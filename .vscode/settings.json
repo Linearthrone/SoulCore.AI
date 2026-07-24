@@ -1,0 +1,12 @@
+{
+  "markdownlint.ignore": [
+    "docs/agents/log/**",
+    "docs/agents/unexecuted_proposals/**",
+    "SoulCore/scripts/logs/**"
+  ],
+  "files.associations": {
+    "*.log": "log",
+    "*.log.err": "plaintext",
+    "*.meta.json": "json"
+  }
+}

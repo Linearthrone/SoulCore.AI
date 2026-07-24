@@ -1,0 +1,5 @@
+# Local empty / runtime DB files — do not commit binary DBs by default.
+*.db
+*.db-wal
+*.db-shm
+!*.db.sql

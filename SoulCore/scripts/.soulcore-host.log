@@ -1,0 +1,1262 @@
+info: SoulCore.Memory.SqliteMemoryStore[0]
+      SqliteMemoryStore ready at C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db
+info: SoulCore.Host[0]
+      SoulCore.Host listening on http://127.0.0.1:7700 (health: /health, ws: /ws); memory=C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db; inference=ollama; hermes=http; soulLoop=enabled; unreal=ws://127.0.0.1:8888
+info: SoulCore.Adapters.Ws.PresenceWsHub[0]
+      PresenceWsHub ready (loopback /ws)
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Loop.SoulLoopHostedService[0]
+      SoulLoop hosted timer started (interval=60s). Scaffold only - no high-agency acts.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:7700
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e19a74ed-6d94-45c9-a244-6b149c1bf2d2 accepted
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 14805.0875ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 14811.7641ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e19a74ed-6d94-45c9-a244-6b149c1bf2d2 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello Victoria I replied: Thinking Process:  1.  **Analyze. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session d598d2fe-48bb-4600-a3be-a4bf20f38d91 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello Victoria I replied: Thinking Process:  1.  **Analyze. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session d598d2fe-48bb-4600-a3be-a4bf20f38d91 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello Victoria I replied: Thinking Process:  1.  **Analyze. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 56b05f85-213c-4778-b002-5bd9601f22f0 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello Victoria I replied: Thinking Process:  1.  **Analyze. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 56b05f85-213c-4778-b002-5bd9601f22f0 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 569130cd-06ad-4f7d-b7b8-929cc6922e80 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello Victoria I replied: Thinking Process:  1.  **Analyze. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 569130cd-06ad-4f7d-b7b8-929cc6922e80 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 90df0d2c-e286-4257-a6d1-1f4a51214f8e accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 90df0d2c-e286-4257-a6d1-1f4a51214f8e closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 0c8586d2-5e95-4943-aaa6-72a2ca261ece accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 0c8586d2-5e95-4943-aaa6-72a2ca261ece closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 42ecc83e-4f0b-4764-b1a6-9bf6c39cff89 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 42ecc83e-4f0b-4764-b1a6-9bf6c39cff89 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e9688444-9e72-4b91-a893-7a15654adb44 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e9688444-9e72-4b91-a893-7a15654adb44 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session b789fcb3-8c16-43d9-8cc0-bd47c4c867ae accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session b789fcb3-8c16-43d9-8cc0-bd47c4c867ae closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 89f31db3-fd04-4e14-bc98-0d0cb032bfa2 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 89f31db3-fd04-4e14-bc98-0d0cb032bfa2 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e6b356df-7506-4d35-86fd-c809d9040078 accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e6b356df-7506-4d35-86fd-c809d9040078 closed
+fail: Microsoft.AspNetCore.Server.Kestrel[13]
+      Connection id "0HNN924DSVE5P", Request id "0HNN924DSVE5P:00000001": An unhandled exception was thrown by the application.
+      System.Net.WebSockets.WebSocketException (0x80004005): The remote party closed the WebSocket connection without completing the close handshake.
+       ---> Microsoft.AspNetCore.Connections.ConnectionResetException: An existing connection was forcibly closed by the remote host.
+       ---> System.Net.Sockets.SocketException (10054): An existing connection was forcibly closed by the remote host.
+         --- End of inner exception stack trace ---
+         at System.IO.Pipelines.Pipe.GetReadResult(ReadResult& result)
+         at System.IO.Pipelines.Pipe.GetReadAsyncResult()
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1UpgradeMessageBody.ReadAsyncInternalAwaited(ValueTask`1 readTask, CancellationToken cancellationToken)
+         at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpRequestStream.ReadAsyncInternal(Memory`1 destination, CancellationToken cancellationToken)
+         at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+         at System.IO.Stream.ReadAtLeastAsyncCore(Memory`1 buffer, Int32 minimumBytes, Boolean throwOnEndOfStream, CancellationToken cancellationToken)
+         at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+         at System.Net.WebSockets.ManagedWebSocket.EnsureBufferContainsAsync(Int32 minimumRequiredBytes, CancellationToken cancellationToken)
+         at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.WebSockets.ManagedWebSocket.ReceiveAsyncPrivate[TResult](Memory`1 payloadBuffer, CancellationToken cancellationToken)
+         at System.Net.WebSockets.ManagedWebSocket.ReceiveAsyncPrivate[TResult](Memory`1 payloadBuffer, CancellationToken cancellationToken)
+         at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+         at System.Threading.Tasks.ValueTask`1.ValueTaskSourceAsTask.<>c.<.cctor>b__4_0(Object state)
+      --- End of stack trace from previous location ---
+         at SoulCore.Host.Ws.ChatWebSocketHandler.RunAsync(WebSocket socket, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 99
+         at Program.<>c.<<<Main>$>b__0_13>d.MoveNext() in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Program.cs:line 196
+      --- End of stack trace from previous location ---
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[clarify]: gently clarif. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session d2b314e3-b273-436f-8d77-d89dae12edcd accepted
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2638.4146ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2638.513ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[clarify]: want[clarify]: gently clarify what was meant before moving on (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: hello I replied: Thinking Process:  1.  **Analyze the Requ. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session d2b314e3-b273-436f-8d77-d89dae12edcd closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 39dce61e-cbd2-4d25-93f5-8e85d92a66e1 accepted
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2810.3632ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2810.4687ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal loco intent dispatched: forward=50 right=0 up=0 (from chat text)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 39dce61e-cbd2-4d25-93f5-8e85d92a66e1 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session c518e595-bb5d-429c-9ec4-96b8ea4056f3 accepted
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2706.9516ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2707.016ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal animation intent dispatched: anim=wave (from chat text)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session c518e595-bb5d-429c-9ec4-96b8ea4056f3 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session f577adde-90de-4c07-996b-27ac7a33f18c accepted
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2725.7953ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2725.8719ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal look intent dispatched: look_at_player (from chat text)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session f577adde-90de-4c07-996b-27ac7a33f18c closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=I heard the user say: look at me I replied: Thinking Process:  1.  **Analyze the. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 27 unacked, oldest=16.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 28 unacked, oldest=17.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 29 unacked, oldest=18.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 30 unacked, oldest=19.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 31 unacked, oldest=20.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 32 unacked, oldest=21.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 33 unacked, oldest=22.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 34 unacked, oldest=23.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 35 unacked, oldest=24.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 36 unacked, oldest=25.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 37 unacked, oldest=26.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 38 unacked, oldest=27.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 39 unacked, oldest=28.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 40 unacked, oldest=29.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 41 unacked, oldest=30.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 42 unacked, oldest=31.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 43 unacked, oldest=32.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 44 unacked, oldest=33.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 45 unacked, oldest=34.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 46 unacked, oldest=35.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 47 unacked, oldest=36.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 48 unacked, oldest=37.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 49 unacked, oldest=38.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 50 unacked, oldest=39.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 51 unacked, oldest=40.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 52 unacked, oldest=41.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 53 unacked, oldest=42.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 54 unacked, oldest=43.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 55 unacked, oldest=44.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 56 unacked, oldest=45.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 57 unacked, oldest=46.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 58 unacked, oldest=47.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 59 unacked, oldest=48.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 60 unacked, oldest=49.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 61 unacked, oldest=50.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 62 unacked, oldest=51.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 63 unacked, oldest=52.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 64 unacked, oldest=53.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 65 unacked, oldest=54.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 66 unacked, oldest=55.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 67 unacked, oldest=56.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 68 unacked, oldest=57.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 69 unacked, oldest=58.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 70 unacked, oldest=59.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 71 unacked, oldest=60.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 72 unacked, oldest=61.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 73 unacked, oldest=62.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 74 unacked, oldest=63.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 75 unacked, oldest=64.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 76 unacked, oldest=65.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 77 unacked, oldest=66.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 78 unacked, oldest=67.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 79 unacked, oldest=68.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 80 unacked, oldest=69.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 81 unacked, oldest=70.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 82 unacked, oldest=71.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 83 unacked, oldest=72.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 84 unacked, oldest=73.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 85 unacked, oldest=74.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 86 unacked, oldest=75.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 87 unacked, oldest=76.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 88 unacked, oldest=77.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 89 unacked, oldest=78.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 90 unacked, oldest=79.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 91 unacked, oldest=80.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 92 unacked, oldest=81.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 93 unacked, oldest=82.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 94 unacked, oldest=83.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 95 unacked, oldest=84.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 96 unacked, oldest=85.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 97 unacked, oldest=86.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 98 unacked, oldest=87.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 99 unacked, oldest=88.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 100 unacked, oldest=89.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 101 unacked, oldest=90.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 102 unacked, oldest=91.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 103 unacked, oldest=92.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 104 unacked, oldest=93.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 105 unacked, oldest=94.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 106 unacked, oldest=95.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 107 unacked, oldest=96.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 108 unacked, oldest=97.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 109 unacked, oldest=98.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 110 unacked, oldest=99.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 111 unacked, oldest=100.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 112 unacked, oldest=101.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 113 unacked, oldest=102.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 114 unacked, oldest=103.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 115 unacked, oldest=104.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 116 unacked, oldest=105.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 117 unacked, oldest=106.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 118 unacked, oldest=107.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 119 unacked, oldest=108.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 120 unacked, oldest=109.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 121 unacked, oldest=110.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 122 unacked, oldest=111.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 123 unacked, oldest=112.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 124 unacked, oldest=113.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 125 unacked, oldest=114.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 126 unacked, oldest=115.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 127 unacked, oldest=116.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 128 unacked, oldest=117.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 129 unacked, oldest=118.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 130 unacked, oldest=119.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 131 unacked, oldest=120.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 132 unacked, oldest=121.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 133 unacked, oldest=122.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 134 unacked, oldest=123.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 135 unacked, oldest=124.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 136 unacked, oldest=125.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 137 unacked, oldest=126.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 138 unacked, oldest=127.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 139 unacked, oldest=128.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 140 unacked, oldest=129.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 141 unacked, oldest=130.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 142 unacked, oldest=131.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 143 unacked, oldest=132.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 144 unacked, oldest=133.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 145 unacked, oldest=134.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 146 unacked, oldest=135.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 147 unacked, oldest=136.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 148 unacked, oldest=137.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 149 unacked, oldest=138.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 150 unacked, oldest=139.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 151 unacked, oldest=140.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 152 unacked, oldest=141.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 153 unacked, oldest=142.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 154 unacked, oldest=143.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 155 unacked, oldest=144.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 156 unacked, oldest=145.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 157 unacked, oldest=146.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 158 unacked, oldest=147.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 159 unacked, oldest=148.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 160 unacked, oldest=149.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 161 unacked, oldest=150.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 162 unacked, oldest=151.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 163 unacked, oldest=152.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 164 unacked, oldest=153.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 165 unacked, oldest=154.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 166 unacked, oldest=155.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 167 unacked, oldest=156.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 168 unacked, oldest=157.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 169 unacked, oldest=158.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 170 unacked, oldest=159.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 171 unacked, oldest=160.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 172 unacked, oldest=161.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 173 unacked, oldest=162.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 174 unacked, oldest=163.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 175 unacked, oldest=164.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 176 unacked, oldest=165.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 177 unacked, oldest=166.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 178 unacked, oldest=167.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 179 unacked, oldest=168.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 180 unacked, oldest=169.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 181 unacked, oldest=170.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 182 unacked, oldest=171.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 183 unacked, oldest=172.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 184 unacked, oldest=173.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 185 unacked, oldest=174.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 186 unacked, oldest=175.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 187 unacked, oldest=176.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 188 unacked, oldest=177.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 189 unacked, oldest=178.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 190 unacked, oldest=179.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 191 unacked, oldest=180.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 192 unacked, oldest=181.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 193 unacked, oldest=182.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 194 unacked, oldest=183.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 195 unacked, oldest=184.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 196 unacked, oldest=185.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 197 unacked, oldest=186.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 198 unacked, oldest=187.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 199 unacked, oldest=188.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 200 unacked, oldest=189.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 201 unacked, oldest=190.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 202 unacked, oldest=191.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 203 unacked, oldest=192.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 204 unacked, oldest=193.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 205 unacked, oldest=194.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 206 unacked, oldest=195.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 207 unacked, oldest=196.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 208 unacked, oldest=197.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 209 unacked, oldest=198.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 210 unacked, oldest=199.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 211 unacked, oldest=200.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 212 unacked, oldest=201.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 213 unacked, oldest=202.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 214 unacked, oldest=203.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 215 unacked, oldest=204.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 216 unacked, oldest=205.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 217 unacked, oldest=206.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 218 unacked, oldest=207.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 219 unacked, oldest=208.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 220 unacked, oldest=209.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 221 unacked, oldest=210.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 222 unacked, oldest=211.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 223 unacked, oldest=212.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 224 unacked, oldest=213.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 225 unacked, oldest=214.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 226 unacked, oldest=215.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 227 unacked, oldest=216.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 228 unacked, oldest=217.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 229 unacked, oldest=218.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 230 unacked, oldest=219.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 231 unacked, oldest=220.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 232 unacked, oldest=221.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 233 unacked, oldest=222.0 min ago
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.00 a=1.00 d=0.00 f=0.50); recent=[Reflection] I am feeling neutral (v=0.00, a=1.00). want[notice]: notice what ju. (+2 more)
+warn: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop drift SLO exceeded: 234 unacked, oldest=223.0 min ago

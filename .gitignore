@@ -1,0 +1,43 @@
+# Soul_Core — Phase 0 secret/hygiene stub (SEC-01 / TASK-004)
+# Expand when SoulCore/ + House/ scaffolds land.
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+!.env.template
+*.user
+*.userosscache
+*.userprefs
+secrets.json
+appsettings.*.local.json
+**/secrets.json
+**/Properties/launchSettings.local.json
+
+# .NET user-secrets / IDE
+bin/
+obj/
+*.dll.config
+*.suo
+.vs/
+*.DotSettings.user
+*.csproj.user
+project.lock.json
+**/appsettings.Production.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local runtime (never commit continuity DBs / logs)
+**/*.db
+**/*.db-*
+Logs/
+tmpcode/
