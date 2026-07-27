@@ -1,9 +1,10 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// Non-secret knobs for the BED-133 system + filesystem tools. Filesystem
-/// access is gated by whitelisted roots — empty lists disable the filesystem
-/// tools entirely (they return <c>Success:false, "filesystem tools disabled"</c>).
+/// Non-secret knobs for system/filesystem tools (BED-133) and gated desktop /
+/// browser / MT4 tool classes (BED-135/136/138). Filesystem access is gated by
+/// whitelisted roots — empty lists disable the filesystem tools entirely
+/// (they return <c>Success:false, "filesystem tools disabled"</c>).
 /// </summary>
 public sealed class ToolsOptions
 {
@@ -37,4 +38,25 @@ public sealed class ToolsOptions
     /// </list>
     /// </summary>
     public bool UseDefaultRoots { get; set; } = true;
+
+    /// <summary>
+    /// When false (default), all MT4 read tools refuse with an authorization
+    /// message. User must opt in — even reads are gated by default (BED-138).
+    /// </summary>
+    public bool AllowMt4Read { get; set; }
+
+    /// <summary>
+    /// Master write gate for MT4 trade tools (<c>execute_trade</c>,
+    /// <c>close_position</c>, <c>run_backtest</c>). When false (default), even
+    /// calls with <c>confirmed=true</c> refuse. Per-trade confirmation is an
+    /// additional gate on top of this (BED-138).
+    /// </summary>
+    public bool AllowMt4Trade { get; set; }
+
+    /// <summary>
+    /// MT4 backend selector. <c>"hermes"</c> (default) routes through the
+    /// <c>house_victoria</c> MCP <c>mt4_*</c> tools via the Hermes gateway
+    /// (OPS-143 / BED-144). Native C# MT4 client is out of scope for BED-138.
+    /// </summary>
+    public string Mt4Backend { get; set; } = "hermes";
 }

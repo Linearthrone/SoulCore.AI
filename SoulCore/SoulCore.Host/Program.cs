@@ -20,6 +20,7 @@ using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.Trading;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -208,6 +209,43 @@ builder.Services.AddSingleton<ITool, PlayAnimationTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
+
+// MT4 trading tools (BED-138): 11 tools behind AllowMt4Read / AllowMt4Trade +
+// per-trade confirmed=true gate (execute_trade also requires sl). Default
+// Mt4Backend=hermes routes to house_victoria MCP mt4_* via HermesMt4Bridge
+// (OPS-143 gateway; BED-144 may refine the invoke path). Native MT4 client
+// is out of scope — non-hermes backends get UnavailableMt4Bridge.
+builder.Services.AddHttpClient("mt4-hermes", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<HermesOptions>>().Value;
+    client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+});
+builder.Services.AddSingleton<IMt4Bridge>(sp =>
+{
+    var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var backend = (tools.Mt4Backend ?? "hermes").Trim();
+    if (!string.Equals(backend, "hermes", StringComparison.OrdinalIgnoreCase))
+    {
+        return new UnavailableMt4Bridge(
+            $"mt4 backend '{backend}' not supported — only 'hermes' is implemented (BED-138); native MT4 client is out of scope");
+    }
+
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    var http = factory.CreateClient("mt4-hermes");
+    return ActivatorUtilities.CreateInstance<HermesMt4Bridge>(sp, http);
+});
+builder.Services.AddSingleton<ITool, Mt4StatusTool>();
+builder.Services.AddSingleton<ITool, ListSymbolsTool>();
+builder.Services.AddSingleton<ITool, GetMarketDataTool>();
+builder.Services.AddSingleton<ITool, GetOpenPositionsTool>();
+builder.Services.AddSingleton<ITool, ExecuteTradeTool>();
+builder.Services.AddSingleton<ITool, ClosePositionTool>();
+builder.Services.AddSingleton<ITool, VerifyTicketTool>();
+builder.Services.AddSingleton<ITool, MarketWatchStatusTool>();
+builder.Services.AddSingleton<ITool, ExportHistoryTool>();
+builder.Services.AddSingleton<ITool, GetHistoricalBarsTool>();
+builder.Services.AddSingleton<ITool, RunBacktestTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
