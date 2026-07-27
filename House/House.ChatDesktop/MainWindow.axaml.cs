@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Threading;
 using House.ChatDesktop.Models;
 using SoulCore.Protocol;
 using House.ChatDesktop.Services;
@@ -16,9 +18,9 @@ public partial class MainWindow : Window
     private readonly SoulCoreHealthClient _health = new();
     private readonly SoulCoreWsClient _ws = new();
     private readonly DispatcherTimer _pollTimer;
-    private readonly Brush _okBrush;
-    private readonly Brush _warnBrush;
-    private readonly Brush _badBrush;
+    private readonly IBrush _okBrush;
+    private readonly IBrush _warnBrush;
+    private readonly IBrush _badBrush;
     private LocalUiSettings _uiSettings = LocalUiSettings.Load();
     private SoulCoreHealthSnapshot _lastHealth = new();
     private bool _presenceFromWs;
@@ -27,7 +29,6 @@ public partial class MainWindow : Window
     private double _lastArousal;
     private double _lastDominance = 0.5;
     private double _lastFocus = 0.5;
-    private bool _suppressCorrectSliderEvents;
 
     public MainWindow()
     {
@@ -36,9 +37,9 @@ public partial class MainWindow : Window
         EndpointText.Text = ConnectionDefaults.DisplayEndpoint;
         DisplayNameBox.Text = _uiSettings.DisplayName;
 
-        _okBrush = (Brush)FindResource("OkBrush");
-        _warnBrush = (Brush)FindResource("WarnBrush");
-        _badBrush = (Brush)FindResource("BadBrush");
+        _okBrush = Res("OkBrush");
+        _warnBrush = Res("WarnBrush");
+        _badBrush = Res("BadBrush");
 
         _ws.StateChanged += OnWsStateChanged;
         _ws.FrameReceived += OnFrameReceived;
@@ -46,7 +47,7 @@ public partial class MainWindow : Window
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += async (_, _) => await ProbeHealthAsync();
 
-        Loaded += async (_, _) =>
+        Opened += async (_, _) =>
         {
             AppendSystem(
                 $"Presence shell → SoulCore WS {ConnectionDefaults.WsUri}. " +
@@ -65,37 +66,40 @@ public partial class MainWindow : Window
         };
     }
 
-    private void NavPresence_Checked(object sender, RoutedEventArgs e)
+    private static IBrush Res(string key) =>
+        Application.Current is { } app && app.TryFindResource(key, out var v) && v is IBrush b
+            ? b
+            : Brushes.Gray;
+
+    private void Nav_Changed(object? sender, RoutedEventArgs e)
     {
-        if (PresenceView is null || SettingsView is null) return;
-        PresenceView.Visibility = Visibility.Visible;
-        SettingsView.Visibility = Visibility.Collapsed;
-        Title = "House Victoria — Presence";
+        if (PresenceView is null || SettingsView is null || NavPresence is null) return;
+
+        var presence = NavPresence.IsChecked == true;
+        PresenceView.IsVisible = presence;
+        SettingsView.IsVisible = !presence;
+        Title = presence ? "House Victoria — Presence" : "House Victoria — Settings";
+
+        if (!presence)
+        {
+            // Populate System tab from the last health probe (no new network call).
+            ApplySystemStatus(_lastHealth);
+        }
     }
 
-    private void NavSettings_Checked(object sender, RoutedEventArgs e)
-    {
-        if (PresenceView is null || SettingsView is null) return;
-        PresenceView.Visibility = Visibility.Collapsed;
-        SettingsView.Visibility = Visibility.Visible;
-        Title = "House Victoria — Settings";
-        // Populate System tab from the last health probe (no new network call).
-        ApplySystemStatus(_lastHealth);
-    }
-
-    private void OpenPresenceFromIdentity_Click(object sender, RoutedEventArgs e)
+    private void OpenPresenceFromIdentity_Click(object? sender, RoutedEventArgs e)
     {
         NavPresence.IsChecked = true;
     }
 
-    private void IdentitySave_Click(object sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
+    private void IdentitySave_Click(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
 
-    private void DisplayNameBox_LostFocus(object sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
+    private void DisplayNameBox_LostFocus(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
 
     private void SaveDisplayNameFromEditor()
     {
         if (DisplayNameBox is null) return;
-        var name = DisplayNameBox.Text.Trim();
+        var name = (DisplayNameBox.Text ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(name))
         {
             name = "Victoria";
@@ -112,33 +116,33 @@ public partial class MainWindow : Window
         AppendSystem($"Identity display name saved locally: {name}");
     }
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e)
+    private async void Refresh_Click(object? sender, RoutedEventArgs e)
     {
         await _ws.ConnectAsync();
         await ProbeHealthAsync();
     }
 
-    private async void Send_Click(object sender, RoutedEventArgs e) => await SendCurrentAsync();
+    private async void Send_Click(object? sender, RoutedEventArgs e) => await SendCurrentAsync();
 
-    private void CorrectEmotion_Click(object sender, RoutedEventArgs e)
+    private void CorrectEmotion_Click(object? sender, RoutedEventArgs e)
     {
-        if (EmotionCorrectPanel.Visibility == Visibility.Visible)
+        if (EmotionCorrectPanel.IsVisible)
         {
-            EmotionCorrectPanel.Visibility = Visibility.Collapsed;
+            EmotionCorrectPanel.IsVisible = false;
             return;
         }
 
         SeedCorrectionEditorsFromLastSnapshot();
-        EmotionCorrectPanel.Visibility = Visibility.Visible;
+        EmotionCorrectPanel.IsVisible = true;
         CorrectNoteBox.Focus();
     }
 
-    private void CorrectEmotionCancel_Click(object sender, RoutedEventArgs e)
+    private void CorrectEmotionCancel_Click(object? sender, RoutedEventArgs e)
     {
-        EmotionCorrectPanel.Visibility = Visibility.Collapsed;
+        EmotionCorrectPanel.IsVisible = false;
     }
 
-    private async void CorrectEmotionSave_Click(object sender, RoutedEventArgs e)
+    private async void CorrectEmotionSave_Click(object? sender, RoutedEventArgs e)
     {
         var valence = CorrectValenceSlider.Value;
         var arousal = CorrectArousalSlider.Value;
@@ -172,56 +176,26 @@ public partial class MainWindow : Window
             : $"\"{note.Trim()}\"";
         AppendSystem(
             $"emotion.correct sent · v={valence:0.00} a={arousal:0.00} d={dominance:0.00} f={focus:0.00} · {notePreview}");
-        EmotionCorrectPanel.Visibility = Visibility.Collapsed;
+        EmotionCorrectPanel.IsVisible = false;
         ScrollTranscriptToEnd();
-    }
-
-    private void CorrectSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_suppressCorrectSliderEvents) return;
-        // XAML wires ValueChanged as each slider is created; later labels/sliders
-        // are still null mid-InitializeComponent — guard the full set.
-        if (CorrectValenceSlider is null || CorrectArousalSlider is null
-            || CorrectDominanceSlider is null || CorrectFocusSlider is null
-            || CorrectValenceValue is null || CorrectArousalValue is null
-            || CorrectDominanceValue is null || CorrectFocusValue is null)
-        {
-            return;
-        }
-
-        CorrectValenceValue.Text = CorrectValenceSlider.Value.ToString("0.0");
-        CorrectArousalValue.Text = CorrectArousalSlider.Value.ToString("0.0");
-        CorrectDominanceValue.Text = CorrectDominanceSlider.Value.ToString("0.0");
-        CorrectFocusValue.Text = CorrectFocusSlider.Value.ToString("0.0");
     }
 
     private void SeedCorrectionEditorsFromLastSnapshot()
     {
-        _suppressCorrectSliderEvents = true;
-        try
+        // Slider value labels are bound to the sliders in XAML; only seed the values.
+        CorrectValenceSlider.Value = _lastValence;
+        CorrectArousalSlider.Value = _lastArousal;
+        CorrectDominanceSlider.Value = _lastDominance;
+        CorrectFocusSlider.Value = _lastFocus;
+        if (string.IsNullOrWhiteSpace(CorrectNoteBox.Text))
         {
-            CorrectValenceSlider.Value = _lastValence;
-            CorrectArousalSlider.Value = _lastArousal;
-            CorrectDominanceSlider.Value = _lastDominance;
-            CorrectFocusSlider.Value = _lastFocus;
-            CorrectValenceValue.Text = _lastValence.ToString("0.0");
-            CorrectArousalValue.Text = _lastArousal.ToString("0.0");
-            CorrectDominanceValue.Text = _lastDominance.ToString("0.0");
-            CorrectFocusValue.Text = _lastFocus.ToString("0.0");
-            if (string.IsNullOrWhiteSpace(CorrectNoteBox.Text))
-            {
-                CorrectNoteBox.Text = "that wasn’t how I felt";
-            }
-        }
-        finally
-        {
-            _suppressCorrectSliderEvents = false;
+            CorrectNoteBox.Text = "that wasn’t how I felt";
         }
     }
 
-    private async void ChatInput_KeyDown(object sender, KeyEventArgs e)
+    private async void ChatInput_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        if (e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             e.Handled = true;
             await SendCurrentAsync();
@@ -230,10 +204,10 @@ public partial class MainWindow : Window
 
     private async Task SendCurrentAsync()
     {
-        var text = ChatInput.Text.Trim();
+        var text = (ChatInput.Text ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(text)) return;
 
-        ChatInput.Clear();
+        ChatInput.Text = string.Empty;
         _streamingAssistant = null;
         _messages.Add(new ChatMessage { Role = "user", Text = text });
         ScrollTranscriptToEnd();
@@ -325,18 +299,16 @@ public partial class MainWindow : Window
         UnrealConnectedBox.Foreground = snap.UnrealConnected == true ? _okBrush : _warnBrush;
     }
 
-    private async void RefreshSystem_Click(object sender, RoutedEventArgs e)
+    private async void RefreshSystem_Click(object? sender, RoutedEventArgs e)
     {
         await ProbeHealthAsync();
         ApplySystemStatus(_lastHealth);
     }
 
-    private void ViewCharterAnchors_Click(object sender, RoutedEventArgs e)
+    private void ViewCharterAnchors_Click(object? sender, RoutedEventArgs e)
     {
         if (CharterAnchorsPanel is null || CharterAnchorsText is null) return;
-        CharterAnchorsPanel.Visibility = CharterAnchorsPanel.Visibility == Visibility.Visible
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        CharterAnchorsPanel.IsVisible = !CharterAnchorsPanel.IsVisible;
     }
 
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
@@ -395,7 +367,7 @@ public partial class MainWindow : Window
         if (snap.SoulLoopEnabled is null)
         {
             SystemSoulLoopBox.Text = "(not reported)";
-            SystemSoulLoopBox.Foreground = (Brush)FindResource("MutedBrush");
+            SystemSoulLoopBox.Foreground = Res("MutedBrush");
         }
         else
         {
@@ -421,7 +393,7 @@ public partial class MainWindow : Window
         if (snap.DriftActiveCount is null && snap.DriftSloExceeded is null)
         {
             CharterDriftBox.Text = "(not reported)";
-            CharterDriftBox.Foreground = (Brush)FindResource("MutedBrush");
+            CharterDriftBox.Foreground = Res("MutedBrush");
         }
         else
         {
@@ -437,7 +409,7 @@ public partial class MainWindow : Window
             && snap.SpendEstimatedCost is null && snap.SpendMonthlyCap is null)
         {
             CharterSpendBox.Text = "(not reported)";
-            CharterSpendBox.Foreground = (Brush)FindResource("MutedBrush");
+            CharterSpendBox.Foreground = Res("MutedBrush");
         }
         else
         {
@@ -489,7 +461,7 @@ public partial class MainWindow : Window
 
     private void OnWsStateChanged(WsConnectionState state, string detail)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             if (state is WsConnectionState.Unavailable or WsConnectionState.Disconnected)
             {
@@ -514,7 +486,7 @@ public partial class MainWindow : Window
 
     private void OnFrameReceived(SoulCoreFrame frame)
     {
-        Dispatcher.Invoke(() => ApplyFrame(frame));
+        Dispatcher.UIThread.Post(() => ApplyFrame(frame));
     }
 
     private void ApplyFrame(SoulCoreFrame frame)
@@ -575,7 +547,7 @@ public partial class MainWindow : Window
         if (WantStatusText is not null)
         {
             WantStatusText.Text = wantText;
-            WantStatusText.Foreground = (Brush)FindResource("TextBrush");
+            WantStatusText.Foreground = Res("TextBrush");
         }
 
         var meta = new List<string>();
@@ -648,7 +620,9 @@ public partial class MainWindow : Window
 
     private void ScrollTranscriptToEnd()
     {
-        TranscriptScroll.Dispatcher.InvokeAsync(() => TranscriptScroll.ScrollToEnd(), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(
+            () => TranscriptScroll.Offset = new Vector(TranscriptScroll.Offset.X, TranscriptScroll.Extent.Height),
+            DispatcherPriority.Background);
     }
 
     private static string? ReadPayloadString(SoulCoreFrame frame, string name)

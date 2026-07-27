@@ -10,7 +10,8 @@
 
 ## House.ChatDesktop (Presence + Settings)
 
-.NET 8 **WPF** shell — **not** an overlay tray clone.
+.NET 8 **Avalonia** cross-platform shell (Linux, Windows, macOS) — **not** an overlay tray clone.
+Targets `net8.0` (no Windows-only dependencies), so it builds and runs anywhere the .NET 8 SDK is available.
 
 - **Presence:** chat transcript/input; alive/warm from `presence.status` (HTTP `/health` fallback); emotion strip from `emotion.snapshot`; **Correct…** panel sends `emotion.correct` (SoulCore persists + echoes snapshot); chat via `chat.send` → `chat.delta`/`chat.done`
 - **Settings (day-one tabs):** Identity · Memory · Emotion (points to Presence Correct…; settings store still BED/DBD)
@@ -24,21 +25,23 @@ Stub docs for SoulCore → UE `:8888` verbs: [`UnrealBridge/README.md`](UnrealBr
 
 ### Run
 
-```powershell
+Cross-platform (Linux/macOS/Windows) — the desktop shell needs a graphical display.
+
+```bash
 # SoulCore Host must be up first for live chat
 # (Host continues if UE :8888 is down)
-dotnet run --project SoulCore\SoulCore.Host -c Release
+dotnet run --project SoulCore/SoulCore.Host -c Release
 
-# Presence shell
-dotnet run --project House\House.ChatDesktop -c Release
+# Presence shell (Avalonia)
+dotnet run --project House/House.ChatDesktop -c Release
 ```
 
 ### Build
 
-Included in `..\SoulCore\SoulCore.sln`.
+Included in `../SoulCore/SoulCore.sln` and builds on any OS with the .NET 8 SDK.
 
-```powershell
-dotnet build House\House.ChatDesktop\House.ChatDesktop.csproj -c Debug
-# or
-dotnet build SoulCore\SoulCore.sln -c Debug
+```bash
+dotnet build House/House.ChatDesktop/House.ChatDesktop.csproj -c Debug
+# or the whole solution
+dotnet build SoulCore/SoulCore.sln -c Debug
 ```
