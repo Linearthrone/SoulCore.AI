@@ -17,8 +17,9 @@ using SoulCore.Host.Loop;
 using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
+using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.FS;
-using SoulCore.Inference.Tools.System;
+using SoulCore.Inference.Tools.Meta;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -182,7 +183,11 @@ builder.Services.AddSingleton<IMemoryStats>(sp => sp.GetRequiredService<SqliteMe
 // registry build ListToolsTool, which needs the same enumerable being built.
 // The lazy resolve defers past registry construction (by then the singleton is
 // fully built), and the manifest correctly includes list_tools itself.
-builder.Services.AddSingleton<ITool, ListToolsTool>();
+//
+// Only the IServiceProvider ctor is public (tests use CreateForTests). Factory
+// registration is belt-and-suspenders so MS.DI cannot pick a cycle-forming
+// overload even if a second public ctor is reintroduced later.
+builder.Services.AddSingleton<ITool>(sp => new ListToolsTool(sp));
 builder.Services.AddSingleton<ITool, SystemInfoTool>();
 builder.Services.AddSingleton<ITool, ReadFileTool>();
 builder.Services.AddSingleton<ITool, WriteFileTool>();
@@ -194,6 +199,15 @@ builder.Services.AddSingleton<ITool, ListDirTool>();
 // ITool singletons — ToolRegistry collects them via IEnumerable<ITool>.
 builder.Services.AddSingleton<ITool, RecallMemoryTool>();
 builder.Services.AddSingleton<ITool, StoreMemoryTool>();
+
+// Body tools (BED-132): speak / play_animation / move_to / look_at / set_emotion
+// wrap IUnrealVerbClient so the model can choose body actions mid-loop.
+// Keyword detectors remain as Strategy A fallback (BED-128).
+builder.Services.AddSingleton<ITool, SpeakTool>();
+builder.Services.AddSingleton<ITool, PlayAnimationTool>();
+builder.Services.AddSingleton<ITool, MoveToTool>();
+builder.Services.AddSingleton<ITool, LookAtTool>();
+builder.Services.AddSingleton<ITool, SetEmotionTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
@@ -260,6 +274,24 @@ app.Map(wsPath, async context =>
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         await context.Response.WriteAsync("Expected WebSocket upgrade. Use ws://127.0.0.1:7700/ws");
+        return;
+    }
+
+    // BED-155 / SEC-152: fail-closed companion token when SOULCORE_COMPANION_API_TOKEN is set.
+    // Accept Authorization: Bearer <token> or X-Api-Key: <token>. Never log secret values.
+    var companionToken = CompanionWsAuth.ResolveConfiguredToken(context.RequestServices.GetService<IConfiguration>());
+    var authOutcome = CompanionWsAuth.Evaluate(context.Request, companionToken);
+    if (authOutcome is CompanionWsAuth.AuthOutcome.Missing or CompanionWsAuth.AuthOutcome.Invalid)
+    {
+        var wsAuthLogger = context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("SoulCore.Host.Ws.CompanionAuth");
+        var headerSource = CompanionWsAuth.DescribeHeaderSource(context.Request);
+        wsAuthLogger.LogWarning(
+            "WS upgrade rejected: companion auth failed ({Safe})",
+            CompanionWsAuth.FormatLogSafe(authOutcome, headerSource));
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsync("Unauthorized");
         return;
     }
 
@@ -412,7 +444,8 @@ static int ReportSecretsPresence()
     {
         SecretNames.A2eApiToken,
         SecretNames.HermesApiKey,
-        SecretNames.HuggingFaceToken
+        SecretNames.HuggingFaceToken,
+        SecretNames.CompanionApiToken
     };
 
     var envPath = DotEnvLoader.ResolveEnvFilePath();

@@ -65,15 +65,20 @@ public sealed class ReadFileTool : ITool
             return Array.Empty<string>();
 
         // Default roots — memory is read-only, qa-* and scratch are read/write.
-        var defaults = new List<string>
-        {
-            "%LOCALAPPDATA%/SoulCore/memory/",
-            "SoulCore/scripts/qa-*/",
-            "SoulCore/scratch/"
-        };
+        // Relative SoulCore/... entries are anchored to the package root (the
+        // directory that contains SoulCore.sln) so they survive `dotnet run`
+        // from Host/bin as well as repo-root cwd.
+        var defaults = new List<string> { "%LOCALAPPDATA%/SoulCore/memory/" };
+        defaults.AddRange(FilesystemGuard.DefaultPackageRelativeRoots(
+            includeQaGlob: true, includeScratch: true));
         return Canonicalize(defaults);
     }
 
+    /// <summary>
+    /// Flatten each configured root through
+    /// <see cref="FilesystemGuard.CanonicalizeRoot"/> (which may expand globs
+    /// into multiple concrete roots).
+    /// </summary>
     internal static IReadOnlyList<string> Canonicalize(IReadOnlyList<string> roots)
     {
         if (roots.Count == 0)
@@ -82,9 +87,11 @@ public sealed class ReadFileTool : ITool
         var list = new List<string>(roots.Count);
         foreach (var root in roots)
         {
-            var c = FilesystemGuard.CanonicalizeRoot(root);
-            if (!string.IsNullOrEmpty(c))
-                list.Add(c);
+            foreach (var c in FilesystemGuard.CanonicalizeRoot(root))
+            {
+                if (!string.IsNullOrEmpty(c))
+                    list.Add(c);
+            }
         }
         return list;
     }

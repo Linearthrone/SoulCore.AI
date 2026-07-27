@@ -14,6 +14,8 @@ public sealed class LocalUiSettings
 
     public string DisplayName { get; set; } = "Victoria";
 
+    public NotificationSettings Notifications { get; set; } = new();
+
     public static string StorePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

@@ -86,13 +86,25 @@ internal static class FilesystemGuard
     /// directory-scoped. Best-effort — falls back to the literal canonical path
     /// when resolution fails (e.g. non-existent root is fine for prefix checks
     /// against files we're about to create under it).
+    /// Roots containing <c>*</c> or <c>?</c> are treated as glob patterns:
+    /// the wildcard segment is expanded to all matching directories on disk
+    /// at canonicalization time, and each match is added as a separate root.
+    /// Callers must flatten the returned list (see
+    /// <c>ReadFileTool.Canonicalize</c>).
     /// </summary>
-    public static string CanonicalizeRoot(string root)
+    public static IReadOnlyList<string> CanonicalizeRoot(string root)
     {
         if (string.IsNullOrWhiteSpace(root))
-            return string.Empty;
+            return Array.Empty<string>();
 
         var expanded = Environment.ExpandEnvironmentVariables(root.Trim());
+
+        // Glob expansion: if the root contains wildcards, expand to matching dirs.
+        if (expanded.Contains('*') || expanded.Contains('?'))
+        {
+            return ExpandGlobRoot(expanded);
+        }
+
         string fullPath;
         try
         {
@@ -100,11 +112,130 @@ internal static class FilesystemGuard
         }
         catch (Exception)
         {
-            return string.Empty;
+            return Array.Empty<string>();
         }
 
         var canonical = ResolveFinalPath(fullPath);
-        return EnsureTrailingSep(canonical);
+        return new[] { EnsureTrailingSep(canonical) };
+    }
+
+    /// <summary>
+    /// Build the default package-relative whitelist entries
+    /// (<c>scripts/qa-*</c>, <c>scratch/</c>) anchored to the SoulCore package
+    /// root when discoverable; otherwise fall back to the literal
+    /// <c>SoulCore/...</c> relative forms (resolved against cwd/BaseDirectory).
+    /// </summary>
+    public static IReadOnlyList<string> DefaultPackageRelativeRoots(
+        bool includeQaGlob = true,
+        bool includeScratch = true)
+    {
+        var packageRoot = FindSoulCorePackageRoot();
+        var list = new List<string>(2);
+
+        if (packageRoot is not null)
+        {
+            if (includeQaGlob)
+                list.Add(Path.Combine(packageRoot, "scripts", "qa-*") + Path.DirectorySeparatorChar);
+            if (includeScratch)
+                list.Add(Path.Combine(packageRoot, "scratch") + Path.DirectorySeparatorChar);
+            return list;
+        }
+
+        if (includeQaGlob)
+            list.Add("SoulCore/scripts/qa-*/");
+        if (includeScratch)
+            list.Add("SoulCore/scratch/");
+        return list;
+    }
+
+    /// <summary>
+    /// Walk cwd + <see cref="AppContext.BaseDirectory"/> upward looking for the
+    /// SoulCore package directory (contains <c>SoulCore.sln</c> + <c>scripts/</c>).
+    /// </summary>
+    public static string? FindSoulCorePackageRoot()
+    {
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            if (string.IsNullOrWhiteSpace(start))
+                continue;
+
+            DirectoryInfo? dir;
+            try
+            {
+                dir = new DirectoryInfo(Path.GetFullPath(start));
+            }
+            catch (Exception)
+            {
+                continue;
+            }
+
+            while (dir is not null)
+            {
+                if (IsSoulCorePackageRoot(dir.FullName))
+                    return dir.FullName;
+
+                var nested = Path.Combine(dir.FullName, "SoulCore");
+                if (IsSoulCorePackageRoot(nested))
+                    return nested;
+
+                dir = dir.Parent;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsSoulCorePackageRoot(string path)
+        => Directory.Exists(Path.Combine(path, "scripts"))
+           && File.Exists(Path.Combine(path, "SoulCore.sln"));
+
+    /// <summary>
+    /// Expand a glob-pattern root (e.g. <c>SoulCore/scripts/qa-*/</c>) to all
+    /// matching directories on disk. Each match is canonicalized and trailing-sep'd.
+    /// Returns an empty list if the parent directory doesn't exist or no matches found.
+    /// </summary>
+    private static IReadOnlyList<string> ExpandGlobRoot(string globPath)
+    {
+        // Normalize separators and strip trailing separator for processing.
+        var normalized = globPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        var dir = Path.GetDirectoryName(normalized);
+        var pattern = Path.GetFileName(normalized);
+
+        if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(pattern))
+            return Array.Empty<string>();
+
+        // Expand env vars in the parent dir (e.g. %LOCALAPPDATA%).
+        dir = Environment.ExpandEnvironmentVariables(dir);
+
+        string parentPath;
+        try
+        {
+            parentPath = Path.GetFullPath(dir);
+        }
+        catch (Exception)
+        {
+            return Array.Empty<string>();
+        }
+
+        if (!Directory.Exists(parentPath))
+            return Array.Empty<string>();
+
+        var results = new List<string>();
+        try
+        {
+            foreach (var match in Directory.GetDirectories(parentPath, pattern))
+            {
+                var canonical = ResolveFinalPath(match);
+                results.Add(EnsureTrailingSep(canonical));
+            }
+        }
+        catch (Exception)
+        {
+            // Directory enumeration failed — return what we have (empty).
+        }
+
+        return results;
     }
 
     /// <summary>

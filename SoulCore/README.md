@@ -129,8 +129,10 @@ Do not enable non-loopback binds. Full 24h soak requires an explicit product gat
 Never commit tokens. Use:
 
 - Local file: `SoulCore/.env` (gitignored; copy from `.env.example`) — Host loads `SOULCORE_*` keys into process env before config bind; existing shell env wins
-- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`
+- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`
 - Or: `dotnet user-secrets` on `SoulCore.Host` in Development
+
+`SOULCORE_COMPANION_API_TOKEN` (optional, ≥ 32 random chars recommended): when **set**, Host fail-closes `/ws` upgrades unless the client sends `Authorization: Bearer <token>` or `X-Api-Key: <token>`. When **unset**, local loopback desktop keeps the historical no-header trust model. Set this whenever Tailscale serve is used for phone companion. Never log the raw token; `/health` stays unauthenticated on loopback and must not expose secrets.
 
 See `appsettings.Example.json` and `.env.example` (placeholders only). Do not commit real `.env` values.
 

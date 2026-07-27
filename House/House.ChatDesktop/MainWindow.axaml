@@ -490,6 +490,59 @@
                          Text="Full-duplex audio is on the V1 path; WebRTC video is V1.1."/>
             </StackPanel>
           </TabItem>
+
+          <TabItem Header="Notifications">
+            <StackPanel Margin="12">
+              <TextBlock Text="Notifications" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
+              <TextBlock TextWrapping="Wrap"
+                         Foreground="{DynamicResource MutedBrush}"
+                         Text="Play a sound when Victoria sends you a message while the window is unfocused or minimised. Default is the OS beep; you can pick your own .wav file below."
+                         Margin="0,0,0,16"/>
+
+              <CheckBox x:Name="NotifEnabledCheckBox"
+                        Content="Enable notification sound"
+                        IsChecked="True"
+                        Margin="0,0,0,12"
+                        Click="NotifEnabled_Click"/>
+
+              <TextBlock Text="Sound file (.wav)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+              <DockPanel Margin="0,0,0,12">
+                <Button DockPanel.Dock="Right"
+                        Classes="ghost"
+                        Content="Browse…"
+                        Margin="8,0,0,0"
+                        Click="NotifBrowse_Click"/>
+                <Button DockPanel.Dock="Right"
+                        Classes="ghost"
+                        Content="Clear"
+                        Margin="8,0,0,0"
+                        Click="NotifClear_Click"/>
+                <TextBox x:Name="NotifSoundPathBox"
+                         Classes="input"
+                         IsReadOnly="True"
+                         Text="(system beep)"
+                         Watermark="(system beep — no custom file)"
+                         Padding="8,0"/>
+              </DockPanel>
+
+              <TextBlock TextWrapping="Wrap"
+                         Foreground="{DynamicResource MutedBrush}"
+                         FontSize="11"
+                         Text="Tip: pick any .wav file on your machine. When cleared, the OS default beep is used."
+                         Margin="0,0,0,12"/>
+
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Classes="primary"
+                        Content="Test sound"
+                        Click="NotifTest_Click"
+                        Margin="0,0,8,0"/>
+                <TextBlock x:Name="NotifStatusText"
+                           Text=""
+                           Foreground="{DynamicResource MutedBrush}"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </StackPanel>
+          </TabItem>
         </TabControl>
       </Border>
     </Grid>

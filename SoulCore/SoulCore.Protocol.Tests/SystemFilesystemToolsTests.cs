@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -5,7 +6,7 @@ using SoulCore.Config;
 using SoulCore.Core.Abstractions;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.FS;
-using SoulCore.Inference.Tools.System;
+using SoulCore.Inference.Tools.Meta;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -18,7 +19,7 @@ public class SystemFilesystemToolsTests
     {
         var echo = new FakeEchoDefTool();
         var speak = new FakeSpeakDefTool();
-        var tool = new ListToolsTool(new ITool[] { echo, speak });
+        var tool = ListToolsTool.CreateForTests(new ITool[] { echo, speak });
 
         var result = await tool.ExecuteAsync(default);
 
@@ -35,7 +36,7 @@ public class SystemFilesystemToolsTests
     [Fact]
     public async Task ListTools_EmptyRegistry_ReturnsNoToolsRegistered()
     {
-        var tool = new ListToolsTool(Array.Empty<ITool>());
+        var tool = ListToolsTool.CreateForTests(Array.Empty<ITool>());
 
         var result = await tool.ExecuteAsync(default);
 
@@ -48,7 +49,7 @@ public class SystemFilesystemToolsTests
     [Fact]
     public async Task ListTools_Definition_HasEmptyObjectParameters()
     {
-        var tool = new ListToolsTool(Array.Empty<ITool>());
+        var tool = ListToolsTool.CreateForTests(Array.Empty<ITool>());
 
         Assert.Equal("list_tools", tool.Definition.Name);
         Assert.Equal("object", tool.Definition.Parameters.GetProperty("type").GetString());
@@ -356,7 +357,7 @@ public class SystemFilesystemToolsTests
         var writeArgs = JsonDocument.Parse($"{{\"path\":\"{EscapeJson(file)}\",\"content\":\"hello victoria\"}}").RootElement.Clone();
         var writeResult = await writeTool.ExecuteAsync(writeArgs);
         Assert.True(writeResult.Success, writeResult.Content);
-        Assert.Contains("wrote 13 chars", writeResult.Content);
+        Assert.Contains("wrote 14 chars", writeResult.Content);
 
         var readArgs = JsonDocument.Parse($"{{\"path\":\"{EscapeJson(file)}\"}}").RootElement.Clone();
         var readResult = await tool.ExecuteAsync(readArgs);
@@ -471,8 +472,11 @@ public class SystemFilesystemToolsTests
             new WriteFileTool(toolsOpts),
             new ListDirTool(toolsOpts)
         };
-        var listTool = new ListToolsTool(concrete);
-        ITool[] all = concrete.Append(listTool).ToArray();
+        // Mutable list so list_tools can include itself in the manifest (matches
+        // Host DI behaviour where the lazy IEnumerable<ITool> contains ListToolsTool).
+        var all = new List<ITool>(concrete);
+        var listTool = ListToolsTool.CreateForTests(all);
+        all.Add(listTool);
         var registry = new ToolRegistry(all);
 
         var defs = registry.GetDefinitions();

@@ -5,7 +5,9 @@ using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Core.Abstractions;
 
-namespace SoulCore.Inference.Tools.System;
+// Namespace is Meta (not System) so sibling tools under Tools.Body etc. can still
+// resolve BCL System.* without colliding with SoulCore.Inference.Tools.System.
+namespace SoulCore.Inference.Tools.Meta;
 
 /// <summary>
 /// <c>system_info</c> tool — host build, model, uptime, memory count, SoulLoop

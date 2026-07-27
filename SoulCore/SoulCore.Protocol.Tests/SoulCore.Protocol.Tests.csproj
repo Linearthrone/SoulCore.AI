@@ -31,17 +31,4 @@
     <ProjectReference Include="..\SoulCore.Host\SoulCore.Host.csproj" />
   </ItemGroup>
 
-  <!--
-    TEMPORARY exclude (BED-131 / TASK-131). SystemFilesystemToolsTests.cs is
-    pre-existing in-flight work from BED-132/133 and currently does not compile
-    (TempDirScope[] passed where IReadOnlyList<string> expected — the
-    TempDirScope implicit-to-string conversion does not apply to array-element
-    inference). This is NOT BED-131's code; excluding it so the suite builds and
-    BED-131's tests can run. BED-132/133 should remove this line once their test
-    file compiles (e.g. `new[] { (string)tmp }` or `new[] { tmp.Path }`).
-  -->
-  <ItemGroup>
-    <Compile Remove="SystemFilesystemToolsTests.cs" />
-  </ItemGroup>
-
 </Project>

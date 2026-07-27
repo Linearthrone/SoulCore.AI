@@ -2,7 +2,9 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace SoulCore.Inference.Tools.System;
+// Namespace is Meta (not System) so sibling tools under Tools.Body etc. can still
+// resolve BCL System.* without colliding with SoulCore.Inference.Tools.System.
+namespace SoulCore.Inference.Tools.Meta;
 
 /// <summary>
 /// <c>list_tools</c> self-discovery tool. Returns the names + descriptions of
@@ -33,9 +35,9 @@ namespace SoulCore.Inference.Tools.System;
 /// manifest).
 /// </para>
 /// <para>
-/// For unit tests that don't run under DI, use the
-/// <see cref="ListToolsTool(IEnumerable{ITool})"/> overload which takes a
-/// concrete enumerable directly.
+/// Only one public constructor exists (the DI ctor) so the container cannot
+/// accidentally prefer an <c>IEnumerable&lt;ITool&gt;</c> overload. Unit tests
+/// that aren't under DI use <see cref="CreateForTests"/>.
 /// </para>
 /// </remarks>
 public sealed class ListToolsTool : ITool
@@ -50,20 +52,25 @@ public sealed class ListToolsTool : ITool
     /// <summary>
     /// DI ctor — resolves <c>IEnumerable&lt;ITool&gt;</c> lazily at execution
     /// time to break the singleton construction cycle (see remarks on the class).
+    /// This is the only public constructor so MS.DI cannot pick a cycle-forming
+    /// <c>IEnumerable&lt;ITool&gt;</c> overload.
     /// </summary>
     public ListToolsTool(IServiceProvider provider)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
     }
 
-    /// <summary>
-    /// Test ctor — takes the tool enumerable directly. Use this in unit tests
-    /// that aren't running under the DI container.
-    /// </summary>
-    public ListToolsTool(IEnumerable<ITool> tools)
+    private ListToolsTool(IEnumerable<ITool> tools)
     {
         _explicitTools = tools ?? throw new ArgumentNullException(nameof(tools));
     }
+
+    /// <summary>
+    /// Test factory — takes the tool enumerable directly. Use this in unit
+    /// tests that aren't running under the DI container.
+    /// </summary>
+    public static ListToolsTool CreateForTests(IEnumerable<ITool> tools)
+        => new(tools);
 
     public ToolDefinition Definition { get; } = new(
         Name: "list_tools",

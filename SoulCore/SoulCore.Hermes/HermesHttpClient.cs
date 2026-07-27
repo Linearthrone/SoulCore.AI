@@ -172,6 +172,7 @@ public sealed class HermesHttpClient : IHermesClient
                 Messages = wireMessages,
                 Tools = wireTools.Count == 0 ? null : wireTools,
                 ToolChoice = toolChoice,
+                MaxTokens = _inferenceOptions.MaxTokens,
                 Stream = false
             };
 

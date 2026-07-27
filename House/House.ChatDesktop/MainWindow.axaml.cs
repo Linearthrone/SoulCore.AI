@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using House.ChatDesktop.Models;
 using SoulCore.Protocol;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IBrush _warnBrush;
     private readonly IBrush _badBrush;
     private LocalUiSettings _uiSettings = LocalUiSettings.Load();
+    private readonly NotificationService _notifications;
     private SoulCoreHealthSnapshot _lastHealth = new();
     private bool _presenceFromWs;
     private ChatMessage? _streamingAssistant;
@@ -40,6 +42,9 @@ public partial class MainWindow : Window
         _okBrush = Res("OkBrush");
         _warnBrush = Res("WarnBrush");
         _badBrush = Res("BadBrush");
+
+        _notifications = new NotificationService(_uiSettings.Notifications);
+        _notifications.ReloadPlayer();
 
         _ws.StateChanged += OnWsStateChanged;
         _ws.FrameReceived += OnFrameReceived;
@@ -62,6 +67,7 @@ public partial class MainWindow : Window
             _pollTimer.Stop();
             SaveDisplayNameFromEditor();
             await _ws.DisposeAsync();
+            _notifications.Dispose();
             _health.Dispose();
         };
     }
@@ -84,6 +90,7 @@ public partial class MainWindow : Window
         {
             // Populate System tab from the last health probe (no new network call).
             ApplySystemStatus(_lastHealth);
+            SeedNotificationControls();
         }
     }
 
@@ -309,6 +316,84 @@ public partial class MainWindow : Window
     {
         if (CharterAnchorsPanel is null || CharterAnchorsText is null) return;
         CharterAnchorsPanel.IsVisible = !CharterAnchorsPanel.IsVisible;
+    }
+
+    private void NotifEnabled_Click(object? sender, RoutedEventArgs e)
+    {
+        if (NotifEnabledCheckBox is null) return;
+        _uiSettings.Notifications.Enabled = NotifEnabledCheckBox.IsChecked == true;
+        _uiSettings.Save();
+        UpdateNotifStatusText();
+    }
+
+    private async void NotifBrowse_Click(object? sender, RoutedEventArgs e)
+    {
+        if (NotifSoundPathBox is null) return;
+
+        var provider = StorageProvider;
+        var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Pick a notification sound (.wav)",
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("WAV audio") { Patterns = new[] { "*.wav" } }
+            },
+            AllowMultiple = false
+        });
+
+        if (files is null || files.Count == 0) return;
+
+        var path = files[0].Path.LocalPath;
+        _uiSettings.Notifications.SoundPath = path;
+        _uiSettings.Notifications.UseSystemBeep = false;
+        _uiSettings.Save();
+
+        NotifSoundPathBox.Text = path;
+        _notifications.ReloadPlayer();
+        UpdateNotifStatusText();
+    }
+
+    private void NotifClear_Click(object? sender, RoutedEventArgs e)
+    {
+        if (NotifSoundPathBox is null) return;
+
+        _uiSettings.Notifications.SoundPath = null;
+        _uiSettings.Notifications.UseSystemBeep = true;
+        _uiSettings.Save();
+
+        NotifSoundPathBox.Text = "(system beep)";
+        _notifications.ReloadPlayer();
+        UpdateNotifStatusText();
+    }
+
+    private void NotifTest_Click(object? sender, RoutedEventArgs e)
+    {
+        var ok = _notifications.Play();
+        UpdateNotifStatusText(ok ? "played" : "muted or failed");
+    }
+
+    private void UpdateNotifStatusText(string? message = null)
+    {
+        if (NotifStatusText is null) return;
+        if (message is not null)
+        {
+            NotifStatusText.Text = message;
+            return;
+        }
+
+        NotifStatusText.Text = _uiSettings.Notifications.Enabled
+            ? "Enabled"
+            : "Disabled";
+    }
+
+    private void SeedNotificationControls()
+    {
+        if (NotifEnabledCheckBox is null || NotifSoundPathBox is null) return;
+        NotifEnabledCheckBox.IsChecked = _uiSettings.Notifications.Enabled;
+        NotifSoundPathBox.Text = string.IsNullOrWhiteSpace(_uiSettings.Notifications.SoundPath)
+            ? "(system beep)"
+            : _uiSettings.Notifications.SoundPath!;
+        UpdateNotifStatusText();
     }
 
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
@@ -601,6 +686,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        // New assistant bubble — notify if the window isn't focused.
         var bubble = new ChatMessage
         {
             Role = "assistant",
@@ -609,7 +695,18 @@ public partial class MainWindow : Window
         };
         _messages.Add(bubble);
         _streamingAssistant = finalize ? null : bubble;
+        NotifyIfUnfocused();
         ScrollTranscriptToEnd();
+    }
+
+    private void NotifyIfUnfocused()
+    {
+        // Only ding when the user isn't already looking at the chat.
+        var focused = IsActive && IsVisible && WindowState != WindowState.Minimized;
+        if (!focused)
+        {
+            _notifications.Play();
+        }
     }
 
     private void AppendSystem(string text)

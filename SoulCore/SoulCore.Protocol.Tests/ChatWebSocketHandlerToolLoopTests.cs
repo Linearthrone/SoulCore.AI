@@ -70,10 +70,12 @@ public class ChatWebSocketHandlerToolLoopTests
         IHermesClient hermes,
         IToolRegistry toolRegistry,
         IUnrealVerbClient unreal,
-        ChatWsOptions? chatOptions = null)
+        ChatWsOptions? chatOptions = null,
+        IEmotionState? emotion = null,
+        IMemoryStore? memory = null)
     {
-        var emotion = new StubEmotionState();
-        var memory = new StubMemoryStore();
+        emotion ??= new StubEmotionState();
+        memory ??= new StubMemoryStore();
         var embeddings = new NullEmbeddingClient();
         var charter = new StubCharter();
         var soulLoop = new StubSoulLoop();
@@ -106,7 +108,10 @@ public class ChatWebSocketHandlerToolLoopTests
         return frames;
     }
 
-    private static async Task<List<SoulCoreFrame>> RunOneChatTurnAsync(ChatWebSocketHandler handler, string userText)
+    private static async Task<List<SoulCoreFrame>> RunOneChatTurnAsync(
+        ChatWebSocketHandler handler,
+        string userText,
+        CancellationTokenSource? externalCts = null)
     {
         var inboundFrames = new[]
         {
@@ -114,7 +119,8 @@ public class ChatWebSocketHandlerToolLoopTests
             Array.Empty<byte>() // sentinel — FakeWebSocket signals close after the send frame
         };
         var socket = new FakeWebSocket(inboundFrames);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var ownedCts = externalCts is null ? new CancellationTokenSource(TimeSpan.FromSeconds(5)) : null;
+        var cts = externalCts ?? ownedCts!;
         await handler.RunAsync(socket, cts.Token).ConfigureAwait(false);
         return ParseOutboundFrames(socket.SentFrames);
     }
@@ -330,6 +336,41 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.Equal("the reply text", unreal.SpeakCalls[0]);
     }
 
+    /// <summary>
+    /// TASK-156 / QA-130 AC7: after chat.done, RequestAborted (dying WS CT) must not
+    /// prevent SpeakAsync. Simulates abort during post-chat episodic write; emotion
+    /// GetAsync would throw on a cancelled CT (mirrors SqliteMemoryStore). Speak must
+    /// still be recorded on the unreal stub (UE connected not required for Pass).
+    /// </summary>
+    [Fact]
+    public async Task SpeakAutoPlay_StillRuns_WhenRequestAbortedAfterChatDone()
+    {
+        using var requestCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var inference = new ScriptedInferenceClient
+        {
+            CompleteWithToolsReply = "Hello."
+        };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient { IsConnectedOverride = false };
+        var emotion = new CtSensitiveEmotionState();
+        var memory = new AbortOnEpisodicWriteMemoryStore(requestCts);
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal,
+            MakeChatOptions(useToolLoop: true),
+            emotion, memory);
+
+        var frames = await RunOneChatTurnAsync(handler, "Say hello...", requestCts);
+
+        var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
+        Assert.NotNull(done);
+        Assert.Equal("Hello.", done!.Payload?.GetProperty("text").GetString());
+        Assert.True(requestCts.IsCancellationRequested, "episodic write should have aborted request CT");
+        Assert.Single(unreal.SpeakCalls);
+        Assert.Equal("Hello.", unreal.SpeakCalls[0]);
+        Assert.False(unreal.IsConnected, "UE connected must not be required for SpeakAsync attempt");
+    }
+
     // ---------------------------------------------------------------------
     // AC #6: empty tools registry → tool-loop behaves like single-shot
     // (model returns text in one round-trip; no tools dispatched).
@@ -448,7 +489,8 @@ public class ChatWebSocketHandlerToolLoopTests
 
     private sealed class RecordingUnrealVerbClient : IUnrealVerbClient
     {
-        public bool IsConnected => true;
+        public bool IsConnectedOverride { get; set; } = true;
+        public bool IsConnected => IsConnectedOverride;
         public string TargetUrl => "ws://test";
         public List<string> SpeakCalls { get; } = new();
         public List<string> PlayAnimationCalls { get; } = new();
@@ -460,7 +502,7 @@ public class ChatWebSocketHandlerToolLoopTests
         public Task<bool> SpeakAsync(string text, CancellationToken cancellationToken = default)
         {
             SpeakCalls.Add(text);
-            return Task.FromResult(true);
+            return Task.FromResult(IsConnected);
         }
         public Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default)
         {
@@ -477,6 +519,61 @@ public class ChatWebSocketHandlerToolLoopTests
             LookCalls.Add(lookPayload);
             return Task.FromResult(true);
         }
+    }
+
+    /// <summary>
+    /// Mirrors SqliteMemoryStore/emotion path: throws when the request CT is already cancelled
+    /// (QA-130 AC7 failure mode before TASK-156).
+    /// </summary>
+    private sealed class CtSensitiveEmotionState : IEmotionState
+    {
+        public Task<IReadOnlyDictionary<string, double>> GetAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyDictionary<string, double>>(
+                new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase));
+        }
+
+        public Task SetAsync(IReadOnlyDictionary<string, double> components, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
+
+        public Task<long> GetRevisionAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(1L);
+        }
+    }
+
+    /// <summary>
+    /// Cancels the request CTS during post-chat episodic write (after chat.done),
+    /// simulating RequestAborted while authoring/side-effects still run.
+    /// </summary>
+    private sealed class AbortOnEpisodicWriteMemoryStore : IMemoryStore
+    {
+        private readonly CancellationTokenSource _requestCts;
+
+        public AbortOnEpisodicWriteMemoryStore(CancellationTokenSource requestCts) => _requestCts = requestCts;
+
+        public bool IsDatabaseOpen => true;
+        public string DatabasePath => ":memory:";
+
+        public Task<long> WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
+        {
+            _requestCts.Cancel();
+            return Task.FromResult(1L);
+        }
+
+        public Task StoreEmbeddingAsync(long episodicId, float[] vector, string model, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+        public Task<IReadOnlyList<(long Id, string Content)>> ListEpisodicsMissingEmbeddingsAsync(int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<(long, string)>>(Array.Empty<(long, string)>());
+        public Task<IReadOnlyList<string>> RecallSimilarAsync(float[] queryVector, int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     }
 
     private sealed class StubEmotionState : IEmotionState

@@ -494,18 +494,45 @@ public sealed class ChatWebSocketHandler
         }
         else
         {
+            // Best-effort CT for post-chat Unreal side effects (TASK-156 / QA-130 AC7).
+            // Do not share RequestAborted / dying WS CT — client abort after chat.done must
+            // not skip SpeakAsync (or emotion/loco/anim/look). UE connected is not required;
+            // SpeakAsync is still invoked (Null/stub returns false / no-op).
+            var sideEffectCt = CancellationToken.None;
+
             // Unreal side-effects — never fail the chat path if UE is down.
             try
             {
-                var emotion = await _emotion.GetAsync(cancellationToken).ConfigureAwait(false);
+                var emotion = await _emotion.GetAsync(sideEffectCt).ConfigureAwait(false);
                 var fields = EmotionInfluencePrompt.ReadFields(emotion);
                 await _unreal.SetEmotionAsync(new
                 {
                     valence = fields.Valence,
                     arousal = fields.Arousal,
                     dominance = fields.Dominance
-                }, cancellationToken).ConfigureAwait(false);
-                await _unreal.SpeakAsync(reply, cancellationToken).ConfigureAwait(false);
+                }, sideEffectCt).ConfigureAwait(false);
+
+                var spoke = await _unreal.SpeakAsync(reply, sideEffectCt).ConfigureAwait(false);
+                if (spoke)
+                {
+                    _logger.LogInformation(
+                        "Post-chat SpeakAsync succeeded (replyLen={ReplyLen})",
+                        reply.Length);
+                }
+                else if (!_unreal.IsConnected)
+                {
+                    _logger.LogInformation(
+                        "Post-chat SpeakAsync attempted — Unreal not connected (no-op)");
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Post-chat SpeakAsync returned false (connected but speak failed)");
+                }
+            }
+            catch (OperationCanceledException oce)
+            {
+                _logger.LogDebug(oce, "Post-chat SpeakAsync/emotion side-effect cancelled");
             }
             catch (Exception ex)
             {
@@ -530,7 +557,7 @@ public sealed class ChatWebSocketHandler
                             forward = locoIntent.Forward,
                             right = locoIntent.Right,
                             up = locoIntent.Up
-                        }, cancellationToken).ConfigureAwait(false);
+                        }, sideEffectCt).ConfigureAwait(false);
                         _logger.LogInformation(
                             "Unreal loco intent dispatched: forward={Forward} right={Right} up={Up} (from chat text)",
                             locoIntent.Forward, locoIntent.Right, locoIntent.Up);
@@ -559,7 +586,7 @@ public sealed class ChatWebSocketHandler
                     var animationName = DetectAnimationIntent(text);
                     if (animationName is not null)
                     {
-                        await _unreal.PlayAnimationAsync(animationName, cancellationToken).ConfigureAwait(false);
+                        await _unreal.PlayAnimationAsync(animationName, sideEffectCt).ConfigureAwait(false);
                         _logger.LogInformation(
                             "Unreal animation intent dispatched: anim={AnimationName} (from chat text)",
                             animationName);
@@ -589,7 +616,7 @@ public sealed class ChatWebSocketHandler
                     var lookIntent = DetectLookIntent(text);
                     if (lookIntent)
                     {
-                        await _unreal.LookAsync(null!, cancellationToken).ConfigureAwait(false);
+                        await _unreal.LookAsync(null!, sideEffectCt).ConfigureAwait(false);
                         _logger.LogInformation(
                             "Unreal look intent dispatched: look_at_player (from chat text)");
                     }

@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-26 (Wave-27 Phase 3 agent-loop ticketed + Phase 2 pull-forward + Wave-26 Phase 1)
+updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — archive Pass, hand off 115/132/133/130)
 ---
 
 # Product Root Declaration
@@ -50,6 +50,10 @@ updated: 2026-07-26 (Wave-27 Phase 3 agent-loop ticketed + Phase 2 pull-forward 
    - ~~**Backend**: native C# vs Hermes~~ — **CLEARED 2026-07-26**: user chose **both** (native C# Ollama tool-loop + restored Hermes tool-loop gateway)
    - ~~**Scope**: Phase A+B only vs all 6 waves~~ — **CLEARED 2026-07-26**: user chose **all 6 waves** (A–F all ticketed 125–145)
    - **Security gates** (design requirements on BED-135/138/133, not user blockers): session opt-in desktop, per-trade MT4 confirm, whitelisted FS roots
+11. **Wave 28 phone companion** — TT-146 / PROP-COMPANION-01:
+   - ~~Android vs iOS~~ — **CLEARED 2026-07-27 (PM default)**: Android first
+   - ~~Remote path~~ — **CLEARED 2026-07-27 (PM default)**: Tailscale serve (no LAN bind)
+   - ~~Phase 0 scope~~ — **CLEARED 2026-07-27 (PM default)**: text chat + notifications only
 
 ## In flight (PM)
 
@@ -66,33 +70,40 @@ updated: 2026-07-26 (Wave-27 Phase 3 agent-loop ticketed + Phase 2 pull-forward 
 - ~~Wave23 BED-108 (model-authored episodic) + QA-109 (E14)~~ — done, archived (2026-07-25)
 - ~~Wave24 BED-110 (embedding backfill) + QA-111 (E15)~~ — done, archived (2026-07-25)
 - ~~Wave25 OPS-112 (start-soulcore Ollama/embed preflight)~~ — done, archived (2026-07-25)
-- **Wave 26 — Victoria embodiment Phase 1 ("She walks")** — from TT-113 / PROP-EMBODIMENT-01:
-  - BED-114 `BP_VictoriaCharacter` → **STARTED 2026-07-26** (this session); then BED-115→117 → QA-118
-- **Wave 27 — Phase 2 (gestures + verb correctness + head gaze) — PULLED FORWARD**:
-  - ~~BED-119~~ **Pass** · ~~BED-120~~ **Pass** · BED-121 in flight · BED-122 **STARTED** · QA-123 after Phase 2 lands
-- **Wave 27 — Phase 3 (Victoria agent loop — tool-calling + tool registry) — IN FLIGHT** (from TT-124 / PROP-AGENT-LOOP-01):
-  - User decisions (baked in, do not re-ask): **model = `qwen2.5:14b`** (being pulled; appsettings updated; BED-129 verifies); **backend = both** (native C# Ollama `/api/chat` tool-loop BED-126 + restored Hermes tool-loop BED-127/144); **scope = all 6 waves** (A–F); **security gates** = session opt-in desktop, per-trade MT4 confirm, whitelisted FS roots.
-  - Tickets 125–145 issued (21 total). Reply to TT-01: `reports/TASK-20260726-124-PM01-to-TT01.md`.
-  - Phase A (foundation, blocking): ~~BED-125 (types)~~ **Pass 2026-07-26** (96/96 tests, 0 errors) → ~~BED-126~~ **Pass 2026-07-26** (110/110 tests, live smoke) → ~~BED-127~~ **Pass 2026-07-26** (132/132 tests, ISSUE-001 fallback) → ~~BED-128~~ **Pass 2026-07-26** (145/145 tests, Strategy A, ISSUE-001 closed) → ~~BED-129~~ **Pass 2026-07-26** → QA-130 (gated on BED-131)
-    - ~~BED-125~~ Pass (report `reports/TASK-20260726-125-BED01-to-PM01.md`); chose `SoulCore.Inference` over new project; DI `IEnumerable<ITool>` collection; exception-wrapping `ToolResult`
-    - ~~BED-126~~ Pass (report `reports/TASK-20260726-126-BED01-to-PM01.md`); extended `OllamaInferenceClient.CompleteWithToolsAsync`; extended `IInferenceClient` (BED-127 must mirror signature); shared `ChatMessage`/`ChatToolCall`/`ChatFunctionCall` types; `MaxToolIterations=8`; 14 new tests; live `qwen2.5:14b` round-trip confirmed
-    - ~~BED-127~~ Pass (report `reports/TASK-20260726-127-BED01-to-PM01.md`); `HermesHttpClient.CompleteWithToolsAsync` byte-compatible with BED-126; OpenAI `/v1/chat/completions` + `tool_choice` (default `auto`, configurable); shared `MaxToolIterations`; `NullHermesClient` stub; **ISSUE-001 fallback parser implemented** (`TryRecoverToolCallsFromContent` + 4 tests); 22 new tests; live smoke pending OPS-143
-    - ~~BED-128~~ Pass (report `reports/TASK-20260726-128-BED01-to-PM01.md`); wired `ChatWebSocketHandler` with `IToolRegistry` DI + `UseToolLoop` (default true) + `PreferHermes` routing; **Strategy A** double-trigger suppression via `TrackingToolRegistry` decorator; `speak` auto-play preserved; fixed latent DI ambiguity (`[ActivatorUtilitiesConstructor]` on 3-arg ctor); 13 new tests; **ISSUE-001 Ollama back-filled + closed** (fallback symmetric across both backends)
-    - ~~BED-129~~ Pass (report `reports/TASK-20260726-129-BED01-to-PM01.md`); `qwen2.5:14b` pulled (9.0 GB Q4_K_M, `tools` cap advertised); 3/3 tool-calling smoke; WS round-trip `provider:ollama, stub:false`; **known qwen2.5 flakiness** (bare JSON in `content` instead of `tool_calls` — ollama #13968/#12174) → ~~ISSUE-20260726-001~~ **closed** (Ollama back-filled in BED-128; Hermes done in BED-127; symmetric)
-    - **Phase A code complete.** QA-130 (recall_memory gate) gated on BED-131.
-    - **Suggested follow-up (PM triage)**: expose `inference.model` in `/health` so QA/ops can verify active chat model externally — not blocking, flag for future ticket
-  - Phase B (core tools): BED-131 **Pass** (live QA-130 demo) → BED-132/133 **in flight** → QA-134 (depends on embodiment BED-114/117 for real walking)
-    - ~~BED-131~~ Pass (report `reports/TASK-20260726-131-BED01-to-PM01.md`); `recall_memory` (semantic→recency fallback) + `store_memory` (best-effort embed); 26 tests; **live QA-130 demo PASS** (model emitted `recall_memory` tool_call, Host dispatched, model used QUOKKA-7 memories in reply); `store_memory` uses `source='chat'` not `'model'` (schema rejects `'model'` — ISSUE-20260726-002 P2 filed for DBD migration 003); BED-131 patched broken parallel BED-133 code (usings, namespace collision, ListToolsTool DI cycle) to unblock build — BED-133 subagent has since addressed ListToolsTool cycle via `IServiceProvider` lazy resolve
-  - Phase C (desktop/browser, gated): BED-135/136 → QA-137 (depends on Phase F Hermes OPS-143)
-  - Phase D (trading, gated): BED-138 → QA-139 (depends on Phase F Hermes OPS-143)
-  - Phase E (task/workflow): BED-140/141 → QA-142
-  - Phase F (Hermes MCP restoration): OPS-143 → BED-144 → QA-145 (enables C/D end-to-end)
+- **Wave 26 — Victoria embodiment Phase 1 ("She walks")**:
+  - ~~BED-114~~ **Pass** (archived 2026-07-27) — `BP_VictoriaCharacter` + `VictoriaAvatar` on Home
+  - **BED-115** **STARTED 2026-07-27** (loco + `ABP_Victoria_Locomotion` — also unblocks BED-121 AC-3 / `DefaultSlot`)
+  - BED-116 (NavMesh) may parallel 115 → BED-117 → QA-118
+- **Wave 27 — Phase 2**:
+  - ~~BED-119~~ **Pass** · ~~BED-120~~ **Pass** · ~~BED-122~~ **Pass** (archived)
+  - **BED-121 Partial** (montages exist; AC-3 blocked — mesh `anim_class: None` until BED-115) → QA-123 after 115 + re-verify play_animation
+- **Wave 27 — Phase 3 agent loop**:
+  - Phase A ~~125–129~~ **Pass** (archived) · ~~BED-131~~ **Pass** (archived; live recall demo)
+  - **QA-130 STARTED 2026-07-27** (formal gate; Host was DOWN at handoff — QA starts Host via `start-soulcore.ps1`)
+  - ~~BED-132~~ **Pass** (archived 2026-07-27) — five body tools; `move_to` interim relative loco until BED-117 (ISSUE-20260727-003)
+  - ~~BED-133~~ **Pass** (archived 2026-07-27) — `list_tools` / `system_info` / scoped FS; DI cycle closed
+  - ~~QA-130~~ **Pass** (archived; AC7 SpeakAsync Fail → **BED-156**) — Phase A agency gate cleared; ISSUE-001 marked Fixed
+  - QA-134 gated on embodiment walk (117) for real `move_to` (wave/recall can soft-smoke earlier)
+  - Phases C–F still queued (135–145); do not start C/D until OPS-143
+- **Wave 28 — Phone companion Phase 0** (from TT-146):
+  - Tickets FED-147…151 + SEC-152 + OPS-153 + QA-154 issued; reply archived `log/TASK-20260727-146-PM01-to-TT01.md`
+  - ~~FED-147~~ **Pass** (archived) — `House/House.CompanionAndroid/` Compose shell
+  - ~~FED-148~~ **Pass** (archived) — OkHttp WS `chat.send` + delta/done streaming
+  - ~~FED-149~~ **Pass** (archived) — Keystore token + Bearer/`X-Api-Key` (aligned BED-155)
+  - **FED-150 STARTED 2026-07-27** (foreground WS service); then FED-151 → QA-154
+  - ~~SEC-152~~ **Pass (conditional)** archived — Tailscale+Keystore OK; **LAN bind Fail**
+  - ~~BED-155~~ **Pass** (archived) — fail-closed `/ws` via `SOULCORE_COMPANION_API_TOKEN` (Bearer / X-Api-Key)
+  - ~~OPS-153~~ **Pass** (archived) — runbook `docs/runbooks/tailscale-serve-soulcore.md` + `tailscale-serve-soulcore.ps1`
+  - QA-154 gated on 148–151 (+ token set when using Tailscale serve)
 - **Blocked on user**: charter lock · soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
 
 ## Completed since last update
 
-- **BED-120**: look/autonomy `args.command` parse Pass — `look_at_player` dispatched; yaw-body only; report `reports/TASK-20260726-120-BED01-to-PM01.md`
-- **BED-119**: `play_animation` JSON `args.name` parse Pass — live `:8888` success:true; report `reports/TASK-20260726-119-BED01-to-PM01.md`
+- **2026-07-27**: Archived Pass pairs 114, 122, 124–129, 131; TT-146 phone companion ticketed (147–154)
+- **BED-122**: Head/eye gaze IK Pass — `UVictoriaGazeComponent`; archived
+- **BED-114**: `BP_VictoriaCharacter` Pass — archived
+- **BED-120**: look/autonomy `args.command` parse Pass — archived
+- **BED-119**: `play_animation` JSON `args.name` parse Pass — archived
 - **Wave 27 Phase 2 pull-forward (user GO 2026-07-26)**: tickets BED-121/122 + QA-123; PM note `reports/TASK-20260726-PM01-phase2-pull-forward.md`; BED-119/120/121 handed to BED-01
 - **TT-113 → PM**: Embodiment proposal accepted; Wave 26 Phase 1 tickets BED-114…QA-118 + parallel BED-119/120; reply `reports/TASK-20260726-113-PM01-to-TT01.md`
 - **BED-085**: Added `MaxTokens` / `num_predict` to Ollama + Hermes inference clients to prevent endless generation

@@ -187,13 +187,18 @@ public sealed class OllamaInferenceClient : IInferenceClient
 
         for (var iteration = 0; iteration < cap; iteration++)
         {
+            var chatOptions = new OllamaChatOptions { NumPredict = _options.MaxTokens };
+            if (_options.NumCtx > 0)
+                chatOptions.NumCtx = _options.NumCtx;
+
             var payload = new OllamaChatRequest
             {
                 Model = _options.Model,
                 Messages = ollamaMessages,
                 Tools = ollamaTools.Count == 0 ? null : ollamaTools,
                 Stream = false,
-                Think = _options.ThinkEnabled
+                Think = _options.ThinkEnabled,
+                Options = chatOptions
             };
 
             using var response = await _http.PostAsJsonAsync(
@@ -593,6 +598,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
         public List<OllamaToolDto>? Tools { get; set; }
         public bool Stream { get; set; }
         public bool Think { get; set; }
+        public OllamaChatOptions? Options { get; set; }
+    }
+
+    private sealed class OllamaChatOptions
+    {
+        public int NumPredict { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? NumCtx { get; set; }
     }
 
     private sealed class OllamaChatMessage

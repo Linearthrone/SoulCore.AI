@@ -70,11 +70,8 @@ public sealed class WriteFileTool : ITool
             return Array.Empty<string>();
 
         // Default write roots = the read/write portion of defaults (NOT memory — read-only).
-        var defaults = new List<string>
-        {
-            "SoulCore/scripts/qa-*/",
-            "SoulCore/scratch/"
-        };
+        var defaults = FilesystemGuard.DefaultPackageRelativeRoots(
+            includeQaGlob: true, includeScratch: true);
         return ReadFileTool.Canonicalize(defaults);
     }
 }

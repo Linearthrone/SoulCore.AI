@@ -4,6 +4,8 @@
     <ProjectReference Include="..\SoulCore.Core\SoulCore.Core.csproj" />
     <ProjectReference Include="..\SoulCore.Config\SoulCore.Config.csproj" />
     <ProjectReference Include="..\SoulCore.Memory\SoulCore.Memory.csproj" />
+    <!-- Body tools (BED-132) wrap IUnrealVerbClient from Adapters.Ws. -->
+    <ProjectReference Include="..\SoulCore.Adapters.Ws\SoulCore.Adapters.Ws.csproj" />
   </ItemGroup>
 
   <ItemGroup>

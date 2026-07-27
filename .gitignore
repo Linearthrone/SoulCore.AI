@@ -35,6 +35,7 @@ __pycache__/
 Thumbs.db
 Desktop.ini
 .DS_Store
+.vscode/
 
 # Local runtime (never commit continuity DBs / logs)
 **/*.db
