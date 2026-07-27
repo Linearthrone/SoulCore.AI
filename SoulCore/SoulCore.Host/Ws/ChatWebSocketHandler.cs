@@ -25,10 +25,13 @@ public sealed class ChatWebSocketHandler
     private readonly IHermesClient _hermes;
     private readonly IEmotionState _emotion;
     private readonly IMemoryStore _memory;
+    private readonly IEmbeddingClient _embeddings;
     private readonly ICharter _charter;
     private readonly IUnrealVerbClient _unreal;
     private readonly ISoulLoop _soulLoop;
+    private readonly IToolRegistry _toolRegistry;
     private readonly SpendMeter _spendMeter;
+    private readonly DriftWatcher _driftWatcher;
     private readonly PresenceWsHub _hub;
     private readonly ChatWsOptions _chatOptions;
     private readonly InferenceOptions _inferenceOptions;
@@ -36,7 +39,11 @@ public sealed class ChatWebSocketHandler
     private readonly ILogger<ChatWebSocketHandler> _logger;
 
     /// <summary>Max chars of the combined identity+memory preamble (before emotion).</summary>
-    private const int ContextPreambleCharLimit = 2000;
+    /// <summary>
+    /// Budget for [Identity]+[Memory] chars. Sized for Victoria_Soul_Evolved (~3k)
+    /// plus episodic recall; emotion preamble is always appended outside this budget.
+    /// </summary>
+    private const int ContextPreambleCharLimit = 16000;
 
     /// <summary>How many recent non-quarantined episodic memories to fold into the preamble.</summary>
     private const int ContextMemoryRecallLimit = 5;
@@ -46,10 +53,13 @@ public sealed class ChatWebSocketHandler
         IHermesClient hermes,
         IEmotionState emotion,
         IMemoryStore memory,
+        IEmbeddingClient embeddings,
         ICharter charter,
         IUnrealVerbClient unreal,
         ISoulLoop soulLoop,
+        IToolRegistry toolRegistry,
         SpendMeter spendMeter,
+        DriftWatcher driftWatcher,
         PresenceWsHub hub,
         IOptions<ChatWsOptions> chatOptions,
         IOptions<InferenceOptions> inferenceOptions,
@@ -60,10 +70,13 @@ public sealed class ChatWebSocketHandler
         _hermes = hermes;
         _emotion = emotion;
         _memory = memory;
+        _embeddings = embeddings;
         _charter = charter;
         _unreal = unreal;
         _soulLoop = soulLoop;
+        _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
         _spendMeter = spendMeter;
+        _driftWatcher = driftWatcher;
         _hub = hub;
         _chatOptions = chatOptions.Value;
         _inferenceOptions = inferenceOptions.Value;
@@ -286,11 +299,9 @@ public sealed class ChatWebSocketHandler
         IReadOnlyList<string> recentMemories = Array.Empty<string>();
         try
         {
-            recentMemories = await _memory
-                .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
-                .ConfigureAwait(false);
+            recentMemories = await RecallChatMemoriesAsync(text, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug(
-                "Recalled {Count} recent episodic memories for chat.send",
+                "Recalled {Count} episodic memories for chat.send",
                 recentMemories.Count);
         }
         catch (Exception ex)
@@ -331,18 +342,58 @@ public sealed class ChatWebSocketHandler
 
         var contextPreamble = BuildContextPreamble(identityAnchors, recentMemories, emotionPreamble);
 
+        var spendSummary = _spendMeter.GetSummary();
+        if (spendSummary.CapExceeded)
+        {
+            _logger.LogWarning(
+                "Spend cap exceeded; refusing chat inference. cost={Cost}/{Cap} tokens={Tokens}/{TokenCap}",
+                spendSummary.EstimatedCost,
+                spendSummary.MonthlyCap,
+                spendSummary.TotalTokens,
+                spendSummary.MonthlyTokenCap);
+            await SendFrameAsync(
+                socket,
+                SoulCoreFrame.Create(
+                    SoulCoreFrameTypes.Error,
+                    new
+                    {
+                        code = "chat.spend_cap",
+                        message = "Monthly spend/token cap exceeded. Inference refused."
+                    },
+                    id: frame.Id),
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         string reply;
         string provider;
         var usedStub = false;
+        var dispatchedToolNames = new HashSet<string>(StringComparer.Ordinal);
+
+        // Tool-loop path (BED-128): when UseToolLoop=true, route the chat turn
+        // through the agent loop (CompleteWithToolsAsync) with tools built from
+        // IToolRegistry. When false, fall back to single-shot CompleteAsync /
+        // ChatAsync + keyword detectors (pre-tool-loop behavior, no regression).
+        var useToolLoop = _chatOptions.UseToolLoop;
         try
         {
-            var result = await CompleteChatAsync(text, contextPreamble, cancellationToken).ConfigureAwait(false);
-            reply = result.Text;
-            provider = result.Provider;
+            if (useToolLoop)
+            {
+                var loopResult = await CompleteChatWithToolsAsync(text, contextPreamble, dispatchedToolNames, cancellationToken)
+                    .ConfigureAwait(false);
+                reply = loopResult.Text;
+                provider = loopResult.Provider;
+            }
+            else
+            {
+                var result = await CompleteChatAsync(text, contextPreamble, cancellationToken).ConfigureAwait(false);
+                reply = result.Text;
+                provider = result.Provider;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Chat model path failed; stub={Stub}", _chatOptions.StubWhenModelDown);
+            _logger.LogWarning(ex, "Chat model path failed; stub={Stub} useToolLoop={UseToolLoop}", _chatOptions.StubWhenModelDown, useToolLoop);
             if (!_chatOptions.StubWhenModelDown)
             {
                 await SendFrameAsync(
@@ -390,9 +441,38 @@ public sealed class ChatWebSocketHandler
         {
             try
             {
-                var episode =
-                    $"I heard the user say: {text.Trim()}\nI replied: {reply.Trim()}";
-                await _memory.WriteEpisodicAsync(episode, "chat", cancellationToken).ConfigureAwait(false);
+                var episode = await AuthorChatEpisodicAsync(text, reply, provider, cancellationToken)
+                    .ConfigureAwait(false);
+                var episodicId = await _memory
+                    .WriteEpisodicAsync(episode, "chat", cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (_embeddings.IsEnabled)
+                {
+                    try
+                    {
+                        var vector = await _embeddings
+                            .EmbedAsync(episode, cancellationToken)
+                            .ConfigureAwait(false);
+                        if (vector.Length > 0)
+                        {
+                            await _memory
+                                .StoreEmbeddingAsync(
+                                    episodicId,
+                                    vector,
+                                    _embeddings.Model,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception embedEx)
+                    {
+                        _logger.LogDebug(
+                            embedEx,
+                            "Post-chat embedding store failed (episodic row {Id} kept)",
+                            episodicId);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -400,81 +480,208 @@ public sealed class ChatWebSocketHandler
             }
         }
 
-        // Unreal side-effects — never fail the chat path if UE is down.
-        try
+        // Soft-block Unreal body verbs when drift SLO is exceeded; chat/inference still proceed.
+        var driftStatus = _driftWatcher.GetStatus();
+        if (driftStatus.SloExceeded)
         {
-            var emotion = await _emotion.GetAsync(cancellationToken).ConfigureAwait(false);
-            var fields = EmotionInfluencePrompt.ReadFields(emotion);
-            await _unreal.SetEmotionAsync(new
-            {
-                valence = fields.Valence,
-                arousal = fields.Arousal,
-                dominance = fields.Dominance
-            }, cancellationToken).ConfigureAwait(false);
-            await _unreal.SpeakAsync(reply, cancellationToken).ConfigureAwait(false);
+            var oldestAge = driftStatus.OldestDriftReport is null
+                ? TimeSpan.Zero
+                : DateTimeOffset.UtcNow - driftStatus.OldestDriftReport.ObservedAt;
+            _logger.LogWarning(
+                "Drift SLO exceeded — Unreal verbs soft-blocked (unacked={Unacked}, oldestAge={OldestAge})",
+                driftStatus.UnackedReports,
+                oldestAge);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogDebug(ex, "Unreal verb side-effect ignored");
-        }
-
-        // Locomotion intent dispatch — keyword detection on the ORIGINAL user text.
-        // Independent try/catch so loco runs even if speak failed and never breaks chat.
-        try
-        {
-            var locoIntent = DetectLocoIntent(text);
-            if (locoIntent is not null)
+            // Unreal side-effects — never fail the chat path if UE is down.
+            try
             {
-                await _unreal.LocoAsync(new
+                var emotion = await _emotion.GetAsync(cancellationToken).ConfigureAwait(false);
+                var fields = EmotionInfluencePrompt.ReadFields(emotion);
+                await _unreal.SetEmotionAsync(new
                 {
-                    forward = locoIntent.Forward,
-                    right = locoIntent.Right,
-                    up = locoIntent.Up
+                    valence = fields.Valence,
+                    arousal = fields.Arousal,
+                    dominance = fields.Dominance
                 }, cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Unreal loco intent dispatched: forward={Forward} right={Right} up={Up} (from chat text)",
-                    locoIntent.Forward, locoIntent.Right, locoIntent.Up);
+                await _unreal.SpeakAsync(reply, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unreal verb side-effect ignored");
+            }
+
+            // Locomotion intent dispatch — keyword detection on the ORIGINAL user text.
+            // Strategy A (BED-128): skip the keyword fallback when the model already
+            // called a tool whose name maps to the locomotion verb class this turn
+            // (avoids double-trigger: model calls move_to + user text contains "walk"
+            // → only the tool runs, the keyword does not re-fire the same motion).
+            // Independent try/catch so loco runs even if speak failed and never breaks chat.
+            try
+            {
+                if (!ToolClassFiredThisTurn(dispatchedToolNames, ToolVerbClass.Loco))
+                {
+                    var locoIntent = DetectLocoIntent(text);
+                    if (locoIntent is not null)
+                    {
+                        await _unreal.LocoAsync(new
+                        {
+                            forward = locoIntent.Forward,
+                            right = locoIntent.Right,
+                            up = locoIntent.Up
+                        }, cancellationToken).ConfigureAwait(false);
+                        _logger.LogInformation(
+                            "Unreal loco intent dispatched: forward={Forward} right={Right} up={Up} (from chat text)",
+                            locoIntent.Forward, locoIntent.Right, locoIntent.Up);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Loco keyword fallback skipped — model called a loco-class tool this turn (strategy A). Tools={Tools}",
+                        string.Join(",", dispatchedToolNames));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unreal loco side-effect ignored");
+            }
+
+            // Animation intent dispatch — keyword detection on the ORIGINAL user text.
+            // Strategy A (BED-128): skip when the model called an animation-class tool
+            // this turn (e.g. play_animation) so Victoria does not double-wave.
+            // Independent try/catch so animation runs even if loco/speak failed and never breaks chat.
+            try
+            {
+                if (!ToolClassFiredThisTurn(dispatchedToolNames, ToolVerbClass.Animation))
+                {
+                    var animationName = DetectAnimationIntent(text);
+                    if (animationName is not null)
+                    {
+                        await _unreal.PlayAnimationAsync(animationName, cancellationToken).ConfigureAwait(false);
+                        _logger.LogInformation(
+                            "Unreal animation intent dispatched: anim={AnimationName} (from chat text)",
+                            animationName);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Animation keyword fallback skipped — model called an animation-class tool this turn (strategy A). Tools={Tools}",
+                        string.Join(",", dispatchedToolNames));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unreal animation side-effect ignored");
+            }
+
+            // Look intent dispatch — keyword detection on the ORIGINAL user text.
+            // Strategy A (BED-128): skip when the model called a look-class tool
+            // this turn (e.g. look_at) so Victoria does not double-look.
+            // Independent try/catch so look runs even if animation/loco/speak failed and never breaks chat.
+            // The UE mapper ignores the payload and always sends the fixed look_at_player command.
+            try
+            {
+                if (!ToolClassFiredThisTurn(dispatchedToolNames, ToolVerbClass.Look))
+                {
+                    var lookIntent = DetectLookIntent(text);
+                    if (lookIntent)
+                    {
+                        await _unreal.LookAsync(null!, cancellationToken).ConfigureAwait(false);
+                        _logger.LogInformation(
+                            "Unreal look intent dispatched: look_at_player (from chat text)");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Look keyword fallback skipped — model called a look-class tool this turn (strategy A). Tools={Tools}",
+                        string.Join(",", dispatchedToolNames));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unreal look side-effect ignored");
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Unreal loco side-effect ignored");
-        }
+    }
 
-        // Animation intent dispatch — keyword detection on the ORIGINAL user text.
-        // Independent try/catch so animation runs even if loco/speak failed and never breaks chat.
+    /// <summary>
+    /// Asks the chat provider (same as the reply when possible) to author a short first-person
+    /// episodic memory. Falls back to the legacy briefing template on empty/failure so the
+    /// chat path never fails after <c>chat.done</c>.
+    /// </summary>
+    private async Task<string> AuthorChatEpisodicAsync(
+        string userText,
+        string assistantReply,
+        string chatProvider,
+        CancellationToken cancellationToken)
+    {
+        var template = EpisodicMemoryPrompt.BuildTemplateFallback(userText, assistantReply);
+        var system = EpisodicMemoryPrompt.SystemInstruction;
+        var userPayload = EpisodicMemoryPrompt.BuildUserPayload(userText, assistantReply);
+
         try
         {
-            var animationName = DetectAnimationIntent(text);
-            if (animationName is not null)
-            {
-                await _unreal.PlayAnimationAsync(animationName, cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Unreal animation intent dispatched: anim={AnimationName} (from chat text)",
-                    animationName);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Unreal animation side-effect ignored");
-        }
+            string? authored = null;
+            var authorProvider = chatProvider;
 
-        // Look intent dispatch — keyword detection on the ORIGINAL user text.
-        // Independent try/catch so look runs even if animation/loco/speak failed and never breaks chat.
-        // The UE mapper ignores the payload and always sends the fixed look_at_player command.
-        try
-        {
-            var lookIntent = DetectLookIntent(text);
-            if (lookIntent)
+            var preferHermes = string.Equals(chatProvider, "hermes", StringComparison.OrdinalIgnoreCase);
+
+            if (preferHermes && _hermesOptions.Enabled)
             {
-                await _unreal.LookAsync(null!, cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Unreal look intent dispatched: look_at_player (from chat text)");
+                authored = await _hermes
+                    .ChatAsync(
+                        userPayload,
+                        system,
+                        cancellationToken,
+                        EpisodicMemoryPrompt.AuthorMaxTokens)
+                    .ConfigureAwait(false);
+                authorProvider = "hermes";
             }
+            else if (_inferenceOptions.Enabled)
+            {
+                authored = await _inference
+                    .CompleteAsync(
+                        userPayload,
+                        system,
+                        cancellationToken,
+                        EpisodicMemoryPrompt.AuthorMaxTokens)
+                    .ConfigureAwait(false);
+                authorProvider = "ollama";
+            }
+            else if (_hermesOptions.Enabled)
+            {
+                authored = await _hermes
+                    .ChatAsync(
+                        userPayload,
+                        system,
+                        cancellationToken,
+                        EpisodicMemoryPrompt.AuthorMaxTokens)
+                    .ConfigureAwait(false);
+                authorProvider = "hermes";
+            }
+
+            if (string.IsNullOrWhiteSpace(authored))
+            {
+                _logger.LogWarning(
+                    "Memory-author LLM returned empty (provider={Provider}); falling back to template",
+                    authorProvider);
+                return template;
+            }
+
+            var trimmed = authored.Trim();
+            RecordSpend(authorProvider, userPayload, system, trimmed);
+            return trimmed;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Unreal look side-effect ignored");
+            _logger.LogWarning(
+                ex,
+                "Memory-author LLM call failed; falling back to template");
+            return template;
         }
     }
 
@@ -620,6 +827,51 @@ public sealed class ChatWebSocketHandler
     }
 
     /// <summary>
+    /// Prefer semantic top-K when embeddings are enabled; fall back to recency on any failure.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> RecallChatMemoriesAsync(
+        string userText,
+        CancellationToken cancellationToken)
+    {
+        if (!_embeddings.IsEnabled)
+        {
+            return await _memory
+                .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        try
+        {
+            var queryVec = await _embeddings
+                .EmbedAsync(userText, cancellationToken)
+                .ConfigureAwait(false);
+            if (queryVec.Length == 0)
+            {
+                _logger.LogDebug("Empty embedding vector; falling back to RecallRecentAsync");
+                return await _memory
+                    .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            var similar = await _memory
+                .RecallSimilarAsync(queryVec, ContextMemoryRecallLimit, cancellationToken)
+                .ConfigureAwait(false);
+            if (similar.Count > 0)
+                return similar;
+
+            _logger.LogDebug("Semantic recall returned no hits; falling back to RecallRecentAsync");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Semantic recall failed; falling back to RecallRecentAsync");
+        }
+
+        return await _memory
+            .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Builds the [Memory] section, truncating the oldest memories first to fit
     /// <paramref name="budget"/> chars (block-level, including the header). Returns
     /// the block text and the count of memories dropped due to truncation.
@@ -632,9 +884,8 @@ public sealed class ChatWebSocketHandler
             return (string.Empty, 0);
 
         const string header = "[Memory]\n";
-        // Memory rows from RecallRecentAsync are ordered occurred_at DESC, so the
-        // newest is at index 0. We keep the newest and drop the oldest (tail) when
-        // truncating.
+        // Memory rows from recall are ordered newest/most-relevant first. We keep
+        // the head and drop the tail when truncating.
         var kept = new List<string>(recentMemories.Count);
         var dropped = 0;
         for (var i = 0; i < recentMemories.Count; i++)
@@ -836,35 +1087,78 @@ public sealed class ChatWebSocketHandler
     /// Multi-word phrases are checked first ("turn left", "turn right") before single keywords
     /// so the more specific match wins. Returns null when no locomotion intent is present.
     /// Units are Unreal centimeters (forward=+X, right=+Y, up=+Z).
+    /// Optional distance: "3 ft" / "2 feet" / "1 m" / "150 cm" — default step is 200 cm (~6.5 ft)
+    /// so motion is visible in a house-scale scene (plain "walk forward" used to be only 50 cm).
     /// </summary>
     private static LocoIntent? DetectLocoIntent(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
-        var normalized = text.ToLowerInvariant();
+        // Common typos before keyword match.
+        var normalized = text.ToLowerInvariant()
+            .Replace("foreward", "forward", StringComparison.Ordinal)
+            .Replace("foward", "forward", StringComparison.Ordinal);
+
+        var stepCm = ParseLocoDistanceCm(normalized) ?? 200.0;
 
         // Multi-word phrases first (more specific than bare "left"/"right").
         if (ContainsAny(normalized, "turn left"))
-            return new LocoIntent(0, -50, 0);
+            return new LocoIntent(0, -stepCm, 0);
         if (ContainsAny(normalized, "turn right"))
-            return new LocoIntent(0, 50, 0);
+            return new LocoIntent(0, stepCm, 0);
         if (ContainsAny(normalized, "go back", "step back", "walk back", "move back", "backward", "backwards"))
-            return new LocoIntent(-50, 0, 0);
+            return new LocoIntent(-stepCm, 0, 0);
         if (ContainsAny(normalized, "go forward", "step forward", "walk forward", "move forward"))
-            return new LocoIntent(50, 0, 0);
+            return new LocoIntent(stepCm, 0, 0);
 
         // Single-word locomotion triggers.
         if (ContainsAny(normalized, "step", "walk", "move", "forward", "go"))
-            return new LocoIntent(50, 0, 0);
+            return new LocoIntent(stepCm, 0, 0);
         if (ContainsAny(normalized, "back"))
-            return new LocoIntent(-50, 0, 0);
+            return new LocoIntent(-stepCm, 0, 0);
         if (ContainsAny(normalized, "left"))
-            return new LocoIntent(0, -50, 0);
+            return new LocoIntent(0, -stepCm, 0);
         if (ContainsAny(normalized, "right"))
-            return new LocoIntent(0, 50, 0);
+            return new LocoIntent(0, stepCm, 0);
 
         return null;
+    }
+
+    /// <summary>
+    /// Parses an optional distance from chat text into centimeters.
+    /// Supports ft/feet/foot, m/meter/meters, cm. Returns null when absent.
+    /// </summary>
+    private static double? ParseLocoDistanceCm(string normalized)
+    {
+        // e.g. "3 ft", "3ft", "2.5 feet", "1 m", "150 cm"
+        var match = System.Text.RegularExpressions.Regex.Match(
+            normalized,
+            @"(\d+(?:\.\d+)?)\s*(feet|foot|ft|meters|meter|m|cm)\b",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        if (!match.Success)
+            return null;
+
+        if (!double.TryParse(
+                match.Groups[1].Value,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var amount) ||
+            amount <= 0)
+        {
+            return null;
+        }
+
+        // Cap absurd chat distances (e.g. "move 99999 ft") to keep avatar in the map.
+        const double maxCm = 2000.0;
+        var unit = match.Groups[2].Value;
+        var cm = unit switch
+        {
+            "cm" => amount,
+            "m" or "meter" or "meters" => amount * 100.0,
+            _ => amount * 30.48 // ft / feet / foot
+        };
+        return Math.Min(cm, maxCm);
     }
 
     /// <summary>
@@ -1001,4 +1295,200 @@ public sealed class ChatWebSocketHandler
     }
 
     private sealed record ChatCompletionResult(string Text, string Provider);
+
+    /// <summary>
+    /// Tool-loop inference path (BED-128). Builds the agent-loop messages[]
+    /// (system preamble + user text) and routes through
+    /// <c>CompleteWithToolsAsync</c> on the configured backend (Hermes when
+    /// <see cref="ChatWsOptions.PreferHermes"/> + <see cref="HermesOptions.Enabled"/>,
+    /// otherwise Ollama). <paramref name="dispatchedToolNames"/> is populated
+    /// with every tool name the loop dispatched this turn so the caller can
+    /// apply Strategy A double-trigger suppression on the keyword fallback.
+    /// </summary>
+    private async Task<ChatCompletionResult> CompleteChatWithToolsAsync(
+        string text,
+        string contextPreamble,
+        HashSet<string> dispatchedToolNames,
+        CancellationToken cancellationToken)
+    {
+        var anyEnabled = _inferenceOptions.Enabled || _hermesOptions.Enabled;
+        if (!anyEnabled)
+        {
+            throw new InvalidOperationException(
+                "No LLM client enabled (Inference:Enabled / Hermes:Enabled). Refusing stub-as-success.");
+        }
+
+        // Build the agent-loop messages[]: system preamble + user text.
+        // The tool-loop clients append assistant + tool turns internally.
+        var messages = new List<ChatMessage>(2);
+        if (!string.IsNullOrWhiteSpace(contextPreamble))
+            messages.Add(new ChatMessage { Role = "system", Content = contextPreamble.Trim() });
+        messages.Add(new ChatMessage { Role = "user", Content = text });
+
+        // Tools from the registry. Empty registry → empty tools[] → model
+        // returns text in one round-trip (loop behaves like single-shot).
+        var tools = _toolRegistry.GetDefinitions();
+
+        // Wrap the registry in a tracking decorator so we can record which
+        // tool names fired during the loop (Strategy A). The decorator is
+        // call-scoped — one per chat turn — so the set is accurate per turn.
+        var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames);
+
+        Exception? lastError = null;
+
+        // PreferHermes primary: route to Hermes when configured + enabled.
+        if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        {
+            try
+            {
+                var reply = await _hermes
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(reply))
+                {
+                    RecordSpend("hermes", text, contextPreamble, reply);
+                    return new ChatCompletionResult(reply.Trim(), "hermes");
+                }
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                _logger.LogDebug(ex, "Hermes tool-loop failed; falling back to inference");
+            }
+        }
+
+        // Ollama primary (or Hermes secondary when PreferHermes=false).
+        if (_inferenceOptions.Enabled)
+        {
+            try
+            {
+                var reply = await _inference
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(reply))
+                {
+                    RecordSpend("ollama", text, contextPreamble, reply);
+                    return new ChatCompletionResult(reply.Trim(), "ollama");
+                }
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                _logger.LogDebug(ex, "Ollama tool-loop failed");
+            }
+        }
+
+        // Secondary Hermes (when PreferHermes=false and Ollama failed/disabled).
+        if (!_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        {
+            try
+            {
+                var reply = await _hermes
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(reply))
+                {
+                    RecordSpend("hermes", text, contextPreamble, reply);
+                    return new ChatCompletionResult(reply.Trim(), "hermes");
+                }
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                _logger.LogDebug(ex, "Hermes tool-loop failed (secondary)");
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException(
+            "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.");
+    }
+
+    /// <summary>
+    /// Verb classes the keyword detectors map to. Used by Strategy A to
+    /// suppress the keyword fallback when the model already called a tool
+    /// in the same class this turn. Names are the canonical tool names
+    /// proposed in PROP-AGENT-LOOP-01 Phase B (BED-131/132/133) — the mapping
+    /// is tolerant of variants (e.g. <c>walk_forward</c> vs <c>move_to</c>).
+    /// </summary>
+    private enum ToolVerbClass
+    {
+        Loco,
+        Animation,
+        Look
+    }
+
+    /// <summary>
+    /// Strategy A: returns true when any tool dispatched this turn maps to
+    /// the given verb class. The keyword fallback for that class is then
+    /// skipped so Victoria does not double-act (e.g. model calls
+    /// <c>play_animation</c> + user text contains "wave" → only the tool
+    /// runs). The mapping is intentionally generous (prefix/contains) so
+    /// future tool variants (<c>walk_forward</c>, <c>move_to</c>,
+    /// <c>look_at</c>) are covered without code changes.
+    /// </summary>
+    private static bool ToolClassFiredThisTurn(HashSet<string> dispatchedToolNames, ToolVerbClass verbClass)
+    {
+        if (dispatchedToolNames is null || dispatchedToolNames.Count == 0)
+            return false;
+
+        foreach (var name in dispatchedToolNames)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+            var n = name.ToLowerInvariant();
+            switch (verbClass)
+            {
+                case ToolVerbClass.Loco:
+                    if (n.Contains("move", StringComparison.Ordinal)
+                        || n.Contains("walk", StringComparison.Ordinal)
+                        || n.Contains("loco", StringComparison.Ordinal)
+                        || n.Contains("go_to", StringComparison.Ordinal))
+                        return true;
+                    break;
+                case ToolVerbClass.Animation:
+                    if (n.Contains("animation", StringComparison.Ordinal)
+                        || n.Contains("animate", StringComparison.Ordinal)
+                        || n.Contains("wave", StringComparison.Ordinal)
+                        || n.Contains("play_anim", StringComparison.Ordinal))
+                        return true;
+                    break;
+                case ToolVerbClass.Look:
+                    if (n.Contains("look", StringComparison.Ordinal)
+                        || n.Contains("gaze", StringComparison.Ordinal)
+                        || n.Contains("face", StringComparison.Ordinal))
+                        return true;
+                    break;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Call-scoped decorator over <see cref="IToolRegistry"/> that records
+    /// every dispatched tool name into the supplied set. Used by
+    /// <see cref="CompleteChatWithToolsAsync"/> to implement Strategy A
+    /// (double-trigger suppression) without changing the
+    /// <see cref="IInferenceClient"/> / <see cref="IHermesClient"/> interfaces
+    /// (which return only the final text, not the tool-call trace).
+    /// </summary>
+    private sealed class TrackingToolRegistry : IToolRegistry
+    {
+        private readonly IToolRegistry _inner;
+        private readonly HashSet<string> _dispatched;
+
+        public TrackingToolRegistry(IToolRegistry inner, HashSet<string> dispatched)
+        {
+            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _dispatched = dispatched ?? throw new ArgumentNullException(nameof(dispatched));
+        }
+
+        public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
+
+        public async Task<ToolResult> ExecuteAsync(string name, JsonElement args, CancellationToken ct = default)
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+                _dispatched.Add(name);
+            return await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+        }
+    }
 }

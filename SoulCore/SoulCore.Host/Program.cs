@@ -12,9 +12,13 @@ using SoulCore.Core.Abstractions;
 using SoulCore.Core.Charter;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
+using SoulCore.Host;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Ws;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools;
+using SoulCore.Inference.Tools.FS;
+using SoulCore.Inference.Tools.System;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -43,6 +47,12 @@ if (args.Any(a => string.Equals(a, "--soul-loop-tick", StringComparison.OrdinalI
     return await SoulLoopTickEvidence.RunAsync(enabled);
 }
 
+// CLI: backfill missing episodic embeddings via Ollama, then exit (no web host).
+if (args.Any(a => string.Equals(a, "--backfill-embeddings", StringComparison.OrdinalIgnoreCase)))
+{
+    return await BackfillEmbeddings.RunAsync(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // User-secrets / env for secrets — never App.config tokens from quarry.
@@ -68,6 +78,8 @@ builder.Services.Configure<SoulLoopOptions>(
     builder.Configuration.GetSection(SoulLoopOptions.SectionName));
 builder.Services.Configure<SafetyOptions>(
     builder.Configuration.GetSection(SafetyOptions.SectionName));
+builder.Services.Configure<ToolsOptions>(
+    builder.Configuration.GetSection(ToolsOptions.SectionName));
 
 var bindOptions = builder.Configuration
     .GetSection(HostBindOptions.SectionName)
@@ -101,6 +113,10 @@ var safetyOptions = builder.Configuration
     .GetSection(SafetyOptions.SectionName)
     .Get<SafetyOptions>() ?? new SafetyOptions();
 
+var toolsOptions = builder.Configuration
+    .GetSection(ToolsOptions.SectionName)
+    .Get<ToolsOptions>() ?? new ToolsOptions();
+
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
 if (!IsLoopback(bindOptions.BindAddress))
 {
@@ -115,14 +131,15 @@ builder.Services.AddSingleton<SqliteMemoryStore>();
 builder.Services.AddSingleton<IMemoryStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
-// Safety / spend layer (BED-080 libs wired by BED-082). Singletons; report-only (no act blocking yet).
+// Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
 builder.Services.AddSingleton<ICharter>(sp => sp.GetRequiredService<CharterService>());
 builder.Services.AddSingleton<DriftWatcher>(_ => new DriftWatcher(safetyOptions.DriftSloMinutes));
 builder.Services.AddSingleton<SpendMeter>(_ => new SpendMeter(
     safetyOptions.InputTokenRatePer1K,
     safetyOptions.OutputTokenRatePer1K,
-    safetyOptions.MonthlyCapUsd));
+    safetyOptions.MonthlyCapUsd,
+    safetyOptions.MonthlyTokenCap));
 
 if (inferenceOptions.Enabled)
 {
@@ -132,11 +149,66 @@ if (inferenceOptions.Enabled)
         client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
         client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
     });
+    // BED-126: expose the typed client as IInferenceClient. The 3-arg ctor
+    // (http + options + logger) is what HttpClientFactory builds; the
+    // tool-loop CompleteWithToolsAsync accepts an IToolRegistry at call time
+    // (resolved from the container by the caller, e.g. ChatWebSocketHandler),
+    // so the client itself does not need the registry injected to function.
     builder.Services.AddTransient<IInferenceClient>(sp => sp.GetRequiredService<OllamaInferenceClient>());
 }
 else
 {
     builder.Services.AddSingleton<IInferenceClient, NullInferenceClient>();
+}
+
+// Tool registry (agent-loop foundation, BED-125). Additive — independent of
+// inference/Hermes enablement. Concrete tools (BED-131+) register as ITool
+// singletons elsewhere; ToolRegistry collects them via IEnumerable<ITool>.
+// Empty registry is valid → Host boots clean with zero tools.
+builder.Services.AddSingleton<IToolRegistry, ToolRegistry>();
+
+// BED-133: expose the memory count/stats surface (implemented additively by
+// SqliteMemoryStore; does NOT extend IMemoryStore, so existing stubs stay green).
+builder.Services.AddSingleton<IMemoryStats>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+
+// BED-133: system + filesystem tools. list_tools + system_info have no security
+// gate (local, no secrets). Filesystem tools enforce ToolsOptions whitelist.
+//
+// ListToolsTool takes IServiceProvider (not IEnumerable<ITool>) and resolves
+// the tool enumerable LAZILY inside ExecuteAsync. This breaks what would
+// otherwise be a singleton-construction cycle: ToolRegistry is built from
+// IEnumerable<ITool>, and ListToolsTool is one of those ITool instances —
+// taking IEnumerable<ITool> in ListToolsTool's ctor would make building the
+// registry build ListToolsTool, which needs the same enumerable being built.
+// The lazy resolve defers past registry construction (by then the singleton is
+// fully built), and the manifest correctly includes list_tools itself.
+builder.Services.AddSingleton<ITool, ListToolsTool>();
+builder.Services.AddSingleton<ITool, SystemInfoTool>();
+builder.Services.AddSingleton<ITool, ReadFileTool>();
+builder.Services.AddSingleton<ITool, WriteFileTool>();
+builder.Services.AddSingleton<ITool, ListDirTool>();
+
+// Memory tools (BED-131): recall_memory + store_memory wrap IMemoryStore so
+// the model can decide to recall a specific memory or store a new one within
+// a turn (in addition to the preamble-injected baseline recall). Registered as
+// ITool singletons — ToolRegistry collects them via IEnumerable<ITool>.
+builder.Services.AddSingleton<ITool, RecallMemoryTool>();
+builder.Services.AddSingleton<ITool, StoreMemoryTool>();
+
+var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
+if (embeddingsOn)
+{
+    builder.Services.AddHttpClient<OllamaEmbeddingClient>((sp, client) =>
+    {
+        var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
+        client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+    });
+    builder.Services.AddTransient<IEmbeddingClient>(sp => sp.GetRequiredService<OllamaEmbeddingClient>());
+}
+else
+{
+    builder.Services.AddSingleton<IEmbeddingClient, NullEmbeddingClient>();
 }
 
 if (hermesOptions.Enabled)
@@ -252,7 +324,9 @@ app.MapGet("/health", (
         inference = new
         {
             enabled = inferenceOptions.Enabled,
-            provider = inferenceOptions.Enabled ? "ollama" : "null"
+            provider = inferenceOptions.Enabled ? "ollama" : "null",
+            embeddingsEnabled = embeddingsOn,
+            embeddingModel = inferenceOptions.EmbeddingModel
         },
         hermes = new
         {
@@ -288,6 +362,12 @@ app.MapGet("/health", (
             }
         }
     });
+});
+
+app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
+{
+    var acked = driftWatcher.AcknowledgeAll();
+    return Results.Json(new { acked });
 });
 
 app.MapGet("/", () => Results.Redirect("/health"));

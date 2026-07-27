@@ -1,0 +1,13 @@
+﻿{
+    "probeStart":  "2026-07-25T10:14:05.2309526+00:00",
+    "probeEnd":  "2026-07-25T10:15:40.4414069+00:00",
+    "elapsedSec":  95.2,
+    "sessionId":  "qa-109-e14",
+    "chatText":  "Tell me one quiet thing you noticed about today.",
+    "chatDone":  true,
+    "replyText":  "The pace shifted unexpectedly at times. A sudden lulls, then a quick return to flow. I noted those shifts.",
+    "hostFrameCount":  7,
+    "memoryPath":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\memory\\soulcore_memory.db",
+    "embeddingsEnabled":  true,
+    "embeddingModel":  "nomic-embed-text"
+}

@@ -1,0 +1,2 @@
+﻿LOOK_REPLY success:true for Host wire args.command=look_at_player
+BAD_ARGS_REPLY success:false when args.command missing (proves not reading payload.name)

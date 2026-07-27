@@ -11,8 +11,11 @@ namespace SoulCore.Memory;
 /// <summary>
 /// SQLite-backed memory + emotion singleton. Applies DBD Schema/001 + Migrations/001 on first open.
 /// </summary>
-public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IAsyncDisposable, IDisposable
+public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStats, IAsyncDisposable, IDisposable
 {
+    /// <summary>Max embedding rows scanned for in-process cosine recall.</summary>
+    public const int SimilarRecallScanCap = 500;
+
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
     {
         "self", "chat", "imported", "observation", "correction", "system"
@@ -63,7 +66,30 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IAsyncDispo
 
     public string DatabasePath { get; }
 
-    public async Task WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
+    /// <summary>IMemoryStats — re-exposes <see cref="IsDatabaseOpen"/> for the system_info tool.</summary>
+    bool IMemoryStats.IsOpen => IsDatabaseOpen;
+
+    /// <summary>
+    /// IMemoryStats — count of non-quarantined episodic memories. Returns 0 on
+    /// any error (best-effort, used only by <c>system_info</c> for a status line).
+    /// </summary>
+    public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken = default)
+    {
+        if (_disposed) return 0;
+        try
+        {
+            await using var cmd = _connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM episodic_memories WHERE is_quarantined = 0;";
+            var result = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            return result is null || result is DBNull ? 0 : Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
+
+    public async Task<long> WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (string.IsNullOrWhiteSpace(text))
@@ -83,6 +109,116 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IAsyncDispo
         cmd.Parameters.AddWithValue("$source", source);
         cmd.Parameters.AddWithValue("$quarantined", string.Equals(source, "imported", StringComparison.Ordinal) ? 1 : 0);
         await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var idCmd = _connection.CreateCommand();
+        idCmd.CommandText = "SELECT last_insert_rowid();";
+        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (result is null || result is DBNull)
+            throw new InvalidOperationException("Failed to obtain episodic_memories row id after insert.");
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+    }
+
+    public async Task StoreEmbeddingAsync(
+        long episodicId,
+        float[] vector,
+        string model,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(vector);
+        if (episodicId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(episodicId));
+        if (vector.Length == 0)
+            throw new ArgumentException("Embedding vector must be non-empty.", nameof(vector));
+
+        var modelName = string.IsNullOrWhiteSpace(model) ? "nomic-embed-text" : model.Trim();
+        var blob = VectorSimilarity.ToLittleEndianBlob(vector);
+        var createdAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            INSERT INTO episodic_embedding_vectors (episodic_id, model, dims, vector, created_at)
+            VALUES ($episodic_id, $model, $dims, $vector, $created_at)
+            ON CONFLICT(episodic_id) DO UPDATE SET
+                model = excluded.model,
+                dims = excluded.dims,
+                vector = excluded.vector,
+                created_at = excluded.created_at;
+            """;
+        cmd.Parameters.AddWithValue("$episodic_id", episodicId);
+        cmd.Parameters.AddWithValue("$model", modelName);
+        cmd.Parameters.AddWithValue("$dims", vector.Length);
+        cmd.Parameters.AddWithValue("$vector", blob);
+        cmd.Parameters.AddWithValue("$created_at", createdAt);
+        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<(long Id, string Content)>> ListEpisodicsMissingEmbeddingsAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (limit <= 0)
+            return Array.Empty<(long, string)>();
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT e.id, e.content
+            FROM episodic_memories e
+            LEFT JOIN episodic_embedding_vectors v ON v.episodic_id = e.id
+            WHERE e.is_quarantined = 0
+              AND v.episodic_id IS NULL
+            ORDER BY e.id ASC
+            LIMIT $limit;
+            """;
+        cmd.Parameters.AddWithValue("$limit", limit);
+
+        var list = new List<(long Id, string Content)>();
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            list.Add((reader.GetInt64(0), reader.GetString(1)));
+
+        return list;
+    }
+
+    public async Task<IReadOnlyList<string>> RecallSimilarAsync(
+        float[] queryVector,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(queryVector);
+        if (limit <= 0 || queryVector.Length == 0)
+            return Array.Empty<string>();
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT e.content, v.vector
+            FROM episodic_embedding_vectors v
+            INNER JOIN episodic_memories e ON e.id = v.episodic_id
+            WHERE e.is_quarantined = 0
+              AND v.dims = $dims
+            ORDER BY e.occurred_at DESC, e.id DESC
+            LIMIT $scan_cap;
+            """;
+        cmd.Parameters.AddWithValue("$dims", queryVector.Length);
+        cmd.Parameters.AddWithValue("$scan_cap", SimilarRecallScanCap);
+
+        var candidates = new List<(string Item, float[] Vector)>();
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var content = reader.GetString(0);
+            var blob = (byte[])reader.GetValue(1);
+            var vector = VectorSimilarity.FromLittleEndianBlob(blob);
+            if (vector.Length == queryVector.Length)
+                candidates.Add((content, vector));
+        }
+
+        return VectorSimilarity.RankByCosineTopK(queryVector, candidates, limit);
     }
 
     public async Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
@@ -250,8 +386,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IAsyncDispo
             pragma.ExecuteNonQuery();
         }
 
-        var applied = IsMigrationApplied("001");
-        if (!applied)
+        if (!IsMigrationApplied("001"))
         {
             var schemaSql = ReadEmbedded("SoulCore.Memory.Schema.001_schema.sql");
             ExecuteScript(schemaSql);
@@ -265,6 +400,17 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IAsyncDispo
         else
         {
             _logger.LogDebug("Memory migration 001 already applied at {DbPath}", DatabasePath);
+        }
+
+        if (!IsMigrationApplied("002"))
+        {
+            var migration002 = ReadEmbedded("SoulCore.Memory.Migrations.002_embedding_vectors.sql");
+            ExecuteScript(migration002);
+            _logger.LogInformation("Applied Memory migration 002_embedding_vectors to {DbPath}", DatabasePath);
+        }
+        else
+        {
+            _logger.LogDebug("Memory migration 002 already applied at {DbPath}", DatabasePath);
         }
     }
 

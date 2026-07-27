@@ -27,4 +27,22 @@ public sealed class HermesOptions
     /// <c>SOULCORE_HERMES_API_KEY</c> / user-secrets, never committed files.
     /// </summary>
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// OpenAI <c>tool_choice</c> field sent with every tool-loop request.
+    /// <para>
+    /// Values: <c>"auto"</c> (model decides, default), <c>"none"</c> (model
+    /// must not call tools — equivalent to a text-only turn), or
+    /// <c>{ "type":"function", "function":{ "name":"..." } }</c> to force a
+    /// specific tool (BED-127 documents this; the host may also override per
+    /// call by passing a different value — not exposed in the method signature
+    /// to keep it byte-compatible with <c>IInferenceClient.CompleteWithToolsAsync</c>).
+    /// </para>
+    /// <para>
+    /// When the tool-loop is invoked with an empty <c>tools[]</c> array, the
+    /// client omits <c>tool_choice</c> entirely (OpenAI rejects
+    /// <c>tool_choice</c> without <c>tools</c>).
+    /// </para>
+    /// </summary>
+    public string ToolChoice { get; set; } = "auto";
 }

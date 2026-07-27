@@ -8,5 +8,10 @@
     "*.log": "log",
     "*.log.err": "plaintext",
     "*.meta.json": "json"
-  }
+  },
+  "git.autoRepositoryDetection": false,
+  "git.ignoredRepositories": [
+    "C:/Users/kurtw/.cursor/plugins/cache/cursor-public/astronomer-data/99bd2bf36b591f6e2780d5978482dc2e8b8826fc",
+    "C:/Users/kurtw/.cursor/plugins/cache/cursor-public/huggingface-skills/d7223848c3895fbd447faf2aec73e0a6cdd7fdcd"
+  ]
 }

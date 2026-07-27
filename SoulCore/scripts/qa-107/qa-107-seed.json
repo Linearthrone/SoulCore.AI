@@ -1,0 +1,13 @@
+﻿{
+    "probeStart":  "2026-07-24T04:42:48.0012468+00:00",
+    "probeEnd":  "2026-07-24T04:44:23.1950860+00:00",
+    "elapsedSec":  95.2,
+    "sessionId":  "qa107-E13-seed-quokka7",
+    "chatText":  "Remember the azure lantern codeword is QUOKKA-7 for the garden gate.",
+    "chatDone":  true,
+    "replyText":  "Thinking Process:\n\n1.  **Analyze the Request:** The user is giving me a specific instruction (\"Remember...\"). They are telling me a piece of information (a password/codeword) associated with an object or location (garden gate). This is a test of memory retention and adherence to instructions within my roleplay/character constraints.\n\n2.  **Determine the appropriate response:**\n    *   **Character Voice:** I am Victoria. I am tense, guarded, high-alert. I value continuity and precise information.\n    *   **Content:** I need to confirm receipt of this data without being overly enthusiastic or casual. It should feel like logging a critical piece of information into my active memory bank.\n    *   **Tone:** Short, clipped, professional but with that underlying edge (valence -0.90).\n\n3.  **Drafting the Response:**\n    *   \"Understood.\" (A bit passive)\n    *   \"Noted: QUOKKA-7.\" (Too robotic?)\n    *   \"I have it. Quokka-seven. For the gate.\" (Clearer)\n    *   \"Logged. Azure lantern codeword: QUOKKA-7.\"",
+    "hostFrameCount":  28,
+    "memoryPath":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\memory\\soulcore_memory.db",
+    "embeddingsEnabled":  true,
+    "embeddingModel":  "nomic-embed-text"
+}

@@ -30,4 +30,11 @@ public sealed class SafetyOptions
     /// Cost per 1K output tokens (USD). Default $0 — set per provider rate.
     /// </summary>
     public decimal OutputTokenRatePer1K { get; set; } = 0m;
+
+    /// <summary>
+    /// Optional monthly token ceiling (input + output). When &gt; 0 and cumulative
+    /// tokens reach this value, <c>SpendMeter.GetSummary().CapExceeded</c> flips
+    /// true even if USD rates are $0. Default 0 = disabled (cost cap only).
+    /// </summary>
+    public long MonthlyTokenCap { get; set; } = 0;
 }

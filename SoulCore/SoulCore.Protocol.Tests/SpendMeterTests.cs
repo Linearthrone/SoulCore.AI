@@ -121,6 +121,66 @@ public class SpendMeterTests
     }
 
     [Fact]
+    public void GetSummary_CapExceeded_FlipsWhenTokenCeilingHit()
+    {
+        // Rates stay $0 so cost alone never trips; token ceiling does.
+        var meter = new SpendMeter(
+            inputRatePer1K: 0m,
+            outputRatePer1K: 0m,
+            monthlyCapUsd: 30m,
+            monthlyTokenCap: 100);
+
+        meter.RecordUsage("test", 40, 40);
+        Assert.False(meter.GetSummary().CapExceeded);
+
+        meter.RecordUsage("test", 20, 0); // total tokens = 100
+        var atCap = meter.GetSummary();
+        Assert.Equal(100, atCap.TotalTokens);
+        Assert.Equal(100, atCap.MonthlyTokenCap);
+        Assert.Equal(0m, atCap.EstimatedCost);
+        Assert.True(atCap.CapExceeded);
+    }
+
+    [Fact]
+    public void GetSummary_CapExceeded_StillFlipsOnCostThreshold()
+    {
+        var meter = new SpendMeter(
+            inputRatePer1K: 1.0m,
+            outputRatePer1K: 0m,
+            monthlyCapUsd: 5.0m,
+            monthlyTokenCap: 0);
+
+        meter.RecordUsage("test", 5000, 0); // $5.00
+        var summary = meter.GetSummary();
+        Assert.Equal(5.0m, summary.EstimatedCost);
+        Assert.True(summary.CapExceeded);
+    }
+
+    [Fact]
+    public void GetSummary_TokenCapZero_DisabledEvenWithHugeTokenCounts()
+    {
+        var meter = new SpendMeter(
+            inputRatePer1K: 0m,
+            outputRatePer1K: 0m,
+            monthlyCapUsd: 30m,
+            monthlyTokenCap: 0);
+
+        meter.RecordUsage("test", 5_000_000, 5_000_000);
+        var summary = meter.GetSummary();
+        Assert.Equal(10_000_000, summary.TotalTokens);
+        Assert.Equal(0, summary.MonthlyTokenCap);
+        Assert.Equal(0m, summary.EstimatedCost);
+        Assert.False(summary.CapExceeded);
+    }
+
+    [Fact]
+    public void Constructor_NegativeTokenCap_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new SpendMeter(monthlyTokenCap: -1));
+    }
+
+    [Fact]
     public void Reset_ClearsCounters_AndReturnsPreviousSummary()
     {
         var meter = new SpendMeter(

@@ -1,0 +1,13 @@
+﻿{
+    "probeStart":  "2026-07-25T10:16:42.9551947+00:00",
+    "probeEnd":  "2026-07-25T10:17:48.1687599+00:00",
+    "elapsedSec":  65.2,
+    "sessionId":  "qa-109-e1",
+    "chatText":  "hello",
+    "chatDone":  true,
+    "replyText":  "Acknowledged. What is it?",
+    "hostFrameCount":  5,
+    "memoryPath":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\memory\\soulcore_memory.db",
+    "embeddingsEnabled":  true,
+    "embeddingModel":  "nomic-embed-text"
+}

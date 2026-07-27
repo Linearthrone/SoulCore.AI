@@ -8,7 +8,8 @@ public sealed record SpendSummary(
     long TotalTokensOut,
     decimal EstimatedCost,
     decimal MonthlyCap,
-    bool CapExceeded)
+    bool CapExceeded,
+    long MonthlyTokenCap = 0)
 {
     public long TotalTokens => TotalTokensIn + TotalTokensOut;
 }

@@ -2,13 +2,30 @@
 <#
 .SYNOPSIS
   Build (if needed) and start SoulCore.Host on loopback :7700.
+.DESCRIPTION
+  Inference/embed preflight (TASK-112): before starting the Host, probe the
+  local Ollama server (/api/tags) and confirm the embedding model is present.
+    * Ollama unreachable  -> WARNING only (Host still starts; it can serve
+      health/WS stubs offline). Semantic recall/embeddings will be degraded.
+    * Model missing        -> WARNING with remedy `ollama pull <model>`.
+                              Use -PullEmbedModel to auto-pull (opt-in only).
+    * All good             -> confirmation line, no behavior change.
+  Embedding model name resolves from env SOULCORE_EMBED_MODEL (loaded from
+  SoulCore/.env if present), defaulting to `nomic-embed-text`. Warnings never
+  print secrets/API keys. Preflight is advisory and does not hard-fail start.
 .NOTES
   SEC-004: V1 binds 127.0.0.1 only. Does not use 0.0.0.0.
 #>
 [CmdletBinding()]
 param(
     [int]$Port = 7700,
-    [switch]$ForceRebuild
+    [switch]$ForceRebuild,
+    # Opt-in: run `ollama pull <embed-model>` when the model is missing.
+    [switch]$PullEmbedModel,
+    # Base URL of the local Ollama server used for the preflight probe.
+    [string]$OllamaUrl = "http://127.0.0.1:11434",
+    # Skip the Ollama/embed preflight entirely.
+    [switch]$SkipPreflight
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +50,70 @@ function Test-PortListening {
         return $null -ne $conns
     } catch {
         return $false
+    }
+}
+
+# TASK-112: Advisory Ollama/embed preflight. Never hard-fails Host start.
+# Probes <OllamaUrl>/api/tags and confirms the embedding model is available.
+function Invoke-InferencePreflight {
+    param(
+        [string]$BaseUrl,
+        [switch]$Pull
+    )
+
+    $model = [Environment]::GetEnvironmentVariable("SOULCORE_EMBED_MODEL", "Process")
+    if ([string]::IsNullOrWhiteSpace($model)) { $model = "nomic-embed-text" }
+    $model = $model.Trim()
+
+    $tagsUrl = ($BaseUrl.TrimEnd('/')) + "/api/tags"
+    Write-Host "Preflight: probing Ollama at $tagsUrl (embed model: $model)"
+
+    $tags = $null
+    try {
+        $tags = Invoke-RestMethod -Uri $tagsUrl -Method Get -TimeoutSec 5 -ErrorAction Stop
+    } catch {
+        Write-Warning "Ollama unreachable at $BaseUrl - $($_.Exception.Message)"
+        Write-Warning "Host will still start, but embeddings/semantic recall will be degraded until Ollama is running."
+        Write-Warning "Remedy: start Ollama (e.g. 'ollama serve') then re-run this script."
+        return
+    }
+
+    $names = @()
+    if ($null -ne $tags -and $null -ne $tags.models) {
+        $names = @($tags.models | ForEach-Object { $_.name })
+    }
+
+    $present = $false
+    foreach ($n in $names) {
+        if ([string]::IsNullOrWhiteSpace($n)) { continue }
+        if ($n -eq $model -or $n -eq "${model}:latest" -or $n -like "${model}:*") {
+            $present = $true
+            break
+        }
+    }
+
+    if ($present) {
+        Write-Host "Preflight OK: Ollama reachable and embed model '$model' is installed."
+        return
+    }
+
+    Write-Warning "Embed model '$model' not found in Ollama tags."
+    if ($Pull) {
+        Write-Host "Preflight: -PullEmbedModel set -> running 'ollama pull $model' ..."
+        try {
+            & ollama pull $model
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "'ollama pull $model' exited with code $LASTEXITCODE. Embeddings may be unavailable."
+            } else {
+                Write-Host "Preflight: pull complete for '$model'."
+            }
+        } catch {
+            Write-Warning "Failed to run 'ollama pull $model' - $($_.Exception.Message)"
+            Write-Warning "Is the Ollama CLI on PATH? Remedy: ollama pull $model"
+        }
+    } else {
+        Write-Warning "Remedy: ollama pull $model   (or re-run with -PullEmbedModel to auto-pull)"
+        Write-Warning "Host will still start; episodics may be written without embedding vectors until the model is present."
     }
 }
 
@@ -91,6 +172,14 @@ if (Test-Path -LiteralPath $EnvFile) {
     Write-Host "loaded $loadedCount SOULCORE_* keys from .env"
 } else {
     Write-Host ".env not found at $EnvFile (skipping SOULCORE_* load)"
+}
+
+# TASK-112: advisory inference/embed preflight (after .env load so
+# SOULCORE_EMBED_MODEL is honored). Warnings only; never blocks Host start.
+if (-not $SkipPreflight) {
+    Invoke-InferencePreflight -BaseUrl $OllamaUrl -Pull:$PullEmbedModel
+} else {
+    Write-Host "Preflight skipped (-SkipPreflight)."
 }
 
 Write-Host "Starting SoulCore.Host on http://${BindAddress}:${Port} ..."

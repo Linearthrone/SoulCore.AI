@@ -1,3 +1,4 @@
+using SoulCore.Core;
 using SoulCore.Core.Safety;
 
 namespace SoulCore.Protocol.Tests;
@@ -172,5 +173,74 @@ public class DriftWatcherTests
     {
         var watcher = new DriftWatcher(15);
         Assert.Throws<ArgumentNullException>(() => watcher.RecordDrift(null!));
+    }
+
+    [Fact]
+    public void RecordDrift_EmotionOverload_BelowThreshold_DoesNotEnqueue()
+    {
+        var watcher = new DriftWatcher(15);
+        // Typical content: v≈0, a≈1 → score=1.0 < 1.15
+        var fields = new EmotionInfluencePrompt.EmotionFields(0.0, 1.0, 0.5, 0.5);
+        watcher.RecordDrift("content", fields, "stay calm");
+
+        var status = watcher.GetStatus();
+        Assert.Equal(0, status.UnackedReports);
+        Assert.Null(status.LastDriftReport);
+    }
+
+    [Fact]
+    public void RecordDrift_EmotionOverload_AtOrAboveThreshold_Enqueues()
+    {
+        var watcher = new DriftWatcher(15);
+        // Tense: v=-0.9, a=1.0 → score ≈ 1.345 ≥ 1.15
+        var fields = new EmotionInfluencePrompt.EmotionFields(-0.9, 1.0, 0.5, 0.5);
+        watcher.RecordDrift("tense", fields, "move away");
+
+        var status = watcher.GetStatus();
+        Assert.Equal(1, status.UnackedReports);
+        Assert.NotNull(status.LastDriftReport);
+        Assert.Equal("emotion", status.LastDriftReport!.Dimension);
+        Assert.True(status.LastDriftReport.Score >= 1.15);
+        Assert.Equal(1.15, status.LastDriftReport.Threshold);
+    }
+
+    [Fact]
+    public void RecordDrift_EmotionOverload_ExactThreshold_Enqueues()
+    {
+        var watcher = new DriftWatcher(15);
+        // score = sqrt(0² + 1.15²) = 1.15
+        var fields = new EmotionInfluencePrompt.EmotionFields(0.0, 1.15, 0.5, 0.5);
+        watcher.RecordDrift("edge", fields, "edge want");
+
+        var status = watcher.GetStatus();
+        Assert.Equal(1, status.UnackedReports);
+        Assert.True(status.LastDriftReport!.Score >= 1.15);
+    }
+
+    [Fact]
+    public void RecordDrift_EmotionOverload_AgedReport_StillTripsSloExceeded()
+    {
+        var watcher = new DriftWatcher(TimeSpan.FromMinutes(1));
+        var fields = new EmotionInfluencePrompt.EmotionFields(-0.9, 1.0, 0.5, 0.5);
+        watcher.RecordDrift("tense", fields, "move away");
+
+        var statusFresh = watcher.GetStatus();
+        Assert.Equal(1, statusFresh.UnackedReports);
+        Assert.False(statusFresh.SloExceeded);
+
+        // Age the report by acknowledging via direct RecordDrift with past ObservedAt
+        // (emotion overload stamps UtcNow). Clear and inject aged report matching score.
+        watcher.AcknowledgeAll();
+        var aged = DateTimeOffset.UtcNow.AddMinutes(-2);
+        watcher.RecordDrift(new DriftReport(
+            "emotion",
+            Math.Sqrt(0.9 * 0.9 + 1.0 * 1.0),
+            1.15,
+            "aged",
+            aged));
+
+        var statusAged = watcher.GetStatus();
+        Assert.True(statusAged.SloExceeded);
+        Assert.Equal(1, statusAged.UnackedReports);
     }
 }

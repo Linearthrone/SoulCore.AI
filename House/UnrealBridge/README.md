@@ -45,7 +45,7 @@ envelope for `play_animation` / `look` / `set_emotion`.
 | SoulCore verb | UE wire | Notes |
 | --- | --- | --- |
 | `speak` | plain `speak <text>` | **BED-067:** BridgeServer reads **PlainArgs**, not JSON `payload.args.text` (QA-065: JSON ack `success:false`, plain `success:true`) |
-| `play_animation` | `{ "type":"command", "payload":{ "name":"play_animation", "args":{ "name":"…" } } }` | Native UE verb |
+| `play_animation` | `{ "type":"command", "payload":{ "name":"play_animation", "args":{ "name":"…" } } }` | **BED-119:** BridgeServer reads JSON `payload.args.name` (+ PlainArgs fallback). Ack `success:true` on parse; montage `/Game/Animations/Victoria/{name}` may still be missing (Wave 27). |
 | `look` | `{ "type":"command", "payload":{ "name":"autonomy", "args":{ "command":"look_at_player" } } }` | Nearest documented UE path; `LookAsync` payload ignored |
 | `set_emotion` | `{ "type":"command", "payload":{ "name":"set_emotion", "args":{ "valence", "arousal", "dominance", "label" } } }` | **BED-069:** UE accepts JSON + plain `set_emotion <label>`; ack `success:true` (visual stub OK). **BED-070:** Host maps `SetEmotionAsync` (disk; soak Host may be old until recycle). |
 | `loco` | plain `move_avatar_relative <forward> <right> <up>` | **BED-072:** local +X/+Y/+Z cm; empty payload → forward=50. UE also accepts `command`/`loco` (after plugin rebuild). Live soak Host binary may still be old until recycle |
@@ -170,7 +170,7 @@ UE plugin (MyProject `HouseVictoriaBridge`): `set_emotion` accepted; `loco` alia
 | SoulCore verb | Status after adapter |
 | --- | --- |
 | `speak` | Mapped → plain `speak <text>` (PlainArgs-compatible) |
-| `play_animation` | Mapped → UE `command`/`play_animation` |
+| `play_animation` | Mapped → UE `command`/`play_animation` (**BED-119:** UE parses `args.name`; ack `success:true`; visual montage may wait for Phase 2 assets) |
 | `look` | Mapped → UE `command`/`autonomy` + `look_at_player` |
 | `set_emotion` | **UE verb live** (BED-069). Host mapper on disk (BED-070); activates after Host recycle. Label map: calm/happy/sad/angry → montage (missing = visual stub, ack `success:true`). |
 | `loco` | **Mapped** → plain `move_avatar_relative <forward> <right> <up>` (BED-072; empty→50). Host on disk until recycle. |
