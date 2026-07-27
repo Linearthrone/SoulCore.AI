@@ -10,11 +10,26 @@ namespace SoulCore.Memory;
 
 /// <summary>
 /// SQLite-backed memory + emotion singleton. Applies DBD Schema/001 + Migrations/001 on first open.
+/// Also implements <see cref="IVictoriaTaskStore"/> (BED-140) against the
+/// <c>victoria_tasks</c> table in the same DB — Victoria's own work items,
+/// separate from PM tickets under <c>docs/agents/tasks/</c>.
 /// </summary>
-public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStats, IAsyncDisposable, IDisposable
+public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStats, IVictoriaTaskStore, IAsyncDisposable, IDisposable
 {
     /// <summary>Max embedding rows scanned for in-process cosine recall.</summary>
     public const int SimilarRecallScanCap = 500;
+
+    /// <summary>Allowed <c>victoria_tasks.status</c> values (BED-140).</summary>
+    public static readonly HashSet<string> AllowedTaskStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "todo", "in_progress", "done", "blocked"
+    };
+
+    /// <summary>Default priority for a newly created Victoria task.</summary>
+    public const string DefaultTaskPriority = "medium";
+
+    /// <summary>Default status for a newly created Victoria task.</summary>
+    public const string DefaultTaskStatus = "todo";
 
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -360,6 +375,156 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
     }
 
+    // ─── IVictoriaTaskStore (BED-140) ─────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<long> CreateAsync(
+        string title,
+        string? description,
+        string? priority,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Task title must be non-empty.", nameof(title));
+
+        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        var resolvedPriority = string.IsNullOrWhiteSpace(priority)
+            ? DefaultTaskPriority
+            : priority.Trim().ToLowerInvariant();
+        var resolvedDescription = description?.Trim() ?? string.Empty;
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            INSERT INTO victoria_tasks (title, description, status, priority, created_at, updated_at)
+            VALUES ($title, $description, $status, $priority, $created_at, $updated_at);
+            """;
+        cmd.Parameters.AddWithValue("$title", title.Trim());
+        cmd.Parameters.AddWithValue("$description", resolvedDescription);
+        cmd.Parameters.AddWithValue("$status", DefaultTaskStatus);
+        cmd.Parameters.AddWithValue("$priority", resolvedPriority);
+        cmd.Parameters.AddWithValue("$created_at", now);
+        cmd.Parameters.AddWithValue("$updated_at", now);
+        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var idCmd = _connection.CreateCommand();
+        idCmd.CommandText = "SELECT last_insert_rowid();";
+        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (result is null || result is DBNull)
+            throw new InvalidOperationException("Failed to obtain victoria_tasks row id after insert.");
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+    }
+
+    /// <inheritdoc />
+    public async Task<VictoriaTask?> GetAsync(long id, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (id <= 0)
+            return null;
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT id, title, description, status, priority, created_at, updated_at
+            FROM victoria_tasks
+            WHERE id = $id
+            LIMIT 1;
+            """;
+        cmd.Parameters.AddWithValue("$id", id);
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            return null;
+
+        return ReadVictoriaTask(reader);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> UpdateStatusAsync(long id, string status, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (id <= 0)
+            return false;
+        if (string.IsNullOrWhiteSpace(status))
+            throw new ArgumentException("Task status must be non-empty.", nameof(status));
+
+        var normalized = status.Trim().ToLowerInvariant();
+        if (!AllowedTaskStatuses.Contains(normalized))
+        {
+            throw new ArgumentException(
+                $"Invalid task status '{status}'. Allowed: todo, in_progress, done, blocked.",
+                nameof(status));
+        }
+
+        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            UPDATE victoria_tasks
+            SET status = $status, updated_at = $updated_at
+            WHERE id = $id;
+            """;
+        cmd.Parameters.AddWithValue("$status", normalized);
+        cmd.Parameters.AddWithValue("$updated_at", now);
+        cmd.Parameters.AddWithValue("$id", id);
+        var rows = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        return rows > 0;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<VictoriaTask>> ListAsync(
+        string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await using var cmd = _connection.CreateCommand();
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            cmd.CommandText =
+                """
+                SELECT id, title, description, status, priority, created_at, updated_at
+                FROM victoria_tasks
+                ORDER BY updated_at DESC, id DESC;
+                """;
+        }
+        else
+        {
+            var normalized = status.Trim().ToLowerInvariant();
+            cmd.CommandText =
+                """
+                SELECT id, title, description, status, priority, created_at, updated_at
+                FROM victoria_tasks
+                WHERE status = $status
+                ORDER BY updated_at DESC, id DESC;
+                """;
+            cmd.Parameters.AddWithValue("$status", normalized);
+        }
+
+        var list = new List<VictoriaTask>();
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            list.Add(ReadVictoriaTask(reader));
+        }
+
+        return list;
+    }
+
+    private static VictoriaTask ReadVictoriaTask(SqliteDataReader reader)
+    {
+        return new VictoriaTask(
+            Id: reader.GetInt64(0),
+            Title: reader.GetString(1),
+            Description: reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+            Status: reader.GetString(3),
+            Priority: reader.GetString(4),
+            CreatedAt: reader.GetString(5),
+            UpdatedAt: reader.GetString(6));
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -411,6 +576,17 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         else
         {
             _logger.LogDebug("Memory migration 002 already applied at {DbPath}", DatabasePath);
+        }
+
+        if (!IsMigrationApplied("003"))
+        {
+            var migration003 = ReadEmbedded("SoulCore.Memory.Migrations.003_victoria_tasks.sql");
+            ExecuteScript(migration003);
+            _logger.LogInformation("Applied Memory migration 003_victoria_tasks to {DbPath}", DatabasePath);
+        }
+        else
+        {
+            _logger.LogDebug("Memory migration 003 already applied at {DbPath}", DatabasePath);
         }
     }
 
