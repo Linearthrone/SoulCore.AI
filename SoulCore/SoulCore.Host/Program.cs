@@ -136,6 +136,9 @@ builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteM
 // PM tickets under docs/agents/tasks/ — those are human-authored orchestration
 // artifacts; this store is model-managed via task_* tools.
 builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// BED-141: Victoria's workflow store (victoria_workflows table) — ordered step
+// lists executed via workflow_* tools (model-initiated, not SoulLoop).
+builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
@@ -221,6 +224,14 @@ builder.Services.AddSingleton<ITool, TaskCreateTool>();
 builder.Services.AddSingleton<ITool, TaskGetTool>();
 builder.Services.AddSingleton<ITool, TaskUpdateStatusTool>();
 builder.Services.AddSingleton<ITool, TaskListTool>();
+
+// Workflow tools (BED-141): workflow_create / workflow_execute / workflow_get
+// wrap IVictoriaWorkflowStore. workflow_execute resolves IToolRegistry lazily
+// via IServiceProvider (same DI-cycle pattern as ListToolsTool).
+builder.Services.AddSingleton<ITool>(sp => new WorkflowExecuteTool(
+    sp.GetRequiredService<IVictoriaWorkflowStore>(), sp));
+builder.Services.AddSingleton<ITool, WorkflowCreateTool>();
+builder.Services.AddSingleton<ITool, WorkflowGetTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
