@@ -18,7 +18,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
     {
-        "self", "chat", "imported", "observation", "correction", "system"
+        "self", "chat", "imported", "observation", "correction", "system", "model"
     };
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -411,6 +411,18 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         else
         {
             _logger.LogDebug("Memory migration 002 already applied at {DbPath}", DatabasePath);
+        }
+
+        // BED-01 / TASK-157 / ISSUE-002: source='model' (005 — 003/004 reserved by BED-140/141).
+        if (!IsMigrationApplied("005"))
+        {
+            var migration005 = ReadEmbedded("SoulCore.Memory.Migrations.005_episodic_source_model.sql");
+            ExecuteScript(migration005);
+            _logger.LogInformation("Applied Memory migration 005_episodic_source_model to {DbPath}", DatabasePath);
+        }
+        else
+        {
+            _logger.LogDebug("Memory migration 005 already applied at {DbPath}", DatabasePath);
         }
     }
 

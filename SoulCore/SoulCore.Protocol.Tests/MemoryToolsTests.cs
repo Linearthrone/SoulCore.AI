@@ -251,7 +251,8 @@ public class MemoryToolsTests
         Assert.True(result.Success);
         Assert.True(memory.WriteCalled, "WriteEpisodicAsync should be called");
         Assert.True(memory.LastSourceLabel == StoreMemoryTool.SourceLabel,
-            "store_memory must use source='chat' (schema-valid model-authored label, distinct from 'self')");
+            "store_memory must use source='model' (dedicated label, distinct from 'self'/'chat')");
+        Assert.Equal("model", StoreMemoryTool.SourceLabel);
         Assert.Contains("honey in their tea", memory.LastText);
         Assert.Contains("[tags: tea, preferences]", memory.LastText);
         Assert.True(memory.EmbeddingStored, "Embedding should be stored when embeddings enabled");

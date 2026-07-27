@@ -1,0 +1,4 @@
+-- Schema companion for Migrations/005_episodic_source_model.sql
+-- Canonical CHECK for episodic_memories.source now includes 'model'
+-- (also reflected in Schema/001_schema.sql for fresh installs).
+-- Applied via Migrations/005 on upgrade / first open after 002.

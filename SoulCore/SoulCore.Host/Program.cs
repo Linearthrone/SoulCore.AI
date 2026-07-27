@@ -353,10 +353,12 @@ app.MapGet("/health", (
             open = memoryOk,
             path = memory.DatabasePath
         },
+        // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
         inference = new
         {
             enabled = inferenceOptions.Enabled,
             provider = inferenceOptions.Enabled ? "ollama" : "null",
+            model = inferenceOptions.Model,
             embeddingsEnabled = embeddingsOn,
             embeddingModel = inferenceOptions.EmbeddingModel
         },

@@ -4,28 +4,21 @@ using SoulCore.Memory;
 namespace SoulCore.Inference.Tools;
 
 /// <summary>
-/// Model-callable memory store tool (BED-131). Wraps
+/// Model-callable memory store tool (BED-131 / TASK-157). Wraps
 /// <see cref="IMemoryStore.WriteEpisodicAsync"/> — the same episodic store path
 /// used by <c>ChatWebSocketHandler.AuthorChatEpisodicAsync</c> (BED-108) for
-/// model-authored memories. Writes the row with <c>source='chat'</c> (the
-/// schema-valid label that means "model-authored episodic memory", distinct from
-/// <c>source='self'</c> used by the SoulLoop for loop-authored reflections) and
-/// computes an embedding via <see cref="IEmbeddingClient"/> when enabled.
+/// model-authored memories. Writes the row with <c>source='model'</c> (dedicated
+/// provenance for <c>store_memory</c>, distinct from chat-path <c>'chat'</c> and
+/// SoulLoop <c>'self'</c>) and computes an embedding via
+/// <see cref="IEmbeddingClient"/> when enabled.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The ticket (TASK-131) specified <c>source='model'</c>, but that value is NOT
-/// in the schema CHECK constraint (<c>'self','chat','imported','observation','correction','system'</c>)
-/// nor in <c>SqliteMemoryStore.AllowedSources</c>. Writing it literally would be
-/// rejected by SQLite; <c>NormalizeSource</c> would silently coerce it to
-/// <c>'system'</c>. The existing convention already distinguishes model-authored
-/// from loop-authored: SoulLoop writes <c>source='self'</c>; the chat path's
-/// model-authored episodics write <c>source='chat'</c>. This tool reuses
-/// <c>'chat'</c> so <c>store_memory</c> lands in the same provenance bucket as
-/// other model-authored memories, and remains distinct from SoulLoop's
-/// <c>'self'</c>. A dedicated <c>'model'</c> label would require a DBD schema
-/// migration (003) + <c>AllowedSources</c> update — tracked in ISSUE-... as a
-/// follow-up; this tool will switch to <c>'model'</c> when that migration lands.
+/// TASK-131 originally worked around a missing CHECK value by writing
+/// <c>source='chat'</c>. ISSUE-20260726-002 / TASK-157 added migration
+/// <c>005_episodic_source_model</c> (slots 003/004 reserved by BED-140/141) plus
+/// <c>AllowedSources</c> so this tool can use the dedicated <c>'model'</c> label.
+/// Rows written before the flip remain <c>'chat'</c> (no backfill).
 /// </para>
 /// <para>
 /// The tool does not throw on bad args or store/embedding failures; it returns a
@@ -46,10 +39,11 @@ namespace SoulCore.Inference.Tools;
 public sealed class StoreMemoryTool : ITool
 {
     /// <summary>
-    /// Source label written for model-authored <c>store_memory</c> rows.
-    /// Schema-valid and distinct from <c>'self'</c> (SoulLoop-authored).
+    /// Source label written for <c>store_memory</c> rows.
+    /// Schema-valid (<c>005_episodic_source_model</c>) and distinct from
+    /// <c>'self'</c> (SoulLoop) and <c>'chat'</c> (AuthorChatEpisodicAsync).
     /// </summary>
-    public const string SourceLabel = "chat";
+    public const string SourceLabel = "model";
 
     private static readonly JsonElement ParametersSchema = BuildParametersSchema();
 
