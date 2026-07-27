@@ -31,12 +31,28 @@ data class CompanionConfig(
     }
 }
 
+/**
+ * Local reply-alert preferences (FED-151) — mirrors desktop
+ * `NotificationSettings` (Enabled + SoundPath) plus a vibration toggle.
+ */
+data class NotificationPrefs(
+    val enabled: Boolean = true,
+    /** Absolute path to imported custom sound file; empty = OS default notification sound. */
+    val soundPath: String = "",
+    val vibration: Boolean = true
+)
+
 object CompanionPrefs {
     private const val TAG = "CompanionPrefs"
     private const val PREFS = "companion_prefs"
     private const val SECURE_PREFS = "companion_secure_prefs"
     private const val KEY_WS_URL = "ws_url"
     private const val KEY_TOKEN = "token"
+
+    /** FED-151 reply notification keys (plain prefs — non-secret). */
+    const val KEY_NOTIF_ENABLED = "notif_enabled"
+    const val KEY_NOTIF_SOUND_PATH = "notif_sound_path"
+    const val KEY_NOTIF_VIBRATION = "notif_vibration"
 
     /** Emulator / on-device loopback default — mirrors House.ChatDesktop ConnectionDefaults. */
     const val DEFAULT_WS_URL = "ws://127.0.0.1:7700/ws"
@@ -89,6 +105,25 @@ object CompanionPrefs {
 
     fun hasToken(context: Context): Boolean =
         load(context).token.isNotBlank()
+
+    fun loadNotification(context: Context): NotificationPrefs {
+        val prefs = plainPrefs(context)
+        return NotificationPrefs(
+            enabled = prefs.getBoolean(KEY_NOTIF_ENABLED, true),
+            soundPath = prefs.getString(KEY_NOTIF_SOUND_PATH, "").orEmpty(),
+            vibration = prefs.getBoolean(KEY_NOTIF_VIBRATION, true)
+        )
+    }
+
+    fun saveNotification(context: Context, notification: NotificationPrefs) {
+        plainPrefs(context)
+            .edit()
+            .putBoolean(KEY_NOTIF_ENABLED, notification.enabled)
+            .putString(KEY_NOTIF_SOUND_PATH, notification.soundPath.trim())
+            .putBoolean(KEY_NOTIF_VIBRATION, notification.vibration)
+            .apply()
+        Log.d(TAG, "Notification prefs saved (enabled=${notification.enabled}, vibration=${notification.vibration}, sound=${if (notification.soundPath.isBlank()) "default" else "custom"})")
+    }
 
     private fun plainPrefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

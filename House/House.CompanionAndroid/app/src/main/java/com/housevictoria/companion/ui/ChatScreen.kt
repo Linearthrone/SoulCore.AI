@@ -1,7 +1,12 @@
 package com.housevictoria.companion.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +33,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.housevictoria.companion.data.ChatMessage
 import com.housevictoria.companion.data.CompanionPrefs
 import com.housevictoria.companion.data.MessageRole
+import com.housevictoria.companion.net.CompanionConnection
 import com.housevictoria.companion.net.SoulCoreFrame
-import com.housevictoria.companion.net.SoulCoreWsClient
 import com.housevictoria.companion.net.WsConnectionState
+import kotlinx.coroutines.flow.collectLatest
 import java.util.concurrent.atomic.AtomicReference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,13 +59,19 @@ import java.util.concurrent.atomic.AtomicReference
 fun ChatScreen(onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val config = remember { CompanionPrefs.load(context) }
-    val wsClient = remember { SoulCoreWsClient() }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val streamingAssistantId = remember { AtomicReference<String?>(null) }
     var draft by remember { mutableStateOf("") }
-    var connLabel by remember { mutableStateOf("Connecting…") }
     val listState = rememberLazyListState()
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
+    val connPair by CompanionConnection.state.collectAsState()
+    val connLabel = when (connPair.first) {
+        WsConnectionState.Connected -> "Connected"
+        WsConnectionState.Connecting -> "Connecting…"
+        WsConnectionState.Failed -> "Host down"
+        WsConnectionState.Disconnected -> "Disconnected"
+    }
 
     fun onMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block()
@@ -82,8 +95,10 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
             if (idx >= 0) {
                 val existing = messages[idx]
                 if (frame.id.isBlank() || existing.frameId == frame.id || existing.frameId.isNullOrBlank()) {
-                    // Host sends cumulative prefixes — replace, do not concatenate.
-                    messages[idx] = existing.copy(content = content, frameId = frame.id.ifBlank { existing.frameId })
+                    messages[idx] = existing.copy(
+                        content = content,
+                        frameId = frame.id.ifBlank { existing.frameId }
+                    )
                     if (finalize) streamingAssistantId.set(null)
                     return
                 }
@@ -120,26 +135,41 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
         }
     }
 
-    DisposableEffect(Unit) {
-        wsClient.onStateChanged = { state, detail ->
-            onMain {
-                connLabel = when (state) {
-                    WsConnectionState.Connected -> "Connected"
-                    WsConnectionState.Connecting -> "Connecting…"
-                    WsConnectionState.Failed -> "Host down"
-                    WsConnectionState.Disconnected -> "Disconnected"
-                }
-                if (state == WsConnectionState.Connected || state == WsConnectionState.Failed) {
-                    appendSystem(detail)
-                }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* FGS still starts; notification may be hidden if denied */ }
+
+    fun ensureNotifPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        ensureNotifPermission()
+        CompanionConnection.start(context, config.wsUrl, config.token)
+    }
+
+    LaunchedEffect(Unit) {
+        var lastDetail: String? = null
+        CompanionConnection.state.collectLatest { (state, detail) ->
+            if (detail != lastDetail &&
+                (state == WsConnectionState.Connected || state == WsConnectionState.Failed)
+            ) {
+                lastDetail = detail
+                onMain { appendSystem(detail) }
             }
         }
-        wsClient.onFrame = { frame -> onMain { applyFrame(frame) } }
-        wsClient.connect(config.wsUrl, config.token)
-        onDispose {
-            wsClient.onStateChanged = null
-            wsClient.onFrame = null
-            wsClient.disconnect()
+    }
+
+    LaunchedEffect(Unit) {
+        CompanionConnection.frames.collectLatest { frame ->
+            onMain { applyFrame(frame) }
         }
     }
 
@@ -209,7 +239,7 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                         streamingAssistantId.set(null)
                         messages.add(ChatMessage(role = MessageRole.USER, content = text))
                         draft = ""
-                        val result = wsClient.sendChat(text)
+                        val result = CompanionConnection.client.sendChat(text)
                         result.exceptionOrNull()?.message?.let { err ->
                             messages.add(ChatMessage(role = MessageRole.SYSTEM, content = err))
                         }

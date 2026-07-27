@@ -1,0 +1,4 @@
+NO_AUTH => FAIL: Exception calling "Wait" with "0" argument(s): "One or more errors occurred." | One or more errors occurred.
+BEARER_OK => CONNECTED state=Open
+BEARER_BAD => FAIL: Exception calling "Wait" with "0" argument(s): "One or more errors occurred." | One or more errors occurred.
+token_len=27

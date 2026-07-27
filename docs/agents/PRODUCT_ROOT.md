@@ -71,18 +71,18 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
 - ~~Wave24 BED-110 (embedding backfill) + QA-111 (E15)~~ — done, archived (2026-07-25)
 - ~~Wave25 OPS-112 (start-soulcore Ollama/embed preflight)~~ — done, archived (2026-07-25)
 - **Wave 26 — Victoria embodiment Phase 1 ("She walks")**:
-  - ~~BED-114~~ **Pass** (archived 2026-07-27) — `BP_VictoriaCharacter` + `VictoriaAvatar` on Home
-  - **BED-115** **STARTED 2026-07-27** (loco + `ABP_Victoria_Locomotion` — also unblocks BED-121 AC-3 / `DefaultSlot`)
-  - BED-116 (NavMesh) may parallel 115 → BED-117 → QA-118
+  - ~~BED-114~~ **Pass** (archived) — `BP_VictoriaCharacter` + `VictoriaAvatar` on Home
+  - ~~BED-115~~ **Pass** (archived 2026-07-27) — Manny→MH loco + `ABP_Victoria_Locomotion` + **DefaultSlot**; AnimClass assigned
+  - **BED-116 STARTED 2026-07-27** (NavMesh) → then BED-117 → QA-118
 - **Wave 27 — Phase 2**:
   - ~~BED-119~~ **Pass** · ~~BED-120~~ **Pass** · ~~BED-122~~ **Pass** (archived)
-  - **BED-121 Partial** (montages exist; AC-3 blocked — mesh `anim_class: None` until BED-115) → QA-123 after 115 + re-verify play_animation
+  - **BED-121 Partial** — montages exist; AC-3 unblocked by 115 DefaultSlot → re-probe `play_animation` then QA-123
 - **Wave 27 — Phase 3 agent loop**:
   - Phase A ~~125–129~~ **Pass** (archived) · ~~BED-131~~ **Pass** (archived; live recall demo)
   - **QA-130 STARTED 2026-07-27** (formal gate; Host was DOWN at handoff — QA starts Host via `start-soulcore.ps1`)
   - ~~BED-132~~ **Pass** (archived 2026-07-27) — five body tools; `move_to` interim relative loco until BED-117 (ISSUE-20260727-003)
   - ~~BED-133~~ **Pass** (archived 2026-07-27) — `list_tools` / `system_info` / scoped FS; DI cycle closed
-  - ~~QA-130~~ **Pass** (archived; AC7 SpeakAsync Fail → **BED-156**) — Phase A agency gate cleared; ISSUE-001 marked Fixed
+  - ~~QA-130~~ **Pass** (archived; AC7 closed by ~~BED-156~~ **Pass**) — Phase A agency gate cleared; ISSUE-001 Fixed
   - QA-134 gated on embodiment walk (117) for real `move_to` (wave/recall can soft-smoke earlier)
   - Phases C–F still queued (135–145); do not start C/D until OPS-143
 - **Wave 28 — Phone companion Phase 0** (from TT-146):
@@ -90,7 +90,9 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
   - ~~FED-147~~ **Pass** (archived) — `House/House.CompanionAndroid/` Compose shell
   - ~~FED-148~~ **Pass** (archived) — OkHttp WS `chat.send` + delta/done streaming
   - ~~FED-149~~ **Pass** (archived) — Keystore token + Bearer/`X-Api-Key` (aligned BED-155)
-  - **FED-150 STARTED 2026-07-27** (foreground WS service); then FED-151 → QA-154
+  - ~~FED-150~~ **Pass** (archived) — FGS keeps WS alive + connected notification
+  - ~~FED-151~~ **Pass** (archived) — `chat.done` background `victoria_replies` alerts
+  - **QA-154 STARTED 2026-07-27** (Phase 0 phone exit gate)
   - ~~SEC-152~~ **Pass (conditional)** archived — Tailscale+Keystore OK; **LAN bind Fail**
   - ~~BED-155~~ **Pass** (archived) — fail-closed `/ws` via `SOULCORE_COMPANION_API_TOKEN` (Bearer / X-Api-Key)
   - ~~OPS-153~~ **Pass** (archived) — runbook `docs/runbooks/tailscale-serve-soulcore.md` + `tailscale-serve-soulcore.ps1`

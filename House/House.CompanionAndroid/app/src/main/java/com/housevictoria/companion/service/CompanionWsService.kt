@@ -74,7 +74,6 @@ class CompanionWsService : Service() {
     override fun onDestroy() {
         Log.i(TAG, "FGS destroyed — disconnecting WS")
         CompanionConnection.removeStateObserver(onState)
-        CompanionConnection.clearStateObservers()
         CompanionConnection.client.disconnect()
         CompanionConnection.markServiceRunning(false)
         super.onDestroy()

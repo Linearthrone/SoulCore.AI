@@ -6,4 +6,7 @@
     <string name="notif_connected_title">Victoria connected</string>
     <string name="notif_connecting_title">Connecting to Victoria…</string>
     <string name="notif_action_disconnect">Disconnect</string>
+    <string name="notif_channel_replies_name">Victoria replies</string>
+    <string name="notif_channel_replies_desc">Alerts when Victoria replies while the app is in the background.</string>
+    <string name="notif_reply_title">Victoria</string>
 </resources>

@@ -1,0 +1,19 @@
+﻿ATTEMPT=2 PROMPT=What is my favorite test phrase? Use your recall_memory tool.
+---- frame 1 ----
+{"v":1,"type":"presence.status","id":"e43667c10cd64183b49a009ec43ae65f","ts":"2026-07-27T13:35:32.9436857\u002B00:00","payload":{"alive":true,"warm":true,"phase":1}}
+---- frame 2 ----
+{"v":1,"type":"emotion.snapshot","id":"2e3d2c20a60c404cbaa5cd085d3ce9d3","ts":"2026-07-27T13:35:32.9653798\u002B00:00","payload":{"valence":0.005303776036539997,"arousal":0.5067133913454341,"dominance":0.5,"focus":0.5,"label":"neutral","revision":15}}
+---- frame 3 ----
+{"v":1,"type":"emotion.snapshot","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:32.9733107\u002B00:00","payload":{"valence":0.005303776036539997,"arousal":0.5067133913454341,"dominance":0.5,"focus":0.5,"label":"neutral","revision":15}}
+---- frame 4 ----
+{"v":1,"type":"chat.delta","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:37.4340262\u002B00:00","payload":{"text":"Your favorite test phrase is indeed **QUOKKA-130","stub":false,"provider":"ollama"}}
+---- frame 5 ----
+{"v":1,"type":"chat.delta","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:37.4341411\u002B00:00","payload":{"text":"Your favorite test phrase is indeed **QUOKKA-130**. It seems this phrase stands out as memorable","stub":false,"provider":"ollama"}}
+---- frame 6 ----
+{"v":1,"type":"chat.delta","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:37.4341595\u002B00:00","payload":{"text":"Your favorite test phrase is indeed **QUOKKA-130**. It seems this phrase stands out as memorable to you, although it wasn\u0027t directly related to ","stub":false,"provider":"ollama"}}
+---- frame 7 ----
+{"v":1,"type":"chat.delta","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:37.4342153\u002B00:00","payload":{"text":"Your favorite test phrase is indeed **QUOKKA-130**. It seems this phrase stands out as memorable to you, although it wasn\u0027t directly related to the garden gate codewords which were QUOKKA-7.","stub":false,"provider":"ollama"}}
+---- frame 8 ----
+{"v":1,"type":"chat.done","id":"b0d671a8342d4e4e93224e4adec7dcea","ts":"2026-07-27T13:35:37.4342741\u002B00:00","payload":{"text":"Your favorite test phrase is indeed **QUOKKA-130**. It seems this phrase stands out as memorable to you, although it wasn\u0027t directly related to the garden gate codewords which were QUOKKA-7.","stub":false,"provider":"ollama"}}
+frames=8 done=True QUOKKA-130=True
+

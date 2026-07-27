@@ -55,10 +55,6 @@ object CompanionConnection {
         synchronized(stateExtras) { stateExtras.remove(observer) }
     }
 
-    fun clearStateObservers() {
-        synchronized(stateExtras) { stateExtras.clear() }
-    }
-
     fun markServiceRunning(running: Boolean) {
         _serviceRunning.value = running
     }

@@ -24,79 +24,34 @@ info: Microsoft.Hosting.Lifetime[0]
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
 info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      WS session 65dd1eac-210d-4acb-a939-b68a93c7a9ee accepted
+      WS session f1bbc922-d6fc-469a-897d-33e69c66308b accepted
 info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      WS session 3661392e-ca64-499c-b7b2-3343c25d4d55 accepted
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
-      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
-      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
-      Received HTTP response headers after 1501.601ms - 200
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
-      End processing HTTP request after 1507.4859ms - 200
-info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
-      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
-info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
-      Sending HTTP request POST http://127.0.0.1:11434/api/chat
-info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
-      Received HTTP response headers after 5435.219ms - 200
-info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
-      End processing HTTP request after 5435.3308ms - 200
-info: SoulCore.Inference.OllamaInferenceClient[0]
-      Ollama tool dispatch: iter=0 tool#0 name=recall_memory recovered=False
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
-      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
-      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
-      Received HTTP response headers after 39.0938ms - 200
-info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
-      End processing HTTP request after 39.1742ms - 200
-info: SoulCore.Inference.OllamaInferenceClient[0]
-      Ollama tool result: iter=0 tool#0 name=recall_memory success=True contentLen=175
-info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
-      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
-info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
-      Sending HTTP request POST http://127.0.0.1:11434/api/chat
-info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
-      Received HTTP response headers after 1225.5666ms - 200
-info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
-      End processing HTTP request after 1225.6543ms - 200
-info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
-      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
-info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
-      Sending HTTP request POST http://127.0.0.1:11434/api/generate
-warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      Memory-author LLM call failed; falling back to template
-      System.Threading.Tasks.TaskCanceledException: The operation was canceled.
-       ---> System.Threading.Tasks.TaskCanceledException: The operation was canceled.
-       ---> System.IO.IOException: Unable to read data from the transport connection: The I/O operation has been aborted because of either a thread exit or an application request..
-       ---> System.Net.Sockets.SocketException (995): The I/O operation has been aborted because of either a thread exit or an application request.
-         --- End of inner exception stack trace ---
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource<System.Int32>.GetResult(Int16 token)
-         at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         --- End of inner exception stack trace ---
-         at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
-         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
-         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-         --- End of inner exception stack trace ---
-         at System.Net.Http.HttpClient.HandleFailure(Exception e, Boolean telemetryStarted, HttpResponseMessage response, CancellationTokenSource cts, CancellationToken cancellationToken, CancellationTokenSource pendingRequestsCts)
-         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-         at SoulCore.Inference.OllamaInferenceClient.CompleteAsync(String prompt, String systemPreamble, CancellationToken cancellationToken, Nullable`1 maxTokens) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Inference\OllamaInferenceClient.cs:line 119
-         at SoulCore.Host.Ws.ChatWebSocketHandler.AuthorChatEpisodicAsync(String userText, String assistantReply, String chatProvider, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 646
-warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      Episodic write after chat failed (reply already sent)
-      System.Threading.Tasks.TaskCanceledException: A task was canceled.
-         at SoulCore.Memory.SqliteMemoryStore.WriteEpisodicAsync(String text, String sourceLabel, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Memory\SqliteMemoryStore.cs:line 111
-         at SoulCore.Memory.SqliteMemoryStore.WriteEpisodicAsync(String text, String sourceLabel, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Memory\SqliteMemoryStore.cs:line 118
-         at SoulCore.Host.Ws.ChatWebSocketHandler.HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 446
+      WS session f1bbc922-d6fc-469a-897d-33e69c66308b closed
 info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      WS session 3661392e-ca64-499c-b7b2-3343c25d4d55 closed
+      WS session 2e925c42-1c30-42f6-b9c8-c1a1de101e34 accepted
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 2e925c42-1c30-42f6-b9c8-c1a1de101e34 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e2151180-7d8b-4ed1-b6fe-3d1ff4914c4d accepted
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session e2151180-7d8b-4ed1-b6fe-3d1ff4914c4d closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 8bb90d70-7a65-43f4-9991-0dce8d951dc8 accepted
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 8bb90d70-7a65-43f4-9991-0dce8d951dc8 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 58ef4b9e-b40a-47c6-b5cc-578eec1d60c4 accepted

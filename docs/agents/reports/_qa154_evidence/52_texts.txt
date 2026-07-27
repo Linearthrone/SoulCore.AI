@@ -1,0 +1,5 @@
+text="WS connected · ws://127.0.0.1:7700/ws"
+text="frame loop.want id=9af3819c38ab4459962cd573ba18f814"
+text="Message…"
+text="Victoria"
+text="Connected · ws://127.0.0.1:7700/ws"
