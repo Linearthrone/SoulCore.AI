@@ -18,6 +18,7 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
 using SoulCore.Memory;
@@ -239,6 +240,26 @@ else
 {
     builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
 }
+
+// Desktop tools (BED-135): capture + click/type/key with session opt-in gate.
+// AllowComputerControl defaults false; AllowDesktopCapture defaults true.
+// Backend: Tools:DesktopBackend = "native" | "hermes" (hermes stub → BED-144).
+builder.Services.AddSingleton<IComputerControlGate, ComputerControlGate>();
+var desktopBackend = (toolsOptions.DesktopBackend ?? "native").Trim();
+if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
+}
+else
+{
+    builder.Services.AddSingleton<IDesktopControlBackend, NativeDesktopControlBackend>();
+}
+builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool, DesktopClickTool>();
+builder.Services.AddSingleton<ITool, DesktopTypeTool>();
+builder.Services.AddSingleton<ITool, DesktopKeyTool>();
+builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
+builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
 
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
