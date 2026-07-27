@@ -245,6 +245,15 @@ builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<Prese
 builder.Services.AddSingleton<SoulLoopScaffold>();
 builder.Services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
 builder.Services.AddHostedService<SoulLoopHostedService>();
+
+// BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
+builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
+{
+    var max = sp.GetRequiredService<IOptions<ChatWsOptions>>().Value.MaxSessionHistoryMessages;
+    if (max < 2) max = 40;
+    return new ChatSessionHistoryStore(max);
+});
+
 builder.Services.AddSingleton<ChatWebSocketHandler>();
 
 if (unrealOptions.Enabled)

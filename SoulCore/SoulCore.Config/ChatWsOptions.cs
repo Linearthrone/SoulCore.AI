@@ -34,4 +34,11 @@ public sealed class ChatWsOptions
     /// </para>
     /// </summary>
     public bool UseToolLoop { get; set; } = true;
+
+    /// <summary>
+    /// Max messages retained per client <c>sessionId</c> for multi-turn tool/chat
+    /// history (BED-158 / ISSUE-004). Oldest messages are trimmed first. Must be
+    /// ≥ 2. Default 40 ≈ ~10–20 turns including tool traces.
+    /// </summary>
+    public int MaxSessionHistoryMessages { get; set; } = 40;
 }

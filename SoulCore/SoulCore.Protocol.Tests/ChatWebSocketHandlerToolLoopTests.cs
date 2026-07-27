@@ -72,10 +72,12 @@ public class ChatWebSocketHandlerToolLoopTests
         IUnrealVerbClient unreal,
         ChatWsOptions? chatOptions = null,
         IEmotionState? emotion = null,
-        IMemoryStore? memory = null)
+        IMemoryStore? memory = null,
+        IChatSessionHistoryStore? sessionHistory = null)
     {
         emotion ??= new StubEmotionState();
         memory ??= new StubMemoryStore();
+        sessionHistory ??= new ChatSessionHistoryStore(40);
         var embeddings = new NullEmbeddingClient();
         var charter = new StubCharter();
         var soulLoop = new StubSoulLoop();
@@ -90,12 +92,14 @@ public class ChatWebSocketHandlerToolLoopTests
 
         return new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, toolRegistry, spendMeter, driftWatcher,
+            unreal, soulLoop, toolRegistry, sessionHistory, spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
     }
 
-    private static string ChatSendFrame(string text) =>
-        SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text }).ToJson();
+    private static string ChatSendFrame(string text, string? sessionId = null) =>
+        sessionId is null
+            ? SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text }).ToJson()
+            : SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text, sessionId }).ToJson();
 
     private static List<SoulCoreFrame> ParseOutboundFrames(List<string> rawFrames)
     {
@@ -111,11 +115,12 @@ public class ChatWebSocketHandlerToolLoopTests
     private static async Task<List<SoulCoreFrame>> RunOneChatTurnAsync(
         ChatWebSocketHandler handler,
         string userText,
-        CancellationTokenSource? externalCts = null)
+        CancellationTokenSource? externalCts = null,
+        string? sessionId = null)
     {
         var inboundFrames = new[]
         {
-            Encoding.UTF8.GetBytes(ChatSendFrame(userText)),
+            Encoding.UTF8.GetBytes(ChatSendFrame(userText, sessionId)),
             Array.Empty<byte>() // sentinel — FakeWebSocket signals close after the send frame
         };
         var socket = new FakeWebSocket(inboundFrames);
@@ -123,6 +128,33 @@ public class ChatWebSocketHandlerToolLoopTests
         var cts = externalCts ?? ownedCts!;
         await handler.RunAsync(socket, cts.Token).ConfigureAwait(false);
         return ParseOutboundFrames(socket.SentFrames);
+    }
+
+    /// <summary>
+    /// Runs multiple chat.send frames on one WebSocket so session history accumulates
+    /// under the same connection (and optional payload sessionId).
+    /// </summary>
+    private static async Task<(List<SoulCoreFrame> Frames, ScriptedInferenceClient Inference)> RunMultiTurnAsync(
+        ScriptedInferenceClient inference,
+        IReadOnlyList<(string Text, string? SessionId)> turns,
+        IToolRegistry? registry = null,
+        IChatSessionHistoryStore? history = null)
+    {
+        registry ??= new ToolRegistry(Array.Empty<ITool>());
+        history ??= new ChatSessionHistoryStore(40);
+        var hermes = new NullHermesClient();
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true), sessionHistory: history);
+
+        var inbound = new List<byte[]>(turns.Count + 1);
+        foreach (var (text, sid) in turns)
+            inbound.Add(Encoding.UTF8.GetBytes(ChatSendFrame(text, sid)));
+        inbound.Add(Array.Empty<byte>());
+
+        var socket = new FakeWebSocket(inbound.ToArray());
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await handler.RunAsync(socket, cts.Token).ConfigureAwait(false);
+        return (ParseOutboundFrames(socket.SentFrames), inference);
     }
 
     // ---------------------------------------------------------------------
@@ -220,7 +252,7 @@ public class ChatWebSocketHandlerToolLoopTests
         var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
         handler = new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, registry, spendMeter, driftWatcher,
+            unreal, soulLoop, registry, new ChatSessionHistoryStore(40), spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
 
         var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
@@ -397,15 +429,116 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.Equal("no tools, just text", done!.Payload?.GetProperty("text").GetString());
     }
 
+    // ---------------------------------------------------------------------
+    // BED-158 / ISSUE-004: per-sessionId chat + tool history so multi-turn
+    // pronouns can resolve prior task/workflow IDs.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task SessionHistory_SecondTurn_IncludesPriorUserAndToolResult()
+    {
+        var taskTool = new FakeTaskCreateTool();
+        var registry = new ToolRegistry(new ITool[] { taskTool });
+        var history = new ChatSessionHistoryStore(40);
+        var inference = new ScriptedInferenceClient();
+        inference.CompleteWithToolsReplies.Enqueue("Created task #42 to review the charter.");
+        inference.CompleteWithToolsReplies.Enqueue("Task #42 is still todo.");
+
+        await RunMultiTurnAsync(
+            inference,
+            new (string Text, string? SessionId)[]
+            {
+                ("create a task to review the charter", "qa-158"),
+                ("what's the status of that task?", "qa-158")
+            },
+            registry,
+            history);
+
+        Assert.Equal(2, inference.CapturedMessageSnapshots.Count);
+
+        // Turn 2 must see turn-1 user text + tool result Content carrying the id.
+        var turn2 = inference.CapturedMessageSnapshots[1];
+        Assert.Contains(turn2, m => m.Role == "user" && m.Content!.Contains("create a task", StringComparison.Ordinal));
+        Assert.Contains(turn2, m => m.Role == "tool" && m.Name == "task_create" && m.Content!.Contains("id=42", StringComparison.Ordinal));
+        Assert.Contains(turn2, m => m.Role == "user" && m.Content == "what's the status of that task?");
+
+        // Store itself should retain the tool trace under the client sessionId.
+        var stored = history.GetMessages("qa-158");
+        Assert.Contains(stored, m => m.Role == "tool" && (m.Content ?? "").Contains("id=42", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SessionHistory_DifferentSessionIds_AreIsolated()
+    {
+        var history = new ChatSessionHistoryStore(40);
+        var inferenceA = new ScriptedInferenceClient { CompleteWithToolsReply = "reply-a" };
+        var unreal = new RecordingUnrealVerbClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+
+        var handler = MakeHandler(inferenceA, new NullHermesClient(), registry, unreal,
+            MakeChatOptions(useToolLoop: true), sessionHistory: history);
+
+        await RunOneChatTurnAsync(handler, "secret from session A", sessionId: "sess-A");
+
+        var inferenceB = new ScriptedInferenceClient { CompleteWithToolsReply = "reply-b" };
+        handler = MakeHandler(inferenceB, new NullHermesClient(), registry, unreal,
+            MakeChatOptions(useToolLoop: true), sessionHistory: history);
+        await RunOneChatTurnAsync(handler, "hello from session B", sessionId: "sess-B");
+
+        Assert.Single(inferenceB.CapturedMessageSnapshots);
+        var turnB = inferenceB.CapturedMessageSnapshots[0];
+        Assert.DoesNotContain(turnB, m => (m.Content ?? "").Contains("secret from session A", StringComparison.Ordinal));
+        Assert.Contains(turnB, m => m.Role == "user" && m.Content == "hello from session B");
+    }
+
+    [Fact]
+    public void ChatSessionHistoryStore_TrimsOldest_WhenOverMax()
+    {
+        var store = new ChatSessionHistoryStore(maxMessages: 4);
+        store.AppendTurn("s1", new[]
+        {
+            new ChatMessage { Role = "user", Content = "u1" },
+            new ChatMessage { Role = "assistant", Content = "a1" }
+        });
+        store.AppendTurn("s1", new[]
+        {
+            new ChatMessage { Role = "user", Content = "u2" },
+            new ChatMessage { Role = "assistant", Content = "a2" }
+        });
+        store.AppendTurn("s1", new[]
+        {
+            new ChatMessage { Role = "user", Content = "u3" },
+            new ChatMessage { Role = "assistant", Content = "a3" }
+        });
+
+        var msgs = store.GetMessages("s1");
+        Assert.Equal(4, msgs.Count);
+        Assert.Equal("u2", msgs[0].Content);
+        Assert.Equal("a3", msgs[3].Content);
+    }
+
     // ---------- stubs ----------
+
+    private sealed class FakeTaskCreateTool : ITool
+    {
+        public ToolDefinition Definition { get; } = new(
+            Name: "task_create",
+            Description: "Create a task.",
+            Parameters: JsonDocument.Parse("""{"type":"object","properties":{"title":{"type":"string"}}}""").RootElement.Clone());
+
+        public Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
+            => Task.FromResult(new ToolResult(true, "created task id=42 title='review the charter' status=todo", new { id = 42 }));
+    }
 
     private sealed class ScriptedInferenceClient : IInferenceClient
     {
         public string CompleteAsyncReply { get; set; } = "default";
         public string CompleteWithToolsReply { get; set; } = "default-tool-loop";
+        public Queue<string> CompleteWithToolsReplies { get; } = new();
         public bool CompleteAsyncCalled { get; private set; }
         public bool CompleteWithToolsCalled { get; private set; }
         public List<string> ToolDispatches { get; } = new();
+        public List<IReadOnlyList<ChatMessage>> CapturedMessageSnapshots { get; } = new();
 
         public Task<string> CompleteAsync(
             string prompt, string? systemPreamble = null,
@@ -422,6 +555,7 @@ public class ChatWebSocketHandlerToolLoopTests
             CancellationToken cancellationToken = default)
         {
             CompleteWithToolsCalled = true;
+            CapturedMessageSnapshots.Add(messages.ToList());
             // Simulate dispatching any registered tools so Strategy A sees them.
             var defs = registry.GetDefinitions();
             foreach (var d in defs)
@@ -429,6 +563,9 @@ public class ChatWebSocketHandlerToolLoopTests
                 ToolDispatches.Add(d.Name);
                 registry.ExecuteAsync(d.Name, default, cancellationToken).GetAwaiter().GetResult();
             }
+
+            if (CompleteWithToolsReplies.Count > 0)
+                return Task.FromResult(CompleteWithToolsReplies.Dequeue());
             return Task.FromResult(CompleteWithToolsReply);
         }
     }
