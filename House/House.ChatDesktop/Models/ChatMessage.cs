@@ -33,6 +33,9 @@ public sealed class ChatMessage : INotifyPropertyChanged
         _ => Role
     };
 
+    /// <summary>Drives the user-bubble style selector in the transcript template.</summary>
+    public bool IsUser => Role == "user";
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
