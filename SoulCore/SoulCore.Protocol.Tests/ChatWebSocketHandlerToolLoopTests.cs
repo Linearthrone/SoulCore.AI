@@ -453,6 +453,15 @@ public class ChatWebSocketHandlerToolLoopTests
             return Task.FromResult(CompleteWithToolsReply);
         }
 
+        public Task<ToolResult> CallMcpToolAsync(
+            string mcpToolName,
+            JsonElement arguments,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: null));
+
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult("ok");
     }

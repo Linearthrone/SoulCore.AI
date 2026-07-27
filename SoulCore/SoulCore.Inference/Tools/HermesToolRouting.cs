@@ -1,0 +1,120 @@
+using System.Text.Json;
+using SoulCore.Config;
+
+namespace SoulCore.Inference.Tools;
+
+/// <summary>
+/// Shared helpers for BED-144 Hermes-routed tools: backend selection,
+/// unavailable handling, and native-fallback refusal.
+/// </summary>
+public static class HermesToolRouting
+{
+    public const string NativeNotImplementedMessage =
+        "native backend not implemented for this tool — set Backend=hermes or implement the native path";
+
+    public const string ComputerControlRequiredMessage =
+        "desktop control requires user authorization — ask the user to enable AllowComputerControl";
+
+    public const string DesktopCaptureDisabledMessage =
+        "desktop capture disabled — set Tools.AllowDesktopCapture=true";
+
+    public const string BrowserCaptureDisabledMessage =
+        "browser capture disabled — set Tools.AllowBrowserCapture=true";
+
+    public const string Mt4ReadDisabledMessage =
+        "mt4 read requires user authorization — set Tools.AllowMt4Read=true";
+
+    public const string Mt4TradeDisabledMessage =
+        "mt4 trade requires user authorization — set Tools.AllowMt4Trade=true";
+
+    public static bool IsHermesBackend(string? backend) =>
+        string.Equals(
+            (backend ?? string.Empty).Trim(),
+            ToolsOptions.BackendHermes,
+            StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsNativeBackend(string? backend) =>
+        string.Equals(
+            (backend ?? string.Empty).Trim(),
+            ToolsOptions.BackendNative,
+            StringComparison.OrdinalIgnoreCase);
+
+    public static JsonElement EmptyArgs() =>
+        JsonDocument.Parse("{}").RootElement.Clone();
+
+    public static JsonElement MergeObject(JsonElement args, IReadOnlyDictionary<string, object?> extras)
+    {
+        var dict = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        if (args.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var p in args.EnumerateObject())
+                dict[p.Name] = p.Value.Clone();
+        }
+
+        foreach (var (key, value) in extras)
+        {
+            if (value is null) continue;
+            dict[key] = JsonSerializer.SerializeToElement(value);
+        }
+
+        return JsonSerializer.SerializeToElement(dict);
+    }
+
+    public static bool TryGetString(JsonElement args, string name, out string value)
+    {
+        value = string.Empty;
+        if (args.ValueKind != JsonValueKind.Object) return false;
+        if (!args.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.String) return false;
+        value = el.GetString() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    public static bool TryGetInt(JsonElement args, string name, out int value)
+    {
+        value = 0;
+        if (args.ValueKind != JsonValueKind.Object) return false;
+        if (!args.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.Number) return false;
+        return el.TryGetInt32(out value);
+    }
+
+    public static bool IsConfirmed(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object) return false;
+        if (!args.TryGetProperty("confirmed", out var el)) return false;
+        return el.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.String => string.Equals(el.GetString(), "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(el.GetString(), "yes", StringComparison.OrdinalIgnoreCase),
+            JsonValueKind.Number => el.TryGetInt32(out var n) && n != 0,
+            _ => false
+        };
+    }
+
+    public static async Task<ToolResult> RouteAsync(
+        IHermesMcpInvoker hermes,
+        string backend,
+        string mcpToolName,
+        JsonElement mcpArgs,
+        Func<CancellationToken, Task<ToolResult>>? nativeFallback,
+        CancellationToken ct)
+    {
+        if (IsHermesBackend(backend) || string.IsNullOrWhiteSpace(backend))
+        {
+            return await hermes.CallMcpToolAsync(mcpToolName, mcpArgs, ct).ConfigureAwait(false);
+        }
+
+        if (IsNativeBackend(backend))
+        {
+            if (nativeFallback is not null)
+                return await nativeFallback(ct).ConfigureAwait(false);
+
+            return new ToolResult(Success: false, Content: NativeNotImplementedMessage, Data: null);
+        }
+
+        return new ToolResult(
+            Success: false,
+            Content: $"unknown backend '{backend}' — use '{ToolsOptions.BackendHermes}' or '{ToolsOptions.BackendNative}'",
+            Data: null);
+    }
+}

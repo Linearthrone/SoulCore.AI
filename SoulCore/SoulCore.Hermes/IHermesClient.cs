@@ -5,8 +5,10 @@ namespace SoulCore.Hermes;
 /// <summary>
 /// Hermes OpenAI-compatible tool-loop client.
 /// Secrets (if any) via env / user-secrets only — never committed config.
+/// Extends <see cref="IHermesMcpInvoker"/> so desktop/browser/trading tools
+/// (BED-144) can force-invoke MCP tools through the same client instance.
 /// </summary>
-public interface IHermesClient
+public interface IHermesClient : IHermesMcpInvoker
 {
     /// <param name="systemPreamble">Optional system message (e.g. emotion influence). No secrets.</param>
     /// <param name="maxTokens">Optional override for completion max_tokens; null uses configured MaxTokens.</param>
