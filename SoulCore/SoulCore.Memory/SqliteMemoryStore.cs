@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -637,12 +638,29 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
     internal static string SerializeWorkflowSteps(IReadOnlyList<WorkflowStep> steps)
     {
-        var payload = steps.Select(s => new Dictionary<string, object?>
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
         {
-            ["description"] = s.Description,
-            ["tool"] = string.IsNullOrWhiteSpace(s.Tool) ? null : s.Tool!.Trim()
-        }).ToList();
-        return JsonSerializer.Serialize(payload, JsonOptions);
+            writer.WriteStartArray();
+            foreach (var s in steps)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("description", s.Description);
+                if (!string.IsNullOrWhiteSpace(s.Tool))
+                    writer.WriteString("tool", s.Tool!.Trim());
+                if (s.Args.ValueKind == JsonValueKind.Object)
+                {
+                    writer.WritePropertyName("args");
+                    s.Args.WriteTo(writer);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
     }
 
     internal static IReadOnlyList<WorkflowStep> DeserializeWorkflowSteps(string stepsJson)
@@ -672,7 +690,11 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
                     tool = t.Trim();
             }
 
-            list.Add(new WorkflowStep(description, tool));
+            var args = default(JsonElement);
+            if (el.TryGetProperty("args", out var argsProp) && argsProp.ValueKind == JsonValueKind.Object)
+                args = argsProp.Clone();
+
+            list.Add(new WorkflowStep(description, tool, args));
         }
 
         return list;

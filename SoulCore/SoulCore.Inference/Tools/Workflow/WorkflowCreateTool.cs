@@ -160,7 +160,26 @@ public sealed class WorkflowCreateTool : ITool
                 }
             }
 
-            steps.Add(new WorkflowStep(description!.Trim(), tool));
+            var args = default(JsonElement);
+            if (el.TryGetProperty("args", out var argsProp))
+            {
+                if (argsProp.ValueKind == JsonValueKind.Null)
+                {
+                    args = default;
+                }
+                else if (argsProp.ValueKind == JsonValueKind.Object)
+                {
+                    args = argsProp.Clone();
+                }
+                else
+                {
+                    error = $"error: workflow_create steps[{index}] 'args' must be a JSON object when present.";
+                    steps = new List<WorkflowStep>();
+                    return false;
+                }
+            }
+
+            steps.Add(new WorkflowStep(description!.Trim(), tool, args));
             index++;
         }
 
@@ -185,11 +204,15 @@ public sealed class WorkflowCreateTool : ITool
                 "properties": {
                   "description": {
                     "type": "string",
-                    "description": "What this step does."
+                    "description": "What this step does. When tool args are omitted, description is mapped into the tool's primary string parameter."
                   },
                   "tool": {
                     "type": "string",
                     "description": "Optional tool name to call via the registry when this step executes."
+                  },
+                  "args": {
+                    "type": "object",
+                    "description": "Optional JSON object of arguments for the nested tool. Missing required string fields are filled from description."
                   }
                 },
                 "required": ["description"]

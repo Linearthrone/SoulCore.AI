@@ -120,6 +120,213 @@ public class WorkflowToolsTests
     }
 
     [Fact]
+    public async Task Execute_DescriptionMapsIntoRequiredStringArg_RecallMemoryStyle()
+    {
+        // ISSUE-005 / QA-142: step {description, tool:recall_memory} must not
+        // dispatch with {} — description becomes query.
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-args-rm-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            IVictoriaWorkflowStore workflows = store;
+            var capture = new CapturingTool(
+                "recall_memory",
+                """
+                {"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer"}},"required":["query"]}
+                """);
+            var registry = new ToolRegistry(new ITool[] { capture });
+            var create = new WorkflowCreateTool(workflows);
+            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+
+            var created = await create.ExecuteAsync(JsonDocument.Parse(
+                """
+                {"name":"mem","steps":[
+                  {"description":"charter review notes","tool":"recall_memory"},
+                  {"description":"say it aloud","tool":"speak"}
+                ]}
+                """).RootElement.Clone());
+            // Only recall_memory is registered; speak step will fail lookup but
+            // we only run the first step here.
+            var id = GetDataLong(created.Data!, "id");
+
+            var result = await execute.ExecuteAsync(JsonDocument.Parse($"{{\"id\":{id}}}").RootElement.Clone());
+
+            Assert.True(result.Success);
+            Assert.Equal(1, capture.CallCount);
+            Assert.Equal(JsonValueKind.Object, capture.LastArgs.ValueKind);
+            Assert.True(capture.LastArgs.TryGetProperty("query", out var query));
+            Assert.Equal("charter review notes", query.GetString());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task Execute_DescriptionMapsIntoSpeakText()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-args-sp-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            IVictoriaWorkflowStore workflows = store;
+            var capture = new CapturingTool(
+                "speak",
+                """
+                {"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}
+                """);
+            var registry = new ToolRegistry(new ITool[] { capture });
+            var create = new WorkflowCreateTool(workflows);
+            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+
+            var created = await create.ExecuteAsync(JsonDocument.Parse(
+                """{"name":"say","steps":[{"description":"Hello from Victoria","tool":"speak"}]}""")
+                .RootElement.Clone());
+            var id = GetDataLong(created.Data!, "id");
+
+            var result = await execute.ExecuteAsync(JsonDocument.Parse($"{{\"id\":{id}}}").RootElement.Clone());
+
+            Assert.True(result.Success);
+            Assert.Equal("Hello from Victoria", capture.LastArgs.GetProperty("text").GetString());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task Execute_ExplicitArgs_ArePassedAndNotOverwritten()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-args-ex-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            IVictoriaWorkflowStore workflows = store;
+            var capture = new CapturingTool(
+                "recall_memory",
+                """
+                {"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer"}},"required":["query"]}
+                """);
+            var registry = new ToolRegistry(new ITool[] { capture });
+            var create = new WorkflowCreateTool(workflows);
+            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+
+            var created = await create.ExecuteAsync(JsonDocument.Parse(
+                """
+                {"name":"ex","steps":[{
+                  "description":"should not replace query",
+                  "tool":"recall_memory",
+                  "args":{"query":"explicit charter","limit":5}
+                }]}
+                """).RootElement.Clone());
+            var id = GetDataLong(created.Data!, "id");
+
+            var result = await execute.ExecuteAsync(JsonDocument.Parse($"{{\"id\":{id}}}").RootElement.Clone());
+
+            Assert.True(result.Success);
+            Assert.Equal("explicit charter", capture.LastArgs.GetProperty("query").GetString());
+            Assert.Equal(5, capture.LastArgs.GetProperty("limit").GetInt32());
+
+            // Round-trip persistence of args
+            var loaded = await workflows.GetAsync(id);
+            Assert.Equal(JsonValueKind.Object, loaded!.Steps[0].Args.ValueKind);
+            Assert.Equal("explicit charter", loaded.Steps[0].Args.GetProperty("query").GetString());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task Execute_PartialArgs_FillsMissingRequiredFromDescription()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-args-partial-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            IVictoriaWorkflowStore workflows = store;
+            var capture = new CapturingTool(
+                "recall_memory",
+                """
+                {"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer"}},"required":["query"]}
+                """);
+            var registry = new ToolRegistry(new ITool[] { capture });
+            var create = new WorkflowCreateTool(workflows);
+            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+
+            var created = await create.ExecuteAsync(JsonDocument.Parse(
+                """
+                {"name":"partial","steps":[{
+                  "description":"fill me in",
+                  "tool":"recall_memory",
+                  "args":{"limit":2}
+                }]}
+                """).RootElement.Clone());
+            var id = GetDataLong(created.Data!, "id");
+
+            var result = await execute.ExecuteAsync(JsonDocument.Parse($"{{\"id\":{id}}}").RootElement.Clone());
+
+            Assert.True(result.Success);
+            Assert.Equal("fill me in", capture.LastArgs.GetProperty("query").GetString());
+            Assert.Equal(2, capture.LastArgs.GetProperty("limit").GetInt32());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public void Resolve_NoStringParams_ReturnsEmptyObject()
+    {
+        var def = new ToolDefinition(
+            "echo",
+            "no args",
+            JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement.Clone());
+        var step = new WorkflowStep("ignored for empty schema", "echo");
+        var args = WorkflowStepToolArgs.Resolve(step, def);
+        Assert.Equal(JsonValueKind.Object, args.ValueKind);
+        Assert.False(args.EnumerateObject().Any());
+    }
+
+    [Fact]
+    public void Resolve_SchemaRequiredString_WithoutKnownAlias()
+    {
+        var def = new ToolDefinition(
+            "custom_tool",
+            "custom",
+            JsonDocument.Parse(
+                """{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}""")
+                .RootElement.Clone());
+        var step = new WorkflowStep("write a haiku", "custom_tool");
+        var args = WorkflowStepToolArgs.Resolve(step, def);
+        Assert.Equal("write a haiku", args.GetProperty("prompt").GetString());
+    }
+
+    [Fact]
+    public async Task WorkflowCreate_RejectsNonObjectArgs()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-bad-args-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            var create = new WorkflowCreateTool(store);
+            var result = await create.ExecuteAsync(JsonDocument.Parse(
+                """{"name":"n","steps":[{"description":"x","args":"nope"}]}""")
+                .RootElement.Clone());
+            Assert.False(result.Success);
+            Assert.Contains("args", result.Content, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
     public async Task Execute_ReachedEnd_ReturnsWorkflowComplete()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-end-{Guid.NewGuid():N}.db");
@@ -300,6 +507,11 @@ public class WorkflowToolsTests
         var required = req.EnumerateArray().Select(e => e.GetString()).ToHashSet();
         Assert.Contains("name", required);
         Assert.Contains("steps", required);
+        Assert.True(create.TryGetProperty("properties", out var createProps));
+        Assert.True(createProps.TryGetProperty("steps", out var stepsSchema));
+        Assert.True(stepsSchema.TryGetProperty("items", out var stepItem));
+        Assert.True(stepItem.TryGetProperty("properties", out var stepProps));
+        Assert.True(stepProps.TryGetProperty("args", out _), "workflow_create steps.items must advertise optional args (BED-159)");
 
         var exec = tools[1].Definition.Parameters;
         Assert.True(exec.TryGetProperty("required", out var execReq));
@@ -421,6 +633,30 @@ public class WorkflowToolsTests
         {
             CallCount++;
             return Task.FromResult(new ToolResult(Success: true, Content: "echo-ok", Data: null));
+        }
+    }
+
+    /// <summary>Records the last args JSON for BED-159 assertions.</summary>
+    private sealed class CapturingTool : ITool
+    {
+        public int CallCount { get; private set; }
+        public JsonElement LastArgs { get; private set; }
+
+        public CapturingTool(string name, string parametersJson)
+        {
+            Definition = new(
+                Name: name,
+                Description: $"Capture args for {name}.",
+                Parameters: JsonDocument.Parse(parametersJson).RootElement.Clone());
+        }
+
+        public ToolDefinition Definition { get; }
+
+        public Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
+        {
+            CallCount++;
+            LastArgs = args.Clone();
+            return Task.FromResult(new ToolResult(Success: true, Content: $"{Definition.Name}-ok", Data: null));
         }
     }
 

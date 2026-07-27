@@ -6,12 +6,14 @@ using SoulCore.Memory;
 namespace SoulCore.Inference.Tools.Workflow;
 
 /// <summary>
-/// Model-callable <c>workflow_execute</c> (BED-141). Advances a workflow by
-/// executing the next step (<c>all=false</c>) or all remaining steps
-/// (<c>all=true</c>). When a step names a <c>tool</c>, it is dispatched via
-/// <see cref="IToolRegistry"/> with an empty args object. Description-only
-/// steps succeed with the description as content. Reached-end returns
-/// <c>Success:false</c> with "workflow complete" (soft completion, not an error).
+/// Model-callable <c>workflow_execute</c> (BED-141 / BED-159). Advances a
+/// workflow by executing the next step (<c>all=false</c>) or all remaining
+/// steps (<c>all=true</c>). When a step names a <c>tool</c>, it is dispatched
+/// via <see cref="IToolRegistry"/> with args from <c>step.args</c> and/or
+/// mapped from <c>step.description</c> (never empty <c>{}</c> when the tool
+/// needs a primary string param — ISSUE-005). Description-only steps succeed
+/// with the description as content. Reached-end returns <c>Success:false</c>
+/// with "workflow complete" (soft completion, not an error).
 /// </summary>
 /// <remarks>
 /// Resolves <see cref="IToolRegistry"/> lazily via <see cref="IServiceProvider"/>
@@ -22,7 +24,6 @@ namespace SoulCore.Inference.Tools.Workflow;
 public sealed class WorkflowExecuteTool : ITool
 {
     private static readonly JsonElement ParametersSchema = BuildParametersSchema();
-    private static readonly JsonElement EmptyToolArgs = JsonDocument.Parse("{}").RootElement.Clone();
 
     /// <summary>Tools that must not be nested as workflow steps (recursion guard).</summary>
     private static readonly HashSet<string> ForbiddenStepTools = new(StringComparer.Ordinal)
@@ -223,10 +224,11 @@ public sealed class WorkflowExecuteTool : ITool
             }
             else
             {
+                var toolArgs = WorkflowStepToolArgs.Resolve(step, registry);
                 ToolResult toolResult;
                 try
                 {
-                    toolResult = await registry.ExecuteAsync(toolName, EmptyToolArgs, ct).ConfigureAwait(false);
+                    toolResult = await registry.ExecuteAsync(toolName, toolArgs, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -245,6 +247,7 @@ public sealed class WorkflowExecuteTool : ITool
                 toolData = new
                 {
                     tool = toolName,
+                    tool_args = toolArgs.GetRawText(),
                     tool_success = toolResult.Success,
                     tool_content = toolResult.Content,
                     tool_data = toolResult.Data
