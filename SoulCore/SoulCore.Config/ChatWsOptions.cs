@@ -10,7 +10,14 @@ public sealed class ChatWsOptions
     /// <summary>Path on the Host Kestrel listener (same port as /health). Default /ws.</summary>
     public string Path { get; set; } = "/ws";
 
-    /// <summary>Prefer Hermes over Ollama when both Enabled.</summary>
+    /// <summary>
+    /// Prefer Hermes over Ollama when both Enabled.
+    /// <para>
+    /// BED-161: PreferHermes turns use Hermes as <b>LLM-only</b>; the Host runs
+    /// the SoulCore tool-loop (<c>ITool</c> → <c>CallMcpToolAsync</c> for hermes
+    /// backends). Hermes gateway/key failure is fail-fast (no Ollama fallback).
+    /// </para>
+    /// </summary>
     public bool PreferHermes { get; set; } = false;
 
     /// <summary>

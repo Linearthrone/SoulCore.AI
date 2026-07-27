@@ -18,8 +18,11 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Browser;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.Trading;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -118,6 +121,30 @@ var toolsOptions = builder.Configuration
     .GetSection(ToolsOptions.SectionName)
     .Get<ToolsOptions>() ?? new ToolsOptions();
 
+// BED-161 / ISSUE-009: Hermes API key preflight — never read secrets from git.
+// Warn (do not crash) when Hermes is enabled or PreferHermes is set but the key
+// is missing; chat/MCP will fail-fast at call time with a clear message.
+{
+    var hermesKeyPresent = !string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(SecretNames.HermesApiKey))
+        || !string.IsNullOrWhiteSpace(hermesOptions.ApiKey);
+    if ((hermesOptions.Enabled || chatWsOptions.PreferHermes) && !hermesKeyPresent)
+    {
+        Console.Error.WriteLine(
+            $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
+            $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
+            "PreferHermes chat and hermes-backend MCP tools will fail-fast until the key is provided. " +
+            "Do not put ApiKey values in appsettings.json.");
+    }
+
+    if (!string.IsNullOrWhiteSpace(hermesOptions.ApiKey))
+    {
+        Console.Error.WriteLine(
+            "[SoulCore] WARNING: Hermes:ApiKey is set in configuration. Prefer env " +
+            $"{SecretNames.HermesApiKey} / user-secrets — never commit API keys.");
+    }
+}
+
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
 if (!IsLoopback(bindOptions.BindAddress))
 {
@@ -209,6 +236,34 @@ builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
 
+// Desktop / browser / trading tools (BED-135/136/138 schemas; BED-144 Hermes MCP wiring).
+// Backend selection is per-class (DesktopBackend / BrowserBackend / Mt4Backend).
+// When Backend=hermes and the gateway is down, tools return Success:false with
+// "hermes gateway unavailable" — no silent native fallback.
+builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool, DesktopClickTool>();
+builder.Services.AddSingleton<ITool, DesktopTypeTool>();
+builder.Services.AddSingleton<ITool, DesktopKeyTool>();
+builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
+builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
+builder.Services.AddSingleton<ITool, BrowserHealthTool>();
+builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTool>();
+builder.Services.AddSingleton<ITool, BrowserTypeTool>();
+builder.Services.AddSingleton<ITool, BrowserKeyTool>();
+builder.Services.AddSingleton<ITool, BrowserScrollTool>();
+builder.Services.AddSingleton<ITool, Mt4StatusTool>();
+builder.Services.AddSingleton<ITool, Mt4ListSymbolsTool>();
+builder.Services.AddSingleton<ITool, Mt4GetMarketDataTool>();
+builder.Services.AddSingleton<ITool, Mt4GetOpenPositionsTool>();
+builder.Services.AddSingleton<ITool, Mt4ExecuteTradeTool>();
+builder.Services.AddSingleton<ITool, Mt4ClosePositionTool>();
+builder.Services.AddSingleton<ITool, Mt4VerifyTicketTool>();
+builder.Services.AddSingleton<ITool, Mt4MarketwatchStatusTool>();
+builder.Services.AddSingleton<ITool, Mt4ExportHistoryTool>();
+builder.Services.AddSingleton<ITool, Mt4GetHistoricalBarsTool>();
+builder.Services.AddSingleton<ITool, Mt4RunBacktestTool>();
+
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
 {
@@ -234,10 +289,14 @@ if (hermesOptions.Enabled)
         client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
     });
     builder.Services.AddTransient<IHermesClient>(sp => sp.GetRequiredService<HermesHttpClient>());
+    // BED-144: desktop/browser/trading tools resolve IHermesMcpInvoker.
+    builder.Services.AddTransient<IHermesMcpInvoker>(sp => sp.GetRequiredService<HermesHttpClient>());
 }
 else
 {
-    builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
+    builder.Services.AddSingleton<NullHermesClient>();
+    builder.Services.AddSingleton<IHermesClient>(sp => sp.GetRequiredService<NullHermesClient>());
+    builder.Services.AddSingleton<IHermesMcpInvoker>(sp => sp.GetRequiredService<NullHermesClient>());
 }
 
 builder.Services.AddSingleton<PresenceWsHub>();

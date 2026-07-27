@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SoulCore.Inference;
 
 namespace SoulCore.Hermes;
@@ -31,6 +32,26 @@ public sealed class NullHermesClient : IHermesClient
         IToolRegistry registry,
         CancellationToken cancellationToken = default)
         => Task.FromResult(ToolLoopStubReply);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// BED-144: disabled Hermes must not silently succeed MCP tool calls —
+    /// adapters with <c>Backend=hermes</c> surface
+    /// <see cref="IHermesMcpInvoker.UnavailableMessage"/>.
+    /// </remarks>
+    public Task<ToolResult> CallMcpToolAsync(
+        string mcpToolName,
+        JsonElement arguments,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(mcpToolName))
+            throw new ArgumentException("mcpToolName must be non-empty.", nameof(mcpToolName));
+
+        return Task.FromResult(new ToolResult(
+            Success: false,
+            Content: IHermesMcpInvoker.UnavailableMessage,
+            Data: new { mcpToolName, hermes = "disabled" }));
+    }
 
     public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(string.Empty);

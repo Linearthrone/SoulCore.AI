@@ -234,6 +234,56 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     // ---------------------------------------------------------------------
+    // BED-161: PreferHermes fail-fast — no Ollama fallback when Hermes throws.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task PreferHermes_HermesDown_DoesNotFallBackToOllama()
+    {
+        var inference = new ScriptedInferenceClient
+        {
+            CompleteWithToolsReply = "ollama should not run"
+        };
+        var hermes = new ScriptedHermesClient
+        {
+            ThrowOnCompleteWithTools = new InvalidOperationException(
+                IHermesMcpInvoker.UnavailableMessage)
+        };
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+
+        var emotion = new StubEmotionState();
+        var memory = new StubMemoryStore();
+        var embeddings = new NullEmbeddingClient();
+        var charter = new StubCharter();
+        var soulLoop = new StubSoulLoop();
+        var spendMeter = new SpendMeter();
+        var driftWatcher = new DriftWatcher(15);
+        var hub = new PresenceWsHub(new LoggerFactory().CreateLogger<PresenceWsHub>());
+        var chatOpts = Options.Create(MakeChatOptions(useToolLoop: true, preferHermes: true));
+        var infOpts = Options.Create(MakeInferenceOptions());
+        var hermesOpts = Options.Create(MakeHermesOptions(enabled: true));
+        var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
+        var handler = new ChatWebSocketHandler(
+            inference, hermes, emotion, memory, embeddings, charter,
+            unreal, soulLoop, registry, spendMeter, driftWatcher,
+            hub, chatOpts, infOpts, hermesOpts, logger);
+
+        var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
+
+        Assert.True(hermes.CompleteWithToolsCalled);
+        Assert.False(inference.CompleteWithToolsCalled,
+            "PreferHermes must not fall back to Ollama when Hermes fails");
+        var err = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.Error);
+        Assert.NotNull(err);
+        Assert.Equal("chat.model_down", err!.Payload?.GetProperty("code").GetString());
+        Assert.Contains(
+            IHermesMcpInvoker.UnavailableMessage,
+            err.Payload?.GetProperty("message").GetString() ?? "",
+            StringComparison.Ordinal);
+    }
+
+    // ---------------------------------------------------------------------
     // AC #4: Strategy A — when the model calls a tool whose name maps to a
     // verb class, the keyword fallback for that class is skipped (no double
     // side-effect). We verify by recording the Unreal verb calls.
@@ -437,6 +487,7 @@ public class ChatWebSocketHandlerToolLoopTests
     {
         public string CompleteWithToolsReply { get; set; } = "hermes-default";
         public bool CompleteWithToolsCalled { get; private set; }
+        public Exception? ThrowOnCompleteWithTools { get; set; }
 
         public Task<string> ChatAsync(
             string message, string? systemPreamble = null,
@@ -450,8 +501,19 @@ public class ChatWebSocketHandlerToolLoopTests
             CancellationToken cancellationToken = default)
         {
             CompleteWithToolsCalled = true;
+            if (ThrowOnCompleteWithTools is not null)
+                throw ThrowOnCompleteWithTools;
             return Task.FromResult(CompleteWithToolsReply);
         }
+
+        public Task<ToolResult> CallMcpToolAsync(
+            string mcpToolName,
+            JsonElement arguments,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: null));
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult("ok");
