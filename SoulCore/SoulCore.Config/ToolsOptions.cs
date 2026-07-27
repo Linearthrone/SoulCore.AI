@@ -1,9 +1,13 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// Non-secret knobs for the BED-133 system + filesystem tools. Filesystem
-/// access is gated by whitelisted roots — empty lists disable the filesystem
-/// tools entirely (they return <c>Success:false, "filesystem tools disabled"</c>).
+/// Non-secret knobs for system/filesystem tools (BED-133) and computer-use
+/// gates (BED-135/136). Filesystem access is gated by whitelisted roots —
+/// empty lists disable the filesystem tools entirely (they return
+/// <c>Success:false, "filesystem tools disabled"</c>). Desktop/browser write
+/// actions require <see cref="AllowComputerControl"/> session opt-in (default
+/// false). Native browser backend is out of scope for BED-136 — use
+/// <see cref="BrowserBackend"/> = <c>hermes</c>.
 /// </summary>
 public sealed class ToolsOptions
 {
@@ -37,4 +41,24 @@ public sealed class ToolsOptions
     /// </list>
     /// </summary>
     public bool UseDefaultRoots { get; set; } = true;
+
+    /// <summary>
+    /// When true (default), read-only browser tools (<c>browser_health</c>,
+    /// <c>browser_capture_tab</c>) may run. Does not authorize click/type/key/scroll.
+    /// </summary>
+    public bool AllowBrowserCapture { get; set; } = true;
+
+    /// <summary>
+    /// Session opt-in for write/control tools shared by desktop (BED-135) and
+    /// browser (BED-136): click/type/key/scroll. Default <c>false</c> — never
+    /// inject input until the user enables this for the session.
+    /// </summary>
+    public bool AllowComputerControl { get; set; } = false;
+
+    /// <summary>
+    /// Browser tool backend. <c>hermes</c> (default) routes through Hermes MCP
+    /// <c>browser_bridge_*</c> (OPS-143 / BED-144). Native C# fallback is not
+    /// implemented in BED-136 — unsupported values return a clear error.
+    /// </summary>
+    public string BrowserBackend { get; set; } = "hermes";
 }

@@ -18,6 +18,7 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
 using SoulCore.Memory;
@@ -208,6 +209,37 @@ builder.Services.AddSingleton<ITool, PlayAnimationTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
+
+// Browser tools (BED-136): browser_health / capture_tab / click / type / key / scroll.
+// Read tools gated by Tools.AllowBrowserCapture (default true). Write/control tools
+// gated by Tools.AllowComputerControl (default false — same session opt-in as desktop).
+// Backend: Tools.BrowserBackend=hermes → HermesBrowserBridge (MCP browser_bridge_*);
+// anything else → UnsupportedBrowserBridge (native out of scope).
+builder.Services.AddHttpClient(nameof(HermesBrowserBridge), (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<HermesOptions>>().Value;
+    client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+});
+builder.Services.AddSingleton<IBrowserBridge>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var backend = (opts.BrowserBackend ?? "hermes").Trim();
+    if (!string.Equals(backend, "hermes", StringComparison.OrdinalIgnoreCase))
+        return new UnsupportedBrowserBridge(backend);
+
+    var hermes = sp.GetRequiredService<IHermesClient>();
+    var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(HermesBrowserBridge));
+    var hermesOpts = sp.GetRequiredService<IOptions<HermesOptions>>();
+    var logger = sp.GetRequiredService<ILogger<HermesBrowserBridge>>();
+    return new HermesBrowserBridge(hermes, http, hermesOpts, logger);
+});
+builder.Services.AddSingleton<ITool, BrowserHealthTool>();
+builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTool>();
+builder.Services.AddSingleton<ITool, BrowserTypeTool>();
+builder.Services.AddSingleton<ITool, BrowserKeyTool>();
+builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
