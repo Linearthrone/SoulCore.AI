@@ -213,13 +213,18 @@ public class OllamaToolLoopTests
         // object-form arguments. ForceTool posts those messages to /v1 — they
         // MUST be JSON strings on the wire or Ollama returns 400:
         //   cannot unmarshal object into ... arguments of type string
+        // BED-168: text-only under ForceTool=workflow_execute with a known
+        // session id soft-dispatches — provide a follow-up final text turn.
         var priorArgs = JsonDocument.Parse("""{"id":42,"all":true}""").RootElement.Clone();
         var handler = new ScriptedHandler(
             new[]
             {
-                OpenAiChatResponseJson(content: "ok", toolCalls: null)
+                OpenAiChatResponseJson(content: "Which workflow?", toolCalls: null),
+                ChatResponseJson(content: "ran", toolCalls: null)
             });
-        var client = MakeClient(handler, registry: new ScriptedRegistry());
+        var registry = new ScriptedRegistry(
+            ("workflow_execute", _ => new ToolResult(true, "workflow id=42 execute all: ok", null)));
+        var client = MakeClient(handler, registry: registry);
 
         var messages = new List<ChatMessage>
         {
@@ -244,13 +249,14 @@ public class OllamaToolLoopTests
             new() { Role = "user", Content = "run that workflow again" }
         };
 
-        await client.CompleteWithToolsAsync(
+        var result = await client.CompleteWithToolsAsync(
             messages,
             new[] { WorkflowExecuteToolDef(), EchoToolDef() },
-            new ScriptedRegistry(),
+            registry,
             loopOptions: new ToolLoopOptions { ForceToolName = "workflow_execute" });
 
-        Assert.Single(handler.CapturedRequests);
+        Assert.Equal("ran", result);
+        Assert.True(handler.CallCount >= 1);
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
         Assert.False(string.IsNullOrWhiteSpace(handler.CapturedRequests[0].RawBody));
 
@@ -279,6 +285,149 @@ public class OllamaToolLoopTests
         Assert.Equal(JsonValueKind.Object, argsDoc.RootElement.ValueKind);
         Assert.Equal(42, argsDoc.RootElement.GetProperty("id").GetInt32());
         Assert.True(argsDoc.RootElement.GetProperty("all").GetBoolean());
+
+        // Soft-dispatch must have executed workflow_execute with the session id.
+        Assert.Contains(registry.Calls, c => c.Name == "workflow_execute");
+    }
+
+    // ---------------------------------------------------------------------
+    // BED-168: ForceTool text-only must not end the loop — soft-dispatch
+    // workflow_execute when session id known, else forced retry nudge.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task ForceToolName_TextOnly_SoftDispatchesWorkflowExecute_WhenSessionIdKnown()
+    {
+        // QA-142 Retest-4 AC6: exclusive ForceTool + /v1 200 but model emits
+        // clarification prose → soft-dispatch workflow_execute with id from
+        // prior create result.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "Sure — which workflow id should I run?",
+                    toolCalls: null),
+                ChatResponseJson(content: "workflow finished", toolCalls: null)
+            });
+        JsonElement? seenArgs = null;
+        var registry = new ScriptedRegistry(
+            ("workflow_execute", args =>
+            {
+                seenArgs = args.Clone();
+                return new ToolResult(true, "workflow id=7 execute all: ok", null);
+            }));
+        var client = MakeClient(handler, registry: registry);
+
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "user", Content = "create a workflow to: 1) recall a memory, 2) speak the memory" },
+            new() { Role = "assistant", Content = "", ToolCalls = new[]
+            {
+                new ChatToolCall
+                {
+                    Function = new ChatFunctionCall
+                    {
+                        Name = "workflow_create",
+                        Arguments = JsonDocument.Parse("""{"name":"ac5","steps":[]}""").RootElement.Clone()
+                    }
+                }
+            }},
+            new() { Role = "tool", Name = "workflow_create", Content = "created: id=7 name=ac5 steps=2" },
+            new() { Role = "user", Content = "run that workflow" }
+        };
+
+        var result = await client.CompleteWithToolsAsync(
+            messages,
+            new[] { WorkflowExecuteToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_execute" });
+
+        Assert.Equal("workflow finished", result);
+        Assert.Single(registry.Calls);
+        Assert.Equal("workflow_execute", registry.Calls[0].Name);
+        Assert.NotNull(seenArgs);
+        Assert.Equal(7, seenArgs!.Value.GetProperty("id").GetInt64());
+        Assert.True(seenArgs.Value.GetProperty("all").GetBoolean());
+        // Soft-dispatch happens in-process — no second /v1 force round required
+        // before the post-tool /api/chat final text.
+        Assert.Equal(2, handler.CallCount);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForceToolName_TextOnly_RetryNudge_ThenDispatches()
+    {
+        // No session id → cannot soft-dispatch; inject nudge and keep force
+        // on the next round so the model must emit the tool call.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "I can create that workflow for you — want me to?",
+                    toolCalls: null),
+                OpenAiChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new
+                    {
+                        function = new
+                        {
+                            name = "workflow_create",
+                            arguments = new
+                            {
+                                name = "recall-speak",
+                                steps = new[]
+                                {
+                                    new { description = "recall a memory", tool = "recall_memory" },
+                                    new { description = "speak the memory", tool = "speak" }
+                                }
+                            }
+                        }
+                    }
+                }),
+                ChatResponseJson(content: "created", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("workflow_create", _ => new ToolResult(true, "created: id=9 name=recall-speak steps=2", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var workflowCreateDef = new ToolDefinition(
+            Name: "workflow_create",
+            Description: "Create a workflow.",
+            Parameters: JsonDocument.Parse(
+                """{"type":"object","properties":{"name":{"type":"string"},"steps":{"type":"array"}}}""")
+                .RootElement.Clone());
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new()
+                {
+                    Role = "user",
+                    Content = "create a workflow to: 1) recall a memory, 2) speak the memory"
+                }
+            },
+            new[] { workflowCreateDef, EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_create" });
+
+        Assert.Equal("created", result);
+        Assert.Single(registry.Calls);
+        Assert.Equal("workflow_create", registry.Calls[0].Name);
+        Assert.Equal(3, handler.CallCount);
+
+        // Round 0 + nudge round both use /v1 force; final text uses /api/chat.
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+        Assert.Contains("api/chat", handler.CapturedRequests[2].Path, StringComparison.Ordinal);
+
+        var nudgeRound = handler.CapturedRequests[1];
+        Assert.NotNull(nudgeRound.ToolChoiceRaw);
+        Assert.Contains("\"name\":\"workflow_create\"", nudgeRound.ToolChoiceRaw!, StringComparison.Ordinal);
+        var nudgeUser = nudgeRound.Messages.LastOrDefault(m => m.Role == "user");
+        Assert.NotNull(nudgeUser);
+        Assert.Contains("workflow_create", nudgeUser!.Content ?? "", StringComparison.Ordinal);
+        Assert.Contains("tool call", nudgeUser.Content ?? "", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

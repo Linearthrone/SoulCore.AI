@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Tools.Workflow;
 
 namespace SoulCore.Inference;
 
@@ -187,6 +188,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
         // to surface when the model's final turn emitted only tool_calls.
         var lastAssistantText = string.Empty;
 
+        // BED-168: ForceTool stays active until a tool_calls round is processed
+        // (dispatch or refuse). Text-only on a force round must not end the
+        // loop — soft-dispatch workflow_execute when a session id is known,
+        // otherwise one forced retry nudge, then give up.
+        var forceConsumed = false;
+        var forceNudgeUsed = false;
+
         _logger.LogDebug(
             "Ollama agent loop start: model={Model} messages={Count} tools={ToolCount} forceTool={Force} maxIter={Cap}",
             _options.Model,
@@ -201,10 +209,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
             if (_options.NumCtx > 0)
                 chatOptions.NumCtx = _options.NumCtx;
 
-            // BED-165: when ForceToolName is active on iteration 0, advertise
-            // ONLY that tool (exclusive tools[]) so the model cannot pick a
-            // sibling escape hatch (QA-142 AC6 wrong-tool despite forceTool log).
-            var forceActive = iteration == 0 && !string.IsNullOrEmpty(forceToolName);
+            // BED-165/168: while ForceToolName is pending, advertise ONLY that
+            // tool (exclusive tools[]) so the model cannot pick a sibling
+            // escape hatch (QA-142 AC6 wrong-tool despite forceTool log).
+            var forceActive = !forceConsumed && !string.IsNullOrEmpty(forceToolName);
             var wireTools = forceActive
                 ? FilterToolsByName(ollamaTools, forceToolName!)
                 : ollamaTools;
@@ -212,7 +220,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 ? new HashSet<string>(StringComparer.Ordinal) { forceToolName! }
                 : toolNames;
 
-            var wireToolChoice = BuildWireToolChoice(forceToolName, iteration, wireTools.Count);
+            var wireToolChoice = BuildWireToolChoice(forceActive ? forceToolName : null, wireTools.Count);
             OllamaChatResponseMessage? msg;
             string body;
 
@@ -339,11 +347,52 @@ public sealed class OllamaInferenceClient : IInferenceClient
 
             if (toolCalls is null || toolCalls.Count == 0)
             {
-                _logger.LogDebug(
-                    "Ollama agent loop end at iteration {Iter}: text reply (no tool_calls, recovered={Recovered}).",
-                    iteration, recovered);
-                return assistantText;
+                if (forceActive
+                    && TrySoftDispatchForcedWorkflowExecute(
+                        forceToolName!,
+                        ollamaMessages,
+                        out var softCalls)
+                    && softCalls is { Count: > 0 })
+                {
+                    toolCalls = softCalls;
+                    recovered = true;
+                    // Soft-dispatch synthesizes the tool call — do not surface
+                    // clarification prose as the final assistant text.
+                    lastAssistantText = string.Empty;
+                    assistantText = string.Empty;
+                    _logger.LogInformation(
+                        "Ollama ForceTool soft-dispatch: tool={Tool} iter={Iter} (session workflow id known).",
+                        forceToolName, iteration);
+                }
+                else if (forceActive && !forceNudgeUsed)
+                {
+                    forceNudgeUsed = true;
+                    ollamaMessages.Add(new OllamaChatMessage
+                    {
+                        Role = "assistant",
+                        Content = assistantText
+                    });
+                    ollamaMessages.Add(new OllamaChatMessage
+                    {
+                        Role = "user",
+                        Content = BuildForceToolRetryNudge(forceToolName!)
+                    });
+                    _logger.LogInformation(
+                        "Ollama ForceTool text-only on force round — retry nudge for tool={Tool} iter={Iter}.",
+                        forceToolName, iteration);
+                    continue;
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Ollama agent loop end at iteration {Iter}: text reply (no tool_calls, recovered={Recovered}, forceActive={Force}).",
+                        iteration, recovered, forceActive);
+                    return assistantText;
+                }
             }
+
+            // Non-null after the text-only gate above (soft-dispatch or model tool_calls).
+            var pendingCalls = toolCalls!;
 
             // Append the assistant turn (with tool_calls) so the conversation
             // shape matches what the model produced. Ollama expects the
@@ -352,13 +401,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
             {
                 Role = "assistant",
                 Content = assistantText,
-                ToolCalls = toolCalls
+                ToolCalls = pendingCalls
             });
 
             // Dispatch each tool call and append role:"tool" results.
-            for (var i = 0; i < toolCalls.Count; i++)
+            for (var i = 0; i < pendingCalls.Count; i++)
             {
-                var tc = toolCalls[i];
+                var tc = pendingCalls[i];
                 var name = tc.Function?.Name ?? string.Empty;
                 var args = ParseArguments(tc.Function?.Arguments);
 
@@ -400,6 +449,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     Content = result.Content ?? string.Empty
                 });
             }
+
+            // BED-168: any tool_calls round under ForceTool consumes the force
+            // (exclusivity applies only until the first tool_calls response is
+            // handled — including hard refuse). Later iterations restore full
+            // tools (BED-165 AC3).
+            if (forceActive)
+                forceConsumed = true;
         }
 
         _logger.LogWarning(
@@ -577,19 +633,90 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
-    /// BED-162: object-form <c>tool_choice</c> on iteration 0 when a force tool
-    /// is requested; otherwise omit (Ollama auto). Never send tool_choice when
-    /// no tools are advertised.
+    /// BED-162/168: object-form <c>tool_choice</c> while ForceTool is active;
+    /// otherwise omit (Ollama auto). Never send tool_choice when no tools are
+    /// advertised.
     /// </summary>
-    private static JsonElement? BuildWireToolChoice(string? forceToolName, int iteration, int toolCount)
+    private static JsonElement? BuildWireToolChoice(string? forceToolName, int toolCount)
     {
         if (toolCount == 0)
             return null;
-        if (iteration != 0 || string.IsNullOrWhiteSpace(forceToolName))
+        if (string.IsNullOrWhiteSpace(forceToolName))
             return null;
 
         var json = $"{{\"type\":\"function\",\"function\":{{\"name\":{JsonSerializer.Serialize(forceToolName)}}}}}";
         return JsonDocument.Parse(json).RootElement.Clone();
+    }
+
+    /// <summary>
+    /// BED-168: when ForceTool requires <c>workflow_execute</c> and the model
+    /// returned clarification prose, synthesize a tool call if a workflow id
+    /// is already present in session history / prior tool_call args.
+    /// </summary>
+    private static bool TrySoftDispatchForcedWorkflowExecute(
+        string forceToolName,
+        IReadOnlyList<OllamaChatMessage> messages,
+        out List<OllamaToolCallDto>? softCalls)
+    {
+        softCalls = null;
+        if (!string.Equals(forceToolName, "workflow_execute", StringComparison.Ordinal))
+            return false;
+
+        var texts = new List<string?>(messages.Count);
+        var argObjects = new List<JsonElement?>();
+        foreach (var m in messages)
+        {
+            if (m is null) continue;
+            texts.Add(m.Content);
+            if (m.ToolCalls is null) continue;
+            foreach (var tc in m.ToolCalls)
+            {
+                if (tc?.Function?.Arguments is { } args)
+                    argObjects.Add(args);
+            }
+        }
+
+        if (!WorkflowToolIntent.TryFindLatestWorkflowId(texts, argObjects, out var id))
+            return false;
+
+        var argsJson = $"{{\"id\":{id},\"all\":true}}";
+        softCalls = new List<OllamaToolCallDto>(1)
+        {
+            new OllamaToolCallDto
+            {
+                Function = new OllamaFunctionCallDto
+                {
+                    Name = "workflow_execute",
+                    Arguments = JsonDocument.Parse(argsJson).RootElement.Clone()
+                }
+            }
+        };
+        return true;
+    }
+
+    /// <summary>
+    /// BED-168: user nudge appended after a ForceTool text-only clarification
+    /// so the next forced round still requires a real tool call.
+    /// </summary>
+    private static string BuildForceToolRetryNudge(string forceToolName)
+    {
+        if (string.Equals(forceToolName, "workflow_execute", StringComparison.Ordinal))
+        {
+            return
+                "You must call workflow_execute now with the workflow id from prior tool results in this session " +
+                "and all=true. Do not ask for clarification or reply with prose — emit the tool call only.";
+        }
+
+        if (string.Equals(forceToolName, "workflow_create", StringComparison.Ordinal))
+        {
+            return
+                "You must call workflow_create now with a name and steps. " +
+                "Do not describe the plan in prose — emit the tool call only.";
+        }
+
+        return
+            $"You must call the {forceToolName} tool now. " +
+            "Do not ask for clarification or reply with prose — emit the tool call only.";
     }
 
     /// <summary>

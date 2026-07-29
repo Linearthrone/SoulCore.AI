@@ -99,6 +99,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
   - ~~BED-161~~ **Pass** (merged local 2026-07-27) — PreferHermes Host ITool loop + fail-fast; ISSUE-007/009/010 Fixed; ISSUE-008 OOS → **QA-145 retest**
   - ~~BED-164~~ **Pass** (Avenue B) — PreferHermes tool-loop on **Ollama**; Hermes **MCP-only** (`CallMcpToolAsync`); ISSUE-20260729-002 Fixed → **QA-145 retest**
   - ~~BED-167~~ **Pass** — NL `Mt4ToolIntent` → `ForceToolName=mt4_status` (AC4 task_* escape); ISSUE-20260729-003 Fixed → **QA-145 AC4 retest**
+  - ~~BED-168~~ **Pass** — ForceTool text-only → soft-dispatch `workflow_execute` / retry nudge; ISSUE-20260729-001 Fixed (Retest-4) → **QA-142 AC6 retest**
   - ~~OPS-143~~ **Pass** (archived) — Hermes `gemma4:64k` @65536
   - QA-134 gated on QA-118 visual walk Pass (117 done; 160 in flight)
   - QA-137/139 after Phase F / PreferHermes path clears

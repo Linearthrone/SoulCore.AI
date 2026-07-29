@@ -6,16 +6,16 @@ priority: P1
 status: Fixed
 resolved: 2026-07-29
 reopened: 2026-07-29
-gate: QA-142 retest-2 / retest-3
-related: TASK-142, TASK-162, TASK-165, TASK-166, BED-162, BED-165, BED-166
+gate: QA-142 retest-2 / retest-3 / retest-4
+related: TASK-142, TASK-162, TASK-165, TASK-166, TASK-168, BED-162, BED-165, BED-166, BED-168
 related_fixed: ISSUE-20260727-004, ISSUE-20260727-005
-fix: docs/agents/reports/TASK-20260729-166-BED01-to-PM01.md
-prior_fix: docs/agents/reports/TASK-20260729-165-BED01-to-PM01.md
+fix: docs/agents/reports/TASK-20260729-168-BED01-to-PM01.md
+prior_fix: docs/agents/reports/TASK-20260729-166-BED01-to-PM01.md
 ---
 
-# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools / wrong-tool escape / /v1 args 400
+# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools / wrong-tool escape / /v1 args 400 / ForceTool text-only
 
-# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only) + forced wrong-tool escape + /v1 arguments 400
+# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only) + forced wrong-tool escape + /v1 arguments 400 + ForceTool text-only no dispatch
 
 ## Summary
 
@@ -37,6 +37,10 @@ includes prior assistant `tool_calls` whose `function.arguments` are JSON
 
 → no dispatch → QA-142 AC5–7 still blocked.
 
+**Reopen (QA-142 Retest-4):** Exclusive ForceTool + `/v1` string args → HTTP
+200, but model emits clarification prose with **no** `tool_calls` → Host ends
+the loop → no dispatch. AC5/AC7 Pass; **AC6 Fail**.
+
 ## Severity
 
 **P1** — blocks Phase E formal exit on AC5–7 exact prompts (create / run /
@@ -55,14 +59,17 @@ re-run workflow) without requiring the user to name tools.
    non-forced sibling tool — AC6 still Fail.
 5. **Post BED-165:** ForceTool exclusivity OK on cold turn; with prior
    tool_calls in session history, `/v1` 400 on object-form `arguments`.
+6. **Retest-4:** `forceTool=workflow_execute` + exclusive `/v1` 200 but
+   clarification prose / empty `tool_calls` → loop ends without dispatch.
 
 ## Expected
 
 Same prompts dispatch `workflow_create` then `workflow_execute` (with
 `all=true` on full-run phrasing), using session history for ids. When
-`ForceToolName` is set, only that tool is advertised and executable on
-iteration 0. Outbound `/v1` bodies stringify `arguments` even when history
-stored them as objects.
+`ForceToolName` is set, only that tool is advertised and executable while
+force is pending. Outbound `/v1` bodies stringify `arguments` even when
+history stored them as objects. Text-only under force must soft-dispatch
+`workflow_execute` when a session id is known, or retry-nudge once.
 
 ## Fix (BED-162)
 
@@ -92,3 +99,14 @@ See `docs/agents/reports/TASK-20260729-165-BED01-to-PM01.md`.
 - Unit: `ForceToolName_HistoryObjectArguments_AreStringifiedOnV1Wire`.
 
 See `docs/agents/reports/TASK-20260729-166-BED01-to-PM01.md`.
+
+## Fix (BED-168 — ForceTool text-only)
+
+- Text-only under ForceTool no longer ends the loop.
+- Soft-dispatch `workflow_execute` `{id, all:true}` when
+  `TryFindLatestWorkflowId` finds a session id (tool results / prior args).
+- Otherwise one forced retry nudge (force retained) then give up.
+- Force consumed after the first tool_calls round (exclusivity / refuse
+  semantics of BED-165 preserved for wrong-name escapes).
+
+See `docs/agents/reports/TASK-20260729-168-BED01-to-PM01.md`.
