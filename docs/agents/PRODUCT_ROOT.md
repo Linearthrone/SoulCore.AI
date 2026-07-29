@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — archive Pass, hand off 115/132/133/130)
+updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; QA-134 soft; QA-142 next)
 ---
 
 # Product Root Declaration
@@ -57,6 +57,9 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
 
 ## In flight (PM)
 
+- **2026-07-29 TINA:** BED-140 **Pass** (PR #3) · DBD-157 **Pass** (PR #4) archived → next BED-141 · BED-158 · OPS-143 · QA-134 — `reports/TASK-20260729-PM01-cold-start-patrol.md`
+- **Merge order:** PR #4 (mig 003) **before** PR #3 (mig 004) — both touch `SqliteMemoryStore.cs`
+- **Held (no UE / no adb):** BED-116/117 · QA-118 · BED-121 re-probe · QA-123 · QA-154
 - ~~Wave14 BED-082 + OPS-083 + QA-084 E2E gates~~ — done, archived (2026-07-23)
 - ~~Wave15 BED-085 (token limit) + BED-088 (loco dispatch) + QA-089 (E3 final)~~ — done, ISSUE-002 closed
 - ~~SoulLoop enable~~ — LIVE (PID 63904, ticks firing, `soulLoop=enabled`)
