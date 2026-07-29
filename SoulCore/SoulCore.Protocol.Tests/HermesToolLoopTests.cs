@@ -585,6 +585,86 @@ public class HermesToolLoopTests
     }
 
     // ---------------------------------------------------------------------
+    // BED-161: PreferHermes Host ITool dispatch + gateway fail-fast.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task CompleteWithTools_GatewayDown_ThrowsUnavailable_FailFast()
+    {
+        var handler = new ScriptedHandler(
+            Array.Empty<string>(),
+            healthOk: false);
+        var client = MakeClient(handler);
+        var registry = new ScriptedRegistry();
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "user", Content = "hi" }
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.CompleteWithToolsAsync(messages, new[] { EchoToolDef() }, registry));
+
+        Assert.Equal(IHermesMcpInvoker.UnavailableMessage, ex.Message);
+        Assert.Equal(0, handler.CallCount); // health probe does not count as chat
+        Assert.Empty(registry.Calls);
+    }
+
+    [Fact]
+    public async Task ComputerUse_Alias_DispatchesSoulCoreDesktopScreenshot()
+    {
+        // PreferHermes must map Hermes MCP computer_use → desktop_screenshot ITool
+        // (which then CallMcpToolAsync), not execute Hermes server tools on Host.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAIResponseJson(
+                    content: null,
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            id = "call_cu",
+                            type = "function",
+                            function = new
+                            {
+                                name = "computer_use",
+                                arguments = "{\"action\":\"screenshot\",\"monitor\":0}"
+                            }
+                        }
+                    }),
+                OpenAIResponseJson(content: "screenshot done via SoulCore ITool", toolCalls: null)
+            });
+
+        var desktopDef = new ToolDefinition(
+            Name: "desktop_screenshot",
+            Description: "Capture desktop.",
+            Parameters: JsonDocument.Parse(
+                """{"type":"object","properties":{"monitor":{"type":"integer"}}}""").RootElement.Clone());
+
+        var registry = new ScriptedRegistry(
+            ("desktop_screenshot", args =>
+            {
+                Assert.True(args.ValueKind == JsonValueKind.Object || args.ValueKind == JsonValueKind.Undefined
+                    || args.TryGetProperty("action", out _) || args.TryGetProperty("monitor", out _));
+                return new ToolResult(true, "shot=/tmp/x.png", null);
+            }));
+
+        var client = MakeClient(handler);
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "user", Content = "take a screenshot" }
+        };
+
+        var result = await client.CompleteWithToolsAsync(
+            messages, new[] { desktopDef }, registry);
+
+        Assert.Equal("screenshot done via SoulCore ITool", result);
+        Assert.Single(registry.Calls);
+        Assert.Equal("desktop_screenshot", registry.Calls[0].Name);
+        Assert.Equal(2, handler.CallCount);
+    }
+
+    // ---------------------------------------------------------------------
     // Argument validation / ctor guards.
     // ---------------------------------------------------------------------
 
@@ -696,18 +776,32 @@ public class HermesToolLoopTests
     private sealed class ScriptedHandler : HttpMessageHandler
     {
         private readonly Queue<string> _responses;
+        private readonly bool _healthOk;
 
         public int CallCount { get; private set; }
         public List<CapturedRequest> CapturedRequests { get; } = new();
 
-        public ScriptedHandler(IEnumerable<string> responses)
+        public ScriptedHandler(IEnumerable<string> responses, bool healthOk = true)
         {
             _responses = new Queue<string>(responses);
+            _healthOk = healthOk;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            // BED-161: CompleteWithToolsAsync probes /health first — do not
+            // consume scripted chat responses for the health gate.
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            if (path.Contains("health", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(new HttpResponseMessage(
+                    _healthOk ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent(_healthOk ? """{"status":"ok"}""" : "down")
+                });
+            }
+
             CallCount++;
 
             // Capture the request body for assertions.

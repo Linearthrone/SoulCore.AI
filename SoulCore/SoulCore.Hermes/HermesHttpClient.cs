@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools;
 
 namespace SoulCore.Hermes;
 
@@ -121,15 +122,23 @@ public sealed class HermesHttpClient : IHermesClient
     /// <paramref name="messages"/> + <paramref name="tools"/> +
     /// <see cref="HermesOptions.ToolChoice"/>, parses OpenAI-compatible
     /// <c>choices[0].message.tool_calls</c>, dispatches each via
-    /// <paramref name="registry"/>, appends
+    /// <paramref name="registry"/> (SoulCore <c>ITool</c> — BED-161:
+    /// Hermes is LLM-only here; hermes-backend tools use
+    /// <see cref="CallMcpToolAsync"/> inside the ITool), appends
     /// <c>{ role:"tool", tool_call_id, name, content }</c> results, re-prompts,
     /// and returns the final assistant text. Capped at
     /// <see cref="InferenceOptions.MaxToolIterations"/> (shared with BED-126).
     /// <para>
+    /// Fail-fast: probes <c>GET /health</c> and requires
+    /// <c>SOULCORE_HERMES_API_KEY</c> before the first chat round-trip. PreferHermes
+    /// callers must not fall back to Ollama when this throws.
+    /// </para>
+    /// <para>
     /// ISSUE-20260726-001 fallback: when <c>tool_calls</c> is null/empty, the
     /// loop attempts to parse <c>choices[0].message.content</c> as a JSON
     /// object matching <c>{ "name":"...", "arguments":{...} }</c> and
-    /// dispatches it as a tool call when <c>name</c> matches a registered tool.
+    /// dispatches it as a tool call when <c>name</c> matches a registered tool
+    /// (or a known Hermes MCP → SoulCore alias).
     /// </para>
     /// </summary>
     public async Task<string> CompleteWithToolsAsync(
@@ -145,6 +154,20 @@ public sealed class HermesHttpClient : IHermesClient
         if (registry is null)
             throw new ArgumentNullException(nameof(registry));
 
+        // BED-161: fail-fast when gateway down / key missing (PreferHermes must not
+        // silently degrade to Hermes server-agent tools or Ollama).
+        if (!await IsGatewayHealthyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage);
+        }
+
+        if (string.IsNullOrWhiteSpace(ResolveApiKey(_options)))
+        {
+            throw new InvalidOperationException(
+                $"Hermes chat requires API key via env {SecretNames.HermesApiKey} or user-secrets. " +
+                "Health checks do not require a key.");
+        }
+
         var cap = Math.Max(1, _inferenceOptions.MaxToolIterations);
         var wireMessages = BuildInitialMessages(messages);
         var wireTools = BuildTools(tools);
@@ -157,7 +180,7 @@ public sealed class HermesHttpClient : IHermesClient
         var lastAssistantText = string.Empty;
 
         _logger.LogDebug(
-            "Hermes agent loop start: model={Model} messages={Count} tools={ToolCount} tool_choice={Choice} maxIter={Cap}",
+            "Hermes agent loop start (Host ITool dispatch): model={Model} messages={Count} tools={ToolCount} tool_choice={Choice} maxIter={Cap}",
             _options.Model,
             wireMessages.Count,
             wireTools.Count,
@@ -253,31 +276,61 @@ public sealed class HermesHttpClient : IHermesClient
                 ToolCalls = toolCalls
             });
 
-            // Dispatch each tool call and append role:"tool" results. OpenAI
-            // requires tool_call_id on the tool-result message so the model can
-            // correlate the result with the call that produced it.
+            // Dispatch each tool call via SoulCore ITool registry only (BED-161).
+            // Hermes MCP names are aliased to SoulCore tools (e.g. computer_use →
+            // desktop_screenshot) so hermes backends hit CallMcpToolAsync inside
+            // the ITool — never treat Hermes server-agent tools as Host execution.
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
-                var name = tc.Function?.Name ?? string.Empty;
+                var wireName = tc.Function?.Name ?? string.Empty;
                 var args = ParseArguments(tc.Function?.Arguments);
+                var soulName = HermesToolRouting.ResolveSoulCoreToolName(wireName, args, toolNames)
+                    ?? wireName;
+
+                if (!string.Equals(wireName, soulName, StringComparison.Ordinal))
+                {
+                    _logger.LogInformation(
+                        "Hermes MCP→SoulCore alias: wire={Wire} → soul={Soul}",
+                        wireName, soulName);
+                }
+
+                if (!toolNames.Contains(soulName))
+                {
+                    _logger.LogWarning(
+                        "Hermes tool name not in SoulCore registry: iter={Iter} wire={Wire} soul={Soul} id={Id}",
+                        iteration, wireName, soulName, tc.Id ?? "(none)");
+                }
 
                 _logger.LogInformation(
-                    "Hermes tool dispatch: iter={Iter} tool#{Index} name={Name} recovered={Recovered} id={Id}",
-                    iteration, i, name, recovered, tc.Id ?? "(none)");
+                    "Hermes→SoulCore ITool dispatch: iter={Iter} tool#{Index} wire={Wire} soul={Soul} recovered={Recovered} id={Id}",
+                    iteration, i, wireName, soulName, recovered, tc.Id ?? "(none)");
 
-                var result = await registry.ExecuteAsync(name, args, cancellationToken).ConfigureAwait(false);
+                var result = await registry.ExecuteAsync(soulName, args, cancellationToken).ConfigureAwait(false);
+
+                // Clarify PreferHermes ownership when Hermes-native / unknown tools leak.
+                var content = result.Content ?? string.Empty;
+                if (!result.Success
+                    && !toolNames.Contains(soulName)
+                    && content.StartsWith("Unknown tool", StringComparison.Ordinal))
+                {
+                    content =
+                        $"Refused non-SoulCore tool '{wireName}'. " +
+                        "PreferHermes dispatches SoulCore ITools only; " +
+                        "MCP backends run via CallMcpToolAsync inside those ITools. " +
+                        content;
+                }
 
                 _logger.LogInformation(
-                    "Hermes tool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
-                    iteration, i, name, result.Success, result.Content?.Length ?? 0);
+                    "Hermes SoulCore ITool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
+                    iteration, i, soulName, result.Success, content.Length);
 
                 wireMessages.Add(new ChatMessageDto
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Name = name,
-                    Content = result.Content ?? string.Empty
+                    Name = soulName,
+                    Content = content
                 });
             }
         }
@@ -290,6 +343,144 @@ public sealed class HermesHttpClient : IHermesClient
             : lastAssistantText;
     }
 
+    /// <summary>
+    /// BED-144: force-invoke a Hermes MCP tool via <c>POST /v1/chat/completions</c>
+    /// with a single-tool <c>tools[]</c> advertisement and an object-form
+    /// <c>tool_choice</c> that forces that tool. Hermes with
+    /// <c>tool_execution: "server"</c> typically returns the MCP result in
+    /// <c>message.content</c> (often <b>without</b> client-visible
+    /// <c>tool_calls</c>). Content-leak recovery (ISSUE-001 shape) is applied
+    /// when the model echoes a call JSON instead of a result.
+    /// </summary>
+    public async Task<ToolResult> CallMcpToolAsync(
+        string mcpToolName,
+        JsonElement arguments,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(mcpToolName))
+            throw new ArgumentException("mcpToolName must be non-empty.", nameof(mcpToolName));
+
+        var toolName = mcpToolName.Trim();
+        var argsElement = NormalizeArgsObject(arguments);
+        var argsJson = argsElement.GetRawText();
+
+        // Health gate — AC #4: Hermes down → Success:false with unavailable message.
+        if (!await IsGatewayHealthyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogWarning(
+                "Hermes MCP invoke aborted: gateway unhealthy for tool={Tool}",
+                toolName);
+            return new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: new { mcpToolName = toolName, reason = "health_failed" });
+        }
+
+        if (string.IsNullOrWhiteSpace(ResolveApiKey(_options)))
+        {
+            _logger.LogWarning(
+                "Hermes MCP invoke aborted: missing API key for tool={Tool}",
+                toolName);
+            return new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: new { mcpToolName = toolName, reason = "missing_api_key" });
+        }
+
+        // Object-form tool_choice (not a JSON string) so OpenAI sees a real object.
+        var toolChoiceJson =
+            "{\"type\":\"function\",\"function\":{\"name\":" + JsonSerializer.Serialize(toolName) + "}}";
+        using var toolChoiceDoc = JsonDocument.Parse(toolChoiceJson);
+        var toolChoice = toolChoiceDoc.RootElement.Clone();
+
+        var parameters = argsElement.ValueKind == JsonValueKind.Object
+            ? BuildPassthroughParametersSchema(argsElement)
+            : JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement.Clone();
+
+        var payload = new McpInvokeRequest
+        {
+            Model = _options.Model,
+            Messages = new List<ChatMessageDto>
+            {
+                new()
+                {
+                    Role = "system",
+                    Content =
+                        "You are a tool router. Call exactly the forced tool with the provided JSON arguments. " +
+                        "Do not invent extra arguments. After the tool runs, reply with only the tool result text."
+                },
+                new()
+                {
+                    Role = "user",
+                    Content = $"Call tool '{toolName}' with arguments: {argsJson}"
+                }
+            },
+            Tools = new List<ToolDto>
+            {
+                new()
+                {
+                    Type = "function",
+                    Function = new FunctionDto
+                    {
+                        Name = toolName,
+                        Description = $"Hermes MCP tool '{toolName}' (SoulCore BED-144 direct invoke).",
+                        Parameters = parameters
+                    }
+                }
+            },
+            ToolChoice = toolChoice,
+            MaxTokens = Math.Max(64, _options.MaxTokens),
+            Stream = false
+        };
+
+        _logger.LogInformation(
+            "Hermes MCP invoke start: tool={Tool} argsLen={Len}",
+            toolName, argsJson.Length);
+
+        string body;
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(
+                "v1/chat/completions",
+                payload,
+                JsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Hermes MCP invoke HTTP {Status} for tool={Tool}: {Body}",
+                    (int)response.StatusCode,
+                    toolName,
+                    TextUtil.Truncate(body, 400));
+                return new ToolResult(
+                    Success: false,
+                    Content: IHermesMcpInvoker.UnavailableMessage,
+                    Data: new
+                    {
+                        mcpToolName = toolName,
+                        reason = "http_error",
+                        status = (int)response.StatusCode
+                    });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Hermes MCP invoke transport failure for tool={Tool}", toolName);
+            return new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: new { mcpToolName = toolName, reason = "transport", error = ex.GetType().Name });
+        }
+
+        return TranslateMcpCompletionToToolResult(toolName, body);
+    }
+
     /// <summary>GET /health — no API key required on quarry Hermes.</summary>
     public async Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
     {
@@ -297,6 +488,227 @@ public sealed class HermesHttpClient : IHermesClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return body;
+    }
+
+    /// <summary>
+    /// Short health probe used by <see cref="CallMcpToolAsync"/>. Treats any
+    /// non-success / transport failure as unavailable (does not throw).
+    /// </summary>
+    private async Task<bool> IsGatewayHealthyAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            // Bound the probe so a hung gateway cannot stall a tool call beyond ~5s.
+            linked.CancelAfter(TimeSpan.FromSeconds(5));
+            using var response = await _http.GetAsync("health", linked.Token).ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false; // probe timeout
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Translate an OpenAI chat-completion body into <see cref="ToolResult"/>.
+    /// Prefers <c>message.content</c> (server-side tool_execution). Falls back
+    /// to recovering leaked tool-call JSON (treated as incomplete) and to
+    /// summarizing client-visible <c>tool_calls</c> when content is empty.
+    /// </summary>
+    private ToolResult TranslateMcpCompletionToToolResult(string mcpToolName, string body)
+    {
+        ChatCompletionResponse? parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<ChatCompletionResponse>(body, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Hermes MCP invoke: non-JSON body for tool={Tool}", mcpToolName);
+            return new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: new { mcpToolName, reason = "invalid_json" });
+        }
+
+        var msg = parsed?.Choices?.FirstOrDefault()?.Message;
+        if (msg is null)
+        {
+            return new ToolResult(
+                Success: false,
+                Content: IHermesMcpInvoker.UnavailableMessage,
+                Data: new { mcpToolName, reason = "no_choice" });
+        }
+
+        var content = (msg.Content ?? string.Empty).Trim();
+        var toolCalls = msg.ToolCalls;
+
+        // Server-side execution path: content holds the MCP result; tool_calls often null.
+        if (!string.IsNullOrWhiteSpace(content))
+        {
+            // If content is a leaked call envelope ({name, arguments}) rather than a
+            // result, mark incomplete — do not pretend the MCP tool ran.
+            var nameSet = new HashSet<string>(StringComparer.Ordinal) { mcpToolName };
+            if (TryRecoverToolCallsFromContent(content, nameSet) is { Count: > 0 })
+            {
+                _logger.LogWarning(
+                    "Hermes MCP invoke: content looks like an unevaluated tool call for {Tool}",
+                    mcpToolName);
+                return new ToolResult(
+                    Success: false,
+                    Content:
+                        $"hermes returned an unevaluated tool call for '{mcpToolName}' " +
+                        "(server-side tool_execution did not produce a result in content).",
+                    Data: new { mcpToolName, raw = content, tool_calls = toolCalls });
+            }
+
+            var translated = TryParseStructuredToolResult(content, mcpToolName);
+            _logger.LogInformation(
+                "Hermes MCP invoke ok (content): tool={Tool} success={Success} contentLen={Len}",
+                mcpToolName, translated.Success, translated.Content?.Length ?? 0);
+            return translated;
+        }
+
+        // Client-visible tool_calls without content: gateway did not execute server-side.
+        if (toolCalls is { Count: > 0 })
+        {
+            var first = toolCalls[0];
+            var name = first.Function?.Name ?? mcpToolName;
+            var args = first.Function?.Arguments ?? "{}";
+            _logger.LogWarning(
+                "Hermes MCP invoke: tool_calls present but empty content for {Tool} (client-side shape)",
+                mcpToolName);
+            return new ToolResult(
+                Success: false,
+                Content:
+                    $"hermes returned tool_calls for '{name}' without server-side execution result. " +
+                    "Ensure Hermes tool_execution=server for MCP tools.",
+                Data: new { mcpToolName = name, arguments = args, tool_call_id = first.Id });
+        }
+
+        return new ToolResult(
+            Success: false,
+            Content: IHermesMcpInvoker.UnavailableMessage,
+            Data: new { mcpToolName, reason = "empty_content" });
+    }
+
+    /// <summary>
+    /// Best-effort parse of MCP content into <see cref="ToolResult"/>. Accepts
+    /// plain text (Success:true) or JSON objects with <c>success</c>/<c>ok</c>
+    /// + <c>content</c>/<c>message</c>/<c>result</c> fields.
+    /// </summary>
+    private static ToolResult TryParseStructuredToolResult(string content, string mcpToolName)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return new ToolResult(Success: true, Content: content, Data: new { mcpToolName, raw = content });
+            }
+
+            var success = true;
+            if (root.TryGetProperty("success", out var sEl))
+            {
+                success = sEl.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.String => !string.Equals(sEl.GetString(), "false", StringComparison.OrdinalIgnoreCase),
+                    _ => true
+                };
+            }
+            else if (root.TryGetProperty("ok", out var okEl))
+            {
+                success = okEl.ValueKind != JsonValueKind.False
+                    && !(okEl.ValueKind == JsonValueKind.String
+                         && string.Equals(okEl.GetString(), "false", StringComparison.OrdinalIgnoreCase));
+            }
+
+            string? text = null;
+            foreach (var key in new[] { "content", "message", "result", "output", "text" })
+            {
+                if (!root.TryGetProperty(key, out var v)) continue;
+                text = v.ValueKind == JsonValueKind.String ? v.GetString() : v.GetRawText();
+                if (!string.IsNullOrWhiteSpace(text)) break;
+            }
+
+            return new ToolResult(
+                Success: success,
+                Content: string.IsNullOrWhiteSpace(text) ? content : text!,
+                Data: JsonSerializer.Deserialize<object>(content));
+        }
+        catch (JsonException)
+        {
+            // Plain / non-JSON content — treat as successful tool output text.
+            return new ToolResult(Success: true, Content: content, Data: new { mcpToolName });
+        }
+    }
+
+    private static JsonElement NormalizeArgsObject(JsonElement arguments)
+    {
+        if (arguments.ValueKind == JsonValueKind.Object)
+            return arguments.Clone();
+        if (arguments.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            return JsonDocument.Parse("{}").RootElement.Clone();
+        // Wrap non-objects so the wire always carries a JSON object.
+        return JsonSerializer.SerializeToElement(new { value = arguments });
+    }
+
+    /// <summary>
+    /// Build a permissive JSON Schema that mirrors known argument keys so the
+    /// gateway accepts the forced tool call without rejecting unknown props.
+    /// </summary>
+    private static JsonElement BuildPassthroughParametersSchema(JsonElement args)
+    {
+        var props = new Dictionary<string, object>();
+        foreach (var p in args.EnumerateObject())
+        {
+            props[p.Name] = new { type = JsonTypeName(p.Value.ValueKind) };
+        }
+
+        var schema = new
+        {
+            type = "object",
+            properties = props,
+            additionalProperties = true
+        };
+        return JsonSerializer.SerializeToElement(schema);
+    }
+
+    private static string JsonTypeName(JsonValueKind kind) => kind switch
+    {
+        JsonValueKind.String => "string",
+        JsonValueKind.Number => "number",
+        JsonValueKind.True or JsonValueKind.False => "boolean",
+        JsonValueKind.Array => "array",
+        JsonValueKind.Object => "object",
+        _ => "string"
+    };
+
+    /// <summary>
+    /// MCP-direct invoke request. <see cref="ToolChoice"/> is a
+    /// <see cref="JsonElement"/> so object-form <c>tool_choice</c> serializes
+    /// as a JSON object (not a double-encoded string).
+    /// </summary>
+    private sealed class McpInvokeRequest
+    {
+        public string Model { get; set; } = string.Empty;
+        public List<ChatMessageDto> Messages { get; set; } = new();
+        public List<ToolDto>? Tools { get; set; }
+        public JsonElement? ToolChoice { get; set; }
+        public int? MaxTokens { get; set; }
+        public bool Stream { get; set; }
     }
 
     private static string? ResolveApiKey(HermesOptions options)

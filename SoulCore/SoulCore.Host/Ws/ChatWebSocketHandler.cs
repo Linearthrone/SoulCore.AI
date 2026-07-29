@@ -30,6 +30,7 @@ public sealed class ChatWebSocketHandler
     private readonly IUnrealVerbClient _unreal;
     private readonly ISoulLoop _soulLoop;
     private readonly IToolRegistry _toolRegistry;
+    private readonly IChatSessionHistoryStore _sessionHistory;
     private readonly SpendMeter _spendMeter;
     private readonly DriftWatcher _driftWatcher;
     private readonly PresenceWsHub _hub;
@@ -58,6 +59,7 @@ public sealed class ChatWebSocketHandler
         IUnrealVerbClient unreal,
         ISoulLoop soulLoop,
         IToolRegistry toolRegistry,
+        IChatSessionHistoryStore sessionHistory,
         SpendMeter spendMeter,
         DriftWatcher driftWatcher,
         PresenceWsHub hub,
@@ -75,6 +77,7 @@ public sealed class ChatWebSocketHandler
         _unreal = unreal;
         _soulLoop = soulLoop;
         _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
+        _sessionHistory = sessionHistory ?? throw new ArgumentNullException(nameof(sessionHistory));
         _spendMeter = spendMeter;
         _driftWatcher = driftWatcher;
         _hub = hub;
@@ -126,7 +129,7 @@ public sealed class ChatWebSocketHandler
                     continue;
 
                 var json = Encoding.UTF8.GetString(ms.ToArray());
-                await HandleTextAsync(socket, json, cancellationToken).ConfigureAwait(false);
+                await HandleTextAsync(socket, json, sessionId, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -136,7 +139,11 @@ public sealed class ChatWebSocketHandler
         }
     }
 
-    private async Task HandleTextAsync(WebSocket socket, string json, CancellationToken cancellationToken)
+    private async Task HandleTextAsync(
+        WebSocket socket,
+        string json,
+        Guid connectionSessionId,
+        CancellationToken cancellationToken)
     {
         if (!SoulCoreFrame.TryParse(json, out var frame) || frame is null)
         {
@@ -159,7 +166,7 @@ public sealed class ChatWebSocketHandler
                 break;
 
             case SoulCoreFrameTypes.ChatSend:
-                await HandleChatSendAsync(socket, frame, cancellationToken).ConfigureAwait(false);
+                await HandleChatSendAsync(socket, frame, connectionSessionId, cancellationToken).ConfigureAwait(false);
                 break;
 
             case SoulCoreFrameTypes.EmotionCorrect:
@@ -279,7 +286,11 @@ public sealed class ChatWebSocketHandler
         await SendEmotionSnapshotAsync(socket, frame.Id, cancellationToken, note: note).ConfigureAwait(false);
     }
 
-    private async Task HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, CancellationToken cancellationToken)
+    private async Task HandleChatSendAsync(
+        WebSocket socket,
+        SoulCoreFrame frame,
+        Guid connectionSessionId,
+        CancellationToken cancellationToken)
     {
         var text = ExtractText(frame.Payload);
         if (string.IsNullOrWhiteSpace(text))
@@ -293,6 +304,11 @@ public sealed class ChatWebSocketHandler
                 cancellationToken).ConfigureAwait(false);
             return;
         }
+
+        // BED-158: prefer client payload.sessionId; fall back to WS connection id
+        // so multi-turn on the same socket still carries history when the client
+        // omits sessionId.
+        var historySessionId = ResolveHistorySessionId(frame.Payload, connectionSessionId);
 
         await SendEmotionSnapshotAsync(socket, frame.Id, cancellationToken).ConfigureAwait(false);
 
@@ -369,6 +385,7 @@ public sealed class ChatWebSocketHandler
         string provider;
         var usedStub = false;
         var dispatchedToolNames = new HashSet<string>(StringComparer.Ordinal);
+        var toolTrace = new List<ToolTraceEntry>();
 
         // Tool-loop path (BED-128): when UseToolLoop=true, route the chat turn
         // through the agent loop (CompleteWithToolsAsync) with tools built from
@@ -379,7 +396,13 @@ public sealed class ChatWebSocketHandler
         {
             if (useToolLoop)
             {
-                var loopResult = await CompleteChatWithToolsAsync(text, contextPreamble, dispatchedToolNames, cancellationToken)
+                var loopResult = await CompleteChatWithToolsAsync(
+                        text,
+                        contextPreamble,
+                        historySessionId,
+                        dispatchedToolNames,
+                        toolTrace,
+                        cancellationToken)
                     .ConfigureAwait(false);
                 reply = loopResult.Text;
                 provider = loopResult.Provider;
@@ -389,6 +412,8 @@ public sealed class ChatWebSocketHandler
                 var result = await CompleteChatAsync(text, contextPreamble, cancellationToken).ConfigureAwait(false);
                 reply = result.Text;
                 provider = result.Provider;
+                // Still record plain user+assistant so non-tool multi-turn has context.
+                AppendPlainTurn(historySessionId, text, reply);
             }
         }
         catch (Exception ex)
@@ -415,6 +440,7 @@ public sealed class ChatWebSocketHandler
             usedStub = true;
             provider = "stub";
             reply = BuildStubReply(text);
+            AppendPlainTurn(historySessionId, text, reply);
         }
 
         // Chunk into chat.delta frames (cumulative text) then finalize with chat.done.
@@ -1324,18 +1350,18 @@ public sealed class ChatWebSocketHandler
     private sealed record ChatCompletionResult(string Text, string Provider);
 
     /// <summary>
-    /// Tool-loop inference path (BED-128). Builds the agent-loop messages[]
-    /// (system preamble + user text) and routes through
-    /// <c>CompleteWithToolsAsync</c> on the configured backend (Hermes when
-    /// <see cref="ChatWsOptions.PreferHermes"/> + <see cref="HermesOptions.Enabled"/>,
-    /// otherwise Ollama). <paramref name="dispatchedToolNames"/> is populated
-    /// with every tool name the loop dispatched this turn so the caller can
-    /// apply Strategy A double-trigger suppression on the keyword fallback.
+    /// Tool-loop inference path (BED-128 + BED-158). Builds the agent-loop
+    /// messages[] as system preamble + prior session history + current user
+    /// text, routes through <c>CompleteWithToolsAsync</c>, then appends the
+    /// completed turn (user + tool trace + assistant) to the session store so
+    /// later pronouns can resolve prior task/workflow IDs.
     /// </summary>
     private async Task<ChatCompletionResult> CompleteChatWithToolsAsync(
         string text,
         string contextPreamble,
+        string historySessionId,
         HashSet<string> dispatchedToolNames,
+        List<ToolTraceEntry> toolTrace,
         CancellationToken cancellationToken)
     {
         var anyEnabled = _inferenceOptions.Enabled || _hermesOptions.Enabled;
@@ -1345,23 +1371,33 @@ public sealed class ChatWebSocketHandler
                 "No LLM client enabled (Inference:Enabled / Hermes:Enabled). Refusing stub-as-success.");
         }
 
-        // Build the agent-loop messages[]: system preamble + user text.
-        // The tool-loop clients append assistant + tool turns internally.
-        var messages = new List<ChatMessage>(2);
+        // Build the agent-loop messages[]: system preamble + prior turns + user.
+        // The tool-loop clients append assistant + tool turns internally for
+        // THIS turn only; we persist a compact trace afterward (BED-158).
+        var prior = _sessionHistory.GetMessages(historySessionId);
+        var messages = new List<ChatMessage>(2 + prior.Count);
         if (!string.IsNullOrWhiteSpace(contextPreamble))
             messages.Add(new ChatMessage { Role = "system", Content = contextPreamble.Trim() });
+        messages.AddRange(prior);
         messages.Add(new ChatMessage { Role = "user", Content = text });
+
+        _logger.LogDebug(
+            "Chat tool-loop history: session={SessionId} priorMessages={PriorCount}",
+            historySessionId,
+            prior.Count);
 
         // Tools from the registry. Empty registry → empty tools[] → model
         // returns text in one round-trip (loop behaves like single-shot).
         var tools = _toolRegistry.GetDefinitions();
 
         // Wrap the registry in a tracking decorator so we can record which
-        // tool names fired during the loop (Strategy A). The decorator is
-        // call-scoped — one per chat turn — so the set is accurate per turn.
-        var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames);
+        // tool names fired during the loop (Strategy A) AND capture tool
+        // result Content for session history (BED-158). Call-scoped.
+        var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames, toolTrace);
 
         Exception? lastError = null;
+        string? replyText = null;
+        string? provider = null;
 
         // PreferHermes primary: route to Hermes when configured + enabled.
         if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
@@ -1373,8 +1409,9 @@ public sealed class ChatWebSocketHandler
                     .ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(reply))
                 {
-                    RecordSpend("hermes", text, contextPreamble, reply);
-                    return new ChatCompletionResult(reply.Trim(), "hermes");
+                    replyText = reply.Trim();
+                    provider = "hermes";
+                    RecordSpend("hermes", text, contextPreamble, replyText);
                 }
             }
             catch (Exception ex)
@@ -1385,7 +1422,7 @@ public sealed class ChatWebSocketHandler
         }
 
         // Ollama primary (or Hermes secondary when PreferHermes=false).
-        if (_inferenceOptions.Enabled)
+        if (replyText is null && _inferenceOptions.Enabled)
         {
             try
             {
@@ -1394,8 +1431,9 @@ public sealed class ChatWebSocketHandler
                     .ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(reply))
                 {
-                    RecordSpend("ollama", text, contextPreamble, reply);
-                    return new ChatCompletionResult(reply.Trim(), "ollama");
+                    replyText = reply.Trim();
+                    provider = "ollama";
+                    RecordSpend("ollama", text, contextPreamble, replyText);
                 }
             }
             catch (Exception ex)
@@ -1406,7 +1444,7 @@ public sealed class ChatWebSocketHandler
         }
 
         // Secondary Hermes (when PreferHermes=false and Ollama failed/disabled).
-        if (!_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        if (replyText is null && !_chatOptions.PreferHermes && _hermesOptions.Enabled)
         {
             try
             {
@@ -1415,8 +1453,9 @@ public sealed class ChatWebSocketHandler
                     .ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(reply))
                 {
-                    RecordSpend("hermes", text, contextPreamble, reply);
-                    return new ChatCompletionResult(reply.Trim(), "hermes");
+                    replyText = reply.Trim();
+                    provider = "hermes";
+                    RecordSpend("hermes", text, contextPreamble, replyText);
                 }
             }
             catch (Exception ex)
@@ -1426,9 +1465,102 @@ public sealed class ChatWebSocketHandler
             }
         }
 
-        throw lastError ?? new InvalidOperationException(
-            "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.");
+        if (replyText is null || provider is null)
+        {
+            throw lastError ?? new InvalidOperationException(
+                "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.");
+        }
+
+        // Persist this turn (user + tool trace + final assistant) for the next send.
+        AppendToolLoopTurn(historySessionId, text, toolTrace, replyText);
+
+        return new ChatCompletionResult(replyText, provider);
     }
+
+    /// <summary>
+    /// Resolves the history key: payload <c>sessionId</c> when present, else
+    /// <c>ws:{connectionSessionId}</c> so same-socket multi-turn still works.
+    /// </summary>
+    private static string ResolveHistorySessionId(JsonElement? payload, Guid connectionSessionId)
+    {
+        var client = ExtractSessionId(payload);
+        if (!string.IsNullOrWhiteSpace(client))
+            return client.Trim();
+        return "ws:" + connectionSessionId.ToString("N");
+    }
+
+    private static string? ExtractSessionId(JsonElement? payload)
+    {
+        if (payload is null || payload.Value.ValueKind != JsonValueKind.Object)
+            return null;
+        if (payload.Value.TryGetProperty("sessionId", out var sid) && sid.ValueKind == JsonValueKind.String)
+            return sid.GetString();
+        return null;
+    }
+
+    private void AppendPlainTurn(string historySessionId, string userText, string assistantText)
+    {
+        _sessionHistory.AppendTurn(
+            historySessionId,
+            new[]
+            {
+                new ChatMessage { Role = "user", Content = userText },
+                new ChatMessage { Role = "assistant", Content = assistantText }
+            });
+    }
+
+    /// <summary>
+    /// Stores user + synthetic assistant tool_calls + role:tool results + final
+    /// assistant text. Tool args/results carry task/workflow IDs so later turns
+    /// can resolve pronouns without re-asking the user.
+    /// </summary>
+    private void AppendToolLoopTurn(
+        string historySessionId,
+        string userText,
+        IReadOnlyList<ToolTraceEntry> toolTrace,
+        string assistantText)
+    {
+        var turn = new List<ChatMessage>(2 + toolTrace.Count * 2);
+        turn.Add(new ChatMessage { Role = "user", Content = userText });
+
+        if (toolTrace.Count > 0)
+        {
+            var calls = new List<ChatToolCall>(toolTrace.Count);
+            foreach (var t in toolTrace)
+            {
+                calls.Add(new ChatToolCall
+                {
+                    Function = new ChatFunctionCall
+                    {
+                        Name = t.Name,
+                        Arguments = t.Arguments
+                    }
+                });
+            }
+
+            turn.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = string.Empty,
+                ToolCalls = calls
+            });
+
+            foreach (var t in toolTrace)
+            {
+                turn.Add(new ChatMessage
+                {
+                    Role = "tool",
+                    Name = t.Name,
+                    Content = t.Content ?? string.Empty
+                });
+            }
+        }
+
+        turn.Add(new ChatMessage { Role = "assistant", Content = assistantText });
+        _sessionHistory.AppendTurn(historySessionId, turn);
+    }
+
+    private sealed record ToolTraceEntry(string Name, JsonElement? Arguments, string? Content);
 
     /// <summary>
     /// Verb classes the keyword detectors map to. Used by Strategy A to
@@ -1492,21 +1624,24 @@ public sealed class ChatWebSocketHandler
 
     /// <summary>
     /// Call-scoped decorator over <see cref="IToolRegistry"/> that records
-    /// every dispatched tool name into the supplied set. Used by
-    /// <see cref="CompleteChatWithToolsAsync"/> to implement Strategy A
-    /// (double-trigger suppression) without changing the
-    /// <see cref="IInferenceClient"/> / <see cref="IHermesClient"/> interfaces
-    /// (which return only the final text, not the tool-call trace).
+    /// every dispatched tool name (Strategy A) and tool result Content
+    /// (BED-158 session history) without changing the inference client
+    /// interfaces (which return only the final text, not the tool-call trace).
     /// </summary>
     private sealed class TrackingToolRegistry : IToolRegistry
     {
         private readonly IToolRegistry _inner;
         private readonly HashSet<string> _dispatched;
+        private readonly List<ToolTraceEntry> _trace;
 
-        public TrackingToolRegistry(IToolRegistry inner, HashSet<string> dispatched)
+        public TrackingToolRegistry(
+            IToolRegistry inner,
+            HashSet<string> dispatched,
+            List<ToolTraceEntry> trace)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _dispatched = dispatched ?? throw new ArgumentNullException(nameof(dispatched));
+            _trace = trace ?? throw new ArgumentNullException(nameof(trace));
         }
 
         public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
@@ -1515,7 +1650,19 @@ public sealed class ChatWebSocketHandler
         {
             if (!string.IsNullOrWhiteSpace(name))
                 _dispatched.Add(name);
-            return await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+
+            var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+
+            JsonElement? clonedArgs = null;
+            if (args.ValueKind is not JsonValueKind.Undefined and not JsonValueKind.Null)
+                clonedArgs = args.Clone();
+
+            _trace.Add(new ToolTraceEntry(
+                name ?? string.Empty,
+                clonedArgs,
+                result.Content));
+
+            return result;
         }
     }
 }
