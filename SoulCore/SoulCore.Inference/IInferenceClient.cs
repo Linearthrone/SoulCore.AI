@@ -40,10 +40,15 @@ public interface IInferenceClient
     /// <param name="tools">Tool schemas built from <see cref="IToolRegistry.GetDefinitions"/>. May be empty.</param>
     /// <param name="registry">Tool dispatch surface. May be empty-registry (no tools callable).</param>
     /// <param name="cancellationToken">Cancellation for the whole loop.</param>
+    /// <param name="loopOptions">
+    /// Optional per-turn knobs (BED-162). Ollama may force a tool via
+    /// <see cref="ToolLoopOptions.ForceToolName"/> on iteration 0.
+    /// </param>
     /// <returns>Final assistant text (last non-empty turn, or a capped marker when iterations hit the cap).</returns>
     Task<string> CompleteWithToolsAsync(
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition> tools,
         IToolRegistry registry,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ToolLoopOptions? loopOptions = null);
 }

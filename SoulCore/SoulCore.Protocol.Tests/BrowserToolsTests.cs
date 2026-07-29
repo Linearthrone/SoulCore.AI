@@ -409,7 +409,8 @@ public class BrowserToolsTests
             IReadOnlyList<ChatMessage> messages,
             IReadOnlyList<ToolDefinition> tools,
             IToolRegistry registry,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            ToolLoopOptions? loopOptions = null)
             => Task.FromResult(string.Empty);
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)

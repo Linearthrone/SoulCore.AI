@@ -542,6 +542,55 @@ public class WorkflowToolsTests
     }
 
     [Fact]
+    public void ToolDescriptions_IncludeNlWhenToUseLanguage()
+    {
+        IVictoriaWorkflowStore stub = new StubWorkflowStore();
+        var create = new WorkflowCreateTool(stub);
+        var execute = WorkflowExecuteTool.CreateForTests(stub, new ToolRegistry(Array.Empty<ITool>()));
+        var get = new WorkflowGetTool(stub);
+
+        Assert.Contains("create a workflow", create.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("prose", create.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("run that workflow", execute.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("all=true", execute.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("id", get.Definition.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_InfersToolFromDescription_WhenToolOmitted()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-infer-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            var create = new WorkflowCreateTool(store);
+            var args = JsonDocument.Parse("""
+            {
+              "name": "recall_and_speak",
+              "steps": [
+                {"description":"Recall a memory about the charter"},
+                {"description":"Speak the recalled memory aloud"}
+              ]
+            }
+            """).RootElement.Clone();
+
+            var result = await create.ExecuteAsync(args);
+            Assert.True(result.Success, result.Content);
+
+            IVictoriaWorkflowStore workflows = store;
+            var row = await workflows.GetAsync(1);
+            Assert.NotNull(row);
+            Assert.Equal(2, row!.Steps.Count);
+            Assert.Equal("recall_memory", row.Steps[0].Tool);
+            Assert.Equal("speak", row.Steps[1].Tool);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
     public void HostDi_RegistersWorkflowStoreAndTools_WithoutCycle()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-di-{Guid.NewGuid():N}.db");

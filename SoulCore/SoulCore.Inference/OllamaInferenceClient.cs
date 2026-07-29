@@ -157,7 +157,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition> tools,
         IToolRegistry? registry = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ToolLoopOptions? loopOptions = null)
     {
         if (messages is null)
             throw new ArgumentNullException(nameof(messages));
@@ -173,16 +174,25 @@ public sealed class OllamaInferenceClient : IInferenceClient
         var ollamaMessages = BuildInitialMessages(messages);
         var ollamaTools = BuildTools(tools);
         var toolNames = BuildToolNameSet(tools);
+        var forceToolName = loopOptions?.ForceToolName?.Trim();
+        if (!string.IsNullOrEmpty(forceToolName) && !toolNames.Contains(forceToolName))
+        {
+            _logger.LogDebug(
+                "Ollama tool_choice force ignored — tool '{Name}' not in advertised tools.",
+                forceToolName);
+            forceToolName = null;
+        }
 
         // Track the last assistant text so the cap-return path has something
         // to surface when the model's final turn emitted only tool_calls.
         var lastAssistantText = string.Empty;
 
         _logger.LogDebug(
-            "Ollama agent loop start: model={Model} messages={Count} tools={ToolCount} maxIter={Cap}",
+            "Ollama agent loop start: model={Model} messages={Count} tools={ToolCount} forceTool={Force} maxIter={Cap}",
             _options.Model,
             ollamaMessages.Count,
             ollamaTools.Count,
+            forceToolName ?? "(none)",
             cap);
 
         for (var iteration = 0; iteration < cap; iteration++)
@@ -191,46 +201,97 @@ public sealed class OllamaInferenceClient : IInferenceClient
             if (_options.NumCtx > 0)
                 chatOptions.NumCtx = _options.NumCtx;
 
-            var payload = new OllamaChatRequest
-            {
-                Model = _options.Model,
-                Messages = ollamaMessages,
-                Tools = ollamaTools.Count == 0 ? null : ollamaTools,
-                Stream = false,
-                Think = _options.ThinkEnabled,
-                Options = chatOptions
-            };
+            var wireToolChoice = BuildWireToolChoice(forceToolName, iteration, ollamaTools.Count);
+            OllamaChatResponseMessage? msg;
+            string body;
 
-            using var response = await _http.PostAsJsonAsync(
-                "api/chat",
-                payload,
-                JsonOptions,
-                cancellationToken).ConfigureAwait(false);
-
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            // BED-162: native /api/chat ignores tool_choice on current Ollama;
+            // OpenAI-compat /v1/chat/completions honors object-form force.
+            if (wireToolChoice.HasValue)
             {
-                _logger.LogWarning(
-                    "Ollama /api/chat failed at iteration {Iter}: {Status} {Body}",
-                    iteration,
-                    (int)response.StatusCode,
-                    TextUtil.Truncate(body, 400));
-                response.EnsureSuccessStatusCode();
+                var openAiPayload = new OpenAiChatRequest
+                {
+                    Model = _options.Model,
+                    Messages = ollamaMessages,
+                    Tools = ollamaTools.Count == 0 ? null : ollamaTools,
+                    ToolChoice = wireToolChoice,
+                    MaxTokens = _options.MaxTokens,
+                    Stream = false
+                };
+
+                using var openAiResponse = await _http.PostAsJsonAsync(
+                    "v1/chat/completions",
+                    openAiPayload,
+                    JsonOptions,
+                    cancellationToken).ConfigureAwait(false);
+
+                body = await openAiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                if (!openAiResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Ollama /v1/chat/completions failed at iteration {Iter}: {Status} {Body}",
+                        iteration,
+                        (int)openAiResponse.StatusCode,
+                        TextUtil.Truncate(body, 400));
+                    openAiResponse.EnsureSuccessStatusCode();
+                }
+
+                msg = TryParseOpenAiAssistantMessage(body);
+                if (msg is null)
+                {
+                    _logger.LogWarning(
+                        "Ollama /v1/chat/completions returned no message at iteration {Iter}: {Body}",
+                        iteration, TextUtil.Truncate(body, 400));
+                    return lastAssistantText;
+                }
+
+                _logger.LogDebug(
+                    "Ollama tool_choice forced via /v1/chat/completions at iteration {Iter} tool={Tool}",
+                    iteration, forceToolName);
             }
-
-            var parsed = JsonSerializer.Deserialize<OllamaChatResponse>(body, JsonOptions);
-            var msg = parsed?.Message;
-            if (msg is null)
+            else
             {
-                _logger.LogWarning("Ollama /api/chat returned no message at iteration {Iter}: {Body}", iteration, TextUtil.Truncate(body, 400));
-                return lastAssistantText;
+                var payload = new OllamaChatRequest
+                {
+                    Model = _options.Model,
+                    Messages = ollamaMessages,
+                    Tools = ollamaTools.Count == 0 ? null : ollamaTools,
+                    Stream = false,
+                    Think = _options.ThinkEnabled,
+                    Options = chatOptions
+                };
+
+                using var response = await _http.PostAsJsonAsync(
+                    "api/chat",
+                    payload,
+                    JsonOptions,
+                    cancellationToken).ConfigureAwait(false);
+
+                body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Ollama /api/chat failed at iteration {Iter}: {Status} {Body}",
+                        iteration,
+                        (int)response.StatusCode,
+                        TextUtil.Truncate(body, 400));
+                    response.EnsureSuccessStatusCode();
+                }
+
+                var parsed = JsonSerializer.Deserialize<OllamaChatResponse>(body, JsonOptions);
+                msg = parsed?.Message;
+                if (msg is null)
+                {
+                    _logger.LogWarning("Ollama /api/chat returned no message at iteration {Iter}: {Body}", iteration, TextUtil.Truncate(body, 400));
+                    return lastAssistantText;
+                }
             }
 
             var assistantText = msg.Content ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(assistantText))
                 lastAssistantText = assistantText;
 
-            // 1. Structured tool_calls (Ollama standard path).
+            // 1. Structured tool_calls (Ollama / OpenAI-compat path).
             var toolCalls = msg.ToolCalls;
             var recovered = false;
 
@@ -327,7 +388,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 // ToolCalls on initial messages are rare (only set on assistant
                 // turns the loop itself produces); we forward them to keep the
                 // shape faithful if a caller pre-seeds an assistant tool-call turn.
-                ,ToolCalls = ConvertToolCalls(m.ToolCalls)
+                ,
+                ToolCalls = ConvertToolCalls(m.ToolCalls)
             });
         }
         return list;
@@ -385,6 +447,105 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 set.Add(t.Name);
         }
         return set;
+    }
+
+    /// <summary>
+    /// BED-162: object-form <c>tool_choice</c> on iteration 0 when a force tool
+    /// is requested; otherwise omit (Ollama auto). Never send tool_choice when
+    /// no tools are advertised.
+    /// </summary>
+    private static JsonElement? BuildWireToolChoice(string? forceToolName, int iteration, int toolCount)
+    {
+        if (toolCount == 0)
+            return null;
+        if (iteration != 0 || string.IsNullOrWhiteSpace(forceToolName))
+            return null;
+
+        var json = $"{{\"type\":\"function\",\"function\":{{\"name\":{JsonSerializer.Serialize(forceToolName)}}}}}";
+        return JsonDocument.Parse(json).RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Parse OpenAI-compatible <c>/v1/chat/completions</c> into the same
+    /// assistant message DTO used by the native Ollama loop (BED-162).
+    /// </summary>
+    private OllamaChatResponseMessage? TryParseOpenAiAssistantMessage(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (!doc.RootElement.TryGetProperty("choices", out var choices)
+                || choices.ValueKind != JsonValueKind.Array
+                || choices.GetArrayLength() == 0)
+            {
+                return null;
+            }
+
+            var choice0 = choices[0];
+            if (!choice0.TryGetProperty("message", out var message)
+                || message.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var content = message.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.String
+                ? c.GetString()
+                : null;
+
+            List<OllamaToolCallDto>? toolCalls = null;
+            if (message.TryGetProperty("tool_calls", out var tcs)
+                && tcs.ValueKind == JsonValueKind.Array
+                && tcs.GetArrayLength() > 0)
+            {
+                toolCalls = new List<OllamaToolCallDto>(tcs.GetArrayLength());
+                foreach (var tc in tcs.EnumerateArray())
+                {
+                    if (!tc.TryGetProperty("function", out var fn) || fn.ValueKind != JsonValueKind.Object)
+                        continue;
+                    var name = fn.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String
+                        ? n.GetString() ?? ""
+                        : "";
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    JsonElement? argsEl = null;
+                    if (fn.TryGetProperty("arguments", out var rawArgs))
+                    {
+                        argsEl = rawArgs.ValueKind switch
+                        {
+                            JsonValueKind.Object or JsonValueKind.Array or JsonValueKind.Number
+                                or JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null
+                                => rawArgs.Clone(),
+                            JsonValueKind.String => ParseStringArguments(rawArgs.GetString()),
+                            _ => null
+                        };
+                    }
+
+                    toolCalls.Add(new OllamaToolCallDto
+                    {
+                        Function = new OllamaFunctionCallDto
+                        {
+                            Name = name,
+                            Arguments = argsEl
+                        }
+                    });
+                }
+
+                if (toolCalls.Count == 0)
+                    toolCalls = null;
+            }
+
+            return new OllamaChatResponseMessage
+            {
+                Content = content,
+                ToolCalls = toolCalls
+            };
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Failed to parse OpenAI-compat chat completion body");
+            return null;
+        }
     }
 
     /// <summary>
@@ -596,9 +757,32 @@ public sealed class OllamaInferenceClient : IInferenceClient
         public string Model { get; set; } = string.Empty;
         public List<OllamaChatMessage> Messages { get; set; } = new();
         public List<OllamaToolDto>? Tools { get; set; }
+
+        /// <summary>
+        /// BED-162: OpenAI-compatible <c>tool_choice</c>. Object form forces a
+        /// function; omitted when null (auto). Native /api/chat may ignore this —
+        /// forced turns use <see cref="OpenAiChatRequest"/> on /v1 instead.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public JsonElement? ToolChoice { get; set; }
+
         public bool Stream { get; set; }
         public bool Think { get; set; }
         public OllamaChatOptions? Options { get; set; }
+    }
+
+    /// <summary>OpenAI-compat request used when forcing <c>tool_choice</c> (BED-162).</summary>
+    private sealed class OpenAiChatRequest
+    {
+        public string Model { get; set; } = string.Empty;
+        public List<OllamaChatMessage> Messages { get; set; } = new();
+        public List<OllamaToolDto>? Tools { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public JsonElement? ToolChoice { get; set; }
+
+        public int MaxTokens { get; set; }
+        public bool Stream { get; set; }
     }
 
     private sealed class OllamaChatOptions

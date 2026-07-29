@@ -11,6 +11,7 @@ using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
 
 namespace SoulCore.Host.Ws;
@@ -357,6 +358,9 @@ public sealed class ChatWebSocketHandler
         }
 
         var contextPreamble = BuildContextPreamble(identityAnchors, recentMemories, emotionPreamble);
+        // BED-162: agency guidance so NL workflow prompts dispatch tools (ISSUE-001).
+        if (_chatOptions.UseToolLoop)
+            contextPreamble = ToolAgencyGuidance.AppendToPreamble(contextPreamble);
 
         var spendSummary = _spendMeter.GetSummary();
         if (spendSummary.CapExceeded)
@@ -1404,6 +1408,7 @@ public sealed class ChatWebSocketHandler
         // Host runs the SoulCore tool-loop → ITool → CallMcpToolAsync for
         // hermes backends. Fail-fast when Hermes is down — do NOT fall through
         // to Ollama (avoids dual-backend turns / silent PreferHermes bypass).
+        // BED-162: ForceToolName is Ollama-only — do not pass loopOptions here.
         if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
         {
             try
@@ -1433,12 +1438,22 @@ public sealed class ChatWebSocketHandler
         }
 
         // Ollama primary (or Hermes secondary when PreferHermes=false).
+        // BED-162: force workflow tool_choice on high-confidence NL intents.
+        ToolLoopOptions? ollamaLoopOptions = null;
+        if (WorkflowToolIntent.TryMatch(text, out var intent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = intent.ToolName };
+            _logger.LogInformation(
+                "Workflow NL intent matched: intent={Intent} forceTool={Tool}",
+                intent.Intent, intent.ToolName);
+        }
+
         if (replyText is null && _inferenceOptions.Enabled)
         {
             try
             {
                 var reply = await _inference
-                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken, ollamaLoopOptions)
                     .ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(reply))
                 {

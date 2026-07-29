@@ -21,7 +21,9 @@ public sealed class WorkflowGetTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "workflow_get",
-        Description: "Get a workflow by id (with current step).",
+        Description:
+            "Get a saved Victoria workflow by id (name, steps, current_step). " +
+            "Use when the user asks for workflow status/details, or to resolve an id before execute.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

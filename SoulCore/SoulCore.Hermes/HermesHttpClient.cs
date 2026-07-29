@@ -145,7 +145,8 @@ public sealed class HermesHttpClient : IHermesClient
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition> tools,
         IToolRegistry registry,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ToolLoopOptions? loopOptions = null)
     {
         if (messages is null)
             throw new ArgumentNullException(nameof(messages));
@@ -156,6 +157,9 @@ public sealed class HermesHttpClient : IHermesClient
 
         // BED-161: fail-fast when gateway down / key missing (PreferHermes must not
         // silently degrade to Hermes server-agent tools or Ollama).
+        // BED-162: loopOptions.ForceToolName is intentionally ignored — PreferHermes
+        // keeps HermesOptions.ToolChoice only (shared tool descriptions still apply).
+        _ = loopOptions;
         if (!await IsGatewayHealthyAsync(cancellationToken).ConfigureAwait(false))
         {
             throw new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage);

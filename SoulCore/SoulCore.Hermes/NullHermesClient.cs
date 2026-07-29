@@ -30,7 +30,8 @@ public sealed class NullHermesClient : IHermesClient
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition> tools,
         IToolRegistry registry,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ToolLoopOptions? loopOptions = null)
         => Task.FromResult(ToolLoopStubReply);
 
     /// <inheritdoc />

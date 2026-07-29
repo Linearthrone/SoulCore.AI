@@ -26,6 +26,7 @@ public sealed class NullInferenceClient : IInferenceClient
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition> tools,
         IToolRegistry registry,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ToolLoopOptions? loopOptions = null)
         => Task.FromResult(ToolLoopStubReply);
 }

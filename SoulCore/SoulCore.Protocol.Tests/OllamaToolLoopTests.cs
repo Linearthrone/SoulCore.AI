@@ -53,6 +53,64 @@ public class OllamaToolLoopTests
         Parameters: JsonDocument.Parse("""{"type":"object","properties":{"text":{"type":"string"}}}""").RootElement.Clone());
 
     [Fact]
+    public async Task ForceToolName_SendsObjectToolChoice_OnFirstIterationOnly()
+    {
+        // Iteration 0 uses /v1/chat/completions (OpenAI shape) because tool_choice is forced.
+        // Iteration 1 uses native /api/chat (Ollama shape) with no tool_choice.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new { function = new { name = "echo", arguments = new { text = "forced" } } }
+                }),
+                ChatResponseJson(content: "done", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("echo", _ => new ToolResult(true, "ok", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "user", Content = "create a workflow to: 1) recall a memory, 2) speak the memory" }
+        };
+
+        var result = await client.CompleteWithToolsAsync(
+            messages,
+            new[] { EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "echo" });
+
+        Assert.Equal("done", result);
+        Assert.Equal(2, handler.CallCount);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.NotNull(handler.CapturedRequests[0].ToolChoiceRaw);
+        Assert.Contains("\"name\":\"echo\"", handler.CapturedRequests[0].ToolChoiceRaw!, StringComparison.Ordinal);
+        Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+        Assert.Null(handler.CapturedRequests[1].ToolChoiceRaw);
+    }
+
+    [Fact]
+    public async Task ForceToolName_UnknownTool_OmitsToolChoice()
+    {
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "plain", toolCalls: null)
+            });
+        var client = MakeClient(handler, registry: new ScriptedRegistry());
+
+        await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "hi" } },
+            new[] { EchoToolDef() },
+            new ScriptedRegistry(),
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_create" });
+
+        Assert.Contains("api/chat", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.Null(handler.CapturedRequests[0].ToolChoiceRaw);
+    }
+
+    [Fact]
     public async Task NoToolCall_ReturnsTextImmediately_OneRoundTrip()
     {
         // Model returns plain text on the first call → loop ends in 1 round-trip.
@@ -591,6 +649,54 @@ public class OllamaToolLoopTests
         return JsonSerializer.Serialize(msg, JsonOptions);
     }
 
+    private static string OpenAiChatResponseJson(string content, object[]? toolCalls)
+    {
+        // OpenAI-compat: arguments must often be a JSON string; serialize nested
+        // anonymous objects to strings when needed by re-wrapping.
+        object? wireCalls = null;
+        if (toolCalls is not null)
+        {
+            var list = new List<object>();
+            foreach (var tc in toolCalls)
+            {
+                // Expect shape: { function = { name, arguments } }
+                var raw = JsonSerializer.Serialize(tc, JsonOptions);
+                using var doc = JsonDocument.Parse(raw);
+                var fn = doc.RootElement.GetProperty("function");
+                var name = fn.GetProperty("name").GetString();
+                var argsEl = fn.GetProperty("arguments");
+                var argsStr = argsEl.ValueKind == JsonValueKind.String
+                    ? argsEl.GetString()
+                    : argsEl.GetRawText();
+                list.Add(new
+                {
+                    id = "call_test",
+                    type = "function",
+                    function = new { name, arguments = argsStr }
+                });
+            }
+            wireCalls = list;
+        }
+
+        var msg = new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    finish_reason = toolCalls is null ? "stop" : "tool_calls",
+                    message = new
+                    {
+                        role = "assistant",
+                        content,
+                        tool_calls = wireCalls
+                    }
+                }
+            }
+        };
+        return JsonSerializer.Serialize(msg, JsonOptions);
+    }
+
     private sealed class ScriptedHandler : HttpMessageHandler
     {
         private readonly Queue<string> _responses;
@@ -612,8 +718,10 @@ public class OllamaToolLoopTests
             var body = request.Content is null
                 ? null
                 : request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
+            var path = request.RequestUri?.AbsolutePath ?? "";
             var messages = new List<CapturedMessage>();
             var tools = (List<object>?)null;
+            string? toolChoiceRaw = null;
             if (body is not null)
             {
                 using var doc = JsonDocument.Parse(body);
@@ -635,8 +743,10 @@ public class OllamaToolLoopTests
                         tools.Add(tool.GetRawText());
                     }
                 }
+                if (doc.RootElement.TryGetProperty("tool_choice", out var tc))
+                    toolChoiceRaw = tc.GetRawText();
             }
-            CapturedRequests.Add(new CapturedRequest(messages, tools));
+            CapturedRequests.Add(new CapturedRequest(messages, tools, toolChoiceRaw, path));
 
             if (_responses.Count == 0)
             {
@@ -653,7 +763,11 @@ public class OllamaToolLoopTests
         }
     }
 
-    private sealed record CapturedRequest(IReadOnlyList<CapturedMessage> Messages, List<object>? Tools);
+    private sealed record CapturedRequest(
+        IReadOnlyList<CapturedMessage> Messages,
+        List<object>? Tools,
+        string? ToolChoiceRaw = null,
+        string Path = "");
     private sealed record CapturedMessage(string Role, string? Content, string? Name);
 
     private sealed class ScriptedRegistry : IToolRegistry

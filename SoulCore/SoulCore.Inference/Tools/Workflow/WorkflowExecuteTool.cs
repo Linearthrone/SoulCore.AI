@@ -58,7 +58,14 @@ public sealed class WorkflowExecuteTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "workflow_execute",
-        Description: "Execute the next step(s) of a workflow.",
+        Description:
+            "Execute the next step(s) of a saved Victoria workflow. " +
+            "Call this whenever the user asks to run / execute / re-run a workflow " +
+            "(e.g. \"run that workflow\", \"run that workflow again\"). " +
+            "Use the workflow id from prior workflow_create / workflow_get results in this session — " +
+            "do not ask which workflow if history already has one. " +
+            "Set all=true when the user wants a full run of remaining steps. " +
+            "If already finished, calling again returns 'workflow complete'.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -303,11 +310,11 @@ public sealed class WorkflowExecuteTool : ITool
           "properties": {
             "id": {
               "type": "integer",
-              "description": "Workflow id returned by workflow_create."
+              "description": "Workflow id returned by workflow_create / prior tool results (e.g. from 'that workflow')."
             },
             "all": {
               "type": "boolean",
-              "description": "When true, execute all remaining steps in sequence. Default false (one step).",
+              "description": "When true, execute all remaining steps in sequence. Use true for 'run that workflow' / full-run phrasing. Default false (one step).",
               "default": false
             }
           },

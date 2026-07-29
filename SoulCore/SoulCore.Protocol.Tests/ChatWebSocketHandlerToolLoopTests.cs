@@ -90,7 +90,9 @@ public class ChatWebSocketHandlerToolLoopTests
 
         return new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, toolRegistry, spendMeter, driftWatcher,
+            unreal, soulLoop, toolRegistry,
+            new ChatSessionHistoryStore(40),
+            spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
     }
 
@@ -153,6 +155,73 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.NotNull(done);
         Assert.Equal("tool-loop reply", done!.Payload?.GetProperty("text").GetString());
         Assert.Equal("ollama", done.Payload?.GetProperty("provider").GetString());
+    }
+
+    // ---------------------------------------------------------------------
+    // BED-162 / ISSUE-001: NL workflow prompts force tool_choice + agency guidance
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task WorkflowNlCreate_ForcesWorkflowCreate_AndAppendsAgencyGuidance()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "created" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(
+            handler,
+            "create a workflow to: 1) recall a memory, 2) speak the memory");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("workflow_create", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("[Tools]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("workflow_create", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WorkflowNlExecute_ForcesWorkflowExecute()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "ran" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "run that workflow");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("workflow_execute", inference.LastLoopOptions?.ForceToolName);
+    }
+
+    [Fact]
+    public async Task WorkflowNlRunAgain_ForcesWorkflowExecute()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "complete" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "run that workflow again");
+
+        Assert.Equal("workflow_execute", inference.LastLoopOptions?.ForceToolName);
+    }
+
+    [Fact]
+    public async Task NonWorkflowChat_DoesNotForceToolChoice()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "hi" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "hello victoria");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Null(inference.LastLoopOptions?.ForceToolName);
     }
 
     // ---------------------------------------------------------------------
@@ -220,7 +289,9 @@ public class ChatWebSocketHandlerToolLoopTests
         var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
         handler = new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, registry, spendMeter, driftWatcher,
+            unreal, soulLoop, registry,
+            new ChatSessionHistoryStore(40),
+            spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
 
         var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
@@ -266,7 +337,9 @@ public class ChatWebSocketHandlerToolLoopTests
         var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
         var handler = new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, registry, spendMeter, driftWatcher,
+            unreal, soulLoop, registry,
+            new ChatSessionHistoryStore(40),
+            spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
 
         var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
@@ -456,6 +529,8 @@ public class ChatWebSocketHandlerToolLoopTests
         public bool CompleteAsyncCalled { get; private set; }
         public bool CompleteWithToolsCalled { get; private set; }
         public List<string> ToolDispatches { get; } = new();
+        public ToolLoopOptions? LastLoopOptions { get; private set; }
+        public string? LastSystemContent { get; private set; }
 
         public Task<string> CompleteAsync(
             string prompt, string? systemPreamble = null,
@@ -469,9 +544,12 @@ public class ChatWebSocketHandlerToolLoopTests
             IReadOnlyList<ChatMessage> messages,
             IReadOnlyList<ToolDefinition> tools,
             IToolRegistry registry,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            ToolLoopOptions? loopOptions = null)
         {
             CompleteWithToolsCalled = true;
+            LastLoopOptions = loopOptions;
+            LastSystemContent = messages.FirstOrDefault(m => m.Role == "system")?.Content;
             // Simulate dispatching any registered tools so Strategy A sees them.
             var defs = registry.GetDefinitions();
             foreach (var d in defs)
@@ -498,7 +576,8 @@ public class ChatWebSocketHandlerToolLoopTests
             IReadOnlyList<ChatMessage> messages,
             IReadOnlyList<ToolDefinition> tools,
             IToolRegistry registry,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            ToolLoopOptions? loopOptions = null)
         {
             CompleteWithToolsCalled = true;
             if (ThrowOnCompleteWithTools is not null)

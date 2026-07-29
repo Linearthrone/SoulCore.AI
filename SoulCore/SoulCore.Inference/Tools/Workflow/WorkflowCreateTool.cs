@@ -21,7 +21,12 @@ public sealed class WorkflowCreateTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "workflow_create",
-        Description: "Create a multi-step workflow.",
+        Description:
+            "Create a multi-step Victoria workflow and persist it. " +
+            "Call this whenever the user asks to create a workflow / multi-step plan " +
+            "(e.g. \"create a workflow to: 1) recall a memory, 2) speak the memory\"). " +
+            "Do not answer with prose-only plans — invoke this tool. " +
+            "Each step needs a description; set tool to a registry name (recall_memory, speak, …) when the step should call a tool.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -160,6 +165,12 @@ public sealed class WorkflowCreateTool : ITool
                 }
             }
 
+            // BED-162: when the model omits tool but the description clearly
+            // names a known action (recall memory / speak), infer it so
+            // workflow_execute nested dispatch stays useful (ISSUE-005 path).
+            if (string.IsNullOrWhiteSpace(tool))
+                tool = WorkflowToolIntent.InferToolFromDescription(description);
+
             var args = default(JsonElement);
             if (el.TryGetProperty("args", out var argsProp))
             {
@@ -194,21 +205,21 @@ public sealed class WorkflowCreateTool : ITool
           "properties": {
             "name": {
               "type": "string",
-              "description": "Short name for the workflow."
+              "description": "Short snake_or_kebab name for the workflow (e.g. recall_and_speak_memory)."
             },
             "steps": {
               "type": "array",
-              "description": "Ordered list of steps. Each step has a description and optional tool name to call.",
+              "description": "Ordered list of steps from the user's numbered plan. Include at least one step. For 'recall a memory' use tool=recall_memory; for 'speak the memory' use tool=speak.",
               "items": {
                 "type": "object",
                 "properties": {
                   "description": {
                     "type": "string",
-                    "description": "What this step does. When tool args are omitted, description is mapped into the tool's primary string parameter."
+                    "description": "What this step does (user wording is fine). When tool args are omitted, description is mapped into the tool's primary string parameter at execute time."
                   },
                   "tool": {
                     "type": "string",
-                    "description": "Optional tool name to call via the registry when this step executes."
+                    "description": "Registry tool to call when this step executes (e.g. recall_memory, speak). Strongly preferred when the user names an action that matches a tool."
                   },
                   "args": {
                     "type": "object",
