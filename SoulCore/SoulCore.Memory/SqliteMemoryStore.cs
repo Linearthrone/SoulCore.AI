@@ -11,10 +11,11 @@ namespace SoulCore.Memory;
 /// <summary>
 /// SQLite-backed memory + emotion singleton. Applies DBD Schema/001 + Migrations/001 on first open.
 /// Also implements <see cref="IVictoriaTaskStore"/> (BED-140) against the
-/// <c>victoria_tasks</c> table in the same DB — Victoria's own work items,
-/// separate from PM tickets under <c>docs/agents/tasks/</c>.
+/// <c>victoria_tasks</c> table and <see cref="IVictoriaWorkflowStore"/> (BED-141)
+/// against <c>victoria_workflows</c> in the same DB — Victoria's own work items /
+/// multi-step plans, separate from PM tickets under <c>docs/agents/tasks/</c>.
 /// </summary>
-public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStats, IVictoriaTaskStore, IAsyncDisposable, IDisposable
+public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStats, IVictoriaTaskStore, IVictoriaWorkflowStore, IAsyncDisposable, IDisposable
 {
     /// <summary>Max embedding rows scanned for in-process cosine recall.</summary>
     public const int SimilarRecallScanCap = 500;
@@ -526,6 +527,158 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             UpdatedAt: reader.GetString(6));
     }
 
+    // ─── IVictoriaWorkflowStore (BED-141) ─────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<long> CreateAsync(
+        string name,
+        IReadOnlyList<WorkflowStep> steps,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Workflow name must be non-empty.", nameof(name));
+        if (steps is null)
+            throw new ArgumentNullException(nameof(steps));
+        if (steps.Count == 0)
+            throw new ArgumentException("Workflow must have at least one step.", nameof(steps));
+
+        foreach (var step in steps)
+        {
+            if (step is null || string.IsNullOrWhiteSpace(step.Description))
+                throw new ArgumentException("Each workflow step requires a non-empty description.", nameof(steps));
+        }
+
+        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        var stepsJson = SerializeWorkflowSteps(steps);
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            INSERT INTO victoria_workflows (name, steps_json, current_step, created_at, updated_at)
+            VALUES ($name, $steps_json, 0, $created_at, $updated_at);
+            """;
+        cmd.Parameters.AddWithValue("$name", name.Trim());
+        cmd.Parameters.AddWithValue("$steps_json", stepsJson);
+        cmd.Parameters.AddWithValue("$created_at", now);
+        cmd.Parameters.AddWithValue("$updated_at", now);
+        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var idCmd = _connection.CreateCommand();
+        idCmd.CommandText = "SELECT last_insert_rowid();";
+        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (result is null || result is DBNull)
+            throw new InvalidOperationException("Failed to obtain victoria_workflows row id after insert.");
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+    }
+
+    /// <inheritdoc />
+    async Task<VictoriaWorkflow?> IVictoriaWorkflowStore.GetAsync(long id, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (id <= 0)
+            return null;
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT id, name, steps_json, current_step, created_at, updated_at
+            FROM victoria_workflows
+            WHERE id = $id
+            LIMIT 1;
+            """;
+        cmd.Parameters.AddWithValue("$id", id);
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            return null;
+
+        return ReadVictoriaWorkflow(reader);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SetCurrentStepAsync(
+        long id,
+        int currentStep,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (id <= 0)
+            return false;
+        if (currentStep < 0)
+            throw new ArgumentOutOfRangeException(nameof(currentStep), "current_step must be >= 0.");
+
+        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            UPDATE victoria_workflows
+            SET current_step = $current_step, updated_at = $updated_at
+            WHERE id = $id;
+            """;
+        cmd.Parameters.AddWithValue("$current_step", currentStep);
+        cmd.Parameters.AddWithValue("$updated_at", now);
+        cmd.Parameters.AddWithValue("$id", id);
+        var rows = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        return rows > 0;
+    }
+
+    private static VictoriaWorkflow ReadVictoriaWorkflow(SqliteDataReader reader)
+    {
+        var stepsJson = reader.IsDBNull(2) ? "[]" : reader.GetString(2);
+        return new VictoriaWorkflow(
+            Id: reader.GetInt64(0),
+            Name: reader.GetString(1),
+            Steps: DeserializeWorkflowSteps(stepsJson),
+            CurrentStep: reader.GetInt32(3),
+            CreatedAt: reader.GetString(4),
+            UpdatedAt: reader.GetString(5));
+    }
+
+    internal static string SerializeWorkflowSteps(IReadOnlyList<WorkflowStep> steps)
+    {
+        var payload = steps.Select(s => new Dictionary<string, object?>
+        {
+            ["description"] = s.Description,
+            ["tool"] = string.IsNullOrWhiteSpace(s.Tool) ? null : s.Tool!.Trim()
+        }).ToList();
+        return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    internal static IReadOnlyList<WorkflowStep> DeserializeWorkflowSteps(string stepsJson)
+    {
+        if (string.IsNullOrWhiteSpace(stepsJson))
+            return Array.Empty<WorkflowStep>();
+
+        using var doc = JsonDocument.Parse(stepsJson);
+        if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            throw new InvalidOperationException("victoria_workflows.steps_json must be a JSON array.");
+
+        var list = new List<WorkflowStep>();
+        foreach (var el in doc.RootElement.EnumerateArray())
+        {
+            if (el.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException("Each workflow step must be a JSON object.");
+
+            if (!el.TryGetProperty("description", out var descProp) || descProp.ValueKind != JsonValueKind.String)
+                throw new InvalidOperationException("Each workflow step requires a 'description' string.");
+
+            var description = descProp.GetString() ?? string.Empty;
+            string? tool = null;
+            if (el.TryGetProperty("tool", out var toolProp) && toolProp.ValueKind == JsonValueKind.String)
+            {
+                var t = toolProp.GetString();
+                if (!string.IsNullOrWhiteSpace(t))
+                    tool = t.Trim();
+            }
+
+            list.Add(new WorkflowStep(description, tool));
+        }
+
+        return list;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -589,6 +742,18 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         else
         {
             _logger.LogDebug("Memory migration 004 already applied at {DbPath}", DatabasePath);
+        }
+
+        // Victoria workflows = 005 (BED-141). Ordered step lists; model-initiated execute only.
+        if (!IsMigrationApplied("005"))
+        {
+            var migration005 = ReadEmbedded("SoulCore.Memory.Migrations.005_victoria_workflows.sql");
+            ExecuteScript(migration005);
+            _logger.LogInformation("Applied Memory migration 005_victoria_workflows to {DbPath}", DatabasePath);
+        }
+        else
+        {
+            _logger.LogDebug("Memory migration 005 already applied at {DbPath}", DatabasePath);
         }
     }
 
