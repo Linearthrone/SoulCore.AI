@@ -250,8 +250,9 @@ public class MemoryToolsTests
 
         Assert.True(result.Success);
         Assert.True(memory.WriteCalled, "WriteEpisodicAsync should be called");
+        Assert.Equal("model", StoreMemoryTool.SourceLabel);
         Assert.True(memory.LastSourceLabel == StoreMemoryTool.SourceLabel,
-            "store_memory must use source='chat' (schema-valid model-authored label, distinct from 'self')");
+            "store_memory must use source='model' (dedicated tool provenance; distinct from 'chat' and 'self')");
         Assert.Contains("honey in their tea", memory.LastText);
         Assert.Contains("[tags: tea, preferences]", memory.LastText);
         Assert.True(memory.EmbeddingStored, "Embedding should be stored when embeddings enabled");
@@ -312,7 +313,9 @@ public class MemoryToolsTests
         var args = JsonDocument.Parse("""{"content":"x"}""").RootElement.Clone();
         await tool.ExecuteAsync(args);
 
+        Assert.Equal("model", memory.LastSourceLabel);
         Assert.NotEqual("self", memory.LastSourceLabel);
+        Assert.NotEqual("chat", memory.LastSourceLabel);
     }
 
     [Fact]

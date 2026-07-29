@@ -33,7 +33,7 @@ public sealed class TaskGetTool : ITool
                 Data: null);
         }
 
-        if (!TryReadId(args, out var id, out var error))
+        if (!ToolArgParsing.TryReadPositiveId(args, "task_get", out var id, out var error))
         {
             return new ToolResult(Success: false, Content: error!, Data: null);
         }
@@ -67,32 +67,6 @@ public sealed class TaskGetTool : ITool
             Success: true,
             Content: FormatTask(task),
             Data: task);
-    }
-
-    internal static bool TryReadId(JsonElement args, out long id, out string? error)
-    {
-        id = 0;
-        error = null;
-
-        if (!args.TryGetProperty("id", out var idProp))
-        {
-            error = "error: task_get requires 'id' (integer).";
-            return false;
-        }
-
-        if (idProp.ValueKind == JsonValueKind.Number && idProp.TryGetInt64(out id) && id > 0)
-            return true;
-
-        if (idProp.ValueKind == JsonValueKind.String
-            && long.TryParse(idProp.GetString(), out id)
-            && id > 0)
-        {
-            return true;
-        }
-
-        error = "error: task_get 'id' must be a positive integer.";
-        id = 0;
-        return false;
     }
 
     internal static string FormatTask(VictoriaTask task)

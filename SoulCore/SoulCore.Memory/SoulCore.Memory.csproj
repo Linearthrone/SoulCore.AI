@@ -16,7 +16,10 @@
     <EmbeddedResource Include="Schema\002_embedding_vectors.sql" LogicalName="SoulCore.Memory.Schema.002_embedding_vectors.sql" />
     <EmbeddedResource Include="Migrations\001_initial.sql" LogicalName="SoulCore.Memory.Migrations.001_initial.sql" />
     <EmbeddedResource Include="Migrations\002_embedding_vectors.sql" LogicalName="SoulCore.Memory.Migrations.002_embedding_vectors.sql" />
+    <EmbeddedResource Include="Schema\003_episodic_source_model.sql" LogicalName="SoulCore.Memory.Schema.003_episodic_source_model.sql" />
+    <EmbeddedResource Include="Migrations\003_episodic_source_model.sql" LogicalName="SoulCore.Memory.Migrations.003_episodic_source_model.sql" />
     <EmbeddedResource Include="Migrations\004_victoria_tasks.sql" LogicalName="SoulCore.Memory.Migrations.004_victoria_tasks.sql" />
+    <EmbeddedResource Include="Migrations\005_victoria_workflows.sql" LogicalName="SoulCore.Memory.Migrations.005_victoria_workflows.sql" />
   </ItemGroup>
 
   <PropertyGroup>
