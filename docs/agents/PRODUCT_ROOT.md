@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-29 (TINA=PM-01 cold-start; dispatch BED-140 / OPS-143 / DBD-157 / QA-134; UE tickets held)
+updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; QA-134 soft; QA-142 next)
 ---
 
 # Product Root Declaration

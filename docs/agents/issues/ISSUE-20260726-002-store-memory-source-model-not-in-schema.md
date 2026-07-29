@@ -2,7 +2,7 @@
 type: issue
 id: ISSUE-20260726-002
 severity: P2
-status: schema-landed-tool-pending
+status: Fixed
 updated: 2026-07-29
 created: 2026-07-26
 filed_by: BED-01
@@ -104,4 +104,4 @@ await store.WriteEpisodicAsync("test", "model", ct);
 
 ## Status
 
-**Open.** Workaround landed in TASK-131 (uses `'chat'`). Recommend DBD pick up the migration as a follow-up; lowering to P2 since QA-130 is unblocked.
+**Fixed 2026-07-29** (DBD-157 + BED-158). Historical note — Workaround had landed in TASK-131 (uses `'chat'`). Recommend DBD pick up the migration as a follow-up; lowering to P2 since QA-130 is unblocked.
