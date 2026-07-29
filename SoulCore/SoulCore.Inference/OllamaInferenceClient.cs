@@ -201,7 +201,18 @@ public sealed class OllamaInferenceClient : IInferenceClient
             if (_options.NumCtx > 0)
                 chatOptions.NumCtx = _options.NumCtx;
 
-            var wireToolChoice = BuildWireToolChoice(forceToolName, iteration, ollamaTools.Count);
+            // BED-165: when ForceToolName is active on iteration 0, advertise
+            // ONLY that tool (exclusive tools[]) so the model cannot pick a
+            // sibling escape hatch (QA-142 AC6 wrong-tool despite forceTool log).
+            var forceActive = iteration == 0 && !string.IsNullOrEmpty(forceToolName);
+            var wireTools = forceActive
+                ? FilterToolsByName(ollamaTools, forceToolName!)
+                : ollamaTools;
+            var wireToolNames = forceActive
+                ? new HashSet<string>(StringComparer.Ordinal) { forceToolName! }
+                : toolNames;
+
+            var wireToolChoice = BuildWireToolChoice(forceToolName, iteration, wireTools.Count);
             OllamaChatResponseMessage? msg;
             string body;
 
@@ -213,7 +224,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 {
                     Model = _options.Model,
                     Messages = ollamaMessages,
-                    Tools = ollamaTools.Count == 0 ? null : ollamaTools,
+                    Tools = wireTools.Count == 0 ? null : wireTools,
                     ToolChoice = wireToolChoice,
                     MaxTokens = _options.MaxTokens,
                     Stream = false
@@ -246,8 +257,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 }
 
                 _logger.LogDebug(
-                    "Ollama tool_choice forced via /v1/chat/completions at iteration {Iter} tool={Tool}",
-                    iteration, forceToolName);
+                    "Ollama tool_choice forced via /v1/chat/completions at iteration {Iter} tool={Tool} exclusiveTools={Count}",
+                    iteration, forceToolName, wireTools.Count);
             }
             else
             {
@@ -255,7 +266,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 {
                     Model = _options.Model,
                     Messages = ollamaMessages,
-                    Tools = ollamaTools.Count == 0 ? null : ollamaTools,
+                    Tools = wireTools.Count == 0 ? null : wireTools,
                     Stream = false,
                     Think = _options.ThinkEnabled,
                     Options = chatOptions
@@ -298,9 +309,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
             // 2. ISSUE-20260726-001 fallback: qwen2.5 leak — tool call embedded
             //    as bare JSON in message.content with tool_calls: null. Try to
             //    recover so Victoria still acts on the flaky runs.
-            if ((toolCalls is null || toolCalls.Count == 0) && toolNames.Count > 0)
+            //    BED-165: when force is active, only recover the forced tool name.
+            if ((toolCalls is null || toolCalls.Count == 0) && wireToolNames.Count > 0)
             {
-                var recoveredCalls = TryRecoverToolCallsFromContent(assistantText, toolNames);
+                var recoveredCalls = TryRecoverToolCallsFromContent(assistantText, wireToolNames);
                 if (recoveredCalls is { Count: > 0 })
                 {
                     toolCalls = recoveredCalls;
@@ -312,7 +324,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     // text — drop it from the surfaced "last assistant text"
                     // so the cap path does not return raw JSON to the user.
                     if (!string.IsNullOrWhiteSpace(msg.Content)
-                        && ContainsRecoverableToolCall(msg.Content, toolNames))
+                        && ContainsRecoverableToolCall(msg.Content, wireToolNames))
                     {
                         lastAssistantText = string.Empty;
                     }
@@ -348,7 +360,25 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     "Ollama tool dispatch: iter={Iter} tool#{Index} name={Name} recovered={Recovered}",
                     iteration, i, name, recovered);
 
-                var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken).ConfigureAwait(false);
+                ToolResult result;
+                // BED-165: hard refuse non-forced names while ForceToolName is
+                // active — never execute the escape-hatch tool even if the model
+                // invents a call (or content-recovery somehow leaked one).
+                if (forceActive
+                    && !string.Equals(name, forceToolName, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "Ollama forced-tool exclusivity: refused non-forced tool '{Name}' (required={Required}) iter={Iter}",
+                        name, forceToolName, iteration);
+                    result = new ToolResult(
+                        Success: false,
+                        Content: $"error: forced tool '{forceToolName}' required; refused '{name}'.",
+                        Data: null);
+                }
+                else
+                {
+                    result = await toolRegistry.ExecuteAsync(name, args, cancellationToken).ConfigureAwait(false);
+                }
 
                 _logger.LogInformation(
                     "Ollama tool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
@@ -432,6 +462,25 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     Parameters = t.Parameters
                 }
             });
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// BED-165: exclusive <c>tools[]</c> for a forced iteration — only the
+    /// named function is advertised so the model cannot escape to siblings.
+    /// </summary>
+    private static List<OllamaToolDto> FilterToolsByName(
+        IReadOnlyList<OllamaToolDto> tools,
+        string forceToolName)
+    {
+        if (tools is null || tools.Count == 0) return new List<OllamaToolDto>(0);
+        var list = new List<OllamaToolDto>(1);
+        foreach (var t in tools)
+        {
+            if (t?.Function is null) continue;
+            if (string.Equals(t.Function.Name, forceToolName, StringComparison.Ordinal))
+                list.Add(t);
         }
         return list;
     }

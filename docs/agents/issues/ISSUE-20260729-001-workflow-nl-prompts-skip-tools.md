@@ -5,15 +5,17 @@ from: QA-01 / PM-01
 priority: P1
 status: Fixed
 resolved: 2026-07-29
-gate: QA-142 retest
-related: TASK-142, TASK-162, BED-162
+reopened: 2026-07-29
+gate: QA-142 retest-2
+related: TASK-142, TASK-162, TASK-165, BED-162, BED-165
 related_fixed: ISSUE-20260727-004, ISSUE-20260727-005
-fix: docs/agents/reports/TASK-20260729-162-BED01-to-PM01.md
+fix: docs/agents/reports/TASK-20260729-165-BED01-to-PM01.md
+prior_fix: docs/agents/reports/TASK-20260729-162-BED01-to-PM01.md
 ---
 
-# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only)
+# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools / wrong-tool escape
 
-# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only)
+# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only) + forced wrong-tool escape
 
 ## Summary
 
@@ -22,6 +24,10 @@ return prose without dispatching `workflow_create` / `workflow_execute`.
 Forced recovery prompts that name the tool already Pass. Session history
 (ISSUE-004) and nested step args (ISSUE-005) are Fixed — residual Fail is
 NL tool selection / guidance.
+
+**Reopen (QA-142 Retest-2):** BED-162 set `ForceToolName` + `/v1` `tool_choice`,
+but still advertised the **full** `tools[]`. Model escaped to sibling tools
+(e.g. `task_list`) and Host executed them — AC6 Fail despite `forceTool=` logs.
 
 ## Severity
 
@@ -37,11 +43,15 @@ re-run workflow) without requiring the user to name tools.
    - `run that workflow again`
 3. Observe: model replies in prose / asks for clarification; Host log has no
    `Ollama tool dispatch: … name=workflow_*`.
+4. **Retest-2:** Host log shows `forceTool=workflow_execute` but dispatch is a
+   non-forced sibling tool — AC6 still Fail.
 
 ## Expected
 
 Same prompts dispatch `workflow_create` then `workflow_execute` (with
-`all=true` on full-run phrasing), using session history for ids.
+`all=true` on full-run phrasing), using session history for ids. When
+`ForceToolName` is set, only that tool is advertised and executable on
+iteration 0.
 
 ## Fix (BED-162)
 
@@ -51,6 +61,13 @@ Same prompts dispatch `workflow_create` then `workflow_execute` (with
   via OpenAI-compat `/v1/chat/completions` (native `/api/chat` ignores
   `tool_choice` on Ollama 0.32.4).
 - Soft create-time tool inference for recall/speak step descriptions.
-- PreferHermes unchanged (ForceToolName not passed).
 
-See `docs/agents/reports/TASK-20260729-162-BED01-to-PM01.md`.
+## Fix (BED-165 — reopen)
+
+- Exclusive `tools[]` (forced name only) on ForceToolName iteration 0.
+- Hard `tool_choice` retained on `/v1/chat/completions`.
+- Hard refuse: never `ExecuteAsync` a non-forced name while force is active.
+- BED-162 `WorkflowToolIntent` + BED-164 PreferHermes Avenue B kept intact
+  (ForceToolName also passed on PreferHermes→Ollama path).
+
+See `docs/agents/reports/TASK-20260729-165-BED01-to-PM01.md`.

@@ -110,6 +110,97 @@ public class OllamaToolLoopTests
         Assert.Null(handler.CapturedRequests[0].ToolChoiceRaw);
     }
 
+    // ---------------------------------------------------------------------
+    // BED-165: ForceToolName exclusive tools[] + hard refuse of wrong names.
+    // ---------------------------------------------------------------------
+
+    private static ToolDefinition WorkflowExecuteToolDef() => new(
+        Name: "workflow_execute",
+        Description: "Execute a workflow.",
+        Parameters: JsonDocument.Parse("""{"type":"object","properties":{"id":{"type":"integer"}}}""").RootElement.Clone());
+
+    private static ToolDefinition TaskListToolDef() => new(
+        Name: "task_list",
+        Description: "List tasks.",
+        Parameters: JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement.Clone());
+
+    [Fact]
+    public async Task ForceToolName_ExclusiveToolsArray_OnlyForcedToolAdvertised()
+    {
+        // Full registry has workflow_execute + task_list, but ForceToolName must
+        // advertise ONLY workflow_execute on iteration 0 (/v1).
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new { function = new { name = "workflow_execute", arguments = new { id = 1 } } }
+                }),
+                ChatResponseJson(content: "ran", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("workflow_execute", _ => new ToolResult(true, "workflow id=1 execute all: ok", null)),
+            ("task_list", _ => new ToolResult(true, "tasks: none", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "run that workflow" } },
+            new[] { WorkflowExecuteToolDef(), TaskListToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_execute" });
+
+        Assert.Equal("ran", result);
+        Assert.Equal(2, handler.CallCount);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.NotNull(handler.CapturedRequests[0].Tools);
+        Assert.Single(handler.CapturedRequests[0].Tools!);
+        Assert.Contains("workflow_execute", handler.CapturedRequests[0].Tools![0].ToString()!, StringComparison.Ordinal);
+        Assert.DoesNotContain("task_list", handler.CapturedRequests[0].Tools![0].ToString()!, StringComparison.Ordinal);
+        Assert.DoesNotContain("echo", handler.CapturedRequests[0].Tools![0].ToString()!, StringComparison.Ordinal);
+        Assert.NotNull(handler.CapturedRequests[0].ToolChoiceRaw);
+        Assert.Contains("\"name\":\"workflow_execute\"", handler.CapturedRequests[0].ToolChoiceRaw!, StringComparison.Ordinal);
+
+        // Iteration 1 restores full tools (no force).
+        Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+        Assert.Null(handler.CapturedRequests[1].ToolChoiceRaw);
+        Assert.NotNull(handler.CapturedRequests[1].Tools);
+        Assert.Equal(3, handler.CapturedRequests[1].Tools!.Count);
+    }
+
+    [Fact]
+    public async Task ForceToolName_WrongToolName_DoesNotExecute_ReturnsRefusal()
+    {
+        // Even if the model invents task_list under a force for workflow_execute,
+        // Host must NOT execute it (QA-142 AC6 wrong-tool escape).
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new { function = new { name = "task_list", arguments = new { } } }
+                }),
+                ChatResponseJson(content: "after refuse", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("workflow_execute", _ => new ToolResult(true, "should not matter", null)),
+            ("task_list", _ => new ToolResult(true, "ESCAPE EXECUTED — BUG", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "run that workflow" } },
+            new[] { WorkflowExecuteToolDef(), TaskListToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_execute" });
+
+        Assert.Equal("after refuse", result);
+        Assert.Empty(registry.Calls); // neither tool executed
+        var toolMsg = handler.CapturedRequests[1].Messages
+            .FirstOrDefault(m => m.Role == "tool");
+        Assert.NotNull(toolMsg);
+        Assert.Contains("forced tool 'workflow_execute' required", toolMsg!.Content ?? "", StringComparison.Ordinal);
+        Assert.Contains("refused 'task_list'", toolMsg.Content ?? "", StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task NoToolCall_ReturnsTextImmediately_OneRoundTrip()
     {
