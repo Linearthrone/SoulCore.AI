@@ -220,10 +220,16 @@ public sealed class OllamaInferenceClient : IInferenceClient
             // OpenAI-compat /v1/chat/completions honors object-form force.
             if (wireToolChoice.HasValue)
             {
+                // BED-166: OpenAI /v1 requires function.arguments as a JSON
+                // *string*. Session history (and in-loop echoes) often carry
+                // object-form args from Ollama /api/chat — posting those as
+                // objects yields 400:
+                //   cannot unmarshal object into Go struct field
+                //   .messages.tool_calls.function.arguments of type string
                 var openAiPayload = new OpenAiChatRequest
                 {
                     Model = _options.Model,
-                    Messages = ollamaMessages,
+                    Messages = ToOpenAiWireMessages(ollamaMessages),
                     Tools = wireTools.Count == 0 ? null : wireTools,
                     ToolChoice = wireToolChoice,
                     MaxTokens = _options.MaxTokens,
@@ -437,12 +443,84 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 Function = new OllamaFunctionCallDto
                 {
                     Name = c.Function.Name,
-                    // Re-serialize parsed arguments to a JsonElement for the wire.
+                    // Keep object-form in the in-memory conversation (native
+                    // /api/chat accepts objects). /v1 posts go through
+                    // ToOpenAiWireMessages which stringifies arguments.
                     Arguments = c.Function.Arguments
                 }
             });
         }
         return list;
+    }
+
+    /// <summary>
+    /// BED-166: clone conversation messages for OpenAI-compat <c>/v1</c> so
+    /// every <c>tool_calls[].function.arguments</c> is a JSON <b>string</b> on
+    /// the wire (not an object). Leaves the in-memory loop messages unchanged
+    /// so native <c>/api/chat</c> rounds can keep object-form args.
+    /// </summary>
+    private static List<OllamaChatMessage> ToOpenAiWireMessages(IReadOnlyList<OllamaChatMessage> messages)
+    {
+        var list = new List<OllamaChatMessage>(messages.Count);
+        foreach (var m in messages)
+        {
+            if (m is null) continue;
+            list.Add(new OllamaChatMessage
+            {
+                Role = m.Role,
+                Content = m.Content,
+                Name = m.Name,
+                ToolCalls = ToOpenAiWireToolCalls(m.ToolCalls)
+            });
+        }
+        return list;
+    }
+
+    private static List<OllamaToolCallDto>? ToOpenAiWireToolCalls(IReadOnlyList<OllamaToolCallDto>? calls)
+    {
+        if (calls is null || calls.Count == 0) return null;
+        var list = new List<OllamaToolCallDto>(calls.Count);
+        foreach (var c in calls)
+        {
+            if (c?.Function is null) continue;
+            list.Add(new OllamaToolCallDto
+            {
+                Function = new OllamaFunctionCallDto
+                {
+                    Name = c.Function.Name,
+                    Arguments = StringifyArgumentsForOpenAi(c.Function.Arguments)
+                }
+            });
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Re-serialize parsed arguments (object form) to a JSON <b>string</b>
+    /// JsonElement so System.Text.Json emits a quoted string on the wire —
+    /// matching OpenAI / Ollama <c>/v1/chat/completions</c>. Null/missing →
+    /// <c>"{}"</c>. Already-string values pass through.
+    /// </summary>
+    private static JsonElement StringifyArgumentsForOpenAi(JsonElement? args)
+    {
+        string asString;
+        if (!args.HasValue || args.Value.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            asString = "{}";
+        }
+        else
+        {
+            asString = args.Value.ValueKind switch
+            {
+                JsonValueKind.String => args.Value.GetString() ?? "{}",
+                JsonValueKind.Object or JsonValueKind.Array or JsonValueKind.Number
+                    or JsonValueKind.True or JsonValueKind.False
+                    => args.Value.GetRawText(),
+                _ => "{}"
+            };
+        }
+
+        return JsonSerializer.SerializeToElement(asString);
     }
 
     private static List<OllamaToolDto> BuildTools(IReadOnlyList<ToolDefinition> tools)

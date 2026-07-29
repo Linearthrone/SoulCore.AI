@@ -201,6 +201,86 @@ public class OllamaToolLoopTests
         Assert.Contains("refused 'task_list'", toolMsg.Content ?? "", StringComparison.Ordinal);
     }
 
+    // ---------------------------------------------------------------------
+    // BED-166: /v1 ForceTool path must stringify object-form arguments from
+    // session history (Ollama Go unmarshal requires string, not object).
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task ForceToolName_HistoryObjectArguments_AreStringifiedOnV1Wire()
+    {
+        // Session history from a prior /api/chat turn stores tool_calls with
+        // object-form arguments. ForceTool posts those messages to /v1 — they
+        // MUST be JSON strings on the wire or Ollama returns 400:
+        //   cannot unmarshal object into ... arguments of type string
+        var priorArgs = JsonDocument.Parse("""{"id":42,"all":true}""").RootElement.Clone();
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(content: "ok", toolCalls: null)
+            });
+        var client = MakeClient(handler, registry: new ScriptedRegistry());
+
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "user", Content = "run that workflow" },
+            new()
+            {
+                Role = "assistant",
+                Content = "",
+                ToolCalls = new[]
+                {
+                    new ChatToolCall
+                    {
+                        Function = new ChatFunctionCall
+                        {
+                            Name = "workflow_execute",
+                            Arguments = priorArgs
+                        }
+                    }
+                }
+            },
+            new() { Role = "tool", Name = "workflow_execute", Content = "workflow id=42 execute all: ok" },
+            new() { Role = "user", Content = "run that workflow again" }
+        };
+
+        await client.CompleteWithToolsAsync(
+            messages,
+            new[] { WorkflowExecuteToolDef(), EchoToolDef() },
+            new ScriptedRegistry(),
+            loopOptions: new ToolLoopOptions { ForceToolName = "workflow_execute" });
+
+        Assert.Single(handler.CapturedRequests);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrWhiteSpace(handler.CapturedRequests[0].RawBody));
+
+        using var doc = JsonDocument.Parse(handler.CapturedRequests[0].RawBody!);
+        var msgs = doc.RootElement.GetProperty("messages");
+        JsonElement? assistantToolCalls = null;
+        foreach (var m in msgs.EnumerateArray())
+        {
+            if (m.TryGetProperty("role", out var role)
+                && role.GetString() == "assistant"
+                && m.TryGetProperty("tool_calls", out var tcs)
+                && tcs.ValueKind == JsonValueKind.Array
+                && tcs.GetArrayLength() > 0)
+            {
+                assistantToolCalls = tcs;
+                break;
+            }
+        }
+
+        Assert.True(assistantToolCalls.HasValue, "expected prior assistant tool_calls in /v1 body");
+        var argsEl = assistantToolCalls!.Value[0].GetProperty("function").GetProperty("arguments");
+        Assert.Equal(JsonValueKind.String, argsEl.ValueKind);
+        var argsText = argsEl.GetString();
+        Assert.False(string.IsNullOrWhiteSpace(argsText));
+        using var argsDoc = JsonDocument.Parse(argsText!);
+        Assert.Equal(JsonValueKind.Object, argsDoc.RootElement.ValueKind);
+        Assert.Equal(42, argsDoc.RootElement.GetProperty("id").GetInt32());
+        Assert.True(argsDoc.RootElement.GetProperty("all").GetBoolean());
+    }
+
     [Fact]
     public async Task NoToolCall_ReturnsTextImmediately_OneRoundTrip()
     {
@@ -837,7 +917,7 @@ public class OllamaToolLoopTests
                 if (doc.RootElement.TryGetProperty("tool_choice", out var tc))
                     toolChoiceRaw = tc.GetRawText();
             }
-            CapturedRequests.Add(new CapturedRequest(messages, tools, toolChoiceRaw, path));
+            CapturedRequests.Add(new CapturedRequest(messages, tools, toolChoiceRaw, path, body));
 
             if (_responses.Count == 0)
             {
@@ -858,7 +938,8 @@ public class OllamaToolLoopTests
         IReadOnlyList<CapturedMessage> Messages,
         List<object>? Tools,
         string? ToolChoiceRaw = null,
-        string Path = "");
+        string Path = "",
+        string? RawBody = null);
     private sealed record CapturedMessage(string Role, string? Content, string? Name);
 
     private sealed class ScriptedRegistry : IToolRegistry
