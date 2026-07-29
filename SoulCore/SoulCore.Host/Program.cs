@@ -18,6 +18,7 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
 using SoulCore.Memory;
@@ -208,6 +209,20 @@ builder.Services.AddSingleton<ITool, PlayAnimationTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
+
+// Desktop tools (BED-135): screenshot / click / type / key / list / focus.
+// Capture tools gated by Tools:AllowDesktopCapture (default true).
+// Control tools gated by Tools:AllowComputerControl (default false — session opt-in).
+// Native C# backend is the Pass path; Hermes MCP is optional stretch (OPS-143).
+builder.Services.AddSingleton<NativeDesktopControlBackend>();
+builder.Services.AddSingleton<HermesDesktopControlBackend>();
+builder.Services.AddSingleton<IDesktopControlBackend, DesktopBackendSelector>();
+builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool, DesktopClickTool>();
+builder.Services.AddSingleton<ITool, DesktopTypeTool>();
+builder.Services.AddSingleton<ITool, DesktopKeyTool>();
+builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
+builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
