@@ -1,0 +1,16 @@
+{
+  "prompt": "Say hello briefly.",
+  "session_id": "qa134-e1-speak",
+  "frames": [
+    "{\"v\":1,\"type\":\"presence.status\",\"id\":\"cdc10d79fae84575853cd104ad562a64\",\"ts\":\"2026-07-29T10:47:20.3570242\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"ac51bddf7a0f4bb1ae445c224a4d67ff\",\"ts\":\"2026-07-29T10:47:20.3635718\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"f8aaeb2b115b4ab09dc4570b5327c26d\",\"ts\":\"2026-07-29T10:47:21.8778318\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"f8aaeb2b115b4ab09dc4570b5327c26d\",\"ts\":\"2026-07-29T10:47:48.3718414\\u002B00:00\",\"payload\":{\"text\":\"Hello! How can I assist you today?\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.done\",\"id\":\"f8aaeb2b115b4ab09dc4570b5327c26d\",\"ts\":\"2026-07-29T10:47:48.3722655\\u002B00:00\",\"payload\":{\"text\":\"Hello! How can I assist you today?\",\"stub\":false,\"provider\":\"ollama\"}}"
+  ],
+  "done_text": "Hello! How can I assist you today?",
+  "error": null,
+  "provider": "ollama",
+  "send_id": "f8aaeb2b115b4ab09dc4570b5327c26d",
+  "stub": false
+}

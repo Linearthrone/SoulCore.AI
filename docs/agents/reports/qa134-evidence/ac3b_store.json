@@ -1,0 +1,17 @@
+{
+  "prompt": "Call store_memory with content I prefer the window seat.",
+  "session_id": "qa134-ac3b",
+  "frames": [
+    "{\"v\":1,\"type\":\"presence.status\",\"id\":\"c7bae4ef8f744b9d9e974b6ce6c5ea6b\",\"ts\":\"2026-07-29T10:51:45.7498934\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"a83a7b42dc91469f9225c26d30c29c9e\",\"ts\":\"2026-07-29T10:51:45.7500290\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"bedb1ba099564c9d92035d57a2770102\",\"ts\":\"2026-07-29T10:51:47.2530464\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"bedb1ba099564c9d92035d57a2770102\",\"ts\":\"2026-07-29T10:51:52.5309916\\u002B00:00\",\"payload\":{\"text\":\"The memory \\u0022QUOKKA-134 wave test - Victoria agen\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"bedb1ba099564c9d92035d57a2770102\",\"ts\":\"2026-07-29T10:51:52.5310321\\u002B00:00\",\"payload\":{\"text\":\"The memory \\u0022QUOKKA-134 wave test - Victoria agency gate Phase B\\u0022 was stored with the ID 67.\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.done\",\"id\":\"bedb1ba099564c9d92035d57a2770102\",\"ts\":\"2026-07-29T10:51:52.5310372\\u002B00:00\",\"payload\":{\"text\":\"The memory \\u0022QUOKKA-134 wave test - Victoria agency gate Phase B\\u0022 was stored with the ID 67.\",\"stub\":false,\"provider\":\"ollama\"}}"
+  ],
+  "done_text": "The memory \"QUOKKA-134 wave test - Victoria agency gate Phase B\" was stored with the ID 67.",
+  "error": null,
+  "provider": "ollama",
+  "send_id": "bedb1ba099564c9d92035d57a2770102",
+  "stub": false
+}

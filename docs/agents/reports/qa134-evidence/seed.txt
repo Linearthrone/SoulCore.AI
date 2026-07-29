@@ -1,0 +1,2 @@
+SEEDED_ID=59
+ROW=(59, 'chat', 96, 768)

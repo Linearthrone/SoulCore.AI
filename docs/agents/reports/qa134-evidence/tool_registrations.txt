@@ -1,0 +1,17 @@
+174:builder.Services.AddSingleton<IToolRegistry, ToolRegistry>();
+195:builder.Services.AddSingleton<ITool>(sp => new ListToolsTool(sp));
+196:builder.Services.AddSingleton<ITool, SystemInfoTool>();
+197:builder.Services.AddSingleton<ITool, ReadFileTool>();
+198:builder.Services.AddSingleton<ITool, WriteFileTool>();
+199:builder.Services.AddSingleton<ITool, ListDirTool>();
+205:builder.Services.AddSingleton<ITool, RecallMemoryTool>();
+206:builder.Services.AddSingleton<ITool, StoreMemoryTool>();
+211:builder.Services.AddSingleton<ITool, SpeakTool>();
+212:builder.Services.AddSingleton<ITool, PlayAnimationTool>();
+213:builder.Services.AddSingleton<ITool, MoveToTool>();
+214:builder.Services.AddSingleton<ITool, LookAtTool>();
+215:builder.Services.AddSingleton<ITool, SetEmotionTool>();
+220:builder.Services.AddSingleton<ITool, TaskCreateTool>();
+221:builder.Services.AddSingleton<ITool, TaskGetTool>();
+222:builder.Services.AddSingleton<ITool, TaskUpdateStatusTool>();
+223:builder.Services.AddSingleton<ITool, TaskListTool>();

@@ -1,0 +1,17 @@
+{
+  "prompt": "Call move_to with x=200 y=0 z=0.",
+  "session_id": "qa134-ac5b",
+  "frames": [
+    "{\"v\":1,\"type\":\"presence.status\",\"id\":\"2c9a0fe2734d44e5aeb41c9a0e5279c7\",\"ts\":\"2026-07-29T10:52:03.9687367\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"2a76738415f5428bbf4c506d6ffee23b\",\"ts\":\"2026-07-29T10:52:03.9688865\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"6d8d910492494614be5fdefb89c6aed0\",\"ts\":\"2026-07-29T10:52:05.4715614\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"6d8d910492494614be5fdefb89c6aed0\",\"ts\":\"2026-07-29T10:52:10.6668760\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m sorry, I don\\u0027t have a specific tool for this\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"6d8d910492494614be5fdefb89c6aed0\",\"ts\":\"2026-07-29T10:52:10.6669347\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m sorry, I don\\u0027t have a specific tool for this response. What\\u0027s the current situation?\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.done\",\"id\":\"6d8d910492494614be5fdefb89c6aed0\",\"ts\":\"2026-07-29T10:52:10.6669400\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m sorry, I don\\u0027t have a specific tool for this response. What\\u0027s the current situation?\",\"stub\":false,\"provider\":\"ollama\"}}"
+  ],
+  "done_text": "I'm sorry, I don't have a specific tool for this response. What's the current situation?",
+  "error": null,
+  "provider": "ollama",
+  "send_id": "6d8d910492494614be5fdefb89c6aed0",
+  "stub": false
+}

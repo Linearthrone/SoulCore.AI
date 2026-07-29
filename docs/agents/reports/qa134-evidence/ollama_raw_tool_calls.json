@@ -1,0 +1,89 @@
+[
+  {
+    "prompt": "Call list_tools now.",
+    "expect": "list_tools",
+    "tool_calls": [
+      {
+        "id": "call_uau6pphu",
+        "function": {
+          "index": 0,
+          "name": "list_tools",
+          "arguments": {}
+        }
+      }
+    ],
+    "content": ""
+  },
+  {
+    "prompt": "Call recall_memory with query QUOKKA-134.",
+    "expect": "recall_memory",
+    "tool_calls": [
+      {
+        "id": "call_cw12pnek",
+        "function": {
+          "index": 0,
+          "name": "recall_memory",
+          "arguments": {
+            "query": {
+              "query": "QUOKKA-134"
+            }
+          }
+        }
+      }
+    ],
+    "content": ""
+  },
+  {
+    "prompt": "Call store_memory with content I prefer the window seat.",
+    "expect": "store_memory",
+    "tool_calls": [
+      {
+        "id": "call_ww3uq46w",
+        "function": {
+          "index": 0,
+          "name": "store_memory",
+          "arguments": {
+            "content": "I prefer the window seat."
+          }
+        }
+      }
+    ],
+    "content": ""
+  },
+  {
+    "prompt": "Call play_animation with name wave_goodbye.",
+    "expect": "play_animation",
+    "tool_calls": [
+      {
+        "id": "call_ge6w29lw",
+        "function": {
+          "index": 0,
+          "name": "play_animation",
+          "arguments": {
+            "name": "wave_goodbye"
+          }
+        }
+      }
+    ],
+    "content": ""
+  },
+  {
+    "prompt": "Call move_to with x=200 y=0 z=0.",
+    "expect": "move_to",
+    "tool_calls": [
+      {
+        "id": "call_tps5lcaf",
+        "function": {
+          "index": 0,
+          "name": "move_to",
+          "arguments": {
+            "x": 200,
+            "y": 0,
+            "z": 0
+          }
+        }
+      }
+    ],
+    "content": ""
+  }
+]
