@@ -20,6 +20,7 @@ using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -131,6 +132,10 @@ builder.WebHost.UseUrls($"http://{bindOptions.BindAddress}:{bindOptions.Port}");
 builder.Services.AddSingleton<SqliteMemoryStore>();
 builder.Services.AddSingleton<IMemoryStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// BED-140: Victoria's own task store (victoria_tasks table). Separate from
+// PM tickets under docs/agents/tasks/ — those are human-authored orchestration
+// artifacts; this store is model-managed via task_* tools.
+builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
@@ -208,6 +213,14 @@ builder.Services.AddSingleton<ITool, PlayAnimationTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
+
+// Task tools (BED-140): task_create / task_get / task_update_status / task_list
+// wrap IVictoriaTaskStore (SQLite victoria_tasks). Victoria's own work items —
+// not the PM ticket folder. Workflow tools (BED-141) are separate.
+builder.Services.AddSingleton<ITool, TaskCreateTool>();
+builder.Services.AddSingleton<ITool, TaskGetTool>();
+builder.Services.AddSingleton<ITool, TaskUpdateStatusTool>();
+builder.Services.AddSingleton<ITool, TaskListTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
