@@ -18,6 +18,7 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
@@ -247,6 +248,20 @@ builder.Services.AddSingleton<ITool, DesktopTypeTool>();
 builder.Services.AddSingleton<ITool, DesktopKeyTool>();
 builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
 builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
+
+// Browser tools (BED-136): health / capture_tab / click / type / key / scroll.
+// Capture tools gated by Tools:AllowBrowserCapture (default true).
+// Control tools gated by Tools:AllowComputerControl (default false — same session
+// opt-in as desktop). Native CDP is the Pass path (TT-159); Hermes MCP stretch.
+builder.Services.AddSingleton<NativeBrowserControlBackend>();
+builder.Services.AddSingleton<HermesBrowserControlBackend>();
+builder.Services.AddSingleton<IBrowserControlBackend, BrowserBackendSelector>();
+builder.Services.AddSingleton<ITool, BrowserHealthTool>();
+builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTool>();
+builder.Services.AddSingleton<ITool, BrowserTypeTool>();
+builder.Services.AddSingleton<ITool, BrowserKeyTool>();
+builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)

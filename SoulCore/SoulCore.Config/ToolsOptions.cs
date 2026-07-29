@@ -1,11 +1,11 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// Non-secret knobs for system / filesystem / desktop tools.
+/// Non-secret knobs for system / filesystem / desktop / browser tools.
 /// Filesystem access is gated by whitelisted roots — empty lists disable the
 /// filesystem tools entirely (they return <c>Success:false, "filesystem tools disabled"</c>).
-/// Desktop write tools (<c>desktop_click</c>/<c>type</c>/<c>key</c>) require
-/// <see cref="AllowComputerControl"/> (default false — session opt-in).
+/// Desktop/browser write tools require <see cref="AllowComputerControl"/>
+/// (default false — session opt-in).
 /// </summary>
 public sealed class ToolsOptions
 {
@@ -48,8 +48,16 @@ public sealed class ToolsOptions
     public bool AllowDesktopCapture { get; set; } = true;
 
     /// <summary>
-    /// Session opt-in for desktop <b>write/control</b> tools
-    /// (<c>desktop_click</c>, <c>desktop_type</c>, <c>desktop_key</c>).
+    /// When true (default), read-only browser tools may run:
+    /// <c>browser_health</c>, <c>browser_capture_tab</c>. Does not authorize
+    /// click/type/key/scroll.
+    /// </summary>
+    public bool AllowBrowserCapture { get; set; } = true;
+
+    /// <summary>
+    /// Session opt-in for desktop/browser <b>write/control</b> tools
+    /// (<c>desktop_click</c>/<c>type</c>/<c>key</c> and
+    /// <c>browser_click</c>/<c>type</c>/<c>key</c>/<c>scroll</c>).
     /// Default <c>false</c> — must be enabled explicitly (config/env) before
     /// any input injection. Never enable by default.
     /// </summary>
@@ -61,4 +69,17 @@ public sealed class ToolsOptions
     /// <c>native</c>.
     /// </summary>
     public string DesktopBackend { get; set; } = "native";
+
+    /// <summary>
+    /// Browser tool backend: <c>native</c> (Chrome DevTools Protocol on loopback —
+    /// BED-136 Pass path / TT-159) or <c>hermes</c> (optional MCP stretch;
+    /// OPS-143 <c>browser_bridge</c>). Default <c>native</c>.
+    /// </summary>
+    public string BrowserBackend { get; set; } = "native";
+
+    /// <summary>
+    /// Chrome/Chromium remote-debugging HTTP base used by the native browser
+    /// backend (e.g. <c>http://127.0.0.1:9222</c>). Only loopback is accepted.
+    /// </summary>
+    public string BrowserCdpUrl { get; set; } = "http://127.0.0.1:9222";
 }
