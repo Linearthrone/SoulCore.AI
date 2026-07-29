@@ -1,0 +1,50 @@
+{
+  "create": {
+    "prompt": "Call workflow_create with name \"nest-check\" and steps [{\"description\":\"recall\",\"tool\":\"recall_memory\"},{\"description\":\"speak it\",\"tool\":\"speak\"}].",
+    "session_id": "qa142-nest-c",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"c5c8557421e247fe8c083c7feb25370f\",\"ts\":\"2026-07-29T11:09:25.9443323\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"75fe6fb103b1455b99dc82e3f962eac5\",\"ts\":\"2026-07-29T11:09:25.9448576\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:27.4476025\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9320801\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321292\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022descript\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321418\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022description\\u0022: \\u0022recall\\u0022, \\u0022tool\\u0022: \\u0022recall_memory\\u0022}, {\\u0022desc\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321477\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022description\\u0022: \\u0022recall\\u0022, \\u0022tool\\u0022: \\u0022recall_memory\\u0022}, {\\u0022description\\u0022: \\u0022speak it\\u0022, \\u0022tool\\u0022: \\u0022speak\\u0022}]\\n\\nPlease \",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321563\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022description\\u0022: \\u0022recall\\u0022, \\u0022tool\\u0022: \\u0022recall_memory\\u0022}, {\\u0022description\\u0022: \\u0022speak it\\u0022, \\u0022tool\\u0022: \\u0022speak\\u0022}]\\n\\nPlease provide any additional parameters or details if \",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321627\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022description\\u0022: \\u0022recall\\u0022, \\u0022tool\\u0022: \\u0022recall_memory\\u0022}, {\\u0022description\\u0022: \\u0022speak it\\u0022, \\u0022tool\\u0022: \\u0022speak\\u0022}]\\n\\nPlease provide any additional parameters or details if needed for this specific workflow.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"290a026b090b4ed6b16b2e83668cb694\",\"ts\":\"2026-07-29T11:09:33.9321718\\u002B00:00\",\"payload\":{\"text\":\"Calling the workflow_create task.\\n\\nTask details:\\n- **Name**: nest-check\\n- **Steps**: [{\\u0022description\\u0022: \\u0022recall\\u0022, \\u0022tool\\u0022: \\u0022recall_memory\\u0022}, {\\u0022description\\u0022: \\u0022speak it\\u0022, \\u0022tool\\u0022: \\u0022speak\\u0022}]\\n\\nPlease provide any additional parameters or details if needed for this specific workflow.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "Calling the workflow_create task.\n\nTask details:\n- **Name**: nest-check\n- **Steps**: [{\"description\": \"recall\", \"tool\": \"recall_memory\"}, {\"description\": \"speak it\", \"tool\": \"speak\"}]\n\nPlease provide any additional parameters or details if needed for this specific workflow.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "290a026b090b4ed6b16b2e83668cb694",
+    "stub": false
+  },
+  "exec": {
+    "prompt": "Call workflow_execute with id 1 and all true.",
+    "session_id": "qa142-nest-e",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"59a409a1782d4fc2a328c530cfd2dfe7\",\"ts\":\"2026-07-29T11:09:34.7922973\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"4793ad72c05545a09af444692e262b6d\",\"ts\":\"2026-07-29T11:09:34.7923871\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:36.2951373\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:41.5988291\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to execute the next step of the workfl\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:41.5988979\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to execute the next step of the workflow with \\u0060id 1\\u0060 and a condition that is always tr\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:41.5989036\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to execute the next step of the workflow with \\u0060id 1\\u0060 and a condition that is always true, which is \\u0060all true\\u0060. How can I start this pr\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:41.5989079\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to execute the next step of the workflow with \\u0060id 1\\u0060 and a condition that is always true, which is \\u0060all true\\u0060. How can I start this process?\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"c695cb77fabd48aa9e59667a34cd8702\",\"ts\":\"2026-07-29T11:09:41.5989137\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to execute the next step of the workflow with \\u0060id 1\\u0060 and a condition that is always true, which is \\u0060all true\\u0060. How can I start this process?\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "I'm ready to execute the next step of the workflow with `id 1` and a condition that is always true, which is `all true`. How can I start this process?",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "c695cb77fabd48aa9e59667a34cd8702",
+    "stub": false
+  },
+  "wf": [
+    [
+      1,
+      "recall-and-speak",
+      "[{\"description\":\"recall a memory tool recall_memory\",\"tool\":\"recall_memory\"},{\"description\":\"speak the memory tool speak\",\"tool\":\"speak\"}]",
+      2
+    ]
+  ]
+}

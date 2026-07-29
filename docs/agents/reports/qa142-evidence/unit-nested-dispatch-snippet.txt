@@ -1,0 +1,45 @@
+17:    public async Task CreateGetExecuteSingleExecuteAll_RoundTrip()
+18-    {
+19-        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-{Guid.NewGuid():N}.db");
+20-        try
+--
+29:            var registry = new ToolRegistry(new ITool[] { echo });
+30:            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+31-
+32-            var createArgs = JsonDocument.Parse(
+33-                """
+--
+92:    public async Task Execute_ToolCallStep_DispatchesViaRegistry()
+93-    {
+94-        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-tool-{Guid.NewGuid():N}.db");
+95-        try
+--
+100:            var registry = new ToolRegistry(new ITool[] { echo });
+101-            var create = new WorkflowCreateTool(workflows);
+102:            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+103-
+104-            var created = await create.ExecuteAsync(JsonDocument.Parse(
+105-                """{"name":"t","steps":[{"description":"run echo","tool":"echo"}]}""")
+--
+131:            var registry = new ToolRegistry(Array.Empty<ITool>());
+132:            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+133-
+134-            var created = await create.ExecuteAsync(JsonDocument.Parse(
+135-                """{"name":"one","steps":[{"description":"only"}]}""")
+--
+145:            Assert.Equal("workflow complete", second.Content);
+146-            Assert.True(GetDataBool(second.Data!, "complete"));
+147-        }
+148-        finally
+--
+205:    public async Task ExecuteAll_FromStart_RunsEveryStep()
+206-    {
+207-        var path = Path.Combine(Path.GetTempPath(), $"soulcore-wf-all-{Guid.NewGuid():N}.db");
+208-        try
+--
+213:            var registry = new ToolRegistry(new ITool[] { echo });
+214-            var create = new WorkflowCreateTool(workflows);
+215:            var execute = WorkflowExecuteTool.CreateForTests(workflows, registry);
+216-
+217-            var created = await create.ExecuteAsync(JsonDocument.Parse(
+218-                """

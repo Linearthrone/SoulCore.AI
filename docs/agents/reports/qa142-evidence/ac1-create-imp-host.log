@@ -1,0 +1,78 @@
+
+      Received HTTP response headers after 1572.5662ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1572.6784ms - 200
+dbug: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop end at iteration 1: text reply (no tool_calls, recovered=False).
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 1509.9278ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1510.0296ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 72.915ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 73.0208ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 — verbs will no-op until UE is up (Host continues)
+      System.Net.WebSockets.WebSocketException (0x80004005): Unable to connect to the remote server
+       ---> System.Net.Http.HttpRequestException: Connection refused (127.0.0.1:8888)
+       ---> System.Net.Sockets.SocketException (111): Connection refused
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in /workspace/SoulCore/SoulCore.Adapters.Ws/UnrealVerbClientStub.cs:line 62
+dbug: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb dropped (not connected): set_emotion
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 — verbs will no-op until UE is up (Host continues)
+      System.Net.WebSockets.WebSocketException (0x80004005): Unable to connect to the remote server
+       ---> System.Net.Http.HttpRequestException: Connection refused (127.0.0.1:8888)
+       ---> System.Net.Sockets.SocketException (111): Connection refused
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in /workspace/SoulCore/SoulCore.Adapters.Ws/UnrealVerbClientStub.cs:line 62
+dbug: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb dropped (not connected): speak
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted — Unreal not connected (no-op)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 5c4ff829-942e-4138-bd1d-6d419c09292a closed
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/ws'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:7700/ws - 101 - - 9976.9988ms

@@ -1,0 +1,21 @@
+{
+  "prompt": "Call workflow_execute with id 1 and all true.",
+  "session_id": "qa142x-ac7-end",
+  "frames": [
+    "{\"v\":1,\"type\":\"presence.status\",\"id\":\"3aebfc01da9842d6b9cf7df5e48fc1cc\",\"ts\":\"2026-07-29T11:08:32.8649045\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"1cad9d3c53e44101a21e361039071255\",\"ts\":\"2026-07-29T11:08:32.8650222\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:34.3676195\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+    "{\"v\":1,\"type\":\"loop.want\",\"id\":\"dad7fde7f00c4f2f9a5ad6e8fe482495\",\"ts\":\"2026-07-29T11:08:51.5426177\\u002B00:00\",\"payload\":{\"want\":\"want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=calm v=0.00 a=0.00 d=0.50 f=0.00); recent=I replied: \\u0022The task is being executed with id 1.\\u0022 Here are the steps:  1. **Ste\\u2026 (\\u002B2 more)\",\"category\":\"recall\",\"emotionLabel\":\"calm\",\"valence\":0,\"arousal\":0,\"episodicCount\":3,\"driftAlert\":false}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2959888\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2960384\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the status set to \\u0022done\\u0022. You can now proceed with \",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2960444\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the status set to \\u0022done\\u0022. You can now proceed with your work or continue answering questions relate\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2960523\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the status set to \\u0022done\\u0022. You can now proceed with your work or continue answering questions related to Victoria\\u0027s tasks. If you have any more quer\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2960575\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the status set to \\u0022done\\u0022. You can now proceed with your work or continue answering questions related to Victoria\\u0027s tasks. If you have any more queries, feel free to ask!\",\"stub\":false,\"provider\":\"ollama\"}}",
+    "{\"v\":1,\"type\":\"chat.done\",\"id\":\"53eb79b05f664f6ea623716795aa5f6e\",\"ts\":\"2026-07-29T11:08:55.2960643\\u002B00:00\",\"payload\":{\"text\":\"The workflow has completed successfully with the status set to \\u0022done\\u0022. You can now proceed with your work or continue answering questions related to Victoria\\u0027s tasks. If you have any more queries, feel free to ask!\",\"stub\":false,\"provider\":\"ollama\"}}"
+  ],
+  "done_text": "The workflow has completed successfully with the status set to \"done\". You can now proceed with your work or continue answering questions related to Victoria's tasks. If you have any more queries, feel free to ask!",
+  "error": null,
+  "provider": "ollama",
+  "send_id": "53eb79b05f664f6ea623716795aa5f6e",
+  "stub": false
+}

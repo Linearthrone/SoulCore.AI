@@ -1,0 +1,24 @@
+{
+  "result": {
+    "prompt": "Invoke task_list() and summarize the results.",
+    "session_id": "qa142r-ac4r-3-6183",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"08f9a8ef6dd44a3686d91a54ee029771\",\"ts\":\"2026-07-29T11:06:28.2283992\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"07d929000398480cb75a1e1d6d9d8d12\",\"ts\":\"2026-07-29T11:06:28.2284975\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:29.7311258\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7194605\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follo\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7195034\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follows:\\n\\n- Task 1: Review the Charter, which she sho\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7195092\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follows:\\n\\n- Task 1: Review the Charter, which she should do before proceeding with something else.\\n- \",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7195229\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follows:\\n\\n- Task 1: Review the Charter, which she should do before proceeding with something else.\\n- Task 2: Remember to Review Charter, indicating t\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7195289\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follows:\\n\\n- Task 1: Review the Charter, which she should do before proceeding with something else.\\n- Task 2: Remember to Review Charter, indicating that she takes time to remember information.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"e0afcf6e351f4be9aa96ecaef2ab0536\",\"ts\":\"2026-07-29T11:06:35.7195325\\u002B00:00\",\"payload\":{\"text\":\"The current list of Victoria\\u0027s tasks is as follows:\\n\\n- Task 1: Review the Charter, which she should do before proceeding with something else.\\n- Task 2: Remember to Review Charter, indicating that she takes time to remember information.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "The current list of Victoria's tasks is as follows:\n\n- Task 1: Review the Charter, which she should do before proceeding with something else.\n- Task 2: Remember to Review Charter, indicating that she takes time to remember information.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "e0afcf6e351f4be9aa96ecaef2ab0536",
+    "stub": false
+  },
+  "marker": "=== QA142R ac4r-a3 eeba3e05 ===",
+  "excerpt": ""
+}

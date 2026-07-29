@@ -1,0 +1,21 @@
+{
+  "result": {
+    "prompt": "Use tool task_get. id=2. Report the status field.",
+    "session_id": "qa142r-ac2r-2-d6ee",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"b40ada78c6d04a178f780d7afc86cb4e\",\"ts\":\"2026-07-29T11:05:45.3533367\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"f9da62b8b46147bb8988bfb5f00cba43\",\"ts\":\"2026-07-29T11:05:45.3534590\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"24510ea79f1b4c449c467a375ba34461\",\"ts\":\"2026-07-29T11:05:46.8558871\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"error\",\"id\":\"24510ea79f1b4c449c467a375ba34461\",\"ts\":\"2026-07-29T11:05:51.4857816\\u002B00:00\",\"payload\":{\"code\":\"chat.model_down\",\"message\":\"LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.\"}}"
+    ],
+    "done_text": null,
+    "error": {
+      "code": "chat.model_down",
+      "message": "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients."
+    },
+    "provider": null,
+    "send_id": "24510ea79f1b4c449c467a375ba34461"
+  },
+  "marker": "=== QA142R ac2r-a2 c7eaa476 ===",
+  "excerpt": ""
+}

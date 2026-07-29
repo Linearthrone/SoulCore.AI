@@ -1,0 +1,43 @@
+dbug: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Loaded 0 charter identity anchors for chat.send
+dbug: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Emotion influence preamble ready (218 chars) for chat.send
+dbug: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop start: model=qwen2.5:0.5b messages=2 tools=19 maxIter=8
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 8653.0432ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 8653.1829ms - 200
+dbug: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop end at iteration 0: text reply (no tool_calls, recovered=False).
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+
+----
+
+dbug: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Loaded 0 charter identity anchors for chat.send
+dbug: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Emotion influence preamble ready (218 chars) for chat.send
+dbug: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop start: model=qwen2.5:0.5b messages=2 tools=19 maxIter=8
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 5015.9368ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 5016.0762ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_create recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_create success=True contentLen=13
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat

@@ -1,0 +1,24 @@
+{
+  "result": {
+    "prompt": "Use tool task_list. List every Victoria task.",
+    "session_id": "qa142r-ac4r-2-f83e",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"61ce5d779ad940cd8b9b8891496f9f1a\",\"ts\":\"2026-07-29T11:06:18.0663431\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"75b9dfcadf3e41fc8f4ea743d32a8b68\",\"ts\":\"2026-07-29T11:06:18.0664770\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:19.5691262\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9025597\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9026111\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review the Charter\\n- **Task 2:** Remember to Review Ch\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9026776\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review the Charter\\n- **Task 2:** Remember to Review Charter\\n\\nThis means she has two tasks: one is for \",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9026854\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review the Charter\\n- **Task 2:** Remember to Review Charter\\n\\nThis means she has two tasks: one is for reviewing the charter, and another one is for re\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9026979\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review the Charter\\n- **Task 2:** Remember to Review Charter\\n\\nThis means she has two tasks: one is for reviewing the charter, and another one is for remembering to review it.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"e799afd379d94c73863507ea6ce0fcac\",\"ts\":\"2026-07-29T11:06:25.9027020\\u002B00:00\",\"payload\":{\"text\":\"Here are Victoria\\u0027s tasks:\\n\\n- **Task 1:** Review the Charter\\n- **Task 2:** Remember to Review Charter\\n\\nThis means she has two tasks: one is for reviewing the charter, and another one is for remembering to review it.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "Here are Victoria's tasks:\n\n- **Task 1:** Review the Charter\n- **Task 2:** Remember to Review Charter\n\nThis means she has two tasks: one is for reviewing the charter, and another one is for remembering to review it.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "e799afd379d94c73863507ea6ce0fcac",
+    "stub": false
+  },
+  "marker": "=== QA142R ac4r-a2 e785709a ===",
+  "excerpt": ""
+}

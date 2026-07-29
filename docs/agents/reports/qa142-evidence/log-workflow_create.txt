@@ -1,0 +1,20 @@
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 5856.9801ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 5857.0476ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=workflow_create recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=workflow_create success=True contentLen=43
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+dbug: Microsoft.Extensions.Http.DefaultHttpClientFactory[100]
+      Starting HttpMessageHandler cleanup cycle with 2 items
+dbug: Microsoft.Extensions.Http.DefaultHttpClientFactory[101]
+      Ending HttpMessageHandler cleanup cycle after 0.0104ms - processed: 0 items - remaining: 2 items
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=calm v=0.00 a=0.00 d=0.50 f=0.00); recent=Victoria currently has two tasks pending and one that she needs to review again … (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 10684.1447ms - 200

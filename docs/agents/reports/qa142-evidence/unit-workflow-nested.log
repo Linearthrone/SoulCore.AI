@@ -1,0 +1,24 @@
+Build started 7/29/2026 11:10:06 AM.
+Test run for /workspace/SoulCore/SoulCore.Protocol.Tests/bin/Release/net8.0/SoulCore.Protocol.Tests.dll (.NETCoreApp,Version=v8.0)
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.29)
+[xUnit.net 00:00:00.07]   Discovering: SoulCore.Protocol.Tests
+[xUnit.net 00:00:00.12]   Discovered:  SoulCore.Protocol.Tests
+[xUnit.net 00:00:00.13]   Starting:    SoulCore.Protocol.Tests
+[xUnit.net 00:00:00.29]   Finished:    SoulCore.Protocol.Tests
+  Passed SoulCore.Protocol.Tests.WorkflowToolsTests.ExecuteAll_FromStart_RunsEveryStep [84 ms]
+  Passed SoulCore.Protocol.Tests.WorkflowToolsTests.Execute_ToolCallStep_DispatchesViaRegistry [12 ms]
+  Passed SoulCore.Protocol.Tests.WorkflowToolsTests.CreateGetExecuteSingleExecuteAll_RoundTrip [14 ms]
+  Passed SoulCore.Protocol.Tests.WorkflowToolsTests.Execute_ReachedEnd_ReturnsWorkflowComplete [9 ms]
+
+Test Run Successful.
+Total tests: 4
+     Passed: 4
+ Total time: 0.6829 Seconds
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.12

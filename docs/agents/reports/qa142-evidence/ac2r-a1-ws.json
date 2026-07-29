@@ -1,0 +1,22 @@
+{
+  "result": {
+    "prompt": "Call the task_get tool. Arguments: {\"id\": 2}.",
+    "session_id": "qa142r-ac2r-1-479f",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"280518be2220414fb40d261396032067\",\"ts\":\"2026-07-29T11:05:36.5604811\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"0998424a85a247c089145c852b62e61a\",\"ts\":\"2026-07-29T11:05:36.5606102\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"573fb3d721d246c8b5d13194c0d9d8e0\",\"ts\":\"2026-07-29T11:05:38.0632558\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"573fb3d721d246c8b5d13194c0d9d8e0\",\"ts\":\"2026-07-29T11:05:44.3149526\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been completed. The curre\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"573fb3d721d246c8b5d13194c0d9d8e0\",\"ts\":\"2026-07-29T11:05:44.3150075\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been completed. The current status is \\u0022done\\u0022 and it\\u0027s assigned a \\u0022medium\\u0022\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"573fb3d721d246c8b5d13194c0d9d8e0\",\"ts\":\"2026-07-29T11:05:44.3150139\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been completed. The current status is \\u0022done\\u0022 and it\\u0027s assigned a \\u0022medium\\u0022 priority. It was titled \\u0022review the charter\\u0022.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"573fb3d721d246c8b5d13194c0d9d8e0\",\"ts\":\"2026-07-29T11:05:44.3150179\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been completed. The current status is \\u0022done\\u0022 and it\\u0027s assigned a \\u0022medium\\u0022 priority. It was titled \\u0022review the charter\\u0022.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "The task with ID 2 has been completed. The current status is \"done\" and it's assigned a \"medium\" priority. It was titled \"review the charter\".",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "573fb3d721d246c8b5d13194c0d9d8e0",
+    "stub": false
+  },
+  "marker": "=== QA142R ac2r-a1 35d77b9f ===",
+  "excerpt": ""
+}

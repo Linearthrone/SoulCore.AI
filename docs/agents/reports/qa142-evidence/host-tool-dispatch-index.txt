@@ -1,0 +1,28 @@
+253: Ollama tool dispatch: iter=0 tool#0 name=task_create recovered=False
+255: Ollama tool result: iter=0 tool#0 name=task_create success=True contentLen=13
+369: Ollama tool dispatch: iter=0 tool#0 name=task_create recovered=False
+371: Ollama tool result: iter=0 tool#0 name=task_create success=True contentLen=13
+799: Ollama tool dispatch: iter=0 tool#0 name=task_update_status recovered=False
+801: Ollama tool result: iter=0 tool#0 name=task_update_status success=True contentLen=25
+1408: Ollama tool dispatch: iter=0 tool#0 name=recall_memory recovered=True
+1418: Ollama tool result: iter=0 tool#0 name=recall_memory success=True contentLen=684
+1536: Ollama tool dispatch: iter=0 tool#0 name=play_animation recovered=False
+1562: Ollama tool result: iter=0 tool#0 name=play_animation success=False contentLen=25
+2051: Ollama tool dispatch: iter=0 tool#0 name=list_tools recovered=False
+2053: Ollama tool result: iter=0 tool#0 name=list_tools success=True contentLen=1313
+2169: Ollama tool dispatch: iter=0 tool#0 name=task_get recovered=False
+2171: Ollama tool result: iter=0 tool#0 name=task_get success=True contentLen=62
+2287: Ollama tool dispatch: iter=0 tool#0 name=task_get recovered=False
+2289: Ollama tool result: iter=0 tool#0 name=task_get success=True contentLen=62
+2450: Ollama tool dispatch: iter=0 tool#0 name=task_get recovered=False
+2452: Ollama tool result: iter=0 tool#0 name=task_get success=True contentLen=62
+2830: Ollama tool dispatch: iter=0 tool#0 name=task_list recovered=False
+2832: Ollama tool result: iter=0 tool#0 name=task_list success=True contentLen=90
+2948: Ollama tool dispatch: iter=0 tool#0 name=task_list recovered=False
+2950: Ollama tool result: iter=0 tool#0 name=task_list success=True contentLen=90
+3066: Ollama tool dispatch: iter=0 tool#0 name=workflow_create recovered=False
+3068: Ollama tool result: iter=0 tool#0 name=workflow_create success=True contentLen=43
+3335: Ollama tool dispatch: iter=0 tool#0 name=workflow_execute recovered=False
+3337: Ollama tool result: iter=0 tool#0 name=workflow_execute success=True contentLen=236
+3465: Ollama tool dispatch: iter=0 tool#0 name=workflow_execute recovered=True
+3467: Ollama tool result: iter=0 tool#0 name=workflow_execute success=False contentLen=17

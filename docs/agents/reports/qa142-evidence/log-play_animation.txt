@@ -1,0 +1,20 @@
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 4892.1175ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 4892.1814ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=play_animation recovered=False
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 — verbs will no-op until UE is up (Host continues)
+      System.Net.WebSockets.WebSocketException (0x80004005): Unable to connect to the remote server
+       ---> System.Net.Http.HttpRequestException: Connection refused (127.0.0.1:8888)
+       ---> System.Net.Sockets.SocketException (111): Connection refused
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)

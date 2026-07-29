@@ -1,0 +1,20 @@
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 4872.6205ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 4872.7328ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_update_status recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_update_status success=True contentLen=25
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 676.5815ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 676.7091ms - 200
+dbug: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop end at iteration 1: text reply (no tool_calls, recovered=False).
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate

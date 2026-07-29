@@ -1,0 +1,22 @@
+{
+  "result": {
+    "prompt": "Call task_get with id 2.",
+    "session_id": "qa142r-ac2r-0-b51a",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"39f7792d6c7042cdba7555f040eda467\",\"ts\":\"2026-07-29T11:05:26.7527841\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"db191887b9cf4c4d90689ee1bf59b832\",\"ts\":\"2026-07-29T11:05:26.7529037\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"b4e551db366e45709ce260aa084bb447\",\"ts\":\"2026-07-29T11:05:28.2557717\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"b4e551db366e45709ce260aa084bb447\",\"ts\":\"2026-07-29T11:05:34.5615505\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been marked as done. It\\u0027s\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"b4e551db366e45709ce260aa084bb447\",\"ts\":\"2026-07-29T11:05:34.5615870\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been marked as done. It\\u0027s titled \\u0027review the charter\\u0027. You can check for \",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"b4e551db366e45709ce260aa084bb447\",\"ts\":\"2026-07-29T11:05:34.5615913\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been marked as done. It\\u0027s titled \\u0027review the charter\\u0027. You can check for updates by reviewing this status.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"b4e551db366e45709ce260aa084bb447\",\"ts\":\"2026-07-29T11:05:34.5615994\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been marked as done. It\\u0027s titled \\u0027review the charter\\u0027. You can check for updates by reviewing this status.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "The task with ID 2 has been marked as done. It's titled 'review the charter'. You can check for updates by reviewing this status.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "b4e551db366e45709ce260aa084bb447",
+    "stub": false
+  },
+  "marker": "=== QA142R ac2r-a0 81e07e14 ===",
+  "excerpt": ""
+}

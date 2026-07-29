@@ -1,0 +1,22 @@
+{
+  "result": {
+    "prompt": "Call task_list now.",
+    "session_id": "qa142r-ac4r-0-69a1",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"86cb27daae024e5fbbc32284b31985fc\",\"ts\":\"2026-07-29T11:05:59.8233284\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"73210b3471284c54bebffff21275d27d\",\"ts\":\"2026-07-29T11:05:59.8234573\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"f8c21be07b5e4cffbda0eca9c607dad9\",\"ts\":\"2026-07-29T11:06:01.3262644\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"f8c21be07b5e4cffbda0eca9c607dad9\",\"ts\":\"2026-07-29T11:06:06.2709339\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to help. Please provide me with the ID\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"f8c21be07b5e4cffbda0eca9c607dad9\",\"ts\":\"2026-07-29T11:06:06.2709836\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to help. Please provide me with the ID of the task you would like to check for updates\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"f8c21be07b5e4cffbda0eca9c607dad9\",\"ts\":\"2026-07-29T11:06:06.2709878\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to help. Please provide me with the ID of the task you would like to check for updates on.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"f8c21be07b5e4cffbda0eca9c607dad9\",\"ts\":\"2026-07-29T11:06:06.2709910\\u002B00:00\",\"payload\":{\"text\":\"I\\u0027m ready to help. Please provide me with the ID of the task you would like to check for updates on.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "I'm ready to help. Please provide me with the ID of the task you would like to check for updates on.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "f8c21be07b5e4cffbda0eca9c607dad9",
+    "stub": false
+  },
+  "marker": "=== QA142R ac4r-a0 bae988f1 ===",
+  "excerpt": ""
+}

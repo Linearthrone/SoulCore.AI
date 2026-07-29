@@ -1,0 +1,20 @@
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 8533.4667ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool call recovered from content-embedded JSON at iteration 0 (count=1)
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=recall_memory recovered=True
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 30.5288ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 30.5856ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=recall_memory success=True contentLen=684
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat

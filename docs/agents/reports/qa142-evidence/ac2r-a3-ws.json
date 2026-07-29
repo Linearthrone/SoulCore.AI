@@ -1,0 +1,23 @@
+{
+  "result": {
+    "prompt": "Please invoke task_get(id=2) now.",
+    "session_id": "qa142r-ac2r-3-84d6",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"0e72a75a539a422aa98a9aad7a0d7638\",\"ts\":\"2026-07-29T11:05:51.4890287\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"31eebd0ff28e49ef8231c3daf2501d79\",\"ts\":\"2026-07-29T11:05:51.4891948\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"loop.want\",\"id\":\"8b3fbebea9234d8194ef5d9ec23d5579\",\"ts\":\"2026-07-29T11:05:51.5384700\\u002B00:00\",\"payload\":{\"want\":\"want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=calm v=0.00 a=0.00 d=0.50 f=0.00); recent=This past tense, this private moment about Victoria\\u0027s task_get tool and its stat\\u2026 (\\u002B2 more)\",\"category\":\"notice\",\"emotionLabel\":\"calm\",\"valence\":0,\"arousal\":0,\"episodicCount\":3,\"driftAlert\":false}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"92ea8ec72ce642a6829e5788819594b2\",\"ts\":\"2026-07-29T11:05:53.0409732\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"92ea8ec72ce642a6829e5788819594b2\",\"ts\":\"2026-07-29T11:05:58.7715480\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been successfully complet\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"92ea8ec72ce642a6829e5788819594b2\",\"ts\":\"2026-07-29T11:05:58.7716131\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been successfully completed. It\\u0027s in the \\u0027in_progress\\u0027 status and its nam\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"92ea8ec72ce642a6829e5788819594b2\",\"ts\":\"2026-07-29T11:05:58.7716618\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been successfully completed. It\\u0027s in the \\u0027in_progress\\u0027 status and its name is \\u0022review the charter\\u0022.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"92ea8ec72ce642a6829e5788819594b2\",\"ts\":\"2026-07-29T11:05:58.7716692\\u002B00:00\",\"payload\":{\"text\":\"The task with ID 2 has been successfully completed. It\\u0027s in the \\u0027in_progress\\u0027 status and its name is \\u0022review the charter\\u0022.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "The task with ID 2 has been successfully completed. It's in the 'in_progress' status and its name is \"review the charter\".",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "92ea8ec72ce642a6829e5788819594b2",
+    "stub": false
+  },
+  "marker": "=== QA142R ac2r-a3 fd75b396 ===",
+  "excerpt": ""
+}

@@ -1,0 +1,23 @@
+{
+  "result": {
+    "prompt": "Use tool list_tools with empty arguments {}.",
+    "session_id": "qa142r-ac0r-2-e98b",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"41a25d98789243d18d4fe6533d2f886f\",\"ts\":\"2026-07-29T11:05:17.8158316\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"358d36fac9e24d80a39daafa39b822b2\",\"ts\":\"2026-07-29T11:05:17.8160175\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:19.3186476\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:26.0507522\\u002B00:00\",\"payload\":{\"text\":\"To help you with your query, I will use the \\u0060tas\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:26.0508014\\u002B00:00\",\"payload\":{\"text\":\"To help you with your query, I will use the \\u0060task_list\\u0060 function to list available tasks.\\n\\nPleas\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:26.0508098\\u002B00:00\",\"payload\":{\"text\":\"To help you with your query, I will use the \\u0060task_list\\u0060 function to list available tasks.\\n\\nPlease provide more information about what task or ta\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.delta\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:26.0508190\\u002B00:00\",\"payload\":{\"text\":\"To help you with your query, I will use the \\u0060task_list\\u0060 function to list available tasks.\\n\\nPlease provide more information about what task or tasks are relevant to you.\",\"stub\":false,\"provider\":\"ollama\"}}",
+      "{\"v\":1,\"type\":\"chat.done\",\"id\":\"76c3386acaaa488a84d1cf00b95d7ca9\",\"ts\":\"2026-07-29T11:05:26.0508227\\u002B00:00\",\"payload\":{\"text\":\"To help you with your query, I will use the \\u0060task_list\\u0060 function to list available tasks.\\n\\nPlease provide more information about what task or tasks are relevant to you.\",\"stub\":false,\"provider\":\"ollama\"}}"
+    ],
+    "done_text": "To help you with your query, I will use the `task_list` function to list available tasks.\n\nPlease provide more information about what task or tasks are relevant to you.",
+    "error": null,
+    "provider": "ollama",
+    "send_id": "76c3386acaaa488a84d1cf00b95d7ca9",
+    "stub": false
+  },
+  "marker": "=== QA142R ac0r-a2 ed68d9b1 ===",
+  "excerpt": ""
+}

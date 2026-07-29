@@ -1,0 +1,21 @@
+{
+  "result": {
+    "prompt": "You must call the list_tools tool. Do not answer in text first.",
+    "session_id": "qa142r-ac0r-1-da58",
+    "frames": [
+      "{\"v\":1,\"type\":\"presence.status\",\"id\":\"39e3b3222051491a8b46b2e34610dbdd\",\"ts\":\"2026-07-29T11:05:11.4998410\\u002B00:00\",\"payload\":{\"alive\":true,\"warm\":true,\"phase\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"dde43e7d6d7848da800eba861ad4c662\",\"ts\":\"2026-07-29T11:05:11.4999571\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"emotion.snapshot\",\"id\":\"7ea52c0744004615ba2ad7b20ea08171\",\"ts\":\"2026-07-29T11:05:13.0023937\\u002B00:00\",\"payload\":{\"valence\":0,\"arousal\":0,\"dominance\":0.5,\"focus\":0,\"label\":\"calm\",\"revision\":1}}",
+      "{\"v\":1,\"type\":\"error\",\"id\":\"7ea52c0744004615ba2ad7b20ea08171\",\"ts\":\"2026-07-29T11:05:17.8110009\\u002B00:00\",\"payload\":{\"code\":\"chat.model_down\",\"message\":\"LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.\"}}"
+    ],
+    "done_text": null,
+    "error": {
+      "code": "chat.model_down",
+      "message": "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients."
+    },
+    "provider": null,
+    "send_id": "7ea52c0744004615ba2ad7b20ea08171"
+  },
+  "marker": "=== QA142R ac0r-a1 47fb2249 ===",
+  "excerpt": ""
+}
