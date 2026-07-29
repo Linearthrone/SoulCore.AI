@@ -11,6 +11,7 @@ using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
 
@@ -1404,10 +1405,19 @@ public sealed class ChatWebSocketHandler
         string? replyText = null;
         string? provider = null;
 
-        // BED-162: force workflow tool_choice on high-confidence NL intents
+        // BED-162 / BED-167: force tool_choice on high-confidence NL intents
         // (Ollama path — including PreferHermes Avenue B which also uses Ollama).
+        // MT4 status wins over workflow when both somehow match (ISSUE-003:
+        // models escape "status" phrasing to task_create/task_get).
         ToolLoopOptions? ollamaLoopOptions = null;
-        if (WorkflowToolIntent.TryMatch(text, out var intent))
+        if (Mt4ToolIntent.TryMatch(text, out var mt4Intent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = mt4Intent.ToolName };
+            _logger.LogInformation(
+                "MT4 NL intent matched: intent={Intent} forceTool={Tool}",
+                mt4Intent.Intent, mt4Intent.ToolName);
+        }
+        else if (WorkflowToolIntent.TryMatch(text, out var intent))
         {
             ollamaLoopOptions = new ToolLoopOptions { ForceToolName = intent.ToolName };
             _logger.LogInformation(

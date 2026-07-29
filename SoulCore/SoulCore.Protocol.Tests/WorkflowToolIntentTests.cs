@@ -48,6 +48,7 @@ public class WorkflowToolIntentTests
         Assert.Contains("[Tools]", once, StringComparison.Ordinal);
         Assert.Contains("workflow_create", once, StringComparison.Ordinal);
         Assert.Contains("workflow_execute", once, StringComparison.Ordinal);
+        Assert.Contains("mt4_status", once, StringComparison.Ordinal);
 
         var twice = ToolAgencyGuidance.AppendToPreamble(once);
         Assert.Equal(once, twice);

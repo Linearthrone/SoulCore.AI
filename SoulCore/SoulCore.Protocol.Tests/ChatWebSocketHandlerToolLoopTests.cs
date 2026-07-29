@@ -225,6 +225,67 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     // ---------------------------------------------------------------------
+    // BED-167 / ISSUE-003: NL MT4 status → ForceToolName=mt4_status
+    // (Avenue B PreferHermes→Ollama too; exclusivity via BED-165)
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task Mt4NlStatus_ForcesMt4Status_AndAgencyMentionsTool()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "connected" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "what's my MT4 status?");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("mt4_status", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("mt4_status", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("task_create", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PreferHermes_Mt4NlStatus_ForcesMt4Status_OnOllamaLoop()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "mt4 ok" };
+        var hermes = new ScriptedHermesClient
+        {
+            CompleteWithToolsReply = "hermes must not run tools"
+        };
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal,
+            MakeChatOptions(useToolLoop: true, preferHermes: true),
+            hermesOptions: MakeHermesOptions(enabled: true));
+
+        await RunOneChatTurnAsync(handler, "what's my MT4 status?");
+
+        Assert.True(hermes.EnsureMcpReadyCalled);
+        Assert.False(hermes.CompleteWithToolsCalled,
+            "PreferHermes Avenue B must not call Hermes.CompleteWithToolsAsync");
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("mt4_status", inference.LastLoopOptions?.ForceToolName);
+    }
+
+    [Fact]
+    public async Task TaskStatusPrompt_DoesNotForceMt4Status()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "todo" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "what's the status of that task?");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Null(inference.LastLoopOptions?.ForceToolName);
+    }
+
+    // ---------------------------------------------------------------------
     // AC #2: UseToolLoop=false falls back to single-shot CompleteAsync
     // (no regression — pre-tool-loop behavior).
     // ---------------------------------------------------------------------
