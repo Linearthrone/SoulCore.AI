@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; QA-134 soft; QA-142 next)
+updated: 2026-07-29 (TINA: Phase E done; Phase C BED-135 Pass; SLOP-160→BED-161; native-first)
 ---
 
 # Product Root Declaration
