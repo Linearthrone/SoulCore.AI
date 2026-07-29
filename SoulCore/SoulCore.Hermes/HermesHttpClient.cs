@@ -154,19 +154,10 @@ public sealed class HermesHttpClient : IHermesClient
         if (registry is null)
             throw new ArgumentNullException(nameof(registry));
 
-        // BED-161: fail-fast when gateway down / key missing (PreferHermes must not
-        // silently degrade to Hermes server-agent tools or Ollama).
-        if (!await IsGatewayHealthyAsync(cancellationToken).ConfigureAwait(false))
-        {
-            throw new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage);
-        }
-
-        if (string.IsNullOrWhiteSpace(ResolveApiKey(_options)))
-        {
-            throw new InvalidOperationException(
-                $"Hermes chat requires API key via env {SecretNames.HermesApiKey} or user-secrets. " +
-                "Health checks do not require a key.");
-        }
+        // Fail-fast when gateway down / key missing. PreferHermes Avenue B no
+        // longer routes chat tool-loops here, but secondary Hermes tool-loop
+        // (PreferHermes=false failover) still needs the same gate.
+        await EnsureMcpReadyAsync(cancellationToken).ConfigureAwait(false);
 
         var cap = Math.Max(1, _inferenceOptions.MaxToolIterations);
         var wireMessages = BuildInitialMessages(messages);
@@ -488,6 +479,22 @@ public sealed class HermesHttpClient : IHermesClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return body;
+    }
+
+    /// <inheritdoc />
+    public async Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
+    {
+        if (!await IsGatewayHealthyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage);
+        }
+
+        if (string.IsNullOrWhiteSpace(ResolveApiKey(_options)))
+        {
+            throw new InvalidOperationException(
+                $"Hermes MCP requires API key via env {SecretNames.HermesApiKey} or user-secrets. " +
+                "Health checks do not require a key.");
+        }
     }
 
     /// <summary>

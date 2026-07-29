@@ -53,4 +53,18 @@ public interface IHermesClient : IHermesMcpInvoker
 
     /// <summary>Optional health probe (HermesHttpClient). Null stub returns empty.</summary>
     Task<string> GetHealthAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// BED-164 Avenue B PreferHermes preflight: Hermes is <b>MCP-only</b>
+    /// (<see cref="IHermesMcpInvoker.CallMcpToolAsync"/>). Probes gateway health
+    /// and API key readiness <b>without</b> sending <c>tools[]</c> /
+    /// <c>CompleteWithToolsAsync</c> (hermes-agent 0.18.2 is
+    /// <c>tool_execution: server</c> and does not expose client
+    /// <c>tool_calls</c> for Host ITool dispatch).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown with <see cref="IHermesMcpInvoker.UnavailableMessage"/> (or a
+    /// missing-key message) when PreferHermes must fail-fast.
+    /// </exception>
+    Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default);
 }

@@ -134,7 +134,7 @@ var toolsOptions = builder.Configuration
         Console.Error.WriteLine(
             $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
             $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
-            "PreferHermes chat and hermes-backend MCP tools will fail-fast until the key is provided. " +
+            "PreferHermes MCP preflight and hermes-backend MCP tools will fail-fast until the key is provided. " +
             "Do not put ApiKey values in appsettings.json.");
     }
 

@@ -11,11 +11,15 @@ public sealed class ChatWsOptions
     public string Path { get; set; } = "/ws";
 
     /// <summary>
-    /// Prefer Hermes over Ollama when both Enabled.
+    /// Prefer Hermes MCP readiness for hermes-backend tools when both Hermes and
+    /// Inference are enabled.
     /// <para>
-    /// BED-161: PreferHermes turns use Hermes as <b>LLM-only</b>; the Host runs
-    /// the SoulCore tool-loop (<c>ITool</c> → <c>CallMcpToolAsync</c> for hermes
-    /// backends). Hermes gateway/key failure is fail-fast (no Ollama fallback).
+    /// BED-164 Avenue B: PreferHermes tool-loop runs on <b>Ollama</b>
+    /// (<c>IInferenceClient.CompleteWithToolsAsync</c>). Hermes is <b>MCP-only</b>
+    /// via <c>CallMcpToolAsync</c> — PreferHermes turns must <b>never</b> send
+    /// <c>tools[]</c> through Hermes <c>CompleteWithToolsAsync</c> (hermes-agent
+    /// 0.18.2 is <c>tool_execution: server</c>). Gateway/key failure is fail-fast
+    /// before the Ollama loop (no silent PreferHermes bypass).
     /// </para>
     /// </summary>
     public bool PreferHermes { get; set; } = false;
@@ -29,8 +33,8 @@ public sealed class ChatWsOptions
     /// <summary>
     /// When <c>true</c> (default), <c>HandleChatSendAsync</c> routes the chat
     /// turn through the agent tool-loop (<c>IInferenceClient.CompleteWithToolsAsync</c>
-    /// or <c>IHermesClient.CompleteWithToolsAsync</c> when <see cref="PreferHermes"/>
-    /// + Hermes.Enabled), with <c>tools</c> built from <c>IToolRegistry</c>.
+    /// on Ollama; Hermes <c>CompleteWithToolsAsync</c> only as PreferHermes=false
+    /// secondary failover), with <c>tools</c> built from <c>IToolRegistry</c>.
     /// When <c>false</c>, falls back to the single-shot <c>CompleteAsync</c> /
     /// <c>ChatAsync</c> path + keyword detectors (pre-tool-loop behavior) —
     /// no regression, useful for debug/kill-switch.

@@ -1400,39 +1400,63 @@ public sealed class ChatWebSocketHandler
         string? replyText = null;
         string? provider = null;
 
-        // PreferHermes primary (BED-161): Hermes is LLM-only for this turn;
-        // Host runs the SoulCore tool-loop → ITool → CallMcpToolAsync for
-        // hermes backends. Fail-fast when Hermes is down — do NOT fall through
-        // to Ollama (avoids dual-backend turns / silent PreferHermes bypass).
+        // PreferHermes Avenue B (BED-164 / ISSUE-002): tool-loop on Ollama;
+        // Hermes is MCP-only via CallMcpToolAsync. Never send tools[] through
+        // Hermes CompleteWithToolsAsync (hermes-agent 0.18.2 tool_execution:server
+        // bypasses SoulCore ITools). Fail-fast when Hermes MCP gateway/key is down.
         if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
         {
             try
             {
-                var reply = await _hermes
-                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
-                    .ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(reply))
-                {
-                    replyText = reply.Trim();
-                    provider = "hermes";
-                    RecordSpend("hermes", text, contextPreamble, replyText);
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        "Hermes tool-loop returned empty reply while PreferHermes=true.");
-                }
+                await _hermes.EnsureMcpReadyAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
                     ex,
-                    "Hermes tool-loop failed with PreferHermes=true — fail-fast (no Ollama fallback)");
+                    "PreferHermes MCP preflight failed — fail-fast (no Ollama tool-loop)");
                 throw;
             }
+
+            if (!_inferenceOptions.Enabled)
+            {
+                throw new InvalidOperationException(
+                    "PreferHermes requires Inference:Enabled (Ollama tool-loop); Hermes is MCP-only.");
+            }
+
+            try
+            {
+                var reply = await _inference
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(reply))
+                {
+                    replyText = reply.Trim();
+                    provider = "ollama";
+                    RecordSpend("ollama", text, contextPreamble, replyText);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        "Ollama tool-loop returned empty reply while PreferHermes=true.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // PreferHermes already passed MCP preflight — surface Ollama failures
+                // as model_down without falling through to Hermes CompleteWithToolsAsync.
+                _logger.LogWarning(
+                    ex,
+                    "Ollama tool-loop failed with PreferHermes=true — fail-fast (Hermes CompleteWithToolsAsync forbidden)");
+                throw;
+            }
+
+            // Persist + return — do not fall through to Hermes CompleteWithToolsAsync.
+            AppendToolLoopTurn(historySessionId, text, toolTrace, replyText!);
+            return new ChatCompletionResult(replyText!, provider!);
         }
 
-        // Ollama primary (or Hermes secondary when PreferHermes=false).
+        // Ollama primary (PreferHermes=false).
         if (replyText is null && _inferenceOptions.Enabled)
         {
             try

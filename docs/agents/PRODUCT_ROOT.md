@@ -97,6 +97,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
   - ~~BED-144~~ **Pass** (archived) — `CallMcpToolAsync` + hermes backends
   - **QA-145 FAIL** (first run) — PreferHermes Hermes-native tools / hang / key mismatch
   - ~~BED-161~~ **Pass** (merged local 2026-07-27) — PreferHermes Host ITool loop + fail-fast; ISSUE-007/009/010 Fixed; ISSUE-008 OOS → **QA-145 retest**
+  - ~~BED-164~~ **Pass** (Avenue B) — PreferHermes tool-loop on **Ollama**; Hermes **MCP-only** (`CallMcpToolAsync`); ISSUE-20260729-002 Fixed → **QA-145 retest**
   - ~~OPS-143~~ **Pass** (archived) — Hermes `gemma4:64k` @65536
   - QA-134 gated on QA-118 visual walk Pass (117 done; 160 in flight)
   - QA-137/139 after Phase F / PreferHermes path clears

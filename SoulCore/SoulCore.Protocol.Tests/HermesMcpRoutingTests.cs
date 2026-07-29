@@ -76,6 +76,45 @@ public class HermesMcpRoutingTests
         Mt4Backend = mt4
     };
 
+    private static DesktopScreenshotTool MakeDesktopScreenshot(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        var gate = new ComputerControlGate(opts);
+        var backend = new HermesDesktopControlBackend(hermes);
+        return new DesktopScreenshotTool(gate, backend);
+    }
+
+    private static DesktopClickTool MakeDesktopClick(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        var gate = new ComputerControlGate(opts);
+        var backend = new HermesDesktopControlBackend(hermes);
+        return new DesktopClickTool(gate, backend);
+    }
+
+    private static BrowserCaptureTabTool MakeBrowserCapture(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        return new BrowserCaptureTabTool(new HermesBrowserBridge(hermes), opts);
+    }
+
+    private static Mt4StatusTool MakeMt4Status(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions(allowMt4Read: true));
+        return new Mt4StatusTool(new HermesMt4Bridge(hermes), opts);
+    }
+
+    private static ExecuteTradeTool MakeExecuteTrade(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions(allowMt4Trade: true));
+        return new ExecuteTradeTool(new HermesMt4Bridge(hermes), opts);
+    }
+
     private static string OpenAIContentResponse(string content) =>
         JsonSerializer.Serialize(new
         {
@@ -108,7 +147,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = new DesktopScreenshotTool(hermes, Options.Create(MakeToolsOptions()));
+        var tool = MakeDesktopScreenshot(hermes);
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"monitor":0}""").RootElement.Clone());
@@ -140,7 +179,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("tab captured: /tmp/tab.png\n<html>ok</html>")
             });
         var hermes = MakeClient(handler);
-        var tool = new BrowserCaptureTabTool(hermes, Options.Create(MakeToolsOptions()));
+        var tool = MakeBrowserCapture(hermes);
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"tab":0}""").RootElement.Clone());
@@ -165,7 +204,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"MT4 connected build=1380"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = new Mt4StatusTool(hermes, Options.Create(MakeToolsOptions(allowMt4Read: true)));
+        var tool = MakeMt4Status(hermes);
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
 
@@ -184,13 +223,13 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: false, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var opts = Options.Create(MakeToolsOptions(allowMt4Read: true));
+        var tools = MakeToolsOptions(allowMt4Read: true);
 
-        var desk = await new DesktopScreenshotTool(hermes, opts)
+        var desk = await MakeDesktopScreenshot(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
-        var browser = await new BrowserCaptureTabTool(hermes, opts)
+        var browser = await MakeBrowserCapture(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
-        var mt4 = await new Mt4StatusTool(hermes, opts)
+        var mt4 = await MakeMt4Status(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
 
         Assert.False(desk.Success);
@@ -223,9 +262,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = new Mt4ExecuteTradeTool(
-            hermes,
-            Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05}""").RootElement.Clone());
@@ -241,9 +278,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = new Mt4ExecuteTradeTool(
-            hermes,
-            Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"confirmed":true}""").RootElement.Clone());
@@ -263,9 +298,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"ticket=1001 opened"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = new Mt4ExecuteTradeTool(
-            hermes,
-            Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05,"confirmed":true}""")
@@ -282,9 +315,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = new Mt4ExecuteTradeTool(
-            hermes,
-            Options.Create(MakeToolsOptions(allowMt4Trade: false)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05,"confirmed":true}""")
@@ -324,9 +355,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = new DesktopClickTool(
-            hermes,
-            Options.Create(MakeToolsOptions(allowComputerControl: false)));
+        var tool = MakeDesktopClick(hermes, MakeToolsOptions(allowComputerControl: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"x":10,"y":20}""").RootElement.Clone());
