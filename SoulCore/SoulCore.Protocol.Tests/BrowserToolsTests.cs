@@ -416,6 +416,13 @@ public class BrowserToolsTests
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_health);
 
+        public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_health))
+                return Task.FromException(new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage));
+            return Task.CompletedTask;
+        }
+
         public Task<ToolResult> CallMcpToolAsync(
             string mcpToolName,
             JsonElement arguments,

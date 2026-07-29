@@ -609,6 +609,35 @@ public class HermesToolLoopTests
         Assert.Empty(registry.Calls);
     }
 
+    // BED-164 Avenue B: PreferHermes MCP preflight without tools[] chat.
+    [Fact]
+    public async Task EnsureMcpReady_GatewayDown_ThrowsUnavailable_FailFast()
+    {
+        var handler = new ScriptedHandler(
+            Array.Empty<string>(),
+            healthOk: false);
+        var client = MakeClient(handler);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.EnsureMcpReadyAsync());
+
+        Assert.Equal(IHermesMcpInvoker.UnavailableMessage, ex.Message);
+        Assert.Equal(0, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task EnsureMcpReady_Healthy_Completes()
+    {
+        var handler = new ScriptedHandler(
+            Array.Empty<string>(),
+            healthOk: true);
+        var client = MakeClient(handler);
+
+        await client.EnsureMcpReadyAsync();
+
+        Assert.Equal(0, handler.CallCount); // health probe only
+    }
+
     [Fact]
     public async Task ComputerUse_Alias_DispatchesSoulCoreDesktopScreenshot()
     {

@@ -56,4 +56,12 @@ public sealed class NullHermesClient : IHermesClient
 
     public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(string.Empty);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Disabled Hermes cannot satisfy PreferHermes MCP readiness — fail-fast
+    /// with <see cref="IHermesMcpInvoker.UnavailableMessage"/>.
+    /// </remarks>
+    public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
+        => Task.FromException(new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage));
 }
