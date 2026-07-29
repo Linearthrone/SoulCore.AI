@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 -- ---------------------------------------------------------------------------
 -- episodic_memories — first-person episodic writes (model-authored)
--- source: self | chat | imported | observation | correction | system
+-- source: self | chat | imported | observation | correction | system | model
+-- 'model' = store_memory / dedicated model-tool provenance (migration 003)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS episodic_memories (
     id              INTEGER     PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS episodic_memories (
     updated_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     source          TEXT        NOT NULL
                     CHECK (source IN (
-                        'self', 'chat', 'imported', 'observation', 'correction', 'system'
+                        'self', 'chat', 'imported', 'observation', 'correction', 'system', 'model'
                     )),
     source_ref      TEXT        NULL,               -- optional quarry/session id
     labels_json     TEXT        NOT NULL DEFAULT '[]', -- JSON string array

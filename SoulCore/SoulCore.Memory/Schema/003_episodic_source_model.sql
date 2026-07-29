@@ -1,0 +1,11 @@
+-- Schema fragment 003: episodic_memories.source includes 'model'
+-- Applied via Migrations/003_episodic_source_model.sql on upgrade.
+-- Greenfield: Schema/001_schema.sql already includes 'model' in the CHECK.
+--
+-- Expanded CHECK (canonical):
+--   source IN ('self', 'chat', 'imported', 'observation', 'correction', 'system', 'model')
+--
+-- Semantics:
+--   'chat'  — chat-path model-authored episodics (AuthorChatEpisodicAsync)
+--   'model' — store_memory / tool-authored model provenance (BED follow-up)
+--   'self'  — SoulLoop-authored reflections

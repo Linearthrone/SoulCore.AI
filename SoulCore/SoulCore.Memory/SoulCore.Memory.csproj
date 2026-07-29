@@ -14,8 +14,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Schema\001_schema.sql" LogicalName="SoulCore.Memory.Schema.001_schema.sql" />
     <EmbeddedResource Include="Schema\002_embedding_vectors.sql" LogicalName="SoulCore.Memory.Schema.002_embedding_vectors.sql" />
+    <EmbeddedResource Include="Schema\003_episodic_source_model.sql" LogicalName="SoulCore.Memory.Schema.003_episodic_source_model.sql" />
     <EmbeddedResource Include="Migrations\001_initial.sql" LogicalName="SoulCore.Memory.Migrations.001_initial.sql" />
     <EmbeddedResource Include="Migrations\002_embedding_vectors.sql" LogicalName="SoulCore.Memory.Migrations.002_embedding_vectors.sql" />
+    <EmbeddedResource Include="Migrations\003_episodic_source_model.sql" LogicalName="SoulCore.Memory.Migrations.003_episodic_source_model.sql" />
   </ItemGroup>
 
   <PropertyGroup>
