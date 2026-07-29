@@ -678,7 +678,6 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
         return list;
     }
-
     public void Dispose()
     {
         if (_disposed) return;
@@ -743,7 +742,6 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         {
             _logger.LogDebug("Memory migration 004 already applied at {DbPath}", DatabasePath);
         }
-
         // Victoria workflows = 005 (BED-141). Ordered step lists; model-initiated execute only.
         if (!IsMigrationApplied("005"))
         {
