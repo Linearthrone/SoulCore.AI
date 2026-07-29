@@ -57,8 +57,9 @@ updated: 2026-07-29 (TINA=PM-01 cold-start; dispatch BED-140 / OPS-143 / DBD-157
 
 ## In flight (PM)
 
-- **2026-07-29 TINA cold-start:** BED-140 (Phase E tasks) · OPS-143 (Hermes) · DBD-157 (`source=model`) · QA-134 soft agency — see `reports/TASK-20260729-PM01-cold-start-patrol.md`
-- **Held on this Linux cloud (no UE / no adb):** BED-116/117 · QA-118 · BED-121 AC-3 re-probe · QA-123 · QA-154
+- **2026-07-29 TINA:** BED-140 **Pass** (PR #3) · DBD-157 **Pass** (PR #4) archived → next BED-141 · BED-158 · OPS-143 · QA-134 — `reports/TASK-20260729-PM01-cold-start-patrol.md`
+- **Merge order:** PR #4 (mig 003) **before** PR #3 (mig 004) — both touch `SqliteMemoryStore.cs`
+- **Held (no UE / no adb):** BED-116/117 · QA-118 · BED-121 re-probe · QA-123 · QA-154
 - ~~Wave14 BED-082 + OPS-083 + QA-084 E2E gates~~ — done, archived (2026-07-23)
 - ~~Wave15 BED-085 (token limit) + BED-088 (loco dispatch) + QA-089 (E3 final)~~ — done, ISSUE-002 closed
 - ~~SoulLoop enable~~ — LIVE (PID 63904, ticks firing, `soulLoop=enabled`)

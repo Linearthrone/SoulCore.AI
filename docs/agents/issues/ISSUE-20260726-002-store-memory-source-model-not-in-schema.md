@@ -2,11 +2,13 @@
 type: issue
 id: ISSUE-20260726-002
 severity: P2
-status: open
+status: schema-landed-tool-pending
+updated: 2026-07-29
 created: 2026-07-26
 filed_by: BED-01
 related_task: TASK-131
-gate: none (recommend DBD follow-up migration 003)
+follow_up: TASK-158
+gate: none (DBD-157 Pass PR #4; BED-158 flips StoreMemoryTool)
 ---
 
 # ISSUE-002 — `store_memory` cannot use `source='model'` — schema CHECK + `AllowedSources` reject it
