@@ -1,0 +1,104 @@
+# SoulCore.Host — systemd unit template for SoulCoreOS (Linux / bazzite bootc).
+# BED-002 / TASK-20260729-002
+#
+# Topology: Soul (this Host) on KAIA SoulCoreOS; body (Unreal :8888) on Shadow.
+# Base image / Containerfile ownership: OPS-01. This unit is the Host runtime contract.
+#
+# BEFORE enable/start — replace every <<<PLACEHOLDER>>> (WorkingDirectory, ExecStart,
+# User/Group, ReadWritePaths, EnvironmentFile). Do not commit machine-specific paths
+# back into the template.
+#
+# Install sketch (OPS):
+#   sudo install -d -o soulcore -g soulcore /opt/soulcore/current /var/lib/soulcore /etc/soulcore
+#   # publish net8.0 linux-x64 (or framework-dependent) build into /opt/soulcore/current
+#   sudo cp SoulCoreOS/config/appsettings.SoulCoreOS.json /opt/soulcore/current/
+#   sudo cp SoulCoreOS/config/env.SoulCoreOS.example /etc/soulcore/soulcore.env
+#   # edit /etc/soulcore/soulcore.env — fill secrets locally; chmod 600; never commit
+#   sudo cp SoulCoreOS/systemd/soulcore-host.service /etc/systemd/system/
+#   # edit placeholders in the installed unit, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now soulcore-host.service
+#
+# Security notes (SEC-004 + unit hardening):
+# - Host refuses non-loopback binds in-process (SEC-004). Keep Host__BindAddress=127.0.0.1.
+# - Secrets live only in EnvironmentFile (mode 0600) or a secrets manager — never in this unit,
+#   never in appsettings*.json committed to git.
+# - MemoryDenyWriteExecute must stay false for the .NET JIT (unless NativeAOT publish).
+# - Outbound to Shadow Unreal (ws://house-victoria:8888) and local Ollama (:11434) is expected;
+#   RestrictAddressFamilies still allows AF_INET/AF_INET6 for that.
+# - Ollama process env (OLLAMA_FLASH_ATTENTION / OLLAMA_KV_CACHE_TYPE) belongs on the Ollama
+#   unit/service, not here — see config/env.SoulCoreOS.example notes.
+
+[Unit]
+Description=SoulCore.Host (SoulCoreOS / House Victoria)
+Documentation=https://github.com/linearthrone/soulcore.ai
+After=network-online.target
+Wants=network-online.target
+# Uncomment when Ollama is co-located and managed by systemd:
+# After=network-online.target ollama.service
+# Wants=ollama.service
+
+[Service]
+Type=simple
+
+# <<<PLACEHOLDER>>> — dedicated non-login service account (OPS creates)
+User=soulcore
+Group=soulcore
+
+# <<<PLACEHOLDER>>> — directory that contains SoulCore.Host (+ deps / runtimes)
+# Example: /opt/soulcore/current
+WorkingDirectory=<<<REPLACE_WITH_HOST_INSTALL_DIR>>>
+
+# <<<PLACEHOLDER>>> — absolute path to the Host entrypoint
+# Framework-dependent: /opt/soulcore/current/SoulCore.Host
+# Or: /usr/bin/dotnet /opt/soulcore/current/SoulCore.Host.dll
+ExecStart=<<<REPLACE_WITH_HOST_EXEC>>>
+
+# Load SoulCoreOS appsettings overlay (ASP.NET Core: appsettings.{Environment}.json)
+Environment=ASPNETCORE_ENVIRONMENT=SoulCoreOS
+Environment=DOTNET_ENVIRONMENT=SoulCoreOS
+Environment=DOTNET_PrintConfigSources=false
+
+# <<<PLACEHOLDER>>> — optional drop-in for SOULCORE_* overrides + secrets (mode 0600)
+# Leading '-' = missing file is OK (unit still starts with appsettings only).
+EnvironmentFile=-/etc/soulcore/soulcore.env
+
+# Restart policy: recover from crash/OOM; avoid tight restart loops
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+KillSignal=SIGINT
+# systemd ≥ 249: StartLimit* live under [Unit] on some distros — keep burst modest
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# --- Hardening ---------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# <<<PLACEHOLDER>>> — SQLite / memory + any writable state Host needs
+# Example: /var/lib/soulcore  (set SOULCORE_Memory__DbPath accordingly)
+ReadWritePaths=<<<REPLACE_WITH_STATE_DIR>>>
+
+# .NET CoreCLR JIT requires writable+executable mappings — do NOT set true unless NativeAOT.
+MemoryDenyWriteExecute=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=soulcore-host
+
+[Install]
+WantedBy=multi-user.target
