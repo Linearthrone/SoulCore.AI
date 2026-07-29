@@ -1,0 +1,289 @@
+--------- beginning of main
+07-27 10:17:43.361  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/pasted-to-search-or-browser-or-named-entity-apps session_name:smartselect/train/en/pasted-to-search-or-browser-or-named-entity-apps
+07-27 10:17:43.362  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/pasted-to-notes-apps, session=smartselect/train/en/pasted-to-notes-apps]
+07-27 10:17:43.362  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.362  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/phone, session=smartselect/train/en/phone]
+07-27 10:17:43.362  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.362  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.362  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/address-phone-or-pasted-to-non-messaging-apps session_name:smartselect/train/en/address-phone-or-pasted-to-non-messaging-apps
+07-27 10:17:43.362  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/address-or-pasted-to-map-apps session_name:smartselect/train/en/address-or-pasted-to-map-apps
+07-27 10:17:43.363  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/all-non-url-email-cut-translate session_name:smartselect/train/en/all-non-url-email-cut-translate
+07-27 10:17:43.363  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/phone-or-pasted-to-dialer-apps, session=smartselect/train/en/phone-or-pasted-to-dialer-apps]
+07-27 10:17:43.363  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.363  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/all-pasted-to-none-messaging-apps session_name:smartselect/train/en/all-pasted-to-none-messaging-apps
+07-27 10:17:43.363  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/selected-in-messaging-apps session_name:smartselect/train/en/selected-in-messaging-apps
+07-27 10:17:43.363  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/address-phone-or-selected-in-messaging-apps session_name:smartselect/train/en/address-phone-or-selected-in-messaging-apps
+07-27 10:17:43.363  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/all/all_nonsentences, session=smartselect/train/all/all_nonsentences]
+07-27 10:17:43.363  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.363  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.364  5770  5807 I TrainerClient: Preparing to schedule training for population:aiai/playstore/smartselect/train/en/address-phone-other session_name:smartselect/train/en/address-phone-other
+07-27 10:17:43.364  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/pasted-to-maps-apps, session=smartselect/train/en/pasted-to-maps-apps]
+07-27 10:17:43.364  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.364  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-other-translate, session=smartselect/train/en/address-phone-other-translate]
+07-27 10:17:43.364  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.364  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-other-nonsentences, session=smartselect/train/en/address-phone-other-nonsentences]
+07-27 10:17:43.364  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.364  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.365  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-or-pasted-to-shopping-apps, session=smartselect/train/en/address-or-pasted-to-shopping-apps]
+07-27 10:17:43.365  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.365  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-or-pasted-to-map-or-shopping-apps, session=smartselect/train/en/address-or-pasted-to-map-or-shopping-apps]
+07-27 10:17:43.365  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.365  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.365  5770  5791 I AiAiStatsd: Successfully logged feature usage for TEXT_CLASSIFIER.
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-or-selected-in-search-or-browser-apps, session=smartselect/train/en/address-phone-or-selected-in-search-or-browser-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone, session=smartselect/train/en/address-phone]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/all-non-url-email, session=smartselect/train/en/all-non-url-email]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-otp, session=smartselect/train/en/address-otp]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/selected-in-search-or-browser-apps, session=smartselect/train/en/selected-in-search-or-browser-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/pasted-to-translate-apps, session=smartselect/train/en/pasted-to-translate-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/pasted-to-search-or-browser-or-named-entity-apps, session=smartselect/train/en/pasted-to-search-or-browser-or-named-entity-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-or-pasted-to-non-messaging-apps, session=smartselect/train/en/address-phone-or-pasted-to-non-messaging-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/all-non-url-email-cut-translate, session=smartselect/train/en/all-non-url-email-cut-translate]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-or-pasted-to-map-apps, session=smartselect/train/en/address-or-pasted-to-map-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/selected-in-messaging-apps, session=smartselect/train/en/selected-in-messaging-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/all-pasted-to-none-messaging-apps, session=smartselect/train/en/all-pasted-to-none-messaging-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.366  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-or-selected-in-messaging-apps, session=smartselect/train/en/address-phone-or-selected-in-messaging-apps]
+07-27 10:17:43.366  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.366  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.367  5770  5926 W AiAiFed : [AiAi SimpleStorage Federated Collection] Cancelling training failed [mode=FEDERATION, population=aiai/playstore/smartselect/train/en/address-phone-other, session=smartselect/train/en/address-phone-other]
+07-27 10:17:43.367  5770  5926 W AiAiFed : aalc: PERMISSION_DENIED: Permission denied by security policy
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at abbn.s(PG:17)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at aapu.g(PG:1)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at aapr.a(PG:32)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at aaqj.run(PG:7)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at aaxd.run(PG:18)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-27 10:17:43.367  5770  5926 W AiAiFed : 	at java.lang.Thread.run(Thread.java:1572)
+07-27 10:17:43.369  5770  5791 W AiAiClearcutLogger: Trying to use Clearcut counters (disabled via policy). [CONTEXT ratelimit_period="1 HOURS" ]
+07-27 10:17:43.371  5770  5770 I AiAiTextClassifier: onDestroyTextClassificationSession = TextClassificationSessionId {6e9c8e34-612e-419f-90b4-accf6400d942}
+--------- beginning of system
+07-27 10:17:43.508   687   687 V NotificationHistory: Attempted to add notif for locked/gone/disabled user 0
+07-27 10:17:43.513  5770  5837 W AiAiEcho: LyftNotificationParser Ridesharing ETA not enabled
+07-27 10:17:43.513  5770  5837 I AiAiEcho: SmartspaceNotificationPredictor no parser can handle this notification or notification is invalid
+07-27 10:17:43.658  2355  2993 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-27 10:17:43.681   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.681   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.721   687   687 V NotificationHistory: Attempted to add notif for locked/gone/disabled user 0
+07-27 10:17:43.740   944   944 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+07-27 10:17:43.746   944   944 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+07-27 10:17:43.781   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.781   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.838   687   698 I system_server: Background young concurrent mark compact GC freed 21MB AllocSpace bytes, 11(352KB) LOS objects, 39% free, 35MB/59MB, paused 1.643ms,37.982ms total 53.118ms
+07-27 10:17:43.882   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.882   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.985   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:43.985   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:44.085   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:44.085   531   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+07-27 10:17:44.216  1080  1221 D SatelliteController: isInCarrierRoamingNbIotNtn: satellite is disabled
+07-27 10:17:44.216  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+07-27 10:17:44.216  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.216  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.216  1080  1221 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-27 10:17:44.218  1080  1221 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+07-27 10:17:44.218  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+07-27 10:17:44.218  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.218  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.218  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+07-27 10:17:44.218  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+07-27 10:17:44.218  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.218  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.219  1080  1221 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-27 10:17:44.219  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+07-27 10:17:44.219  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.219  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.219  1080  1221 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-27 10:17:44.219  1080  1221 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+07-27 10:17:44.219  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+07-27 10:17:44.219  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.219  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.219  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+07-27 10:17:44.219  1080  1221 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+07-27 10:17:44.219  1080  1221 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+07-27 10:17:44.219  1080  1221 V SatelliteController: satelliteConfigParser is not ready
+07-27 10:17:44.219  1080  1221 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-27 10:17:44.228   540   540 I adbd    : adbd service requested 'shell,v2,TERM=dumb,raw:logcat -d -t 80'

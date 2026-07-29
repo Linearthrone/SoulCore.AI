@@ -1,0 +1,10 @@
+﻿{
+    "messages":  [
+                     {
+                         "content":  "Call the system_info tool from house_victoria MCP and reply with only the OS name from the result. Do not invent.",
+                         "role":  "user"
+                     }
+                 ],
+    "model":  "hermes-agent",
+    "max_tokens":  256
+}

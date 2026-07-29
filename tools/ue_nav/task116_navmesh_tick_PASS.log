@@ -1,0 +1,57 @@
+=== TASK-116 tick bake 2026-07-27T11:05:58.158896 ===
+Agent target: radius=34.0 height=192.0 slope=44.0
+Current world=/Game/Home.Home
+world=<Object '/Game/Home.Home' (0x0000020BB775D200) Class 'World'> nav=<Object '/Game/Home.Home:NavigationSystemV1_0' (0x0000020B41787800) Class 'NavigationSystemV1'> locked=True
+actors=4793
+Existing bounds: NavMeshBoundsVolume_UAID_BCFCE774C76530F202_1331549495 label=NavMeshBoundsVolume_HomeInterior loc=(-231.9,420.0,160.0) scale=(21.00,21.00,3.50)
+Existing Recast: RecastNavMesh_UAID_BCFCE774C76533F202-Default
+Recast agent_radius=34.0
+Recast agent_height=192.0
+Recast agent_max_slope=44.0
+runtime_generation=<RuntimeGenerationType.STATIC: 0>
+nav lock-related attrs: ['is_navigation_being_built_or_locked']
+Registered slate post-tick callback handle=<_DelegateHandle object at 0x0000020B983BF9F0> phase=wait_unlock
+tick=1 phase=wait_unlock locked=True
+nav lock-related attrs: ['is_navigation_being_built_or_locked']
+tick=31 phase=wait_unlock locked=True
+nav lock-related attrs: ['is_navigation_being_built_or_locked']
+tick=61 phase=wait_unlock locked=True
+nav lock-related attrs: ['is_navigation_being_built_or_locked']
+tick=91 phase=wait_unlock locked=True
+tick=121 phase=wait_unlock locked=True
+tick=151 phase=wait_unlock locked=True
+nav lock-related attrs: ['is_navigation_being_built_or_locked']
+tick=181 phase=wait_unlock locked=False
+Nav unlock cleared after 181 wait ticks
+floor_trace blocking=False raw=<Struct 'HitResult' (0x0000020C8A840000) {}>
+Existing bounds: NavMeshBoundsVolume_UAID_BCFCE774C76530F202_1331549495 label=NavMeshBoundsVolume_HomeInterior loc=(-231.9,420.0,160.0) scale=(21.00,21.00,3.50)
+Existing Recast: RecastNavMesh_UAID_BCFCE774C76533F202-Default
+Recast agent_radius=34.0
+Recast agent_height=192.0
+Recast agent_max_slope=44.0
+runtime_generation=<RuntimeGenerationType.STATIC: 0>
+on_navigation_bounds_updated ok
+RebuildNavigation issued
+build_wait tick=1 building=False locked=False
+tick=211 phase=wait_build locked=False
+build_wait tick=31 building=False locked=False
+project -> <Struct 'Vector' (0x0000020B99EB19B0) {x: -231.920000, y: 420.000000, z: 10.000000}>
+random_location -> <Struct 'Vector' (0x0000020B99EB19B0) {x: 118.166293, y: -22.988357, z: 10.000000}>
+probe path_ok=True points=2 start=(-232,420,30) p0=(-231.9,420.0,10.0) pN=(68.1,470.0,10.0) proj=True any=True
+project -> <Struct 'Vector' (0x0000020B99EB1B40) {x: -231.920000, y: 420.000000, z: 10.000000}>
+random_location -> <Struct 'Vector' (0x0000020B99EB1B40) {x: 1260.885604, y: 370.173939, z: 10.000000}>
+probe path_ok=True points=2 start=(-232,420,30) p0=(-231.9,420.0,10.0) pN=(68.1,470.0,10.0) proj=True any=True
+project -> <Struct 'Vector' (0x0000020B99EB9410) {x: -231.920000, y: 420.000000, z: 10.000000}>
+random_location -> <Struct 'Vector' (0x0000020B99E87F30) {x: -962.335231, y: -796.330252, z: 10.000000}>
+probe path_ok=True points=2 start=(-232,420,30) p0=(-231.9,420.0,10.0) pN=(68.1,470.0,10.0) proj=True any=True
+saved dirty packages
+verified agent r=34.0 h=192.0 ok=True
+=== SUMMARY ===
+coverage=Victoria-centered interior box ~40m x 40m x 6m (half_xy=2000.0 half_z=300.0)
+agent_radius=34.0 agent_height=192.0 (capsule r=34.0 half_h=96.0)
+lock_cleared=True unlock_method=natural_tick_release
+floor_hit=False proj_ok=True any_nav=True
+path_ok=True points=2 start=(-232,420,30) p0=(-231.9,420.0,10.0) pN=(68.1,470.0,10.0)
+FINAL bounds=1 recast=1
+ticks_total=230 wait=181 build=48
+RESULT: PASS

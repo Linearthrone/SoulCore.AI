@@ -1,9 +1,9 @@
 ﻿---
 type: rule
 role: PM-01
-version: 1.3
+version: 1.4
 created: 2026-03-23
-updated: 2026-07-22
+updated: 2026-07-29
 ---
 
 # PM-01 Work Standards
@@ -219,6 +219,50 @@ When PM-01 writes `TASK-{id}-PM01-to-{role}.md`:
    {role}."
 4. PM must **not** do the role's work itself (no code edits, builds, deploys, or test runs).
 
+### 9.1a Parallel fan-out (speed without chaos)
+
+**Default:** When 2+ tickets are ready and independent, hand them all off in the **same** response
+(multiple `Task` tool calls in one turn = parallel execution). Do not serialize independent work.
+
+**Fan out when all of:**
+
+- No shared write paths (or ticket scopes are disjoint packages/files)
+- No hard `depends_on` / gate waiting on another ticket's Pass
+- Acceptance can be verified without the sibling's unfinished output
+- Each ticket has a single clear owner (Â§10)
+
+**Stay sequential when any of:**
+
+- Same files / same types / shared schema or API contract still in flux
+- Later step needs earlier Pass evidence (e.g. OPS after BED, QA after deploy)
+- Two tickets would race on the same report path or produce conflicting edits
+
+**Who fans out:**
+
+| Actor | Rule |
+| --- | --- |
+| **PM-01** | Owns fan-out. Split into N tickets, then launch N role subagents in one turn. |
+| **Execution roles** (FED/BED/DBD/SEC/OPS/QA/SLOP) | One ticket per subagent. Do **not** spawn further product subagents unless the ticket explicitly authorizes a named split. |
+| **TT-01** | May spawn thinktank seats in parallel per `Agents/TT-01.md` (exploration only). |
+
+**Ticket hygiene for parallel work:**
+
+1. Mark independence in the ticket YAML/body: `depends_on: none` (or list blockers) and note sibling tickets.
+2. Prefer disjoint `[Files to Change]` / scope paths; if overlap is unavoidable, do not parallelize.
+3. Tell the user once: "Dispatched TASK-{a},{b},{c} in parallel â€” started."
+4. On reports: accept each independently; only then issue the next wave (merge conflicts / shared-file fixes before the next fan-out).
+
+**Cap / judgment:** Launch **all independent ready work**, not unbounded speculative agents.
+Prefer a few sharp tickets over many overlapping ones. If unsure whether paths collide, sequence
+them (or ask TT-01) rather than gambling on merge fights.
+
+**Forbidden:**
+
+- Parallel agents editing the same file without an explicit ownership split
+- Duplicate dispatches of the same `task_id` / report path
+- Letting execution roles invent extra parallel product work outside their ticket
+- Waiting for the user to say "run them in parallel" when independence is already clear
+
 ### 9.2 On every report (same patrol turn)
 
 When `reports/TASK-{id}-{role}-to-PM01.md` lands:
@@ -233,6 +277,7 @@ When `reports/TASK-{id}-{role}-to-PM01.md` lands:
 During patrol, any `tasks/` entry with **no matching report** and status Pending/In-Progress:
 
 - If not handed off this session â†’ **hand off now** (Â§9.1). Do not wait for the user.
+- If **multiple** such tickets are independent â†’ hand them all off in the **same** turn (Â§9.1a).
 - If already handed off and subagent still running â†’ report "in progress."
 - If handed off and stalled with no report â†’ **one** re-handoff with blocker note.
 - If still unable after re-handoff (or role explicitly cannot complete) â†’ **TT-01 unblock eval** (Â§9.3.1).

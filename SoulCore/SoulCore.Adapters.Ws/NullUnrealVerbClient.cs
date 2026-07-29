@@ -22,6 +22,12 @@ public sealed class NullUnrealVerbClient : IUnrealVerbClient
     public Task<bool> LocoAsync(object locoPayload, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
 
+    public Task<bool> MoveToAsync(object moveToPayload, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
+    public Task<bool> StopAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
     public Task<bool> LookAsync(object lookPayload, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
 }

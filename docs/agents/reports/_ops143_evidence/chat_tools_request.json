@@ -1,0 +1,37 @@
+﻿{
+    "tools":  [
+                  {
+                      "function":  {
+                                       "description":  "Echo back the provided text unchanged.",
+                                       "name":  "echo",
+                                       "parameters":  {
+                                                          "properties":  {
+                                                                             "text":  {
+                                                                                          "type":  "string",
+                                                                                          "description":  "Text to echo"
+                                                                                      }
+                                                                         },
+                                                          "type":  "object",
+                                                          "required":  [
+                                                                           "text"
+                                                                       ]
+                                                      }
+                                   },
+                      "type":  "function"
+                  }
+              ],
+    "messages":  [
+                     {
+                         "content":  "Use the echo tool to echo the word ping. Do not answer without calling the tool.",
+                         "role":  "user"
+                     }
+                 ],
+    "tool_choice":  {
+                        "function":  {
+                                         "name":  "echo"
+                                     },
+                        "type":  "function"
+                    },
+    "model":  "hermes-agent",
+    "max_tokens":  256
+}

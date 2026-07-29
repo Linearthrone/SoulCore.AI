@@ -268,15 +268,15 @@ public class DesktopToolsTests
     }
 
     [Fact]
-    public async Task HermesBackend_WhenGatewayUp_ReturnsPendingBed144Marker()
+    public async Task HermesBackend_WhenGatewayUp_RoutesViaCallMcpToolAsync()
     {
         var hermes = new StubHermesClient(health: "{\"status\":\"ok\"}");
         var backend = new HermesDesktopControlBackend(hermes);
 
         var result = await backend.ClickAsync(1, 2, "left");
 
-        Assert.False(result.Success);
-        Assert.Equal(HermesDesktopControlBackend.PendingBed144Marker, result.Content);
+        Assert.True(result.Success);
+        Assert.Contains("computer_use", result.Content, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -372,5 +372,15 @@ public class DesktopToolsTests
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_health);
+
+        public Task<ToolResult> CallMcpToolAsync(
+            string mcpToolName,
+            JsonElement arguments,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_health))
+                return Task.FromResult(new ToolResult(false, IHermesMcpInvoker.UnavailableMessage, null));
+            return Task.FromResult(new ToolResult(true, $"mcp:{mcpToolName}", null));
+        }
     }
 }

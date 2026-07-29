@@ -11,11 +11,15 @@ public sealed class UnrealBridgeOptions
     /// <summary>When false, Host registers a no-op client (verbs are logged / ignored).</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>UE WS server. Loopback default; LAN/Tailscale override later via config.</summary>
-    public string WsUrl { get; set; } = "ws://127.0.0.1:8888";
+    /// <summary>
+    /// UE WS server. Production body lives on Shadow (Tailscale MagicDNS: house-victoria).
+    /// Override via appsettings / env UnrealBridge__WsUrl for local PIE.
+    /// </summary>
+    public string WsUrl { get; set; } = "ws://house-victoria:8888";
 
     /// <summary>Attempt connect on Host start. Failures must not crash Host.</summary>
     public bool ConnectOnStartup { get; set; } = true;
 
-    public int ConnectTimeoutSeconds { get; set; } = 2;
+    /// <summary>Tailscale hops need more headroom than loopback.</summary>
+    public int ConnectTimeoutSeconds { get; set; } = 10;
 }

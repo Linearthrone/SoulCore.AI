@@ -1,0 +1,82 @@
+﻿[
+    {
+        "sample":  1,
+        "timestamp":  "2026-07-27T11:02:45.5162601-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  2,
+        "timestamp":  "2026-07-27T11:03:16.2717759-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  3,
+        "timestamp":  "2026-07-27T11:03:46.7048889-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  4,
+        "timestamp":  "2026-07-27T11:04:17.0846374-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  5,
+        "timestamp":  "2026-07-27T11:04:47.4413729-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  6,
+        "timestamp":  "2026-07-27T11:05:17.9143594-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  7,
+        "timestamp":  "2026-07-27T11:05:48.3875108-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  8,
+        "timestamp":  "2026-07-27T11:06:19.9464726-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  9,
+        "timestamp":  "2026-07-27T11:06:50.4829407-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    },
+    {
+        "sample":  10,
+        "timestamp":  "2026-07-27T11:07:21.1748094-04:00",
+        "health_ok":  true,
+        "listen_pid":  25008,
+        "process_alive":  true,
+        "body":  "{\"status\": \"ok\", \"platform\": \"hermes-agent\", \"version\": \"0.18.2\"}"
+    }
+]

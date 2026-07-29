@@ -1,0 +1,83 @@
+{
+    "timestamp":  "2026-07-27T11:23:48.2656208-04:00",
+    "api_ps":  {
+                   "models":  [
+                                  {
+                                      "name":  "gemma4:64k",
+                                      "model":  "gemma4:64k",
+                                      "size":  3289257081,
+                                      "digest":  "9a557ef1657b0825531aed5ffd5bb54b2b199c41a7da716d4841d6462371d6f0",
+                                      "details":  {
+                                                      "parent_model":  "",
+                                                      "format":  "gguf",
+                                                      "family":  "gemma4",
+                                                      "families":  [
+                                                                       "gemma4"
+                                                                   ],
+                                                      "parameter_size":  "8.0B",
+                                                      "quantization_level":  "Q4_K_M"
+                                                  },
+                                      "expires_at":  "2026-07-27T11:28:18.4239922-04:00",
+                                      "size_vram":  3289257081,
+                                      "context_length":  65536
+                                  }
+                              ]
+               },
+    "host_health":  {
+                        "status":  "ok",
+                        "service":  "SoulCore.Host",
+                        "bind":  "127.0.0.1",
+                        "port":  7700,
+                        "phase":  1,
+                        "ws":  {
+                                   "path":  "/ws",
+                                   "url":  "ws://127.0.0.1:7700/ws"
+                               },
+                        "memory":  {
+                                       "open":  true,
+                                       "path":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\memory\\soulcore_memory.db"
+                                   },
+                        "inference":  {
+                                          "enabled":  true,
+                                          "provider":  "ollama",
+                                          "model":  "qwen2.5:14b",
+                                          "embeddingsEnabled":  true,
+                                          "embeddingModel":  "nomic-embed-text"
+                                      },
+                        "hermes":  {
+                                       "enabled":  false,
+                                       "provider":  "null"
+                                   },
+                        "soulLoop":  {
+                                         "enabled":  true,
+                                         "tickIntervalSeconds":  60
+                                     },
+                        "unreal":  {
+                                       "enabled":  true,
+                                       "target":  "ws://127.0.0.1:8888",
+                                       "connected":  false
+                                   },
+                        "safety":  {
+                                       "drift":  {
+                                                     "activeDriftCount":  0,
+                                                     "sloExceeded":  false,
+                                                     "oldestDriftMinutes":  0
+                                                 },
+                                       "spend":  {
+                                                     "totalTokensIn":  754,
+                                                     "totalTokensOut":  109,
+                                                     "estimatedCostUsd":  0.000,
+                                                     "monthlyCapUsd":  30,
+                                                     "capExceeded":  false
+                                                 }
+                                   }
+                    },
+    "hermes_health":  {
+                          "status":  "ok",
+                          "platform":  "hermes-agent",
+                          "version":  "0.18.2"
+                      },
+    "hermes_model_default":  "  default: gemma4:64k",
+    "soulcore_numctx_source":  "    \"NumCtx\": 65536,",
+    "soulcore_numctx_bin":  "    \"NumCtx\": 65536,"
+}

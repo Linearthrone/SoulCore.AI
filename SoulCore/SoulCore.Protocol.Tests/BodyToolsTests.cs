@@ -131,7 +131,7 @@ public class BodyToolsTests
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task MoveTo_CallsLocoAsync_WithRelativeOffsets()
+    public async Task MoveTo_CallsMoveToAsync_WithAbsoluteCoords()
     {
         var unreal = new FakeUnrealVerbClient(connected: true);
         var tool = new MoveToTool(unreal);
@@ -140,14 +140,15 @@ public class BodyToolsTests
         var result = await tool.ExecuteAsync(args);
 
         Assert.True(result.Success);
-        Assert.Single(unreal.LocoCalls);
-        var json = JsonSerializer.Serialize(unreal.LocoCalls[0]);
+        Assert.Single(unreal.MoveToCalls);
+        Assert.Empty(unreal.LocoCalls);
+        var json = JsonSerializer.Serialize(unreal.MoveToCalls[0]);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
-        Assert.Equal(100, root.GetProperty("forward").GetDouble());
-        Assert.Equal(-50, root.GetProperty("right").GetDouble());
-        Assert.Equal(10, root.GetProperty("up").GetDouble());
-        Assert.Equal("relative_offset_interim", root.GetProperty("mode").GetString());
+        Assert.Equal(100, root.GetProperty("x").GetDouble());
+        Assert.Equal(-50, root.GetProperty("y").GetDouble());
+        Assert.Equal(10, root.GetProperty("z").GetDouble());
+        Assert.Equal("absolute_path_follow", root.GetProperty("mode").GetString());
     }
 
     [Fact]
@@ -160,9 +161,9 @@ public class BodyToolsTests
         var result = await tool.ExecuteAsync(args);
 
         Assert.True(result.Success);
-        var json = JsonSerializer.Serialize(unreal.LocoCalls[0]);
+        var json = JsonSerializer.Serialize(unreal.MoveToCalls[0]);
         using var doc = JsonDocument.Parse(json);
-        Assert.Equal(0, doc.RootElement.GetProperty("up").GetDouble());
+        Assert.Equal(0, doc.RootElement.GetProperty("z").GetDouble());
     }
 
     [Fact]
@@ -382,6 +383,8 @@ public class BodyToolsTests
         public List<string> SpeakCalls { get; } = new();
         public List<string> PlayAnimationCalls { get; } = new();
         public List<object> LocoCalls { get; } = new();
+        public List<object> MoveToCalls { get; } = new();
+        public int StopCallCount { get; private set; }
         public List<object> LookCalls { get; } = new();
         public List<object> SetEmotionCalls { get; } = new();
 
@@ -409,6 +412,18 @@ public class BodyToolsTests
         public Task<bool> LocoAsync(object locoPayload, CancellationToken cancellationToken = default)
         {
             LocoCalls.Add(locoPayload);
+            return Task.FromResult(_connected);
+        }
+
+        public Task<bool> MoveToAsync(object moveToPayload, CancellationToken cancellationToken = default)
+        {
+            MoveToCalls.Add(moveToPayload);
+            return Task.FromResult(_connected);
+        }
+
+        public Task<bool> StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCallCount++;
             return Task.FromResult(_connected);
         }
 

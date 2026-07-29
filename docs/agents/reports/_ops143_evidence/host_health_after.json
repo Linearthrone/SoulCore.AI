@@ -1,0 +1,49 @@
+{
+    "status":  "ok",
+    "service":  "SoulCore.Host",
+    "bind":  "127.0.0.1",
+    "port":  7700,
+    "phase":  1,
+    "ws":  {
+               "path":  "/ws",
+               "url":  "ws://127.0.0.1:7700/ws"
+           },
+    "memory":  {
+                   "open":  true,
+                   "path":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\memory\\soulcore_memory.db"
+               },
+    "inference":  {
+                      "enabled":  true,
+                      "provider":  "ollama",
+                      "model":  "qwen2.5:14b",
+                      "embeddingsEnabled":  true,
+                      "embeddingModel":  "nomic-embed-text"
+                  },
+    "hermes":  {
+                   "enabled":  false,
+                   "provider":  "null"
+               },
+    "soulLoop":  {
+                     "enabled":  true,
+                     "tickIntervalSeconds":  60
+                 },
+    "unreal":  {
+                   "enabled":  true,
+                   "target":  "ws://127.0.0.1:8888",
+                   "connected":  false
+               },
+    "safety":  {
+                   "drift":  {
+                                 "activeDriftCount":  0,
+                                 "sloExceeded":  false,
+                                 "oldestDriftMinutes":  0
+                             },
+                   "spend":  {
+                                 "totalTokensIn":  0,
+                                 "totalTokensOut":  0,
+                                 "estimatedCostUsd":  0,
+                                 "monthlyCapUsd":  30,
+                                 "capExceeded":  false
+                             }
+               }
+}

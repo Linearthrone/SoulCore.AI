@@ -275,34 +275,27 @@ public class BrowserToolsTests
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task HermesBrowserBridge_WhenHealthEmpty_ReturnsUnavailable_NoHttpCall()
+    public async Task HermesBrowserBridge_WhenHealthEmpty_ReturnsUnavailable()
     {
         var hermes = new StubHermesClient(health: string.Empty);
-        using var handler = new CountingHandler();
-        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:8642/") };
-        var bridge = new HermesBrowserBridge(
-            hermes,
-            http,
-            Options.Create(new HermesOptions { BaseUrl = "http://127.0.0.1:8642", Enabled = true }),
-            NullLogger<HermesBrowserBridge>.Instance);
+        var bridge = new HermesBrowserBridge(hermes);
 
         var result = await bridge.ClickAsync(1, 2);
 
         Assert.False(result.Success);
         Assert.Equal(HermesBrowserBridge.UnavailableContent, result.Content);
-        Assert.Equal(0, handler.SendCount);
     }
 
     [Fact]
-    public void HermesBrowserBridge_ParseCaptureResponse_IncludesPathAndDom()
+    public async Task HermesBrowserBridge_WhenHealthy_RoutesViaCallMcpToolAsync()
     {
-        var json = """{"screenshot_path":"/tmp/cap.png","dom":"<html/>"}""";
-        var result = HermesBrowserBridge.ParseToolsCallResponse("browser_bridge_capture_tab", json);
+        var hermes = new StubHermesClient(health: "{\"status\":\"ok\"}");
+        var bridge = new HermesBrowserBridge(hermes);
+
+        var result = await bridge.CaptureTabAsync(0);
 
         Assert.True(result.Success);
-        Assert.Contains("/tmp/cap.png", result.Content);
-        Assert.Contains("<html/>", result.Content);
-        Assert.NotNull(result.Data);
+        Assert.Contains("browser_bridge_capture_tab", result.Content, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -421,6 +414,16 @@ public class BrowserToolsTests
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_health);
+
+        public Task<ToolResult> CallMcpToolAsync(
+            string mcpToolName,
+            JsonElement arguments,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_health))
+                return Task.FromResult(new ToolResult(false, IHermesMcpInvoker.UnavailableMessage, null));
+            return Task.FromResult(new ToolResult(true, $"mcp:{mcpToolName}", null));
+        }
     }
 
     private sealed class CountingHandler : HttpMessageHandler

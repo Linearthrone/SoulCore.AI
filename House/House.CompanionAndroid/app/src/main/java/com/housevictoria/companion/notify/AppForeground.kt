@@ -21,8 +21,10 @@ object AppForeground {
     fun init(app: Application) {
         if (installed) return
         installed = true
-        // Seed true if process is already started in foreground (typical cold start).
-        isInForeground = true
+        // Default false: START_STICKY / FGS-only process restarts never get Activity
+        // onStart/onStop, so seeding true would permanently suppress reply alerts.
+        // Cold start: onStart fires before WS is up; brief window is harmless.
+        isInForeground = false
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
                 override fun onStart(owner: LifecycleOwner) {

@@ -2,14 +2,21 @@
 type: issue
 id: ISSUE-20260726-002
 severity: P2
-status: open
+status: resolved
 created: 2026-07-26
+resolved: 2026-07-27
 filed_by: BED-01
+resolved_by: BED-01
 related_task: TASK-131
-gate: none (recommend DBD follow-up migration 003)
+resolved_in: TASK-20260727-157
+gate: none (migration 005 — 003/004 reserved by BED-140/141)
 ---
 
 # ISSUE-002 — `store_memory` cannot use `source='model'` — schema CHECK + `AllowedSources` reject it
+
+## Status
+
+**Resolved (2026-07-27 / TASK-157).** Migration `005_episodic_source_model.sql` expands the CHECK + `AllowedSources`; `StoreMemoryTool.SourceLabel` is now `"model"`. ISSUE originally recommended migration **003**, but TASK-140 owns `003_victoria_tasks` and TASK-141 owns `004_victoria_workflows`, so this shipped as **005**.
 
 ## Severity
 
@@ -21,85 +28,20 @@ Not P1 because: the ticket's underlying intent — "distinguish model-authored f
 
 TASK-131 specified `store_memory` should write episodic rows with `source='model'` to "distinguish model-authored from SoulLoop-authored" (SoulLoop uses `source='self'`). But the schema and store reject that value:
 
-### Evidence
+### Evidence (pre-fix)
 
-**`SoulCore/SoulCore.Memory/Schema/001_schema.sql` lines 28–31** — the `episodic_memories.source` CHECK constraint:
+**`SoulCore/SoulCore.Memory/Schema/001_schema.sql`** — the `episodic_memories.source` CHECK constraint omitted `'model'`.
 
-```sql
-source          TEXT        NOT NULL
-                CHECK (source IN (
-                    'self', 'chat', 'imported', 'observation', 'correction', 'system'
-                )),
-```
+**`SqliteMemoryStore.AllowedSources`** mirrored the CHECK; `NormalizeSource` coerced unknown values to `'system'`.
 
-`'model'` is **not** in the allowed set.
+## Fix landed (TASK-157)
 
-**`SoulCore/SoulCore.Memory/SqliteMemoryStore.cs` lines 19–22 + 428–435** — `AllowedSources` mirrors the CHECK, and `NormalizeSource` coerces unknown values to `'system'`:
+1. **Migration `005_episodic_source_model.sql`** — table rebuild with expanded CHECK including `'model'` (SQLite cannot ALTER CHECK in place). Preserves child embedding rows (FK off during swap).
+2. **`Schema/001_schema.sql`** — canonical CHECK updated for fresh installs.
+3. **`SqliteMemoryStore.AllowedSources`** — `"model"` added.
+4. **`StoreMemoryTool.SourceLabel`** — `"chat"` → `"model"`.
+5. No backfill: pre-fix `store_memory` rows stay `'chat'`.
 
-```csharp
-private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
-{
-    "self", "chat", "imported", "observation", "correction", "system"
-};
+## Workaround taken in TASK-131 (historical)
 
-private static string NormalizeSource(string? sourceLabel)
-{
-    if (string.IsNullOrWhiteSpace(sourceLabel))
-        return "system";
-    var trimmed = sourceLabel.Trim().ToLowerInvariant();
-    return AllowedSources.Contains(trimmed) ? trimmed : "system";
-}
-```
-
-So writing `source='model'` literally would either:
-- be **rejected by SQLite** with a CHECK constraint violation (if bypassing `NormalizeSource`), or
-- be **silently coerced to `'system'`** by `NormalizeSource` (the path `WriteEpisodicAsync` actually takes).
-
-Neither yields a row with `source='model'`.
-
-## Impact on TASK-131
-
-- **Acceptance criterion #3** ("`store_memory` writes a row with `source='model'` (not `'self'`)") cannot be satisfied as written.
-- The ticket's **intent** ("distinguish model-authored from SoulLoop-authored") **is already satisfied** by the existing convention:
-  - SoulLoop writes `source='self'` (`SoulLoopScaffold.cs` line 164).
-  - The chat path's model-authored episodics write `source='chat'` (`ChatWebSocketHandler.cs` line 447 — `AuthorChatEpisodicAsync`, BED-108).
-  - `store_memory` reuses `'chat'` so it lands in the same provenance bucket as other model-authored memories and remains distinct from SoulLoop's `'self'`.
-
-## Workaround taken in TASK-131
-
-`StoreMemoryTool.SourceLabel = "chat"` (constant). The tool writes with `source='chat'`, which:
-- Is schema-valid (passes the CHECK).
-- Is the existing label for model-authored episodic memories.
-- Is distinct from `source='self'` (SoulLoop-authored).
-- Distinguishes model-authored from loop-authored, satisfying the ticket's intent.
-
-The tool's `Data` payload also returns `source = "chat"` so the model/host can see the provenance.
-
-## Recommended fix (DBD follow-up)
-
-If a dedicated `'model'` provenance label is still desired (to distinguish `store_memory`-authored rows from chat-path `AuthorChatEpisodicAsync` rows), this requires:
-
-1. **DBD schema migration `003`** — `ALTER TABLE episodic_memories` cannot drop a CHECK constraint in SQLite; the migration must rebuild the table with the expanded CHECK:
-   ```sql
-   CHECK (source IN (
-       'self', 'chat', 'imported', 'observation', 'correction', 'system', 'model'
-   ))
-   ```
-2. **`SqliteMemoryStore.AllowedSources`** — add `"model"` to the `HashSet`.
-3. **`StoreMemoryTool.SourceLabel`** — change from `"chat"` to `"model"`.
-4. Backfill consideration: existing `store_memory` rows written as `'chat'` stay `'chat'` (no rewrite needed; the label change only affects new rows).
-
-This is a DBD-owned change (schema + store). Coordinated with PM as a follow-up ticket; **not** in BED-131's lane (constraints: "Do not change `IMemoryStore` interface").
-
-## Reproduction
-
-```csharp
-// In a real SqliteMemoryStore (not the fake):
-await store.WriteEpisodicAsync("test", "model", ct);
-// → SQLiteException: CHECK constraint failed: episodic_memories
-// (or silently stored as source='system' via NormalizeSource, depending on path)
-```
-
-## Status
-
-**Open.** Workaround landed in TASK-131 (uses `'chat'`). Recommend DBD pick up the migration as a follow-up; lowering to P2 since QA-130 is unblocked.
+`StoreMemoryTool.SourceLabel = "chat"` until migration 005 landed.

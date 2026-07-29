@@ -10,18 +10,19 @@ Thin documentation + verb contract for SoulCore â†’ Unreal Engine body cont
                                               â”‚
                                               â–¼ outbound (optional)
                                      Unreal WS server :8888
+                                     (Shadow: house-victoria via Tailscale)
 ```
 
 | Endpoint | Role | Default |
 | --- | --- | --- |
 | `ws://127.0.0.1:7700/ws` | Presence chat protocol (SoulCore **server**) | Loopback only (SEC-004) |
-| `ws://127.0.0.1:8888` | Unreal body verbs (SoulCore **client**) | Config: `UnrealBridge:WsUrl` |
+| `ws://house-victoria:8888` | Unreal body verbs (SoulCore **client**, Tailscale → Shadow) | Config: `UnrealBridge:WsUrl` |
 
-Canonical Unreal project (product freeze 2026-07-23):
+Canonical Unreal project (author on Shadow via P4):
 
-`C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject`
+`C:\HouseVictoriaUE5.8\MyProject\MyProject.uproject` (KAIA workspace) / synced root on Shadow (`housevictoria_shadow`)
 
-Expected body WS: `ws://127.0.0.1:8888` (config default above).
+Expected body WS: `ws://house-victoria:8888` (Tailscale MagicDNS; override to loopback for local PIE).
 
 ## Outbound verb mapping (SoulCore â†’ UE wire) â€” BED-057
 
@@ -48,7 +49,10 @@ envelope for `play_animation` / `look` / `set_emotion`.
 | `play_animation` | `{ "type":"command", "payload":{ "name":"play_animation", "args":{ "name":"…" } } }` | **BED-119:** BridgeServer reads JSON `payload.args.name` (+ PlainArgs fallback). Ack `success:true` on parse; montage `/Game/Animations/Victoria/{name}` may still be missing (Wave 27). |
 | `look` | `{ "type":"command", "payload":{ "name":"autonomy", "args":{ "command":"look_at_player" } } }` | Nearest documented UE path; `LookAsync` payload ignored |
 | `set_emotion` | `{ "type":"command", "payload":{ "name":"set_emotion", "args":{ "valence", "arousal", "dominance", "label" } } }` | **BED-069:** UE accepts JSON + plain `set_emotion <label>`; ack `success:true` (visual stub OK). **BED-070:** Host maps `SetEmotionAsync` (disk; soak Host may be old until recycle). |
-| `loco` | plain `move_avatar_relative <forward> <right> <up>` | **BED-072:** local +X/+Y/+Z cm; empty payload → forward=50. UE also accepts `command`/`loco` (after plugin rebuild). Live soak Host binary may still be old until recycle |
+| `loco` | plain `move_avatar_relative <forward> <right> <up>` | **BED-072 / BED-117:** local +X/+Y/+Z cm → **NavMesh path-follow walk** (not teleport). Empty payload → forward=50 |
+| `move_to` | plain `move_to <x> <y> <z>` | **BED-117:** absolute world cm → `AIController.MoveToLocation` |
+| `stop` | plain `stop` | **BED-117:** `StopMovement` / abort path; Host chat keyword "stop"/"halt"/… |
+| `move_avatar_absolute` | plain / JSON transform | **Debug teleport only** (`SetActorLocation` + `TeleportPhysics`) |
 
 Logical SoulCore verb names remain in `UnrealVerbTypes`.
 

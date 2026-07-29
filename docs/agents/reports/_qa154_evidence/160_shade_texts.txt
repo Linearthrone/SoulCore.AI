@@ -1,0 +1,36 @@
+Notification cooldown is now on
+Your device volume and alerts are reduced automatically for up to 2 minutes when you get too many notifications at once.
+Turn off
+Android System
+•
+now
+Victoria
+•
+now
+It seems like there's an internal notification or code (bgNotifyQA154) that doesn't require a direct response from me. If you have any questions, need assistan…
+Set a screen lock
+•
+1 minute ago
+For added security, set a PIN, pattern, or password for this device.
+Silent
+Victoria connected
+•
+now
+WS connected · ws://127.0.0.1:7700/ws
+Action required for theft protection
+•
+1 minute ago
+Theft protection is on. Tap to finish setup so your screen will lock if theft is detected. You’ll also be able to lock it remotely.
+Virtual SD card
+•
+1 minute ago
+For storing photos, videos, music and more
+Clear all
+Wi-Fi
+AndroidWifi
+Bluetooth
+Mobile data
+T-Mobile, 5G
+Quick Share
+10:17
+Mon, Jul 27

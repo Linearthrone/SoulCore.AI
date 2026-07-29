@@ -28,7 +28,7 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
 | Chat context | Identity + semantic recall (`nomic-embed-text`) + emotion preamble |
 | Embeddings | Live; 768-d; `--backfill-embeddings` (BED-110); 174/174 covered; native sqlite-vec deferred |
 | SoulLoop | `enabled=true` — **LIVE**; DriftWatcher active; kill switch available |
-| Unreal (canonical) | `C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` → expected body WS `ws://127.0.0.1:8888` |
+| Unreal (canonical) | **Body only → shadow PC** (main freezes under SoulCore+UE). **SoulCore Host / Ollama / Hermes stay on this machine — Victoria’s soul does not leave.** Body WS `:8888` on shadow; Host `UnrealBridge:WsUrl` → `ws://<shadow>:8888` (Tailscale preferred). Prior local path: `...\Unreal Projects\MyProject\MyProject.uproject` |
 | North star | `...\SoulCore_Architecture_and_Development_Plan.md` |
 
 ## Open gates (user)
@@ -73,18 +73,30 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
 - **Wave 26 — Victoria embodiment Phase 1 ("She walks")**:
   - ~~BED-114~~ **Pass** (archived) — `BP_VictoriaCharacter` + `VictoriaAvatar` on Home
   - ~~BED-115~~ **Pass** (archived 2026-07-27) — Manny→MH loco + `ABP_Victoria_Locomotion` + **DefaultSlot**; AnimClass assigned
-  - **BED-116 STARTED 2026-07-27** (NavMesh) → then BED-117 → QA-118
+  - ~~BED-116~~ **Pass** (archived 2026-07-27) — NavMeshBoundsVolume ~42×42 m; Recast 34/192; interior path OK
+  - ~~BED-117~~ **Pass** (archived 2026-07-27) — AIController + path-following verbs; ISSUE-003 Fixed
+  - **QA-118 FAIL** — API ok, travel=0; ISSUE-006 P1
+  - **BED-160** paused pending **MyProject → shadow PC** (main PC freezes under SoulCore+UE); then fix ISSUE-006 → QA-118 retest
+  - **Unreal split (hard rule)**: **Soul stays here** — Host/Hermes/Ollama never move. Only UE Editor+PIE+`MyProject` on shadow; `UnrealBridge:WsUrl` → shadow `:8888` (Tailscale preferred)
 - **Wave 27 — Phase 2**:
   - ~~BED-119~~ **Pass** · ~~BED-120~~ **Pass** · ~~BED-122~~ **Pass** (archived)
   - **BED-121 Partial** — montages exist; AC-3 unblocked by 115 DefaultSlot → re-probe `play_animation` then QA-123
 - **Wave 27 — Phase 3 agent loop**:
   - Phase A ~~125–129~~ **Pass** (archived) · ~~BED-131~~ **Pass** (archived; live recall demo)
-  - **QA-130 STARTED 2026-07-27** (formal gate; Host was DOWN at handoff — QA starts Host via `start-soulcore.ps1`)
-  - ~~BED-132~~ **Pass** (archived 2026-07-27) — five body tools; `move_to` interim relative loco until BED-117 (ISSUE-20260727-003)
-  - ~~BED-133~~ **Pass** (archived 2026-07-27) — `list_tools` / `system_info` / scoped FS; DI cycle closed
-  - ~~QA-130~~ **Pass** (archived; AC7 closed by ~~BED-156~~ **Pass**) — Phase A agency gate cleared; ISSUE-001 Fixed
-  - QA-134 gated on embodiment walk (117) for real `move_to` (wave/recall can soft-smoke earlier)
-  - Phases C–F still queued (135–145); do not start C/D until OPS-143
+  - ~~BED-132~~ **Pass** (archived) — five body tools; `move_to` interim until BED-117 (ISSUE-003)
+  - ~~BED-133~~ **Pass** (archived) — list_tools / system_info / scoped FS
+  - ~~QA-130~~ **Pass** (archived; AC7 closed by BED-156)
+  - ~~BED-140~~ **Pass** (cloud → in tree; report archived)
+  - ~~BED-157~~ **Pass** (cloud → in tree: `/health` `inference.model` + migration 005 `source=model`; ISSUE-002 closed)
+  - ~~BED-141~~ **Pass** (cloud → merged local 2026-07-27: `victoria_workflows` mig 004 + workflow_* tools; archived)
+  - **QA-142 FAIL** → fixes: ~~BED-158~~ **Pass** · ~~BED-159~~ **Pass** — **QA-142 retest** in flight
+  - ~~BED-135~~ **Pass** · ~~BED-136~~ **Pass** · ~~BED-138~~ **Pass** (archived) — desktop/browser/MT4 tools + gates
+  - ~~BED-144~~ **Pass** (archived) — `CallMcpToolAsync` + hermes backends
+  - **QA-145 FAIL** (first run) — PreferHermes Hermes-native tools / hang / key mismatch
+  - ~~BED-161~~ **Pass** (merged local 2026-07-27) — PreferHermes Host ITool loop + fail-fast; ISSUE-007/009/010 Fixed; ISSUE-008 OOS → **QA-145 retest**
+  - ~~OPS-143~~ **Pass** (archived) — Hermes `gemma4:64k` @65536
+  - QA-134 gated on QA-118 visual walk Pass (117 done; 160 in flight)
+  - QA-137/139 after Phase F / PreferHermes path clears
 - **Wave 28 — Phone companion Phase 0** (from TT-146):
   - Tickets FED-147…151 + SEC-152 + OPS-153 + QA-154 issued; reply archived `log/TASK-20260727-146-PM01-to-TT01.md`
   - ~~FED-147~~ **Pass** (archived) — `House/House.CompanionAndroid/` Compose shell
@@ -92,11 +104,12 @@ updated: 2026-07-27 (Wave-28 phone companion ticketed; Wave-26/27 resume — arc
   - ~~FED-149~~ **Pass** (archived) — Keystore token + Bearer/`X-Api-Key` (aligned BED-155)
   - ~~FED-150~~ **Pass** (archived) — FGS keeps WS alive + connected notification
   - ~~FED-151~~ **Pass** (archived) — `chat.done` background `victoria_replies` alerts
-  - **QA-154 STARTED 2026-07-27** (Phase 0 phone exit gate)
+  - ~~QA-154~~ **Pass** (archived 2026-07-27) — emulator + `adb reverse` Phase 0 exit (chat RT, background notif, tap-open, vib toggle)
+  - Post-QA fix: `AppForeground` seed `false` (START_STICKY no-Activity restart was suppressing alerts) — no new ticket; FED-151 follow-up in tree
+  - Wave 28 Phase 0 **CLEARED** (remote Tailscale on-device still optional soak)
   - ~~SEC-152~~ **Pass (conditional)** archived — Tailscale+Keystore OK; **LAN bind Fail**
   - ~~BED-155~~ **Pass** (archived) — fail-closed `/ws` via `SOULCORE_COMPANION_API_TOKEN` (Bearer / X-Api-Key)
   - ~~OPS-153~~ **Pass** (archived) — runbook `docs/runbooks/tailscale-serve-soulcore.md` + `tailscale-serve-soulcore.ps1`
-  - QA-154 gated on 148–151 (+ token set when using Tailscale serve)
 - **Blocked on user**: charter lock · soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
 
 ## Completed since last update

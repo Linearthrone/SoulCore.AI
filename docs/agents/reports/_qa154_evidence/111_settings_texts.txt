@@ -1,0 +1,15 @@
+Background connection (FED-150)
+Foreground service: running · connected
+Reply notifications (FED-151)
+Enable reply alerts
+Vibration
+Sound: (system default)
+Pick custom sound…
+Use system default sound
+Test /health
+Save &amp; reconnect
+Disconnect (stop background WS)
+Clear token
+Clear all (logout)
+Connection
+10:10

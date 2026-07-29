@@ -1,0 +1,51 @@
+﻿Built-in toolsets (cli):
+  Γ£ô enabled  web  ≡ƒöì Web Search & Scraping
+  Γ£ô enabled  browser  ≡ƒîÉ Browser Automation
+  Γ£ô enabled  terminal  ≡ƒÆ╗ Terminal & Processes
+  Γ£ô enabled  file  ≡ƒôü File Operations
+  Γ£ô enabled  code_execution  ΓÜí Code Execution
+  Γ£ô enabled  vision  ≡ƒæü∩╕Å  Vision / Image Analysis
+  Γ£ù disabled  video  ≡ƒÄ¼ Video Analysis
+  Γ£ô enabled  image_gen  ≡ƒÄ¿ Image Generation
+  Γ£ô enabled  video_gen  ≡ƒÄ¼ Video Generation
+  Γ£ù disabled  x_search  ≡ƒÉª X (Twitter) Search
+  Γ£ô enabled  tts  ≡ƒöè Text-to-Speech
+  Γ£ô enabled  skills  ≡ƒôÜ Skills
+  Γ£ô enabled  todo  ≡ƒôï Task Planning
+  Γ£ô enabled  memory  ≡ƒÆ╛ Memory
+  Γ£ù disabled  context_engine  ≡ƒº⌐ Context Engine
+  Γ£ô enabled  session_search  ≡ƒöÄ Session Search
+  Γ£ô enabled  clarify  Γ¥ô Clarifying Questions
+  Γ£ô enabled  delegation  ≡ƒæÑ Task Delegation
+  Γ£ô enabled  cronjob  ΓÅ░ Cron Jobs
+  Γ£ù disabled  homeassistant  ≡ƒÅá Home Assistant
+  Γ£ù disabled  spotify  ≡ƒÄ╡ Spotify
+  Γ£ù disabled  yuanbao  ≡ƒñû Yuanbao
+  Γ£ô enabled  computer_use  ≡ƒû▒∩╕Å  Computer Use (macOS/Windows/Linux)
+
+MCP servers:
+  alpaca  all tools enabled
+  computer_use  all tools enabled
+  context7  all tools enabled
+  docker-hub  all tools enabled
+  elevenlabs  all tools enabled
+  fetch  all tools enabled
+  filesystem  all tools enabled
+  git  all tools enabled
+  github  all tools enabled
+  gmail  all tools enabled
+  google-calendar  all tools enabled
+  google-drive  all tools enabled
+  higgsfield  all tools enabled
+  house_victoria  all tools enabled
+  house_victoria_data  all tools enabled
+  memory  all tools enabled
+  mistral  all tools enabled
+  polygon-io  all tools enabled
+  postgres  all tools enabled
+  puppeteer  all tools enabled
+  sentry  all tools enabled
+  sequential-thinking  all tools enabled
+  tradingview  all tools enabled
+  youtube  all tools enabled
+

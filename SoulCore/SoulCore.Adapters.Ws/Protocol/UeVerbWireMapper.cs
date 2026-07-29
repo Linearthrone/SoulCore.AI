@@ -45,6 +45,8 @@ public static class UeVerbWireMapper
             UnrealVerbTypes.Look => MapLook(),
             UnrealVerbTypes.SetEmotion => MapSetEmotion(payload),
             UnrealVerbTypes.Loco => MapLoco(payload),
+            UnrealVerbTypes.MoveTo => MapMoveTo(payload),
+            UnrealVerbTypes.Stop => MapStop(),
             _ => Unsupported(verb)
         };
     }
@@ -103,6 +105,7 @@ public static class UeVerbWireMapper
     /// <c>forward</c>/<c>right</c>/<c>up</c> map to Unreal local +X/+Y/+Z cm.
     /// Empty payload → default step forward=50. Emit plain <c>move_avatar_relative</c>
     /// (BridgeServer JSON path historically ignored offset; PlainArgs is reliable like speak).
+    /// UE walks to the relative goal via NavMesh (BED-117) — not a teleport.
     /// </summary>
     private static UeWireMapResult MapLoco(object? payload)
     {
@@ -137,6 +140,37 @@ public static class UeVerbWireMapper
             UnrealVerbTypes.Loco,
             "move_avatar_relative",
             wire);
+    }
+
+    /// <summary>
+    /// Absolute world destination (cm). Plain <c>move_to x y z</c> → UE AIController MoveToLocation.
+    /// </summary>
+    private static UeWireMapResult MapMoveTo(object? payload)
+    {
+        var x = ExtractDouble(payload, "x") ?? 0.0;
+        var y = ExtractDouble(payload, "y") ?? 0.0;
+        var z = ExtractDouble(payload, "z") ?? 0.0;
+        var wire = string.Format(
+            CultureInfo.InvariantCulture,
+            "move_to {0} {1} {2}",
+            x,
+            y,
+            z);
+        return new UeWireMapResult(
+            UeWireMapKind.Send,
+            UnrealVerbTypes.MoveTo,
+            "move_to",
+            wire);
+    }
+
+    /// <summary>Plain <c>stop</c> → UE StopMovement / abort path.</summary>
+    private static UeWireMapResult MapStop()
+    {
+        return new UeWireMapResult(
+            UeWireMapKind.Send,
+            UnrealVerbTypes.Stop,
+            "stop",
+            "stop");
     }
 
     private static UeWireMapResult Send(string soulVerb, string ueName, object args)

@@ -18,8 +18,12 @@ using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
 using SoulCore.Inference.Tools.Body;
+using SoulCore.Inference.Tools.Browser;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.Trading;
+using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -118,6 +122,30 @@ var toolsOptions = builder.Configuration
     .GetSection(ToolsOptions.SectionName)
     .Get<ToolsOptions>() ?? new ToolsOptions();
 
+// BED-161 / ISSUE-009: Hermes API key preflight — never read secrets from git.
+// Warn (do not crash) when Hermes is enabled or PreferHermes is set but the key
+// is missing; chat/MCP will fail-fast at call time with a clear message.
+{
+    var hermesKeyPresent = !string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(SecretNames.HermesApiKey))
+        || !string.IsNullOrWhiteSpace(hermesOptions.ApiKey);
+    if ((hermesOptions.Enabled || chatWsOptions.PreferHermes) && !hermesKeyPresent)
+    {
+        Console.Error.WriteLine(
+            $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
+            $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
+            "PreferHermes chat and hermes-backend MCP tools will fail-fast until the key is provided. " +
+            "Do not put ApiKey values in appsettings.json.");
+    }
+
+    if (!string.IsNullOrWhiteSpace(hermesOptions.ApiKey))
+    {
+        Console.Error.WriteLine(
+            $"[SoulCore] WARNING: Hermes:ApiKey is set in configuration. Prefer env " +
+            $"{SecretNames.HermesApiKey} / user-secrets — never commit API keys.");
+    }
+}
+
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
 if (!IsLoopback(bindOptions.BindAddress))
 {
@@ -131,6 +159,12 @@ builder.WebHost.UseUrls($"http://{bindOptions.BindAddress}:{bindOptions.Port}");
 builder.Services.AddSingleton<SqliteMemoryStore>();
 builder.Services.AddSingleton<IMemoryStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// BED-140: Victoria's own task store (victoria_tasks table). Separate from
+// PM tickets under docs/agents/tasks/ — those are human-authored orchestration
+// artifacts; this store is model-managed via task_* tools.
+builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// BED-141: Victoria's workflow store (victoria_workflows) — ordered steps via workflow_* tools.
+builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
@@ -209,6 +243,21 @@ builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
 
+// Task tools (BED-140): task_create / task_get / task_update_status / task_list
+// wrap IVictoriaTaskStore (SQLite victoria_tasks). Victoria's own work items —
+// not the PM ticket folder. Workflow tools (BED-141) are separate.
+builder.Services.AddSingleton<ITool, TaskCreateTool>();
+builder.Services.AddSingleton<ITool, TaskGetTool>();
+builder.Services.AddSingleton<ITool, TaskUpdateStatusTool>();
+builder.Services.AddSingleton<ITool, TaskListTool>();
+
+// Workflow tools (BED-141): workflow_create / workflow_execute / workflow_get.
+// workflow_execute resolves IToolRegistry lazily via IServiceProvider (ListToolsTool pattern).
+builder.Services.AddSingleton<ITool>(sp => new WorkflowExecuteTool(
+    sp.GetRequiredService<IVictoriaWorkflowStore>(), sp));
+builder.Services.AddSingleton<ITool, WorkflowCreateTool>();
+builder.Services.AddSingleton<ITool, WorkflowGetTool>();
+
 var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
 if (embeddingsOn)
 {
@@ -239,6 +288,79 @@ else
 {
     builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
 }
+
+// BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
+builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
+{
+    var max = sp.GetRequiredService<IOptions<ChatWsOptions>>().Value.MaxSessionHistoryMessages;
+    if (max < 2) max = 40;
+    return new ChatSessionHistoryStore(max);
+});
+
+// Desktop tools (BED-135): capture + click/type/key with session opt-in gate.
+// AllowComputerControl defaults false; AllowDesktopCapture defaults true.
+// Backend: Tools:DesktopBackend = "native" | "hermes" (hermes stub → BED-144).
+builder.Services.AddSingleton<IComputerControlGate, ComputerControlGate>();
+var desktopBackend = (toolsOptions.DesktopBackend ?? "native").Trim();
+if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
+}
+else
+{
+    builder.Services.AddSingleton<IDesktopControlBackend, NativeDesktopControlBackend>();
+}
+builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool, DesktopClickTool>();
+builder.Services.AddSingleton<ITool, DesktopTypeTool>();
+builder.Services.AddSingleton<ITool, DesktopKeyTool>();
+builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
+builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
+
+// Browser tools (BED-136): browser_health / capture_tab / click / type / key / scroll.
+// Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
+// Backend: Tools.BrowserBackend=hermes → HermesBrowserBridge (BED-144 CallMcpToolAsync).
+builder.Services.AddSingleton<IBrowserBridge>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendHermes).Trim();
+    if (!string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+        return new UnsupportedBrowserBridge(backend);
+
+    return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
+});
+builder.Services.AddSingleton<ITool, BrowserHealthTool>();
+builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTool>();
+builder.Services.AddSingleton<ITool, BrowserTypeTool>();
+builder.Services.AddSingleton<ITool, BrowserKeyTool>();
+builder.Services.AddSingleton<ITool, BrowserScrollTool>();
+
+// MT4 trading tools (BED-138): AllowMt4Read / AllowMt4Trade + confirmed=true gate.
+// Mt4Backend=hermes → HermesMt4Bridge via CallMcpToolAsync (BED-144).
+builder.Services.AddSingleton<IMt4Bridge>(sp =>
+{
+    var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var backend = (tools.Mt4Backend ?? ToolsOptions.BackendHermes).Trim();
+    if (!string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+    {
+        return new UnavailableMt4Bridge(
+            $"mt4 backend '{backend}' not supported — only 'hermes' is implemented (BED-138)");
+    }
+
+    return new HermesMt4Bridge(sp.GetRequiredService<IHermesClient>());
+});
+builder.Services.AddSingleton<ITool, Mt4StatusTool>();
+builder.Services.AddSingleton<ITool, ListSymbolsTool>();
+builder.Services.AddSingleton<ITool, GetMarketDataTool>();
+builder.Services.AddSingleton<ITool, GetOpenPositionsTool>();
+builder.Services.AddSingleton<ITool, ExecuteTradeTool>();
+builder.Services.AddSingleton<ITool, ClosePositionTool>();
+builder.Services.AddSingleton<ITool, VerifyTicketTool>();
+builder.Services.AddSingleton<ITool, MarketWatchStatusTool>();
+builder.Services.AddSingleton<ITool, ExportHistoryTool>();
+builder.Services.AddSingleton<ITool, GetHistoricalBarsTool>();
+builder.Services.AddSingleton<ITool, RunBacktestTool>();
 
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
@@ -357,6 +479,8 @@ app.MapGet("/health", (
         {
             enabled = inferenceOptions.Enabled,
             provider = inferenceOptions.Enabled ? "ollama" : "null",
+            // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
+            model = inferenceOptions.Model,
             embeddingsEnabled = embeddingsOn,
             embeddingModel = inferenceOptions.EmbeddingModel
         },

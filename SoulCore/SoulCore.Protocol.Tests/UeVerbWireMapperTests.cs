@@ -141,6 +141,26 @@ public class UeVerbWireMapperTests
     }
 
     [Fact]
+    public void MoveTo_maps_to_plain_move_to()
+    {
+        var result = UeVerbWireMapper.Map(UnrealVerbTypes.MoveTo, new { x = -100.5, y = 420.0, z = 10.0 });
+
+        Assert.Equal(UeVerbWireMapper.UeWireMapKind.Send, result.Kind);
+        Assert.Equal("move_to", result.UeCommandName);
+        Assert.Equal("move_to -100.5 420 10", result.WireJson);
+    }
+
+    [Fact]
+    public void Stop_maps_to_plain_stop()
+    {
+        var result = UeVerbWireMapper.Map(UnrealVerbTypes.Stop, null);
+
+        Assert.Equal(UeVerbWireMapper.UeWireMapKind.Send, result.Kind);
+        Assert.Equal("stop", result.UeCommandName);
+        Assert.Equal("stop", result.WireJson);
+    }
+
+    [Fact]
     public void Sample_wire_speak_for_report_evidence()
     {
         var wire = UeVerbWireMapper.Map(UnrealVerbTypes.Speak, new { text = "sample" }).WireJson;

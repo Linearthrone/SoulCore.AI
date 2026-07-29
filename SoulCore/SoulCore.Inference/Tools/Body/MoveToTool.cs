@@ -4,11 +4,10 @@ using SoulCore.Adapters.Ws;
 namespace SoulCore.Inference.Tools.Body;
 
 /// <summary>
-/// Model-callable move_to tool (BED-132). Interim: wraps
-/// <see cref="IUnrealVerbClient.LocoAsync"/> with relative offsets
-/// (<c>forward=x</c>, <c>right=y</c>, <c>up=z</c> cm) — teleport-style via
-/// UE <c>move_avatar_relative</c>. Absolute path-following requires BED-117
-/// (<c>MoveToAsync</c> / AIController); not available yet.
+/// Model-callable move_to tool (BED-132 / BED-117). Absolute world path-follow via
+/// <see cref="IUnrealVerbClient.MoveToAsync"/> → UE <c>move_to x y z</c> /
+/// AIController <c>MoveToLocation</c>. Relative small steps remain on keyword loco /
+/// <see cref="IUnrealVerbClient.LocoAsync"/>.
 /// </summary>
 public sealed class MoveToTool : ITool
 {
@@ -23,7 +22,7 @@ public sealed class MoveToTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "move_to",
-        Description: "Walk to a location (interim: relative offset in cm via loco / move_avatar_relative; not absolute path-following yet).",
+        Description: "Walk to an absolute world location (cm) via NavMesh path-following.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -61,10 +60,9 @@ public sealed class MoveToTool : ITool
                 Data: null);
         }
 
-        // Interim (BED-117 not landed): treat x/y/z as relative local cm offsets.
-        var payload = new { forward = x, right = y, up = z, mode = "relative_offset_interim" };
+        var payload = new { x, y, z, mode = "absolute_path_follow" };
         return await BodyToolBridge.InvokeAsync(
-            ct2 => _unreal.LocoAsync(payload, ct2),
+            ct2 => _unreal.MoveToAsync(payload, ct2),
             data: payload,
             ct).ConfigureAwait(false);
     }
@@ -97,15 +95,15 @@ public sealed class MoveToTool : ITool
           "properties": {
             "x": {
               "type": "number",
-              "description": "Forward offset in cm (interim relative loco; absolute world X when BED-117 path-following lands)."
+              "description": "World X destination in cm (Unreal)."
             },
             "y": {
               "type": "number",
-              "description": "Right offset in cm (interim relative loco)."
+              "description": "World Y destination in cm (Unreal)."
             },
             "z": {
               "type": "number",
-              "description": "Up offset in cm (optional, default 0)."
+              "description": "World Z destination in cm (optional; projected to NavMesh when omitted/near floor)."
             }
           },
           "required": ["x", "y"]

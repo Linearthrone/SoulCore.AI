@@ -752,18 +752,19 @@ public sealed class ChatWebSocketHandler
 
         Exception? lastError = null;
 
+        // PreferHermes fail-fast (BED-161): no Ollama fallback when Hermes is preferred.
         if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
         {
             var hermes = await TryHermesAsync(
                     text,
                     contextPreamble,
-                    "Hermes chat failed; falling back to inference",
+                    "Hermes chat failed with PreferHermes=true — fail-fast (no Ollama fallback)",
                     cancellationToken)
                 .ConfigureAwait(false);
             if (hermes.Result is not null)
                 return hermes.Result;
-            if (hermes.Error is not null)
-                lastError = hermes.Error;
+            throw hermes.Error ?? new InvalidOperationException(
+                "Hermes chat failed while PreferHermes=true.");
         }
 
         if (_inferenceOptions.Enabled)
@@ -786,7 +787,7 @@ public sealed class ChatWebSocketHandler
             }
         }
 
-        if (!_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        if (_hermesOptions.Enabled)
         {
             var hermes = await TryHermesAsync(
                     text,
@@ -1399,7 +1400,10 @@ public sealed class ChatWebSocketHandler
         string? replyText = null;
         string? provider = null;
 
-        // PreferHermes primary: route to Hermes when configured + enabled.
+        // PreferHermes primary (BED-161): Hermes is LLM-only for this turn;
+        // Host runs the SoulCore tool-loop → ITool → CallMcpToolAsync for
+        // hermes backends. Fail-fast when Hermes is down — do NOT fall through
+        // to Ollama (avoids dual-backend turns / silent PreferHermes bypass).
         if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
         {
             try
@@ -1413,11 +1417,18 @@ public sealed class ChatWebSocketHandler
                     provider = "hermes";
                     RecordSpend("hermes", text, contextPreamble, replyText);
                 }
+                else
+                {
+                    throw new InvalidOperationException(
+                        "Hermes tool-loop returned empty reply while PreferHermes=true.");
+                }
             }
             catch (Exception ex)
             {
-                lastError = ex;
-                _logger.LogDebug(ex, "Hermes tool-loop failed; falling back to inference");
+                _logger.LogWarning(
+                    ex,
+                    "Hermes tool-loop failed with PreferHermes=true — fail-fast (no Ollama fallback)");
+                throw;
             }
         }
 
@@ -1444,7 +1455,7 @@ public sealed class ChatWebSocketHandler
         }
 
         // Secondary Hermes (when PreferHermes=false and Ollama failed/disabled).
-        if (replyText is null && !_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        if (replyText is null && _hermesOptions.Enabled)
         {
             try
             {

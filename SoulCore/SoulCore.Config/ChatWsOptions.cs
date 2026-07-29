@@ -41,4 +41,10 @@ public sealed class ChatWsOptions
     /// </para>
     /// </summary>
     public bool UseToolLoop { get; set; } = true;
+
+    /// <summary>
+    /// BED-158: max messages retained per chat session for multi-turn pronouns
+    /// / tool history. Values &lt; 2 fall back to 40 at DI wiring time.
+    /// </summary>
+    public int MaxSessionHistoryMessages { get; set; } = 40;
 }

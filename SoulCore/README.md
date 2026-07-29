@@ -51,7 +51,8 @@ Types live in `SoulCore.Protocol` (`SoulCoreFrame` / `SoulCoreFrameTypes`). Payl
 
 | Knob | Default |
 | --- | --- |
-| `UnrealBridge:WsUrl` | `ws://127.0.0.1:8888` |
+| `UnrealBridge:WsUrl` | `ws://house-victoria:8888` (Shadow over Tailscale) |
+| `UnrealBridge:ConnectTimeoutSeconds` | `10` |
 | `UnrealBridge:Enabled` | `true` |
 | `UnrealBridge:ConnectOnStartup` | `true` (failures **must not** crash Host) |
 

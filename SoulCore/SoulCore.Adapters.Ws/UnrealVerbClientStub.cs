@@ -29,7 +29,7 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IAsyncDisposable
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         TargetUrl = string.IsNullOrWhiteSpace(_options.WsUrl)
-            ? "ws://127.0.0.1:8888"
+            ? "ws://house-victoria:8888"
             : _options.WsUrl.Trim();
     }
 
@@ -90,6 +90,12 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IAsyncDisposable
 
     public Task<bool> LocoAsync(object locoPayload, CancellationToken cancellationToken = default) =>
         SendVerbAsync(UnrealVerbTypes.Loco, locoPayload, cancellationToken);
+
+    public Task<bool> MoveToAsync(object moveToPayload, CancellationToken cancellationToken = default) =>
+        SendVerbAsync(UnrealVerbTypes.MoveTo, moveToPayload, cancellationToken);
+
+    public Task<bool> StopAsync(CancellationToken cancellationToken = default) =>
+        SendVerbAsync(UnrealVerbTypes.Stop, payload: null, cancellationToken);
 
     public Task<bool> LookAsync(object lookPayload, CancellationToken cancellationToken = default) =>
         SendVerbAsync(UnrealVerbTypes.Look, lookPayload, cancellationToken);
