@@ -1,0 +1,15 @@
+[Unit]
+Description=Perforce p4d (SoulCoreOS — Phase later, disabled by default)
+Documentation=https://www.perforce.com/manuals
+ConditionPathExists=/opt/perforce/sbin/p4d
+After=network-online.target
+
+[Service]
+Type=simple
+# Placeholder — do not enable until OPS tickets p4d install + depot paths.
+ExecStart=/opt/perforce/sbin/p4d -r /var/lib/p4d -p 1666
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

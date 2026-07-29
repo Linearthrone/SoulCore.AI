@@ -1,0 +1,36 @@
+# SoulCoreOS — bootc image
+#
+# Base MUST remain bazzite-nvidia-open (Blackwell / RTX 5070 Ti).
+# Do NOT switch to bazzite-nvidia (proprietary / legacy closed modules).
+#
+# Pattern follows Universal Blue image-template:
+#   https://github.com/ublue-os/image-template
+
+FROM scratch AS ctx
+COPY build_files /build_files
+COPY system_files /system_files
+
+ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-nvidia-open:stable"
+FROM ${BASE_IMAGE}
+
+# Re-declare after FROM so --build-arg reaches the RUN layer.
+ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-nvidia-open:stable"
+ARG OLLAMA_VERSION="v0.9.6"
+
+LABEL containers.bootc="1" \
+      org.opencontainers.image.title="SoulCoreOS" \
+      org.opencontainers.image.description="House Victoria soul-machine OS on Bazzite nvidia-open" \
+      org.opencontainers.image.source="https://github.com/linearthrone/soulcore.ai" \
+      soulcoreos.base="bazzite-nvidia-open" \
+      soulcoreos.excludes="unreal-engine,cursor,stability-matrix"
+
+COPY --from=ctx /system_files/ /
+
+RUN --mount=type=bind,from=ctx,source=/build_files,target=/ctx \
+    --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=tmpfs,dst=/tmp \
+    OLLAMA_VERSION="${OLLAMA_VERSION}" /ctx/build.sh
+
+# Final lint (fails the build if bootc metadata / OSTree layout is wrong)
+RUN bootc container lint

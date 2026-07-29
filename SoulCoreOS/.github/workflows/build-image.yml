@@ -1,0 +1,54 @@
+# Build SoulCoreOS image and push to GHCR
+name: soulcoreos-image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "SoulCoreOS/image/**"
+      - "SoulCoreOS/systemd/**"
+      - "SoulCoreOS/.github/workflows/build-image.yml"
+    branches:
+      - main
+      - "cursor/soulcoreos-*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: soulcoreos
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc || true
+          df -h
+
+      - name: Build
+        working-directory: SoulCoreOS/image
+        run: |
+          podman build \
+            --build-arg BASE_IMAGE=ghcr.io/ublue-os/bazzite-nvidia-open:stable \
+            -t "${IMAGE_REGISTRY}/${IMAGE_NAME}:latest" \
+            -f Containerfile \
+            .
+
+      - name: Login GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG="$(date -u +%Y%m%d)"
+          podman tag "${IMAGE_REGISTRY}/${IMAGE_NAME}:latest" "${IMAGE_REGISTRY}/${IMAGE_NAME}:${DATE_TAG}"
+          podman push "${IMAGE_REGISTRY}/${IMAGE_NAME}:latest"
+          podman push "${IMAGE_REGISTRY}/${IMAGE_NAME}:${DATE_TAG}"

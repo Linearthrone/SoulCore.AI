@@ -1,0 +1,25 @@
+[Unit]
+Description=SoulCore.Host (House Victoria soul-machine backend)
+Documentation=https://github.com/linearthrone/soulcore.ai
+After=network-online.target ollama.service
+Wants=network-online.target
+# Ollama is optional at runtime; do not hard-Require so Host can start with stub mode.
+# Unreal body is remote: ws://house-victoria:8888 (Tailscale). Do not block on it.
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/soulcore/host
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_ENVIRONMENT=Production
+# Loopback only (SEC-004). Override Unreal endpoint for Shadow PC body:
+Environment=SOULCORE_Unreal__WebSocketUrl=ws://house-victoria:8888
+EnvironmentFile=-/etc/soulcore/host.env
+# Published layout: place SoulCore.Host.dll (dotnet publish) under /opt/soulcore/host
+ExecStart=/usr/bin/dotnet /opt/soulcore/host/SoulCore.Host.dll
+Restart=on-failure
+RestartSec=5
+# Mutable state (SQLite, logs)
+Environment=SOULCORE_DataDirectory=/var/lib/soulcore
+
+[Install]
+WantedBy=multi-user.target

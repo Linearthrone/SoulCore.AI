@@ -1,0 +1,16 @@
+[Unit]
+Description=Hermes gateway (House Victoria tool-loop, :8642)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/usr/libexec/soulcoreos/hermes-bootstrap
+
+[Service]
+Type=simple
+Environment=HOME=/var/lib/hermes
+WorkingDirectory=/var/lib/hermes
+ExecStart=/usr/libexec/soulcoreos/hermes-bootstrap
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
