@@ -1,0 +1,7 @@
+# OPS-143 — pinned Hermes gateway install for SoulCore/.venv-hermes
+# Recreate:
+#   python3 -m venv SoulCore/.venv-hermes
+#   SoulCore/.venv-hermes/bin/pip install -r SoulCore/scripts/requirements-hermes.txt
+hermes-agent==0.18.2
+aiohttp>=3.9.0
+mcp>=1.0.0

@@ -27,9 +27,14 @@ project.lock.json
 
 # Python
 .venv/
+.venv-hermes/
 __pycache__/
 *.py[cod]
 .ruff_cache/
+
+# Hermes gateway local runtime (OPS-143)
+SoulCore/scripts/.hermes.pid
+SoulCore/scripts/.hermes.log
 
 # OS / editor
 Thumbs.db
