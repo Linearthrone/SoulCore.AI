@@ -105,65 +105,16 @@ public sealed class WorkflowCreateTool : ITool
         out List<WorkflowStep> steps,
         out string? error)
     {
-        steps = new List<WorkflowStep>();
-        error = null;
-
-        if (stepsProp.GetArrayLength() == 0)
+        if (!WorkflowStepJson.TryParseArray(stepsProp, requireNonEmpty: true, out steps, out var parseError))
         {
-            error = "error: workflow_create 'steps' must contain at least one step.";
+            // Preserve prior model-facing prefixes (SLOP F2: shared parse, tool maps errors).
+            error = parseError == "'steps' must contain at least one step"
+                ? "error: workflow_create 'steps' must contain at least one step."
+                : $"error: workflow_create {parseError}.";
             return false;
         }
 
-        var index = 0;
-        foreach (var el in stepsProp.EnumerateArray())
-        {
-            if (el.ValueKind != JsonValueKind.Object)
-            {
-                error = $"error: workflow_create steps[{index}] must be an object.";
-                steps = new List<WorkflowStep>();
-                return false;
-            }
-
-            if (!el.TryGetProperty("description", out var descProp) || descProp.ValueKind != JsonValueKind.String)
-            {
-                error = $"error: workflow_create steps[{index}] requires 'description' (string).";
-                steps = new List<WorkflowStep>();
-                return false;
-            }
-
-            var description = descProp.GetString();
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                error = $"error: workflow_create steps[{index}] 'description' must be non-empty.";
-                steps = new List<WorkflowStep>();
-                return false;
-            }
-
-            string? tool = null;
-            if (el.TryGetProperty("tool", out var toolProp))
-            {
-                if (toolProp.ValueKind == JsonValueKind.Null)
-                {
-                    tool = null;
-                }
-                else if (toolProp.ValueKind == JsonValueKind.String)
-                {
-                    var t = toolProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(t))
-                        tool = t.Trim();
-                }
-                else
-                {
-                    error = $"error: workflow_create steps[{index}] 'tool' must be a string when present.";
-                    steps = new List<WorkflowStep>();
-                    return false;
-                }
-            }
-
-            steps.Add(new WorkflowStep(description!.Trim(), tool));
-            index++;
-        }
-
+        error = null;
         return true;
     }
 

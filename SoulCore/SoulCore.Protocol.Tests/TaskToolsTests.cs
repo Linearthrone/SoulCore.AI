@@ -11,7 +11,7 @@ namespace SoulCore.Protocol.Tests;
 /// BED-140: task_create / task_get / task_update_status / task_list tools +
 /// SQLite <c>victoria_tasks</c> store round-trip.
 /// </summary>
-public class VictoriaToolsTests
+public class TaskToolsTests
 {
     [Fact]
     public async Task CreateGetUpdateList_RoundTrip()

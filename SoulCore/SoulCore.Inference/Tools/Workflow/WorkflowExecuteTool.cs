@@ -70,11 +70,9 @@ public sealed class WorkflowExecuteTool : ITool
                 Data: null);
         }
 
-        if (!WorkflowGetTool.TryReadId(args, out var id, out var idError))
+        if (!ToolArgParsing.TryReadPositiveId(args, "workflow_execute", out var id, out var idError))
         {
-            // Rephrase for this tool name.
-            var msg = idError!.Replace("workflow_get", "workflow_execute", StringComparison.Ordinal);
-            return new ToolResult(Success: false, Content: msg, Data: null);
+            return new ToolResult(Success: false, Content: idError!, Data: null);
         }
 
         var all = false;

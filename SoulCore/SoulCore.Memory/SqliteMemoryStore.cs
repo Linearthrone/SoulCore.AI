@@ -655,25 +655,14 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         if (doc.RootElement.ValueKind != JsonValueKind.Array)
             throw new InvalidOperationException("victoria_workflows.steps_json must be a JSON array.");
 
-        var list = new List<WorkflowStep>();
-        foreach (var el in doc.RootElement.EnumerateArray())
+        // Shared shape with workflow_create (SLOP-160 F2 / BED-161).
+        if (!WorkflowStepJson.TryParseArray(
+                doc.RootElement,
+                requireNonEmpty: false,
+                out var list,
+                out var parseError))
         {
-            if (el.ValueKind != JsonValueKind.Object)
-                throw new InvalidOperationException("Each workflow step must be a JSON object.");
-
-            if (!el.TryGetProperty("description", out var descProp) || descProp.ValueKind != JsonValueKind.String)
-                throw new InvalidOperationException("Each workflow step requires a 'description' string.");
-
-            var description = descProp.GetString() ?? string.Empty;
-            string? tool = null;
-            if (el.TryGetProperty("tool", out var toolProp) && toolProp.ValueKind == JsonValueKind.String)
-            {
-                var t = toolProp.GetString();
-                if (!string.IsNullOrWhiteSpace(t))
-                    tool = t.Trim();
-            }
-
-            list.Add(new WorkflowStep(description, tool));
+            throw new InvalidOperationException($"Invalid workflow steps_json: {parseError}.");
         }
 
         return list;

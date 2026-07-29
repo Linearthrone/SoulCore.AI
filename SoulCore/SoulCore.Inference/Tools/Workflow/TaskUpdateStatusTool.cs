@@ -34,7 +34,7 @@ public sealed class TaskUpdateStatusTool : ITool
                 Data: null);
         }
 
-        if (!TryReadId(args, out var id, out var idError))
+        if (!ToolArgParsing.TryReadPositiveId(args, "task_update_status", out var id, out var idError))
         {
             return new ToolResult(Success: false, Content: idError!, Data: null);
         }
@@ -101,32 +101,6 @@ public sealed class TaskUpdateStatusTool : ITool
             Success: true,
             Content: $"updated: id={id} status={normalized}",
             Data: new { id, status = normalized });
-    }
-
-    private static bool TryReadId(JsonElement args, out long id, out string? error)
-    {
-        id = 0;
-        error = null;
-
-        if (!args.TryGetProperty("id", out var idProp))
-        {
-            error = "error: task_update_status requires 'id' (integer).";
-            return false;
-        }
-
-        if (idProp.ValueKind == JsonValueKind.Number && idProp.TryGetInt64(out id) && id > 0)
-            return true;
-
-        if (idProp.ValueKind == JsonValueKind.String
-            && long.TryParse(idProp.GetString(), out id)
-            && id > 0)
-        {
-            return true;
-        }
-
-        error = "error: task_update_status 'id' must be a positive integer.";
-        id = 0;
-        return false;
     }
 
     private static JsonElement BuildParametersSchema()
