@@ -581,6 +581,12 @@ public class ChatWebSocketHandlerToolLoopTests
             LookCalls.Add(lookPayload);
             return Task.FromResult(true);
         }
+
+        public Task<bool> MoveToAsync(object moveToPayload, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> StopAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 
     /// <summary>
