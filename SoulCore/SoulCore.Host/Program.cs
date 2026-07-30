@@ -25,6 +25,7 @@ using SoulCore.Inference.Tools.Meta;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
+using System.Text.Json;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
 // Existing non-empty process env wins; never log secret values.
@@ -134,7 +135,7 @@ var toolsOptions = builder.Configuration
         Console.Error.WriteLine(
             $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
             $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
-            "PreferHermes chat and hermes-backend MCP tools will fail-fast until the key is provided. " +
+            "PreferHermes MCP preflight and hermes-backend MCP tools will fail-fast until the key is provided. " +
             "Do not put ApiKey values in appsettings.json.");
     }
 
@@ -300,7 +301,10 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 // Desktop tools (BED-135): capture + click/type/key with session opt-in gate.
 // AllowComputerControl defaults false; AllowDesktopCapture defaults true.
 // Backend: Tools:DesktopBackend = "native" | "hermes" (hermes stub → BED-144).
-builder.Services.AddSingleton<IComputerControlGate, ComputerControlGate>();
+// Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
+builder.Services.AddSingleton<ComputerControlGate>();
+builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<ComputerControlGate>());
+builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 var desktopBackend = (toolsOptions.DesktopBackend ?? "native").Trim();
 if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
 {
@@ -422,15 +426,18 @@ app.Map(wsPath, async context =>
     await handler.RunAsync(socket, context.RequestAborted);
 });
 
-app.MapGet("/health", (
+app.MapGet("/health", async (
     IOptions<HostBindOptions> opts,
     IMemoryStore memory,
     IUnrealVerbClient unreal,
     IOptions<UnrealBridgeOptions> unrealOpts,
     IOptions<ChatWsOptions> chatOpts,
     IOptions<SoulLoopOptions> loopOpts,
+    IToolsAccessSettings access,
     DriftWatcher driftWatcher,
-    SpendMeter spendMeter) =>
+    SpendMeter spendMeter,
+    CharterService charter,
+    CancellationToken cancellationToken) =>
 {
     var memoryOk = memory.IsDatabaseOpen;
 
@@ -457,6 +464,18 @@ app.MapGet("/health", (
     {
         spendSummary = new SpendSummary(0, 0, 0m, 0m, false);
     }
+
+    int charterTotal = 0, charterLocked = 0;
+    try
+    {
+        (charterTotal, charterLocked) = await charter.GetLockCountsAsync(cancellationToken).ConfigureAwait(false);
+    }
+    catch (Exception)
+    {
+        // health stays up even if charter query fails
+    }
+
+    var charterFullyLocked = charterTotal > 0 && charterLocked == charterTotal;
 
     return Results.Json(new
     {
@@ -500,6 +519,14 @@ app.MapGet("/health", (
             target = unreal.TargetUrl,
             connected = unreal.IsConnected
         },
+        tools = ToolsSettingsDto(access),
+        charter = new
+        {
+            anchors = charterTotal,
+            locked = charterLocked,
+            fullyLocked = charterFullyLocked,
+            mode = charterFullyLocked ? "locked" : (charterTotal == 0 ? "empty" : "calibration")
+        },
         safety = new
         {
             drift = new
@@ -524,6 +551,55 @@ app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
 {
     var acked = driftWatcher.AcknowledgeAll();
     return Results.Json(new { acked });
+});
+
+static object ToolsSettingsDto(IToolsAccessSettings access) => new
+{
+    allowDesktopCapture = access.AllowDesktopCapture,
+    allowBrowserCapture = access.AllowBrowserCapture,
+    allowComputerControl = access.AllowComputerControl,
+    allowMt4Read = access.AllowMt4Read,
+    allowMt4Trade = access.AllowMt4Trade,
+    desktopBackend = access.DesktopBackend,
+    browserBackend = access.BrowserBackend,
+    mt4Backend = access.Mt4Backend,
+    scope = "session",
+    note = "Session gates until Host restart. Seeded from Tools in appsettings.json."
+};
+
+app.MapGet("/settings/tools", (IToolsAccessSettings access) => Results.Json(ToolsSettingsDto(access)));
+
+app.MapPost("/settings/tools", async (HttpRequest request, IToolsAccessSettings access) =>
+{
+    using var doc = await JsonDocument.ParseAsync(request.Body).ConfigureAwait(false);
+    var root = doc.RootElement;
+    if (root.ValueKind != JsonValueKind.Object)
+        return Results.BadRequest(new { error = "expected JSON object" });
+
+    static bool? ReadBool(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p))
+            return null;
+        return p.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null
+        };
+    }
+
+    if (ReadBool(root, "allowDesktopCapture") is { } deskCap)
+        access.SetAllowDesktopCapture(deskCap);
+    if (ReadBool(root, "allowBrowserCapture") is { } browserCap)
+        access.SetAllowBrowserCapture(browserCap);
+    if (ReadBool(root, "allowComputerControl") is { } control)
+        access.SetAllowComputerControl(control);
+    if (ReadBool(root, "allowMt4Read") is { } mt4Read)
+        access.SetAllowMt4Read(mt4Read);
+    if (ReadBool(root, "allowMt4Trade") is { } mt4Trade)
+        access.SetAllowMt4Trade(mt4Trade);
+
+    return Results.Json(ToolsSettingsDto(access));
 });
 
 app.MapGet("/", () => Results.Redirect("/health"));

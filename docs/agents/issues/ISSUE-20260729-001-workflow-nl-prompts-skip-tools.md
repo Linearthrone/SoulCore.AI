@@ -5,15 +5,25 @@ from: QA-01 / PM-01
 priority: P1
 status: Fixed
 resolved: 2026-07-29
-gate: QA-142 retest
-related: TASK-142, TASK-162, BED-162
+reopened: 2026-07-29
+confirmed_live: 2026-07-29
+gate: QA-142 retest-2 / retest-3 / retest-4 / retest-5
+related: TASK-142, TASK-162, TASK-165, TASK-166, TASK-168, BED-162, BED-165, BED-166, BED-168
 related_fixed: ISSUE-20260727-004, ISSUE-20260727-005
-fix: docs/agents/reports/TASK-20260729-162-BED01-to-PM01.md
+fix: docs/agents/reports/TASK-20260729-168-BED01-to-PM01.md
+qa_confirm: docs/agents/reports/TASK-20260726-142-QA01-to-PM01.md (Retest-5)
+prior_fix: docs/agents/reports/TASK-20260729-166-BED01-to-PM01.md
 ---
 
-# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only)
+# [已修复 2026-07-29] ISSUE-20260729-001: Exact NL workflow prompts skip tools / wrong-tool escape / /v1 args 400 / ForceTool text-only
 
-# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only)
+**QA Retest-5 (2026-07-29):** Live confirmed Fixed —
+`tmpcode/qa142-retest/run-retest5-20260729-154545/` `formalOverall=PASS`
+(AC2+AC5+AC6+AC7). AC6 dispatched `workflow_execute` after `/v1` 200 under
+`forceTool=workflow_execute` (model `tool_calls`; soft-dispatch path not
+required this run).
+
+# ISSUE-20260729-001: Exact NL workflow prompts skip tools (prose-only) + forced wrong-tool escape + /v1 arguments 400 + ForceTool text-only no dispatch
 
 ## Summary
 
@@ -22,6 +32,22 @@ return prose without dispatching `workflow_create` / `workflow_execute`.
 Forced recovery prompts that name the tool already Pass. Session history
 (ISSUE-004) and nested step args (ISSUE-005) are Fixed — residual Fail is
 NL tool selection / guidance.
+
+**Reopen (QA-142 Retest-2):** BED-162 set `ForceToolName` + `/v1` `tool_choice`,
+but still advertised the **full** `tools[]`. Model escaped to sibling tools
+(e.g. `task_list`) and Host executed them — AC6 Fail despite `forceTool=` logs.
+
+**Reopen (post BED-165):** Exclusive ForceTool works, but when session history
+includes prior assistant `tool_calls` whose `function.arguments` are JSON
+**objects**, Ollama `/v1/chat/completions` returns 400:
+
+`cannot unmarshal object into Go struct field .messages.tool_calls.function.arguments of type string`
+
+→ no dispatch → QA-142 AC5–7 still blocked.
+
+**Reopen (QA-142 Retest-4):** Exclusive ForceTool + `/v1` string args → HTTP
+200, but model emits clarification prose with **no** `tool_calls` → Host ends
+the loop → no dispatch. AC5/AC7 Pass; **AC6 Fail**.
 
 ## Severity
 
@@ -37,11 +63,21 @@ re-run workflow) without requiring the user to name tools.
    - `run that workflow again`
 3. Observe: model replies in prose / asks for clarification; Host log has no
    `Ollama tool dispatch: … name=workflow_*`.
+4. **Retest-2:** Host log shows `forceTool=workflow_execute` but dispatch is a
+   non-forced sibling tool — AC6 still Fail.
+5. **Post BED-165:** ForceTool exclusivity OK on cold turn; with prior
+   tool_calls in session history, `/v1` 400 on object-form `arguments`.
+6. **Retest-4:** `forceTool=workflow_execute` + exclusive `/v1` 200 but
+   clarification prose / empty `tool_calls` → loop ends without dispatch.
 
 ## Expected
 
 Same prompts dispatch `workflow_create` then `workflow_execute` (with
-`all=true` on full-run phrasing), using session history for ids.
+`all=true` on full-run phrasing), using session history for ids. When
+`ForceToolName` is set, only that tool is advertised and executable while
+force is pending. Outbound `/v1` bodies stringify `arguments` even when
+history stored them as objects. Text-only under force must soft-dispatch
+`workflow_execute` when a session id is known, or retry-nudge once.
 
 ## Fix (BED-162)
 
@@ -51,6 +87,34 @@ Same prompts dispatch `workflow_create` then `workflow_execute` (with
   via OpenAI-compat `/v1/chat/completions` (native `/api/chat` ignores
   `tool_choice` on Ollama 0.32.4).
 - Soft create-time tool inference for recall/speak step descriptions.
-- PreferHermes unchanged (ForceToolName not passed).
 
-See `docs/agents/reports/TASK-20260729-162-BED01-to-PM01.md`.
+## Fix (BED-165 — reopen)
+
+- Exclusive `tools[]` (forced name only) on ForceToolName iteration 0.
+- Hard `tool_choice` retained on `/v1/chat/completions`.
+- Hard refuse: never `ExecuteAsync` a non-forced name while force is active.
+- BED-162 `WorkflowToolIntent` + BED-164 PreferHermes Avenue B kept intact
+  (ForceToolName also passed on PreferHermes→Ollama path).
+
+See `docs/agents/reports/TASK-20260729-165-BED01-to-PM01.md`.
+
+## Fix (BED-166 — /v1 arguments string)
+
+- When posting ForceTool turns to `/v1/chat/completions`, clone messages via
+  `ToOpenAiWireMessages` so every `tool_calls[].function.arguments` is a JSON
+  **string** on the wire (OpenAI / Ollama Go contract).
+- In-memory / `/api/chat` conversation keeps object-form args unchanged.
+- Unit: `ForceToolName_HistoryObjectArguments_AreStringifiedOnV1Wire`.
+
+See `docs/agents/reports/TASK-20260729-166-BED01-to-PM01.md`.
+
+## Fix (BED-168 — ForceTool text-only)
+
+- Text-only under ForceTool no longer ends the loop.
+- Soft-dispatch `workflow_execute` `{id, all:true}` when
+  `TryFindLatestWorkflowId` finds a session id (tool results / prior args).
+- Otherwise one forced retry nudge (force retained) then give up.
+- Force consumed after the first tool_calls round (exclusivity / refuse
+  semantics of BED-165 preserved for wrong-name escapes).
+
+See `docs/agents/reports/TASK-20260729-168-BED01-to-PM01.md`.

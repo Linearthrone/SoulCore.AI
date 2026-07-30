@@ -15,7 +15,6 @@ namespace SoulCore.Protocol.Tests;
 /// BED-144 integration tests: mock Hermes HTTP, verify desktop / browser / mt4
 /// tools route through <see cref="IHermesMcpInvoker.CallMcpToolAsync"/> and
 /// translate server-side tool_execution content into <see cref="ToolResult"/>.
-/// Updated for gate+backend ctor shape (Wave 27 DI).
 /// </summary>
 public class HermesMcpRoutingTests
 {
@@ -77,26 +76,47 @@ public class HermesMcpRoutingTests
         Mt4Backend = mt4
     };
 
-    private static DesktopScreenshotTool MakeDesktopShot(HermesHttpClient hermes, IOptions<ToolsOptions> opts)
+    private static DesktopScreenshotTool MakeDesktopScreenshot(
+        IHermesClient hermes, ToolsOptions? tools = null)
     {
-        var gate = new ComputerControlGate(opts.Value.AllowDesktopCapture, opts.Value.AllowComputerControl);
-        return new DesktopScreenshotTool(gate, new HermesDesktopControlBackend(hermes));
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        var gate = new ComputerControlGate(opts);
+        var backend = new HermesDesktopControlBackend(hermes);
+        return new DesktopScreenshotTool(gate, backend);
     }
 
-    private static DesktopClickTool MakeDesktopClick(HermesHttpClient hermes, IOptions<ToolsOptions> opts)
+    private static DesktopClickTool MakeDesktopClick(
+        IHermesClient hermes, ToolsOptions? tools = null)
     {
-        var gate = new ComputerControlGate(opts.Value.AllowDesktopCapture, opts.Value.AllowComputerControl);
-        return new DesktopClickTool(gate, new HermesDesktopControlBackend(hermes));
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        var gate = new ComputerControlGate(opts);
+        var backend = new HermesDesktopControlBackend(hermes);
+        return new DesktopClickTool(gate, backend);
     }
 
-    private static BrowserCaptureTabTool MakeBrowserCapture(HermesHttpClient hermes, IOptions<ToolsOptions> opts)
-        => new(new HermesBrowserBridge(hermes), opts);
+    private static BrowserCaptureTabTool MakeBrowserCapture(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions());
+        var access = new ComputerControlGate(opts);
+        return new BrowserCaptureTabTool(new HermesBrowserBridge(hermes), access);
+    }
 
-    private static Mt4StatusTool MakeMt4Status(HermesHttpClient hermes, IOptions<ToolsOptions> opts)
-        => new(new HermesMt4Bridge(hermes), opts);
+    private static Mt4StatusTool MakeMt4Status(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions(allowMt4Read: true));
+        var access = new ComputerControlGate(opts);
+        return new Mt4StatusTool(new HermesMt4Bridge(hermes), opts, access);
+    }
 
-    private static ExecuteTradeTool MakeExecuteTrade(HermesHttpClient hermes, IOptions<ToolsOptions> opts)
-        => new(new HermesMt4Bridge(hermes), opts);
+    private static ExecuteTradeTool MakeExecuteTrade(
+        IHermesClient hermes, ToolsOptions? tools = null)
+    {
+        var opts = Options.Create(tools ?? MakeToolsOptions(allowMt4Trade: true));
+        var access = new ComputerControlGate(opts);
+        return new ExecuteTradeTool(new HermesMt4Bridge(hermes), opts, access);
+    }
 
     private static string OpenAIContentResponse(string content) =>
         JsonSerializer.Serialize(new
@@ -116,6 +136,10 @@ public class HermesMcpRoutingTests
             }
         }, JsonOptions);
 
+    // ---------------------------------------------------------------------
+    // AC #1 / #8: desktop_screenshot → computer_use MCP
+    // ---------------------------------------------------------------------
+
     [Fact]
     public async Task DesktopScreenshot_HermesBackend_RoutesThroughComputerUse_Mcp()
     {
@@ -126,7 +150,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = MakeDesktopShot(hermes, Options.Create(MakeToolsOptions()));
+        var tool = MakeDesktopScreenshot(hermes);
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"monitor":0}""").RootElement.Clone());
@@ -144,6 +168,10 @@ public class HermesMcpRoutingTests
         Assert.Contains("\"action\"", handler.LastChatBody!, StringComparison.Ordinal);
     }
 
+    // ---------------------------------------------------------------------
+    // AC #2 / #8: browser_capture_tab → browser_bridge_capture_tab
+    // ---------------------------------------------------------------------
+
     [Fact]
     public async Task BrowserCaptureTab_HermesBackend_RoutesThroughBrowserBridge_Mcp()
     {
@@ -154,7 +182,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("tab captured: /tmp/tab.png\n<html>ok</html>")
             });
         var hermes = MakeClient(handler);
-        var tool = MakeBrowserCapture(hermes, Options.Create(MakeToolsOptions()));
+        var tool = MakeBrowserCapture(hermes);
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"tab":0}""").RootElement.Clone());
@@ -164,6 +192,10 @@ public class HermesMcpRoutingTests
         Assert.NotNull(handler.LastChatBody);
         Assert.Contains("browser_bridge_capture_tab", handler.LastChatBody!, StringComparison.Ordinal);
     }
+
+    // ---------------------------------------------------------------------
+    // AC #3 / #8: mt4_status → mt4_status MCP
+    // ---------------------------------------------------------------------
 
     [Fact]
     public async Task Mt4Status_HermesBackend_RoutesThroughMt4Status_Mcp()
@@ -175,7 +207,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"MT4 connected build=1380"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = MakeMt4Status(hermes, Options.Create(MakeToolsOptions(allowMt4Read: true)));
+        var tool = MakeMt4Status(hermes);
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
 
@@ -185,18 +217,22 @@ public class HermesMcpRoutingTests
         Assert.Contains("mt4_status", handler.LastChatBody!, StringComparison.Ordinal);
     }
 
+    // ---------------------------------------------------------------------
+    // AC #4: Hermes down → unavailable
+    // ---------------------------------------------------------------------
+
     [Fact]
     public async Task HermesDown_AllThreeTools_ReturnUnavailable()
     {
         var handler = new McpScriptedHandler(healthOk: false, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var opts = Options.Create(MakeToolsOptions(allowMt4Read: true));
+        var tools = MakeToolsOptions(allowMt4Read: true);
 
-        var desk = await MakeDesktopShot(hermes, opts)
+        var desk = await MakeDesktopScreenshot(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
-        var browser = await MakeBrowserCapture(hermes, opts)
+        var browser = await MakeBrowserCapture(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
-        var mt4 = await MakeMt4Status(hermes, opts)
+        var mt4 = await MakeMt4Status(hermes, tools)
             .ExecuteAsync(JsonDocument.Parse("{}").RootElement.Clone());
 
         Assert.False(desk.Success);
@@ -220,12 +256,16 @@ public class HermesMcpRoutingTests
         Assert.Equal(IHermesMcpInvoker.UnavailableMessage, result.Content);
     }
 
+    // ---------------------------------------------------------------------
+    // AC #6: per-trade confirmation gate on Hermes path
+    // ---------------------------------------------------------------------
+
     [Fact]
     public async Task ExecuteTrade_WithoutConfirmed_DoesNotCallHermes()
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = MakeExecuteTrade(hermes, Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05}""").RootElement.Clone());
@@ -241,7 +281,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = MakeExecuteTrade(hermes, Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"confirmed":true}""").RootElement.Clone());
@@ -261,7 +301,7 @@ public class HermesMcpRoutingTests
                 OpenAIContentResponse("""{"success":true,"content":"ticket=1001 opened"}""")
             });
         var hermes = MakeClient(handler);
-        var tool = MakeExecuteTrade(hermes, Options.Create(MakeToolsOptions(allowMt4Trade: true)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: true));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05,"confirmed":true}""")
@@ -278,7 +318,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = MakeExecuteTrade(hermes, Options.Create(MakeToolsOptions(allowMt4Trade: false)));
+        var tool = MakeExecuteTrade(hermes, MakeToolsOptions(allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.05,"confirmed":true}""")
@@ -289,6 +329,10 @@ public class HermesMcpRoutingTests
         Assert.Equal(0, handler.ChatCallCount);
     }
 
+    // ---------------------------------------------------------------------
+    // Server-side tool_execution: content-only response (no tool_calls)
+    // ---------------------------------------------------------------------
+
     [Fact]
     public async Task CallMcpToolAsync_ServerSideContent_TranslatesToToolResult()
     {
@@ -296,6 +340,7 @@ public class HermesMcpRoutingTests
             healthOk: true,
             chatBodies: new[]
             {
+                // No tool_calls — Hermes ran the tool server-side.
                 OpenAIContentResponse("MCP result bytes=ok")
             });
         var hermes = MakeClient(handler);
@@ -313,7 +358,7 @@ public class HermesMcpRoutingTests
     {
         var handler = new McpScriptedHandler(healthOk: true, chatBodies: Array.Empty<string>());
         var hermes = MakeClient(handler);
-        var tool = MakeDesktopClick(hermes, Options.Create(MakeToolsOptions(allowComputerControl: false)));
+        var tool = MakeDesktopClick(hermes, MakeToolsOptions(allowComputerControl: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"x":10,"y":20}""").RootElement.Clone());
@@ -361,7 +406,8 @@ public class HermesMcpRoutingTests
             {
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(OpenAIContentResponse("no more scripts"))
+                    Content = new StringContent(
+                        OpenAIContentResponse("no more scripts"))
                 });
             }
 

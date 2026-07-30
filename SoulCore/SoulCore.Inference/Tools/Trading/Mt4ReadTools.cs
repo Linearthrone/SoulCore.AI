@@ -14,7 +14,11 @@ public sealed class Mt4StatusTool : Mt4ToolBase
 
     public override ToolDefinition Definition { get; } = new(
         Name: "mt4_status",
-        Description: "Get MT4 / MetaTrader bridge connection and account status.",
+        Description:
+            "Get MT4 / MetaTrader bridge connection and account status (connected, terminal path, account). " +
+            "Use when the user asks for MT4 status, MetaTrader status, MT4 connection/account/bridge state " +
+            "(e.g. \"what's my MT4 status?\"). Call with {}. " +
+            "Do NOT use task_create or task_get for MT4/MetaTrader — those track Victoria tasks only.",
         Parameters: Mt4ToolSupport.EmptyObjectSchema());
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default) =>

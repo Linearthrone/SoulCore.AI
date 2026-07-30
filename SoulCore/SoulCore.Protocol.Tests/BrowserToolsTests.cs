@@ -6,6 +6,7 @@ using SoulCore.Config;
 using SoulCore.Hermes;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Browser;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -37,14 +38,14 @@ public class BrowserToolsTests
     public async Task ControlTools_GateClosed_RefuseWithoutCallingBridge(string toolName, string argsJson)
     {
         var bridge = new RecordingBrowserBridge();
-        var opts = Options.Create(new ToolsOptions
-        {
-            AllowBrowserCapture = true,
-            AllowComputerControl = false,
-            BrowserBackend = "hermes",
-        });
+        var access = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: false,
+            allowMt4Read: false,
+            allowMt4Trade: false);
 
-        var tool = CreateControlTool(toolName, bridge, opts);
+        var tool = CreateControlTool(toolName, bridge, access);
         var args = JsonDocument.Parse(argsJson).RootElement.Clone();
 
         var result = await tool.ExecuteAsync(args);
@@ -60,7 +61,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserClickTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowComputerControl = false }));
+            new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"x":1,"y":2}""").RootElement.Clone());
@@ -80,7 +81,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserClickTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowComputerControl = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"x":100,"y":200}""").RootElement.Clone());
@@ -97,7 +98,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserTypeTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowComputerControl = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"text":"hello"}""").RootElement.Clone());
@@ -113,7 +114,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserKeyTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowComputerControl = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"key":"Escape"}""").RootElement.Clone());
@@ -129,7 +130,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserScrollTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowComputerControl = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"dx":5,"dy":-40}""").RootElement.Clone());
@@ -149,7 +150,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserHealthTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowBrowserCapture = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowBrowserCapture: true, allowComputerControl: false, allowMt4Read: false, allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("{}").RootElement.Clone());
@@ -165,7 +166,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserHealthTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowBrowserCapture = false }));
+            new ComputerControlGate(allowDesktopCapture: true, allowBrowserCapture: false, allowComputerControl: false, allowMt4Read: false, allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("{}").RootElement.Clone());
@@ -185,7 +186,7 @@ public class BrowserToolsTests
         };
         var tool = new BrowserCaptureTabTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowBrowserCapture = true }));
+            new ComputerControlGate(allowDesktopCapture: true, allowBrowserCapture: true, allowComputerControl: false, allowMt4Read: false, allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("""{"tab":0}""").RootElement.Clone());
@@ -204,7 +205,7 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserCaptureTabTool(
             bridge,
-            Options.Create(new ToolsOptions { AllowBrowserCapture = false }));
+            new ComputerControlGate(allowDesktopCapture: true, allowBrowserCapture: false, allowComputerControl: false, allowMt4Read: false, allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("{}").RootElement.Clone());
@@ -221,11 +222,12 @@ public class BrowserToolsTests
         var bridge = new RecordingBrowserBridge();
         var tool = new BrowserCaptureTabTool(
             bridge,
-            Options.Create(new ToolsOptions
-            {
-                AllowBrowserCapture = true,
-                AllowComputerControl = false,
-            }));
+            new ComputerControlGate(
+                allowDesktopCapture: true,
+                allowBrowserCapture: true,
+                allowComputerControl: false,
+                allowMt4Read: false,
+                allowMt4Trade: false));
 
         var result = await tool.ExecuteAsync(
             JsonDocument.Parse("{}").RootElement.Clone());
@@ -242,8 +244,8 @@ public class BrowserToolsTests
     public void AllSixTools_Definitions_MatchExpectedNames()
     {
         var bridge = new RecordingBrowserBridge();
-        var opts = Options.Create(new ToolsOptions());
-        var tools = CreateAllTools(bridge, opts);
+        var access = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: false);
+        var tools = CreateAllTools(bridge, access);
 
         Assert.Equal(BrowserToolNames, tools.Select(t => t.Definition.Name).ToArray());
         foreach (var tool in tools)
@@ -257,9 +259,9 @@ public class BrowserToolsTests
     public void Registry_IncludesAllSixBrowserTools()
     {
         var bridge = new RecordingBrowserBridge();
-        var opts = Options.Create(new ToolsOptions());
+        var access = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: false);
         var services = new ServiceCollection();
-        foreach (var tool in CreateAllTools(bridge, opts))
+        foreach (var tool in CreateAllTools(bridge, access))
             services.AddSingleton<ITool>(tool);
         services.AddSingleton<IToolRegistry, ToolRegistry>();
 
@@ -313,25 +315,25 @@ public class BrowserToolsTests
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    private static ITool CreateControlTool(string name, IBrowserBridge bridge, IOptions<ToolsOptions> opts)
+    private static ITool CreateControlTool(string name, IBrowserBridge bridge, IToolsAccessSettings access)
         => name switch
         {
-            "browser_click" => new BrowserClickTool(bridge, opts),
-            "browser_type" => new BrowserTypeTool(bridge, opts),
-            "browser_key" => new BrowserKeyTool(bridge, opts),
-            "browser_scroll" => new BrowserScrollTool(bridge, opts),
+            "browser_click" => new BrowserClickTool(bridge, access),
+            "browser_type" => new BrowserTypeTool(bridge, access),
+            "browser_key" => new BrowserKeyTool(bridge, access),
+            "browser_scroll" => new BrowserScrollTool(bridge, access),
             _ => throw new ArgumentOutOfRangeException(nameof(name), name, null),
         };
 
-    private static IReadOnlyList<ITool> CreateAllTools(IBrowserBridge bridge, IOptions<ToolsOptions> opts)
+    private static IReadOnlyList<ITool> CreateAllTools(IBrowserBridge bridge, IToolsAccessSettings access)
         => new ITool[]
         {
-            new BrowserHealthTool(bridge, opts),
-            new BrowserCaptureTabTool(bridge, opts),
-            new BrowserClickTool(bridge, opts),
-            new BrowserTypeTool(bridge, opts),
-            new BrowserKeyTool(bridge, opts),
-            new BrowserScrollTool(bridge, opts),
+            new BrowserHealthTool(bridge, access),
+            new BrowserCaptureTabTool(bridge, access),
+            new BrowserClickTool(bridge, access),
+            new BrowserTypeTool(bridge, access),
+            new BrowserKeyTool(bridge, access),
+            new BrowserScrollTool(bridge, access),
         };
 
     private sealed class RecordingBrowserBridge : IBrowserBridge
@@ -410,11 +412,18 @@ public class BrowserToolsTests
             IReadOnlyList<ToolDefinition> tools,
             IToolRegistry registry,
             CancellationToken cancellationToken = default,
-            ToolLoopOptions? loopOptions = null)
+            ToolLoopOptions? options = null)
             => Task.FromResult(string.Empty);
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_health);
+
+        public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_health))
+                return Task.FromException(new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage));
+            return Task.CompletedTask;
+        }
 
         public Task<ToolResult> CallMcpToolAsync(
             string mcpToolName,

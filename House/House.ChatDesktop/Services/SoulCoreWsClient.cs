@@ -72,6 +72,16 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
     }
 
     /// <summary>
+    /// Forces one SoulLoop cycle on the Host (<c>loop.tick</c>).
+    /// Host acks with <c>loop.tick.ok</c> and broadcasts <c>loop.want</c> when enabled.
+    /// </summary>
+    public async Task<bool> SendLoopTickAsync(CancellationToken cancellationToken = default)
+    {
+        var frame = SoulCoreFrame.Create(SoulCoreFrameTypes.LoopTick, new { });
+        return await SendFrameAsync(frame, "loop.tick", cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Sends <c>emotion.correct</c> with valence/arousal/dominance/focus + optional note.
     /// SoulCore Host persists the correction and echoes <c>emotion.snapshot</c> when WS is open.
     /// </summary>

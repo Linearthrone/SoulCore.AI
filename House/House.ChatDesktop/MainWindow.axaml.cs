@@ -18,6 +18,9 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<ChatMessage> _messages = new();
     private readonly SoulCoreHealthClient _health = new();
     private readonly SoulCoreWsClient _ws = new();
+    private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
+    private readonly ChatHistoryStore _chatHistory = new();
+    private bool _toolsAccessHydrating;
     private readonly DispatcherTimer _pollTimer;
     private readonly IBrush _okBrush;
     private readonly IBrush _warnBrush;
@@ -54,9 +57,7 @@ public partial class MainWindow : Window
 
         Opened += async (_, _) =>
         {
-            AppendSystem(
-                $"Presence shell → SoulCore WS {ConnectionDefaults.WsUri}. " +
-                "Chat/emotion via Host only (no direct LLM from UI).");
+            LoadChatHistory();
             await _ws.ConnectAsync();
             await ProbeHealthAsync();
             _pollTimer.Start();
@@ -69,7 +70,26 @@ public partial class MainWindow : Window
             await _ws.DisposeAsync();
             _notifications.Dispose();
             _health.Dispose();
+            _toolsSettings.Dispose();
+            _chatHistory.Dispose();
         };
+    }
+
+    private void LoadChatHistory()
+    {
+        try
+        {
+            var prior = _chatHistory.LoadRecent();
+            _messages.Clear();
+            foreach (var m in prior)
+                _messages.Add(m);
+            if (_messages.Count > 0)
+                ScrollTranscriptToEnd();
+        }
+        catch (Exception ex)
+        {
+            AppendSystem($"Chat history load failed: {ex.Message}", persist: false);
+        }
     }
 
     private static IBrush Res(string key) =>
@@ -91,6 +111,7 @@ public partial class MainWindow : Window
             // Populate System tab from the last health probe (no new network call).
             ApplySystemStatus(_lastHealth);
             SeedNotificationControls();
+            _ = RefreshToolsAccessAsync();
         }
     }
 
@@ -121,6 +142,57 @@ public partial class MainWindow : Window
         _uiSettings.DisplayName = name;
         _uiSettings.Save();
         AppendSystem($"Identity display name saved locally: {name}");
+    }
+
+    private async void SoulLoopTick_Click(object? sender, RoutedEventArgs e)
+    {
+        await ForceSoulLoopTickAsync(restartWs: false).ConfigureAwait(true);
+    }
+
+    private async void SoulLoopRestart_Click(object? sender, RoutedEventArgs e)
+    {
+        await ForceSoulLoopTickAsync(restartWs: true).ConfigureAwait(true);
+    }
+
+    private async Task ForceSoulLoopTickAsync(bool restartWs)
+    {
+        if (_lastHealth.SoulLoopEnabled == false)
+        {
+            if (WantStatusText is not null)
+            {
+                WantStatusText.Text = "SoulLoop is off on Host — enable SoulLoop:Enabled and recycle Host.";
+                WantStatusText.Foreground = _badBrush;
+            }
+            if (SoulLoopHintText is not null)
+                SoulLoopHintText.Text = "Focus refresh skipped (kill switch).";
+            return;
+        }
+
+        if (restartWs)
+        {
+            if (SoulLoopHintText is not null)
+                SoulLoopHintText.Text = "Reconnecting Presence WS…";
+            await _ws.ConnectAsync().ConfigureAwait(true);
+        }
+
+        if (_ws.State != WsConnectionState.Connected)
+        {
+            if (SoulLoopHintText is not null)
+                SoulLoopHintText.Text = $"Focus refresh skipped — WS not connected ({_ws.LastError})";
+            return;
+        }
+
+        if (WantStatusText is not null)
+        {
+            WantStatusText.Text = "Refreshing focus…";
+            WantStatusText.Foreground = Res("MutedBrush");
+        }
+        if (SoulLoopHintText is not null)
+            SoulLoopHintText.Text = "Waiting for Host SoulLoop tick…";
+
+        var ok = await _ws.SendLoopTickAsync().ConfigureAwait(true);
+        if (!ok && SoulLoopHintText is not null)
+            SoulLoopHintText.Text = $"Focus refresh failed — {_ws.LastError}";
     }
 
     private async void Refresh_Click(object? sender, RoutedEventArgs e)
@@ -216,20 +288,24 @@ public partial class MainWindow : Window
 
         ChatInput.Text = string.Empty;
         _streamingAssistant = null;
-        _messages.Add(new ChatMessage { Role = "user", Text = text });
+        var userMsg = new ChatMessage { Role = "user", Text = text };
+        _messages.Add(userMsg);
+        PersistMessage(userMsg);
         ScrollTranscriptToEnd();
 
         var sent = await _ws.SendChatAsync(text);
         if (!sent)
         {
-            _messages.Add(new ChatMessage
+            var err = new ChatMessage
             {
                 Role = "system",
                 Text =
                     "Host WS unavailable — message not sent. " +
                     $"Start SoulCore.Host on {ConnectionDefaults.WsUri}, then Refresh. " +
                     $"Detail: {_ws.LastError}"
-            });
+            };
+            _messages.Add(err);
+            PersistMessage(err);
             ScrollTranscriptToEnd();
         }
     }
@@ -396,6 +472,98 @@ public partial class MainWindow : Window
         UpdateNotifStatusText();
     }
 
+    private async void ToolsAccessRefresh_Click(object? sender, RoutedEventArgs e)
+    {
+        await RefreshToolsAccessAsync().ConfigureAwait(true);
+    }
+
+    private async void ToolsAccessToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_toolsAccessHydrating) return;
+        if (ToolsAllowDesktopCaptureCheck is null
+            || ToolsAllowBrowserCaptureCheck is null
+            || ToolsAllowComputerControlCheck is null
+            || ToolsAllowMt4ReadCheck is null
+            || ToolsAllowMt4TradeCheck is null)
+        {
+            return;
+        }
+
+        if (ToolsAccessStatusText is not null)
+            ToolsAccessStatusText.Text = "Saving…";
+
+        var snap = await _toolsSettings.PatchAsync(
+            allowDesktopCapture: ToolsAllowDesktopCaptureCheck.IsChecked == true,
+            allowBrowserCapture: ToolsAllowBrowserCaptureCheck.IsChecked == true,
+            allowComputerControl: ToolsAllowComputerControlCheck.IsChecked == true,
+            allowMt4Read: ToolsAllowMt4ReadCheck.IsChecked == true,
+            allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true).ConfigureAwait(true);
+
+        ApplyToolsAccess(snap, saved: true);
+    }
+
+    private async Task RefreshToolsAccessAsync()
+    {
+        if (ToolsAccessStatusText is not null)
+            ToolsAccessStatusText.Text = "Loading…";
+
+        var snap = await _toolsSettings.GetAsync().ConfigureAwait(true);
+        ApplyToolsAccess(snap, saved: false);
+    }
+
+    private void ApplyToolsAccess(ToolsAccessSnapshot snap, bool saved)
+    {
+        if (ToolsAllowDesktopCaptureCheck is null
+            || ToolsAllowBrowserCaptureCheck is null
+            || ToolsAllowComputerControlCheck is null
+            || ToolsAllowMt4ReadCheck is null
+            || ToolsAllowMt4TradeCheck is null
+            || ToolsDesktopBackendBox is null
+            || ToolsBrowserBackendBox is null
+            || ToolsMt4BackendBox is null)
+        {
+            return;
+        }
+
+        _toolsAccessHydrating = true;
+        try
+        {
+            ToolsAllowDesktopCaptureCheck.IsChecked = snap.AllowDesktopCapture;
+            ToolsAllowBrowserCaptureCheck.IsChecked = snap.AllowBrowserCapture;
+            ToolsAllowComputerControlCheck.IsChecked = snap.AllowComputerControl;
+            ToolsAllowMt4ReadCheck.IsChecked = snap.AllowMt4Read;
+            ToolsAllowMt4TradeCheck.IsChecked = snap.AllowMt4Trade;
+            ToolsDesktopBackendBox.Text = snap.DesktopBackend ?? "—";
+            ToolsBrowserBackendBox.Text = snap.BrowserBackend ?? "—";
+            ToolsMt4BackendBox.Text = snap.Mt4Backend ?? "—";
+        }
+        finally
+        {
+            _toolsAccessHydrating = false;
+        }
+
+        if (ToolsAccessStatusText is null) return;
+
+        if (!snap.Reachable)
+        {
+            ToolsAccessStatusText.Text = snap.Detail ?? "Host unreachable";
+            ToolsAccessStatusText.Foreground = _badBrush;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snap.Detail) && snap.Detail.StartsWith("HTTP", StringComparison.Ordinal))
+        {
+            ToolsAccessStatusText.Text = snap.Detail;
+            ToolsAccessStatusText.Foreground = _badBrush;
+            return;
+        }
+
+        ToolsAccessStatusText.Text = saved
+            ? $"Saved · session until Host restart · {DateTimeOffset.Now:h:mm tt}"
+            : $"Loaded · {(snap.Scope ?? "session")} · {DateTimeOffset.Now:h:mm tt}";
+        ToolsAccessStatusText.Foreground = Res("MutedBrush");
+    }
+
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
     {
         // Null-guard all System tab controls — during InitializeComponent some
@@ -453,11 +621,26 @@ public partial class MainWindow : Window
         {
             SystemSoulLoopBox.Text = "(not reported)";
             SystemSoulLoopBox.Foreground = Res("MutedBrush");
+            if (SoulLoopStateText is not null)
+            {
+                SoulLoopStateText.Text = "SoulLoop —";
+                SoulLoopStateText.Foreground = Res("MutedBrush");
+            }
         }
         else
         {
             SystemSoulLoopBox.Text = snap.SoulLoopEnabled.Value ? "enabled" : "disabled";
             SystemSoulLoopBox.Foreground = snap.SoulLoopEnabled.Value ? _okBrush : _badBrush;
+            if (SoulLoopStateText is not null)
+            {
+                SoulLoopStateText.Text = snap.SoulLoopEnabled.Value ? "SoulLoop on" : "SoulLoop off";
+                SoulLoopStateText.Foreground = snap.SoulLoopEnabled.Value ? _okBrush : _badBrush;
+            }
+            if (SoulLoopHintText is not null && snap.SoulLoopEnabled == false)
+            {
+                SoulLoopHintText.Text =
+                    "SoulLoop:Enabled=false on Host (kill switch). Set true in appsettings/.env and recycle Host, then Tick.";
+            }
         }
 
         SystemUnrealTargetBox.Text = string.IsNullOrWhiteSpace(snap.UnrealTarget)
@@ -468,11 +651,30 @@ public partial class MainWindow : Window
             : (snap.UnrealConnected.Value ? "true" : "false");
         SystemUnrealConnectedBox.Foreground = snap.UnrealConnected == true ? _okBrush : _warnBrush;
 
-        // Charter lock: all anchors use is_locked=0 in the current Host build, so the
-        // charter is in calibration mode rather than locked. This is informational; the
-        // shell never rewrites charter anchors.
-        CharterLockBox.Text = "calibration";
-        CharterLockBox.Foreground = _warnBrush;
+        // Charter lock from /health charter.* (DB is_locked).
+        if (string.IsNullOrWhiteSpace(snap.CharterMode) && snap.CharterFullyLocked is null)
+        {
+            CharterLockBox.Text = "(not reported)";
+            CharterLockBox.Foreground = Res("MutedBrush");
+        }
+        else if (snap.CharterFullyLocked == true || string.Equals(snap.CharterMode, "locked", StringComparison.OrdinalIgnoreCase))
+        {
+            var n = snap.CharterLocked ?? snap.CharterAnchors;
+            CharterLockBox.Text = n is null ? "locked" : $"locked ({n}/{n})";
+            CharterLockBox.Foreground = _okBrush;
+        }
+        else if (string.Equals(snap.CharterMode, "empty", StringComparison.OrdinalIgnoreCase))
+        {
+            CharterLockBox.Text = "empty";
+            CharterLockBox.Foreground = _warnBrush;
+        }
+        else
+        {
+            var locked = snap.CharterLocked ?? 0;
+            var total = snap.CharterAnchors ?? 0;
+            CharterLockBox.Text = total > 0 ? $"calibration ({locked}/{total} locked)" : "calibration";
+            CharterLockBox.Foreground = _warnBrush;
+        }
 
         // Drift report from /health safety.drift.
         if (snap.DriftActiveCount is null && snap.DriftSloExceeded is null)
@@ -548,21 +750,11 @@ public partial class MainWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
+            // Connection noise stays out of the SMS thread except first connect / hard faults.
             if (state is WsConnectionState.Unavailable or WsConnectionState.Disconnected)
             {
                 _presenceFromWs = false;
                 _streamingAssistant = null;
-                if (_messages.All(m => !m.Text.StartsWith("Host WS", StringComparison.Ordinal)
-                                       && !m.Text.StartsWith("WS receive", StringComparison.Ordinal)
-                                       && !m.Text.StartsWith("Host closed", StringComparison.Ordinal)
-                                       && !m.Text.StartsWith("Disconnected from SoulCore", StringComparison.Ordinal)))
-                {
-                    AppendSystem(detail);
-                }
-            }
-            else if (state == WsConnectionState.Connected)
-            {
-                AppendSystem(detail);
             }
 
             UpdateConnectionChrome(_lastHealth);
@@ -588,7 +780,8 @@ public partial class MainWindow : Window
                 ApplyLoopWant(frame);
                 break;
             case SoulCoreFrameTypes.LoopTickOk:
-                // quiet ack — want arrives via loop.want
+                if (SoulLoopHintText is not null)
+                    SoulLoopHintText.Text = "Tick acknowledged — waiting for focus update…";
                 break;
             case SoulCoreFrameTypes.ChatDelta:
                 AppendOrUpdateAssistant(frame, finalize: false);
@@ -597,13 +790,14 @@ public partial class MainWindow : Window
                 AppendOrUpdateAssistant(frame, finalize: true);
                 break;
             case SoulCoreFrameTypes.Error:
-                AppendSystem($"error: {ReadPayloadString(frame, "message") ?? frame.Payload?.ToString() ?? frame.Type}");
+                AppendSystem(
+                    $"error: {ReadPayloadString(frame, "message") ?? frame.Payload?.ToString() ?? frame.Type}",
+                    persist: false);
                 break;
             case SoulCoreFrameTypes.Pong:
-                // quiet
                 break;
             default:
-                AppendSystem($"frame {frame.Type} id={frame.Id}");
+                // Ignore protocol chatter in the SMS thread.
                 break;
         }
     }
@@ -625,22 +819,105 @@ public partial class MainWindow : Window
     private void ApplyLoopWant(SoulCoreFrame frame)
     {
         var want = ReadPayloadString(frame, "want");
+        var category = ReadPayloadString(frame, "category");
         var label = ReadPayloadString(frame, "emotionLabel");
         var episodic = ReadPayloadInt(frame, "episodicCount");
+        var valence = ReadPayloadDouble(frame, "valence");
+        var arousal = ReadPayloadDouble(frame, "arousal");
+        var driftAlert = ReadPayloadBool(frame, "driftAlert") == true;
 
-        var wantText = string.IsNullOrWhiteSpace(want) ? "(empty want)" : want.Trim();
+        // Host still ships a wire dump (want[cat]: … (emotion=…); recent=…).
+        // Panel shows Mode / Feeling / Focus — Focus is the human phrase only.
+        var parsed = ParseWantWire(want, category);
+
         if (WantStatusText is not null)
         {
-            WantStatusText.Text = wantText;
+            WantStatusText.Text = string.IsNullOrWhiteSpace(parsed.Phrase)
+                ? "(no focus text)"
+                : parsed.Phrase;
             WantStatusText.Foreground = Res("TextBrush");
         }
 
-        var meta = new List<string>();
-        if (!string.IsNullOrWhiteSpace(label)) meta.Add($"emotion={label}");
-        if (episodic is not null) meta.Add($"episodic={episodic}");
-        var suffix = meta.Count > 0 ? $" · {string.Join(" · ", meta)}" : string.Empty;
-        AppendSystem($"loop.want · {wantText}{suffix}");
+        if (WantModeText is not null)
+        {
+            var mode = parsed.Category;
+            if (string.IsNullOrWhiteSpace(mode))
+                WantModeText.Text = "—";
+            else
+                WantModeText.Text = char.ToUpperInvariant(mode[0]) + mode[1..];
+        }
+
+        if (WantFeelingText is not null)
+        {
+            var feeling = string.IsNullOrWhiteSpace(label) ? "—" : label.Trim();
+            if (valence is not null || arousal is not null)
+            {
+                feeling +=
+                    $"  ·  calm/intense {FormatMoodAxis(valence)} / energy {FormatMoodAxis(arousal)}";
+            }
+            WantFeelingText.Text = feeling;
+        }
+
+        if (SoulLoopHintText is not null)
+        {
+            var parts = new List<string>
+            {
+                $"Updated {DateTimeOffset.Now:h:mm tt}"
+            };
+            if (episodic is not null)
+                parts.Add(episodic.Value == 1 ? "1 recent memory" : $"{episodic.Value} recent memories");
+            if (driftAlert)
+                parts.Add("drift alert");
+            SoulLoopHintText.Text = string.Join(" · ", parts);
+        }
     }
+
+    /// <summary>
+    /// Pulls category + readable phrase out of the Host want dump.
+    /// Example wire:
+    /// <c>want[recall]: recall the recent thread… (holding 3 recent beats) (emotion=neutral v=…); recent=…</c>
+    /// → phrase = <c>recall the recent thread… (holding 3 recent beats)</c>
+    /// </summary>
+    internal static (string? Category, string Phrase) ParseWantWire(string? want, string? categoryHint)
+    {
+        var category = string.IsNullOrWhiteSpace(categoryHint) ? null : categoryHint.Trim();
+        if (string.IsNullOrWhiteSpace(want))
+            return (category, string.Empty);
+
+        var text = want.Trim();
+        var body = text;
+
+        if (text.StartsWith("want[", StringComparison.OrdinalIgnoreCase))
+        {
+            var close = text.IndexOf(']');
+            if (close > 5)
+            {
+                var fromWire = text[5..close].Trim();
+                if (!string.IsNullOrEmpty(fromWire) && string.IsNullOrEmpty(category))
+                    category = fromWire;
+
+                var after = text[(close + 1)..].TrimStart();
+                if (after.StartsWith(':'))
+                    after = after[1..].TrimStart();
+                body = after;
+            }
+        }
+
+        var emotionAt = body.IndexOf(" (emotion=", StringComparison.OrdinalIgnoreCase);
+        if (emotionAt < 0)
+            emotionAt = body.IndexOf("(emotion=", StringComparison.OrdinalIgnoreCase);
+        if (emotionAt >= 0)
+            body = body[..emotionAt];
+
+        var recentAt = body.IndexOf("; recent=", StringComparison.OrdinalIgnoreCase);
+        if (recentAt >= 0)
+            body = body[..recentAt];
+
+        return (category, body.Trim().TrimEnd(';').Trim());
+    }
+
+    private static string FormatMoodAxis(double? value) =>
+        value is null ? "—" : value.Value.ToString("0.00");
 
     private void ApplyEmotionSnapshot(SoulCoreFrame frame)
     {
@@ -679,6 +956,7 @@ public partial class MainWindow : Window
             _streamingAssistant.Text = text;
             if (finalize)
             {
+                PersistMessage(_streamingAssistant);
                 _streamingAssistant = null;
             }
 
@@ -694,7 +972,15 @@ public partial class MainWindow : Window
             FrameId = frame.Id
         };
         _messages.Add(bubble);
-        _streamingAssistant = finalize ? null : bubble;
+        if (finalize)
+        {
+            PersistMessage(bubble);
+            _streamingAssistant = null;
+        }
+        else
+        {
+            _streamingAssistant = bubble;
+        }
         NotifyIfUnfocused();
         ScrollTranscriptToEnd();
     }
@@ -709,9 +995,24 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AppendSystem(string text)
+    private void PersistMessage(ChatMessage message)
     {
-        _messages.Add(new ChatMessage { Role = "system", Text = text });
+        try
+        {
+            _chatHistory.Save(message);
+        }
+        catch
+        {
+            // History must never break the live chat path.
+        }
+    }
+
+    private void AppendSystem(string text, bool persist = true)
+    {
+        var msg = new ChatMessage { Role = "system", Text = text };
+        _messages.Add(msg);
+        if (persist)
+            PersistMessage(msg);
         ScrollTranscriptToEnd();
     }
 

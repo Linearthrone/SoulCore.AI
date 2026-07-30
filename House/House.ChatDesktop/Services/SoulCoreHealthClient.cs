@@ -18,6 +18,10 @@ public sealed class SoulCoreHealthSnapshot
     public string? UnrealTarget { get; init; }
     public bool? UnrealConnected { get; init; }
     public bool? SoulLoopEnabled { get; init; }
+    public string? CharterMode { get; init; }
+    public int? CharterAnchors { get; init; }
+    public int? CharterLocked { get; init; }
+    public bool? CharterFullyLocked { get; init; }
     public int? DriftActiveCount { get; init; }
     public bool? DriftSloExceeded { get; init; }
     public int? DriftOldestMinutes { get; init; }
@@ -89,6 +93,10 @@ public sealed class SoulCoreHealthClient : IDisposable
                 UnrealTarget = dto?.Unreal?.Target,
                 UnrealConnected = dto?.Unreal?.Connected,
                 SoulLoopEnabled = dto?.SoulLoop?.Enabled,
+                CharterMode = dto?.Charter?.Mode,
+                CharterAnchors = dto?.Charter?.Anchors,
+                CharterLocked = dto?.Charter?.Locked,
+                CharterFullyLocked = dto?.Charter?.FullyLocked,
                 DriftActiveCount = dto?.Safety?.Drift?.ActiveDriftCount,
                 DriftSloExceeded = dto?.Safety?.Drift?.SloExceeded,
                 DriftOldestMinutes = dto?.Safety?.Drift?.OldestDriftMinutes,
@@ -136,8 +144,26 @@ public sealed class SoulCoreHealthClient : IDisposable
         [JsonPropertyName("soulLoop")]
         public SoulLoopDto? SoulLoop { get; set; }
 
+        [JsonPropertyName("charter")]
+        public CharterDto? Charter { get; set; }
+
         [JsonPropertyName("safety")]
         public SafetyDto? Safety { get; set; }
+    }
+
+    private sealed class CharterDto
+    {
+        [JsonPropertyName("anchors")]
+        public int? Anchors { get; set; }
+
+        [JsonPropertyName("locked")]
+        public int? Locked { get; set; }
+
+        [JsonPropertyName("fullyLocked")]
+        public bool? FullyLocked { get; set; }
+
+        [JsonPropertyName("mode")]
+        public string? Mode { get; set; }
     }
 
     private sealed class MemoryDto

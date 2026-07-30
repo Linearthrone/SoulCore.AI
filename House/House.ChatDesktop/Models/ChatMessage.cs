@@ -7,6 +7,9 @@ public sealed class ChatMessage : INotifyPropertyChanged
 {
     private string _text = string.Empty;
 
+    /// <summary>Stable id for SQLite upsert / dedupe (LLMOD-style).</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
     public required string Role { get; init; }
 
     public string Text
@@ -23,7 +26,7 @@ public sealed class ChatMessage : INotifyPropertyChanged
     public DateTimeOffset At { get; init; } = DateTimeOffset.Now;
 
     /// <summary>Correlation id from SoulCore frame (for streaming assistant bubbles).</summary>
-    public string? FrameId { get; init; }
+    public string? FrameId { get; set; }
 
     public string DisplayRole => Role switch
     {
@@ -33,8 +36,12 @@ public sealed class ChatMessage : INotifyPropertyChanged
         _ => Role
     };
 
+    public string DisplayTime => At.ToLocalTime().ToString("h:mm tt");
+
     /// <summary>Drives the user-bubble style selector in the transcript template.</summary>
     public bool IsUser => Role == "user";
+
+    public bool IsSystem => Role == "system";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

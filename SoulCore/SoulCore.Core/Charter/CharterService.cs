@@ -71,6 +71,26 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         return list;
     }
 
+    /// <summary>
+    /// Returns total anchor count and how many are locked (<c>is_locked=1</c>).
+    /// Used by Host <c>/health</c> for Presence charter status.
+    /// </summary>
+    public async Task<(int Total, int Locked)> GetLockCountsAsync(CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT COUNT(*), COALESCE(SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END), 0)
+            FROM charter_anchors;
+            """;
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            return (0, 0);
+        return (reader.GetInt32(0), reader.GetInt32(1));
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetAnchorsByKindAsync(
         string kind,

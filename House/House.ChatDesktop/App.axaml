@@ -150,6 +150,14 @@
     <Style Selector="Border.bubble.user">
       <Setter Property="Background" Value="{DynamicResource UserBubbleBrush}"/>
     </Style>
+    <Style Selector="Border.bubble.system">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="4,6"/>
+      <Setter Property="Opacity" Value="0.85"/>
+    </Style>
 
     <!-- Dark input fields -->
     <Style Selector="TextBox.input">

@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; QA-134 soft; QA-142 next)
+updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
 ---
 
 # Product Root Declaration
@@ -10,10 +10,10 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
 | Execution route | **Avenue A — Soul-spine MVP** |
 | Code home | `C:\Users\kurtw\Soul_Core` → `SoulCore/` + `House/` |
 | Quarry | `C:\Users\kurtw\LLMOD\LLMOD-max-master` |
-| Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` (PID 45752) |
-| UI | `House/House.ChatDesktop` → SoulCore WS only |
+| Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` |
+| UI | `House/House.ChatDesktop` → SoulCore WS only · root `ALLSTART.ps1` / `ALLSTOP.ps1` |
 | Protocol | Shared `SoulCore/SoulCore.Protocol/` |
-| Inference | Ollama primary (`:11434`, model `qwen2.5:14b` for tool-calling loop — BED-129 verifies; `gemma4:latest` retained as fallback for non-tool chat); Hermes fallback (`:8642`, restoring in OPS-143); `num_predict=256` / `max_tokens=256` |
+| Inference | **Local baseline:** Ollama `gemma4:latest` (`NumCtx=16384`); tools via Ollama loop. Hermes MCP-only when PreferHermes (Avenue B). Prior gate model `qwen2.5:14b` retained as optional. |
 | Continuity suite | QA-036 **Pass** (C1–C6); QA-081 re-run **Pass** vs soak Host (492 probes, 0 errors) |
 | Short soak | OPS-037 **Pass** — 15 min, 58/58 health; runbook `SoulCore/docs/soak-runbook.md` |
 | 24h soak | OPS-063 **Pass** — stopped at 14h by user decision (2898 probes, 0 errors, disk stable) |
@@ -23,7 +23,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
 | Safety libs | Charter + DriftWatcher + SpendMeter; spend **enforced** (E11); drift **soft-blocks Unreal** when SLO exceeded (E12); `/health/drift/ack` clears |
 | E2E gates | E1–E14 **Pass**; E15 embedding backfill **Pass** (QA-111 — 174/174 vectors) |
 | Unreal bridge | `HouseVictoriaBridge` plugin on `ws://127.0.0.1:8888`; all 5 verbs: speak/set_emotion/loco/play_animation/look_at |
-| Charter | 10 anchors seeded — calibration mode (`is_locked=0`, `source='seed'`) |
+| Charter | **LOCKED** 2026-07-30 — 18 anchors `is_locked=1` (Victoria_Soul_Evolved import); `/health` `charter.mode=locked` |
 | Self-authored memory | SoulLoop `[Reflection]` + **model-authored** chat episodics (E14) |
 | Chat context | Identity + semantic recall (`nomic-embed-text`) + emotion preamble |
 | Embeddings | Live; 768-d; `--backfill-embeddings` (BED-110); 174/174 covered; native sqlite-vec deferred |
@@ -38,7 +38,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
 3. ~~Authorize 24h soak~~ — done; OPS-063 stopped at 14h by user (PASS)
 4. ~~E3 loco hard-stop~~ — **CLEARED** (QA-089, 2026-07-23 21:06 UTC); ISSUE-002 closed
 5. ~~SoulLoop enable decision~~ — **GO** (user-authorized 2026-07-23 21:10 UTC); SoulLoop LIVE with kill switch
-6. **Charter lock** — review 10 seeded anchors; say "lock the charter" when ready
+6. ~~**Charter lock**~~ — **LOCKED 2026-07-30** (user: "lock her in") — 18/18 anchors `is_locked=1`
 7. **Unreal co-test** — open MyProject with body WS `:8888` for live speak/emote/loco/anim/look (superseded in part by Wave 26 embodiment walk gate QA-118)
 8. **Soak #2** — authorize when you want a long soak with SoulLoop + embeddings + safety live
 9. **Wave 26/27 embodiment decisions** — TT-01 / PROP-EMBODIMENT-01:
@@ -46,7 +46,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
    - **Player embodiment**: grounded Kayleigh body vs keep free-fly `ADefaultPawn` — deferred to Wave 29 / Phase 4
    - ~~**Scope**: Phase 1 only vs Phase 1+2~~ — **CLEARED 2026-07-26**: user **"yes move phase 2 asap"** → Wave 27 Phase 2 (gestures + verb correctness + head gaze) **in flight now**, parallel with Phase 1; do **not** wait for QA-118
 10. **Wave 27 Phase 3 agent-loop decisions** — TT-01 / PROP-AGENT-LOOP-01:
-   - ~~**Tool-calling model**: `gemma4` vs `qwen2.5:14b`~~ — **CLEARED 2026-07-26**: user chose **`qwen2.5:14b`** (being pulled; appsettings updated; BED-129 verifies)
+   - ~~**Tool-calling model**: `gemma4` vs `qwen2.5:14b`~~ — **CLEARED**; gates used `qwen2.5:14b`. **Local daily baseline 2026-07-30:** **`gemma4:latest`** (user — settling / speed)
    - ~~**Backend**: native C# vs Hermes~~ — **CLEARED 2026-07-26**: user chose **both** (native C# Ollama tool-loop + restored Hermes tool-loop gateway)
    - ~~**Scope**: Phase A+B only vs all 6 waves~~ — **CLEARED 2026-07-26**: user chose **all 6 waves** (A–F all ticketed 125–145)
    - **Security gates** (design requirements on BED-135/138/133, not user blockers): session opt-in desktop, per-trade MT4 confirm, whitelisted FS roots
@@ -92,14 +92,14 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
   - ~~BED-140~~ **Pass** (cloud → in tree; report archived)
   - ~~BED-157~~ **Pass** (cloud → in tree: `/health` `inference.model` + migration 005 `source=model`; ISSUE-002 closed)
   - ~~BED-141~~ **Pass** (cloud → merged local 2026-07-27: `victoria_workflows` mig 004 + workflow_* tools; archived)
-  - **QA-142 FAIL** → fixes: ~~BED-158~~ **Pass** · ~~BED-159~~ **Pass** — **QA-142 retest** in flight
-  - ~~BED-135~~ **Pass** · ~~BED-136~~ **Pass** · ~~BED-138~~ **Pass** (archived) — desktop/browser/MT4 tools + gates
-  - ~~BED-144~~ **Pass** (archived) — `CallMcpToolAsync` + hermes backends
-  - **QA-145 FAIL** (first run) — PreferHermes Hermes-native tools / hang / key mismatch
-  - ~~BED-161~~ **Pass** (merged local 2026-07-27) — PreferHermes Host ITool loop + fail-fast; ISSUE-007/009/010 Fixed; ISSUE-008 OOS → **QA-145 retest**
+  - ~~QA-142~~ **Pass** (Retest-5 after BED-168; ISSUE-001 Fixed) — archived · Phase E exit
+  - ~~QA-145~~ **Pass** (Avenue B + BED-167 AC4; ISSUE-002/003 Fixed; ISSUE-008 OOS) — archived · Phase F exit
+  - ~~BED-165/166/168~~ **Pass** (ForceTool exclusivity / /v1 args / soft-dispatch) — archived
+  - ~~BED-167~~ **Pass** (Mt4ToolIntent) — archived
+  - ~~BED-161~~ **Pass** (unit PreferHermes loop; live superseded by Avenue B)
   - ~~OPS-143~~ **Pass** (archived) — Hermes `gemma4:64k` @65536
-  - QA-134 gated on QA-118 visual walk Pass (117 done; 160 in flight)
-  - QA-137/139 after Phase F / PreferHermes path clears
+  - QA-134 gated on QA-118 (**BED-160 paused — UE on shadow PC**)
+  - QA-137/139 after embodiment / next wave as needed
 - **Wave 28 — Phone companion Phase 0** (from TT-146):
   - Tickets FED-147…151 + SEC-152 + OPS-153 + QA-154 issued; reply archived `log/TASK-20260727-146-PM01-to-TT01.md`
   - ~~FED-147~~ **Pass** (archived) — `House/House.CompanionAndroid/` Compose shell
@@ -113,7 +113,7 @@ updated: 2026-07-29 (TINA: Phase E 140/141/158 Pass; OPS-143 Blocked→TT-159; Q
   - ~~SEC-152~~ **Pass (conditional)** archived — Tailscale+Keystore OK; **LAN bind Fail**
   - ~~BED-155~~ **Pass** (archived) — fail-closed `/ws` via `SOULCORE_COMPANION_API_TOKEN` (Bearer / X-Api-Key)
   - ~~OPS-153~~ **Pass** (archived) — runbook `docs/runbooks/tailscale-serve-soulcore.md` + `tailscale-serve-soulcore.ps1`
-- **Blocked on user**: charter lock · soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
+- **Blocked on user**: soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
 
 ## Completed since last update
 

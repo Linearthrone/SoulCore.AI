@@ -188,7 +188,7 @@
         </Border>
       </StackPanel>
 
-      <!-- SoulLoop want (WS loop.want) -->
+      <!-- SoulLoop inner focus (NOT chat) -->
       <Border Grid.Row="2"
               Background="{DynamicResource PanelBrush}"
               BorderBrush="{DynamicResource PanelBorderBrush}"
@@ -196,23 +196,83 @@
               CornerRadius="6"
               Padding="14,10"
               Margin="0,0,0,10">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <TextBlock Text="Want"
-                     FontWeight="SemiBold"
-                     VerticalAlignment="Center"
-                     Margin="0,0,16,0"/>
-          <TextBlock x:Name="WantStatusText"
-                     Grid.Column="1"
-                     Text="(waiting for loop.want — SoulLoop may be off)"
-                     TextWrapping="Wrap"
-                     VerticalAlignment="Center"
-                     Foreground="{DynamicResource MutedBrush}"/>
-          <TextBlock Grid.Column="2"
-                     Text="via WS"
-                     Foreground="{DynamicResource MutedBrush}"
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <TextBlock Text="Inner focus"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <TextBlock x:Name="SoulLoopStateText"
+                       Text="SoulLoop —"
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="12"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      VerticalAlignment="Center">
+            <Button Classes="ghost"
+                    Content="Refresh focus"
+                    ToolTip.Tip="Ask Host to run one SoulLoop tick (updates this panel only — not the chat thread)"
+                    Click="SoulLoopTick_Click"/>
+            <Button Classes="ghost"
+                    Content="Reconnect"
+                    ToolTip.Tip="Reconnect Presence WS, then refresh focus"
+                    Click="SoulLoopRestart_Click"/>
+          </StackPanel>
+
+          <TextBlock Grid.Row="1"
+                     Grid.ColumnSpan="2"
+                     Margin="0,8,0,0"
                      FontSize="11"
-                     VerticalAlignment="Center"
-                     Margin="12,0,0,0"/>
+                     Foreground="{DynamicResource MutedBrush}"
+                     TextWrapping="Wrap"
+                     Text="Background loop (every ~60s): Mode = stance, Feeling = mood, Focus = the intent phrase only (not the raw want dump). Separate from chat."/>
+
+          <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+            <TextBlock Text="Mode"
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="11"
+                       Margin="0,0,12,4"
+                       VerticalAlignment="Center"/>
+            <TextBlock x:Name="WantModeText"
+                       Grid.Column="1"
+                       Text="—"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,4"/>
+
+            <TextBlock Grid.Row="1"
+                       Text="Feeling"
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="11"
+                       Margin="0,0,12,4"
+                       VerticalAlignment="Center"/>
+            <TextBlock x:Name="WantFeelingText"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Text="—"
+                       Margin="0,0,0,4"/>
+
+            <TextBlock Grid.Row="2"
+                       Text="Focus"
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="11"
+                       Margin="0,0,12,0"
+                       VerticalAlignment="Top"/>
+            <TextBlock x:Name="WantStatusText"
+                       Grid.Row="2"
+                       Grid.Column="1"
+                       Text="(waiting for next SoulLoop tick…)"
+                       TextWrapping="Wrap"/>
+          </Grid>
+
+          <TextBlock x:Name="SoulLoopHintText"
+                     Grid.Row="3"
+                     Grid.ColumnSpan="2"
+                     Margin="0,8,0,0"
+                     FontSize="11"
+                     Foreground="{DynamicResource MutedBrush}"
+                     Text="Updated —"/>
         </Grid>
       </Border>
 
@@ -227,12 +287,18 @@
           <ItemsControl x:Name="TranscriptList">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Classes="bubble" Classes.user="{Binding IsUser}">
+                <Border Classes="bubble" Classes.user="{Binding IsUser}" Classes.system="{Binding IsSystem}">
                   <StackPanel>
-                    <TextBlock Text="{Binding DisplayRole}"
-                               FontSize="11"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Margin="0,0,0,4"/>
+                    <DockPanel Margin="0,0,0,4">
+                      <TextBlock Text="{Binding DisplayTime}"
+                                 DockPanel.Dock="Right"
+                                 FontSize="10"
+                                 Foreground="{DynamicResource MutedBrush}"
+                                 VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding DisplayRole}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource AccentBrush}"/>
+                    </DockPanel>
                     <TextBlock Text="{Binding Text}"
                                TextWrapping="Wrap"/>
                   </StackPanel>
@@ -366,6 +432,80 @@
             </StackPanel>
           </TabItem>
 
+          <TabItem Header="Tools &amp; Access">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="12">
+                <TextBlock Text="Tools &amp; Access" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Session gates on SoulCore Host (until Host restart). Seeded from Tools in appsettings.json. Flip these here instead of editing the file."
+                           Margin="0,0,0,16"/>
+
+                <TextBlock Text="Desktop &amp; browser" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Screenshots/capture are read-only. Computer control allows click / type / key / scroll on desktop and browser."
+                           Margin="0,0,0,8"/>
+                <CheckBox x:Name="ToolsAllowDesktopCaptureCheck"
+                          Content="Allow desktop screenshots &amp; window list"
+                          Margin="0,0,0,6"
+                          Click="ToolsAccessToggle_Click"/>
+                <CheckBox x:Name="ToolsAllowBrowserCaptureCheck"
+                          Content="Allow browser capture / health"
+                          Margin="0,0,0,6"
+                          Click="ToolsAccessToggle_Click"/>
+                <CheckBox x:Name="ToolsAllowComputerControlCheck"
+                          Content="Allow computer control (click / type / key)"
+                          FontWeight="SemiBold"
+                          Margin="0,0,0,16"
+                          Click="ToolsAccessToggle_Click"/>
+
+                <TextBlock Text="Trading (MT4)" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Read status/market data separately from trade execution. Trades still require confirmed=true + stop-loss even when trade is allowed."
+                           Margin="0,0,0,8"/>
+                <CheckBox x:Name="ToolsAllowMt4ReadCheck"
+                          Content="Allow MT4 read (status, symbols, positions)"
+                          Margin="0,0,0,6"
+                          Click="ToolsAccessToggle_Click"/>
+                <CheckBox x:Name="ToolsAllowMt4TradeCheck"
+                          Content="Allow MT4 trade / close / backtest"
+                          Margin="0,0,0,16"
+                          Click="ToolsAccessToggle_Click"/>
+
+                <TextBlock Text="Backends (read-only)" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Change backends in Host appsettings Tools:DesktopBackend / BrowserBackend / Mt4Backend, then recycle Host."
+                           Margin="0,0,0,8"/>
+                <TextBlock Text="Desktop backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="ToolsDesktopBackendBox" Classes="input" IsReadOnly="True" Text="—"
+                         Padding="8" Margin="0,0,0,8"/>
+                <TextBlock Text="Browser backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="ToolsBrowserBackendBox" Classes="input" IsReadOnly="True" Text="—"
+                         Padding="8" Margin="0,0,0,8"/>
+                <TextBlock Text="MT4 backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="ToolsMt4BackendBox" Classes="input" IsReadOnly="True" Text="—"
+                         Padding="8" Margin="0,0,0,16"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="ghost"
+                          Content="Refresh"
+                          Click="ToolsAccessRefresh_Click"/>
+                  <TextBlock x:Name="ToolsAccessStatusText"
+                             Text=""
+                             Foreground="{DynamicResource MutedBrush}"
+                             VerticalAlignment="Center"
+                             FontSize="11"/>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
           <TabItem Header="Safety/Charter">
             <StackPanel Margin="12">
               <TextBlock Text="Safety / Charter" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -445,7 +585,15 @@
 
               <TextBlock Text="SoulLoop enabled" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
               <TextBox x:Name="SystemSoulLoopBox" Classes="input" IsReadOnly="True" Text="—"
-                       Padding="8" Margin="0,0,0,12"/>
+                       Padding="8" Margin="0,0,0,8"/>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <Button Classes="ghost"
+                        Content="Tick SoulLoop now"
+                        Click="SoulLoopTick_Click"/>
+                <Button Classes="primary"
+                        Content="Restart SoulLoop"
+                        Click="SoulLoopRestart_Click"/>
+              </StackPanel>
 
               <TextBlock Text="Unreal bridge target" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
               <TextBox x:Name="SystemUnrealTargetBox" Classes="input" IsReadOnly="True" Text="—"

@@ -10,13 +10,13 @@ public static class DesktopToolGate
     /// Returned when a control tool (click/type/key) runs with the session gate closed.
     /// </summary>
     public const string ControlRequiresAuthorization =
-        "desktop control requires user authorization — ask the user to enable AllowComputerControl";
+        "desktop control requires user authorization — enable AllowComputerControl in Settings → Tools & Access";
 
     /// <summary>
     /// Returned when a capture/window tool runs with <c>AllowDesktopCapture=false</c>.
     /// </summary>
     public const string CaptureDisabled =
-        "desktop capture requires AllowDesktopCapture — it is disabled in Tools config";
+        "desktop capture requires AllowDesktopCapture — enable it in Settings → Tools & Access";
 
     public static ToolResult RefuseControl()
         => new(Success: false, Content: ControlRequiresAuthorization, Data: null);

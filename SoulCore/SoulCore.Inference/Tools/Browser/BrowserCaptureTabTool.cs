@@ -1,12 +1,11 @@
 using System.Text.Json;
-using Microsoft.Extensions.Options;
-using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// <c>browser_capture_tab</c> — capture current browser tab (screenshot + optional DOM).
-/// Read-only; gated by <see cref="ToolsOptions.AllowBrowserCapture"/>.
+/// Read-only; gated by browser capture session opt-in.
 /// </summary>
 public sealed class BrowserCaptureTabTool : ITool
 {
@@ -15,13 +14,12 @@ public sealed class BrowserCaptureTabTool : ITool
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
-    private readonly ToolsOptions _options;
+    private readonly IToolsAccessSettings _access;
 
-    public BrowserCaptureTabTool(IBrowserBridge bridge, IOptions<ToolsOptions> options)
+    public BrowserCaptureTabTool(IBrowserBridge bridge, IToolsAccessSettings access)
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-        ArgumentNullException.ThrowIfNull(options);
-        _options = options.Value;
+        _access = access ?? throw new ArgumentNullException(nameof(access));
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -31,7 +29,7 @@ public sealed class BrowserCaptureTabTool : ITool
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
-        if (!BrowserToolGate.IsCaptureAllowed(_options))
+        if (!BrowserToolGate.IsCaptureAllowed(_access))
             return new ToolResult(false, BrowserToolGate.CaptureDenied, null);
 
         var tab = 0;
@@ -42,9 +40,6 @@ public sealed class BrowserCaptureTabTool : ITool
         {
             tab = parsed;
         }
-
-        if (tab < 0)
-            return new ToolResult(false, "error: browser_capture_tab 'tab' must be >= 0", null);
 
         var result = await _bridge.CaptureTabAsync(tab, ct).ConfigureAwait(false);
         return new ToolResult(result.Success, result.Content, result.Data);

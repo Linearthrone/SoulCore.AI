@@ -14,10 +14,10 @@ namespace SoulCore.Inference.Tools.Trading;
 public static class Mt4ToolSupport
 {
     public const string ReadDeniedMessage =
-        "mt4 read requires user authorization — ask the user to enable AllowMt4Read";
+        "mt4 read requires user authorization — enable AllowMt4Read in Settings → Tools & Access";
 
     public const string TradeDeniedMessage =
-        "mt4 trade requires user authorization — ask the user to enable AllowMt4Trade";
+        "mt4 trade requires user authorization — enable AllowMt4Trade in Settings → Tools & Access";
 
     public const string SlRequiredMessage =
         "sl required: execute_trade rejects trades without a valid stop-loss (sl)";
@@ -35,6 +35,12 @@ public static class Mt4ToolSupport
             ? name
             : "mt4_" + name;
     }
+
+    public static bool IsReadAllowed(Desktop.IToolsAccessSettings access) =>
+        access is not null && access.AllowMt4Read;
+
+    public static bool IsTradeAllowed(Desktop.IToolsAccessSettings access) =>
+        access is not null && access.AllowMt4Trade;
 
     public static bool IsReadAllowed(ToolsOptions options) =>
         options is not null && options.AllowMt4Read;
@@ -272,11 +278,21 @@ public static class Mt4ToolSupport
 public abstract class Mt4ToolBase : ITool
 {
     private readonly IOptions<ToolsOptions> _options;
+    private readonly Desktop.IToolsAccessSettings? _access;
 
     protected Mt4ToolBase(IMt4Bridge bridge, IOptions<ToolsOptions> options)
+        : this(bridge, options, access: null)
+    {
+    }
+
+    protected Mt4ToolBase(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        Desktop.IToolsAccessSettings? access)
     {
         Bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _access = access;
     }
 
     protected IMt4Bridge Bridge { get; }
@@ -289,7 +305,10 @@ public abstract class Mt4ToolBase : ITool
 
     protected Task<ToolResult> ExecuteReadAsync(JsonElement args, CancellationToken ct)
     {
-        if (!Mt4ToolSupport.IsReadAllowed(Options))
+        var allowed = _access is not null
+            ? Mt4ToolSupport.IsReadAllowed(_access)
+            : Mt4ToolSupport.IsReadAllowed(Options);
+        if (!allowed)
             return Task.FromResult(new ToolResult(false, Mt4ToolSupport.ReadDeniedMessage, null));
 
         var mcp = Mt4ToolSupport.ToMcpName(Definition.Name);
@@ -298,7 +317,7 @@ public abstract class Mt4ToolBase : ITool
     }
 
     /// <summary>
-    /// Two-phase write: master <see cref="ToolsOptions.AllowMt4Trade"/> gate,
+    /// Two-phase write: master AllowMt4Trade gate,
     /// then per-call <c>confirmed=true</c> gate, then bridge dispatch.
     /// </summary>
     protected Task<ToolResult> ExecuteWriteAsync(
@@ -306,7 +325,10 @@ public abstract class Mt4ToolBase : ITool
         string confirmPrompt,
         CancellationToken ct)
     {
-        if (!Mt4ToolSupport.IsTradeAllowed(Options))
+        var allowed = _access is not null
+            ? Mt4ToolSupport.IsTradeAllowed(_access)
+            : Mt4ToolSupport.IsTradeAllowed(Options);
+        if (!allowed)
             return Task.FromResult(new ToolResult(false, Mt4ToolSupport.TradeDeniedMessage, null));
 
         if (!Mt4ToolSupport.IsConfirmed(args))

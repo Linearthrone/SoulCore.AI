@@ -15,7 +15,10 @@ public static class ToolAgencyGuidance
         "put the step wording in description (and optional args).\n" +
         "When the user asks to run or re-run a workflow (e.g. \"run that workflow\", \"run that workflow again\"), " +
         "you MUST call workflow_execute with the workflow id from prior tool results in this session and all=true " +
-        "for a full run. Do not ask which workflow if prior history already created one.";
+        "for a full run. Do not ask which workflow if prior history already created one.\n" +
+        "When the user asks for MT4 / MetaTrader status, connection, account, or bridge state " +
+        "(e.g. \"what's my MT4 status?\"), you MUST call mt4_status with {}. " +
+        "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.

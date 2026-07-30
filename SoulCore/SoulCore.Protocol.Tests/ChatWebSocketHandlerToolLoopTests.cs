@@ -72,7 +72,8 @@ public class ChatWebSocketHandlerToolLoopTests
         IUnrealVerbClient unreal,
         ChatWsOptions? chatOptions = null,
         IEmotionState? emotion = null,
-        IMemoryStore? memory = null)
+        IMemoryStore? memory = null,
+        HermesOptions? hermesOptions = null)
     {
         emotion ??= new StubEmotionState();
         memory ??= new StubMemoryStore();
@@ -82,17 +83,16 @@ public class ChatWebSocketHandlerToolLoopTests
         var spendMeter = new SpendMeter();
         var driftWatcher = new DriftWatcher(15);
         var hub = new PresenceWsHub(new LoggerFactory().CreateLogger<PresenceWsHub>());
+        var sessionHistory = new ChatSessionHistoryStore(40);
 
         var chatOpts = Options.Create(chatOptions ?? MakeChatOptions());
         var infOpts = Options.Create(MakeInferenceOptions());
-        var hermesOpts = Options.Create(MakeHermesOptions());
+        var hermesOpts = Options.Create(hermesOptions ?? MakeHermesOptions());
         var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
 
         return new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, toolRegistry,
-            new ChatSessionHistoryStore(40),
-            spendMeter, driftWatcher,
+            unreal, soulLoop, toolRegistry, sessionHistory, spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts, logger);
     }
 
@@ -225,6 +225,67 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     // ---------------------------------------------------------------------
+    // BED-167 / ISSUE-003: NL MT4 status → ForceToolName=mt4_status
+    // (Avenue B PreferHermes→Ollama too; exclusivity via BED-165)
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task Mt4NlStatus_ForcesMt4Status_AndAgencyMentionsTool()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "connected" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "what's my MT4 status?");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("mt4_status", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("mt4_status", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("task_create", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PreferHermes_Mt4NlStatus_ForcesMt4Status_OnOllamaLoop()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "mt4 ok" };
+        var hermes = new ScriptedHermesClient
+        {
+            CompleteWithToolsReply = "hermes must not run tools"
+        };
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal,
+            MakeChatOptions(useToolLoop: true, preferHermes: true),
+            hermesOptions: MakeHermesOptions(enabled: true));
+
+        await RunOneChatTurnAsync(handler, "what's my MT4 status?");
+
+        Assert.True(hermes.EnsureMcpReadyCalled);
+        Assert.False(hermes.CompleteWithToolsCalled,
+            "PreferHermes Avenue B must not call Hermes.CompleteWithToolsAsync");
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("mt4_status", inference.LastLoopOptions?.ForceToolName);
+    }
+
+    [Fact]
+    public async Task TaskStatusPrompt_DoesNotForceMt4Status()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "todo" };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "what's the status of that task?");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Null(inference.LastLoopOptions?.ForceToolName);
+    }
+
+    // ---------------------------------------------------------------------
     // AC #2: UseToolLoop=false falls back to single-shot CompleteAsync
     // (no regression — pre-tool-loop behavior).
     // ---------------------------------------------------------------------
@@ -253,63 +314,49 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     // ---------------------------------------------------------------------
-    // AC #3: PreferHermes=true + Hermes.Enabled=true routes to Hermes.
+    // BED-164 Avenue B: PreferHermes=true → Ollama tool-loop; Hermes MCP-only
+    // (EnsureMcpReadyAsync + CallMcpToolAsync). Never Hermes CompleteWithToolsAsync.
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task PreferHermes_True_RoutesToHermesToolLoop()
+    public async Task PreferHermes_True_RoutesToOllamaToolLoop_HermesMcpOnly()
     {
         var inference = new ScriptedInferenceClient
         {
-            CompleteWithToolsReply = "ollama reply (should not be used)"
+            CompleteWithToolsReply = "ollama preferhermes reply"
         };
         var hermes = new ScriptedHermesClient
         {
-            CompleteWithToolsReply = "hermes reply"
+            CompleteWithToolsReply = "hermes reply (must not be used)"
         };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
-        var handler = MakeHandler(inference, hermes, registry, unreal,
-            MakeChatOptions(useToolLoop: true, preferHermes: true));
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal,
+            MakeChatOptions(useToolLoop: true, preferHermes: true),
+            hermesOptions: MakeHermesOptions(enabled: true));
 
-        // HermesOptions.Enabled must be true for the PreferHermes route to fire.
-        // MakeHandler wires MakeHermesOptions(enabled: false) by default, so we
-        // rebuild the handler with Hermes enabled via a custom MakeHandler.
-        var emotion = new StubEmotionState();
-        var memory = new StubMemoryStore();
-        var embeddings = new NullEmbeddingClient();
-        var charter = new StubCharter();
-        var soulLoop = new StubSoulLoop();
-        var spendMeter = new SpendMeter();
-        var driftWatcher = new DriftWatcher(15);
-        var hub = new PresenceWsHub(new LoggerFactory().CreateLogger<PresenceWsHub>());
-        var chatOpts = Options.Create(MakeChatOptions(useToolLoop: true, preferHermes: true));
-        var infOpts = Options.Create(MakeInferenceOptions());
-        var hermesOpts = Options.Create(MakeHermesOptions(enabled: true));
-        var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
-        handler = new ChatWebSocketHandler(
-            inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, registry,
-            new ChatSessionHistoryStore(40),
-            spendMeter, driftWatcher,
-            hub, chatOpts, infOpts, hermesOpts, logger);
+        var frames = await RunOneChatTurnAsync(handler, "hello via preferhermes avenue b");
 
-        var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
-
-        Assert.True(hermes.CompleteWithToolsCalled, "Hermes.CompleteWithToolsAsync should be called when PreferHermes + Hermes.Enabled");
-        Assert.False(inference.CompleteWithToolsCalled, "Ollama.CompleteWithToolsAsync should NOT be called when Hermes succeeded");
+        Assert.True(hermes.EnsureMcpReadyCalled,
+            "PreferHermes must preflight Hermes MCP readiness");
+        Assert.False(hermes.CompleteWithToolsCalled,
+            "PreferHermes must NOT call Hermes.CompleteWithToolsAsync (Avenue B)");
+        Assert.True(inference.CompleteWithToolsCalled,
+            "PreferHermes tool-loop must run on Ollama.CompleteWithToolsAsync");
         var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
         Assert.NotNull(done);
-        Assert.Equal("hermes reply", done!.Payload?.GetProperty("text").GetString());
-        Assert.Equal("hermes", done.Payload?.GetProperty("provider").GetString());
+        Assert.Equal("ollama preferhermes reply", done!.Payload?.GetProperty("text").GetString());
+        Assert.Equal("ollama", done.Payload?.GetProperty("provider").GetString());
     }
 
     // ---------------------------------------------------------------------
-    // BED-161: PreferHermes fail-fast — no Ollama fallback when Hermes throws.
+    // BED-164: PreferHermes MCP preflight fail-fast — no Ollama loop when
+    // Hermes gateway/key is down; never Hermes CompleteWithToolsAsync.
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task PreferHermes_HermesDown_DoesNotFallBackToOllama()
+    public async Task PreferHermes_HermesMcpDown_FailFast_DoesNotRunOllamaToolLoop()
     {
         var inference = new ScriptedInferenceClient
         {
@@ -317,36 +364,23 @@ public class ChatWebSocketHandlerToolLoopTests
         };
         var hermes = new ScriptedHermesClient
         {
-            ThrowOnCompleteWithTools = new InvalidOperationException(
+            ThrowOnEnsureMcpReady = new InvalidOperationException(
                 IHermesMcpInvoker.UnavailableMessage)
         };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal,
+            MakeChatOptions(useToolLoop: true, preferHermes: true),
+            hermesOptions: MakeHermesOptions(enabled: true));
 
-        var emotion = new StubEmotionState();
-        var memory = new StubMemoryStore();
-        var embeddings = new NullEmbeddingClient();
-        var charter = new StubCharter();
-        var soulLoop = new StubSoulLoop();
-        var spendMeter = new SpendMeter();
-        var driftWatcher = new DriftWatcher(15);
-        var hub = new PresenceWsHub(new LoggerFactory().CreateLogger<PresenceWsHub>());
-        var chatOpts = Options.Create(MakeChatOptions(useToolLoop: true, preferHermes: true));
-        var infOpts = Options.Create(MakeInferenceOptions());
-        var hermesOpts = Options.Create(MakeHermesOptions(enabled: true));
-        var logger = new LoggerFactory().CreateLogger<ChatWebSocketHandler>();
-        var handler = new ChatWebSocketHandler(
-            inference, hermes, emotion, memory, embeddings, charter,
-            unreal, soulLoop, registry,
-            new ChatSessionHistoryStore(40),
-            spendMeter, driftWatcher,
-            hub, chatOpts, infOpts, hermesOpts, logger);
+        var frames = await RunOneChatTurnAsync(handler, "hello via preferhermes");
 
-        var frames = await RunOneChatTurnAsync(handler, "hello via hermes");
-
-        Assert.True(hermes.CompleteWithToolsCalled);
+        Assert.True(hermes.EnsureMcpReadyCalled);
+        Assert.False(hermes.CompleteWithToolsCalled,
+            "PreferHermes must never call Hermes.CompleteWithToolsAsync");
         Assert.False(inference.CompleteWithToolsCalled,
-            "PreferHermes must not fall back to Ollama when Hermes fails");
+            "PreferHermes must not run Ollama tool-loop when Hermes MCP preflight fails");
         var err = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.Error);
         Assert.NotNull(err);
         Assert.Equal("chat.model_down", err!.Payload?.GetProperty("code").GetString());
@@ -565,7 +599,9 @@ public class ChatWebSocketHandlerToolLoopTests
     {
         public string CompleteWithToolsReply { get; set; } = "hermes-default";
         public bool CompleteWithToolsCalled { get; private set; }
+        public bool EnsureMcpReadyCalled { get; private set; }
         public Exception? ThrowOnCompleteWithTools { get; set; }
+        public Exception? ThrowOnEnsureMcpReady { get; set; }
 
         public Task<string> ChatAsync(
             string message, string? systemPreamble = null,
@@ -596,6 +632,14 @@ public class ChatWebSocketHandlerToolLoopTests
 
         public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
             => Task.FromResult("ok");
+
+        public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
+        {
+            EnsureMcpReadyCalled = true;
+            if (ThrowOnEnsureMcpReady is not null)
+                return Task.FromException(ThrowOnEnsureMcpReady);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeAnimationTool : ITool

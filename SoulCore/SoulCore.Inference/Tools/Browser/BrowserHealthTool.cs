@@ -1,12 +1,10 @@
 using System.Text.Json;
-using Microsoft.Extensions.Options;
-using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
-/// <c>browser_health</c> — check browser bridge status (read; gated by
-/// <see cref="ToolsOptions.AllowBrowserCapture"/>).
+/// <c>browser_health</c> — check browser bridge status (read; gated by browser capture).
 /// </summary>
 public sealed class BrowserHealthTool : ITool
 {
@@ -15,13 +13,12 @@ public sealed class BrowserHealthTool : ITool
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
-    private readonly ToolsOptions _options;
+    private readonly IToolsAccessSettings _access;
 
-    public BrowserHealthTool(IBrowserBridge bridge, IOptions<ToolsOptions> options)
+    public BrowserHealthTool(IBrowserBridge bridge, IToolsAccessSettings access)
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-        ArgumentNullException.ThrowIfNull(options);
-        _options = options.Value;
+        _access = access ?? throw new ArgumentNullException(nameof(access));
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -31,7 +28,7 @@ public sealed class BrowserHealthTool : ITool
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
-        if (!BrowserToolGate.IsCaptureAllowed(_options))
+        if (!BrowserToolGate.IsCaptureAllowed(_access))
             return new ToolResult(false, BrowserToolGate.CaptureDenied, null);
 
         var result = await _bridge.HealthAsync(ct).ConfigureAwait(false);

@@ -1,12 +1,11 @@
 using System.Text.Json;
-using Microsoft.Extensions.Options;
-using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// <c>browser_type</c> — type text into the browser tab.
-/// Write/control; gated by <see cref="ToolsOptions.AllowComputerControl"/>.
+/// Write/control; gated by computer-control session opt-in.
 /// </summary>
 public sealed class BrowserTypeTool : ITool
 {
@@ -15,13 +14,12 @@ public sealed class BrowserTypeTool : ITool
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
-    private readonly ToolsOptions _options;
+    private readonly IToolsAccessSettings _access;
 
-    public BrowserTypeTool(IBrowserBridge bridge, IOptions<ToolsOptions> options)
+    public BrowserTypeTool(IBrowserBridge bridge, IToolsAccessSettings access)
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-        ArgumentNullException.ThrowIfNull(options);
-        _options = options.Value;
+        _access = access ?? throw new ArgumentNullException(nameof(access));
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -31,7 +29,7 @@ public sealed class BrowserTypeTool : ITool
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
-        if (!BrowserToolGate.IsControlAllowed(_options))
+        if (!BrowserToolGate.IsControlAllowed(_access))
             return new ToolResult(false, BrowserToolGate.ControlDenied, null);
 
         if (args.ValueKind != JsonValueKind.Object)

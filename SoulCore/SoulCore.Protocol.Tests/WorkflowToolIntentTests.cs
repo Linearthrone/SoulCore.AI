@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SoulCore.Inference.Tools.Workflow;
 
 namespace SoulCore.Protocol.Tests;
@@ -48,8 +49,40 @@ public class WorkflowToolIntentTests
         Assert.Contains("[Tools]", once, StringComparison.Ordinal);
         Assert.Contains("workflow_create", once, StringComparison.Ordinal);
         Assert.Contains("workflow_execute", once, StringComparison.Ordinal);
+        Assert.Contains("mt4_status", once, StringComparison.Ordinal);
 
         var twice = ToolAgencyGuidance.AppendToPreamble(once);
         Assert.Equal(once, twice);
+    }
+
+    [Fact]
+    public void TryFindLatestWorkflowId_FromCreatedToolResult()
+    {
+        Assert.True(WorkflowToolIntent.TryFindLatestWorkflowId(
+            new[] { "created: id=7 name=ac5 steps=2", "run that workflow" },
+            null,
+            out var id));
+        Assert.Equal(7, id);
+    }
+
+    [Fact]
+    public void TryFindLatestWorkflowId_PrefersNewest_AndArgsObject()
+    {
+        var older = JsonDocument.Parse("""{"id":3,"all":true}""").RootElement.Clone();
+        var newer = JsonDocument.Parse("""{"id":11}""").RootElement.Clone();
+        Assert.True(WorkflowToolIntent.TryFindLatestWorkflowId(
+            new[] { "workflow id=3 name=x", "created: id=11 name=y steps=1" },
+            new JsonElement?[] { older, newer },
+            out var id));
+        Assert.Equal(11, id);
+    }
+
+    [Fact]
+    public void TryFindLatestWorkflowId_Missing_ReturnsFalse()
+    {
+        Assert.False(WorkflowToolIntent.TryFindLatestWorkflowId(
+            new[] { "hello", "no ids here" },
+            null,
+            out _));
     }
 }
