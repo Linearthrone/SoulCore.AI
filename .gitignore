@@ -63,3 +63,11 @@ docs/agents/.qa*-token.tmp
 docs/agents/reports/_qa*_evidence/
 docs/agents/reports/.qa*-health-*.json
 *.tmp
+
+# Kotlin IDE error dumps
+**/.kotlin/errors/
+
+# One-off QA evidence dumps under scripts (keep .ps1 harnesses)
+SoulCore/scripts/qa-*/**/*.json
+SoulCore/scripts/qa-*/**/*.txt
+SoulCore/scripts/qa-*-*.json
