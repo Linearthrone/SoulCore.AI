@@ -43,3 +43,23 @@ Desktop.ini
 Logs/
 tmpcode/
 .codebuddy
+
+# Build / publish dumps (never commit Host publish trees)
+artifacts/
+
+# Local Hermes / Host process leftovers
+.venv-hermes/
+SoulCore/.venv-hermes/
+SoulCore/scripts/.hermes.*
+SoulCore/scripts/.soulcore-host.*
+SoulCore/scripts/*.pid
+SoulCore/scripts/*.log
+SoulCore/scripts/*.log.err
+**/scripts/**/*.log
+**/scripts/**/*.pid
+
+# Ephemeral QA evidence / tokens (reports stay as markdown)
+docs/agents/.qa*-token.tmp
+docs/agents/reports/_qa*_evidence/
+docs/agents/reports/.qa*-health-*.json
+*.tmp

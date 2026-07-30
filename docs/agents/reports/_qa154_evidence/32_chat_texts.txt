@@ -1,4 +1,0 @@
-text="WS connected · ws://127.0.0.1:7700/ws"
-text="QA"
-text="Victoria"
-text="Connected · ws://127.0.0.1:7700/ws"
