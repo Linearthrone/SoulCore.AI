@@ -53,6 +53,18 @@ public class SoulLoopWantProposalTests
     }
 
     [Fact]
+    public void Classify_ExploreCueInRecent_ReturnsExplore()
+    {
+        var fields = new EmotionInfluencePrompt.EmotionFields(0.2, 0.3, 0.5, 0.3);
+        var recent = new[] { "I want to explore every room of Home with open curiosity." };
+        var cat = SoulLoopWantProposal.Classify("calm", fields, recent);
+        Assert.Equal(SoulLoopWantProposal.CategoryExplore, cat);
+        var want = SoulLoopWantProposal.Propose("calm", fields, recent);
+        Assert.StartsWith("want[explore]:", want);
+        Assert.Contains("Home", want, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Propose_NeverRequestsExternalActs()
     {
         var fields = new EmotionInfluencePrompt.EmotionFields(0.9, 0.9, 0.9, 0.9);

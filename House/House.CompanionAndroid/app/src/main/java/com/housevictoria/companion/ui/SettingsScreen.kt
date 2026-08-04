@@ -59,6 +59,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val saved = remember { CompanionPrefs.load(context) }
     var wsUrl by remember { mutableStateOf(saved.wsUrl) }
+    var httpBase by remember { mutableStateOf(saved.httpBaseUrl.ifBlank { saved.resolvedHttpBase() }) }
     var token by remember { mutableStateOf(saved.token) }
     var status by remember { mutableStateOf("") }
     var statusOk by remember { mutableStateOf<Boolean?>(null) }
@@ -155,6 +156,23 @@ fun SettingsScreen(onBack: () -> Unit) {
                 label = { Text("WebSocket URL") },
                 singleLine = true,
                 placeholder = { Text(CompanionPrefs.DEFAULT_WS_URL) }
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = httpBase,
+                onValueChange = { httpBase = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("HTTP base (MediaGen / Gallery)") },
+                singleLine = true,
+                placeholder = { Text("http://127.0.0.1:7700") }
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Used for /api/companion/v1 (ComfyUI generate + file download). " +
+                    "Usually derived from WS URL; override for Tailscale HTTPS. " +
+                    "Contact id stub: ${CompanionPrefs.DEFAULT_CONTACT_ID} (multi-persona later).",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -290,7 +308,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(20.dp))
             OutlinedButton(
                 onClick = {
-                    val draft = CompanionConfig(wsUrl = wsUrl.trim(), token = token.trim())
+                    val draft = CompanionConfig(
+                        wsUrl = wsUrl.trim(),
+                        token = token.trim(),
+                        httpBaseUrl = httpBase.trim(),
+                        contactId = CompanionPrefs.DEFAULT_CONTACT_ID
+                    )
                     val err = draft.validate()
                     if (err != null) {
                         status = err
@@ -314,7 +337,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = {
-                    val draft = CompanionConfig(wsUrl = wsUrl.trim(), token = token.trim())
+                    val draft = CompanionConfig(
+                        wsUrl = wsUrl.trim(),
+                        token = token.trim(),
+                        httpBaseUrl = httpBase.trim(),
+                        contactId = CompanionPrefs.DEFAULT_CONTACT_ID
+                    )
                     val err = draft.validate()
                     if (err != null) {
                         status = err

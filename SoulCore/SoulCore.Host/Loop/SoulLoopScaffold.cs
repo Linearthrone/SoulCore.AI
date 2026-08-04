@@ -5,6 +5,7 @@ using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
+using SoulCore.Host.Companion;
 using SoulCore.Memory;
 using SoulCore.Protocol;
 using System.Globalization;
@@ -14,11 +15,14 @@ namespace SoulCore.Host.Loop;
 /// <summary>
 /// Safe want→act scaffold: proposes a want string only. Never triggers browser/MT4/email/file acts.
 /// Unreal verbs are not called from this loop (optional no-op path remains elsewhere if UE down).
+/// Also appends light journal notes on reflection ticks (feeling always; animation/environment by want).
 /// </summary>
 public sealed class SoulLoopScaffold : ISoulLoop
 {
     private readonly IEmotionState _emotion;
     private readonly IMemoryStore _memory;
+    private readonly IVictoriaJournalStore? _journals;
+    private readonly ICompanionOutboundMessenger? _outbound;
     private readonly PresenceWsHub _hub;
     private readonly SoulLoopOptions _options;
     private readonly DriftWatcher _driftWatcher;
@@ -33,7 +37,9 @@ public sealed class SoulLoopScaffold : ISoulLoop
         PresenceWsHub hub,
         IOptions<SoulLoopOptions> options,
         DriftWatcher driftWatcher,
-        ILogger<SoulLoopScaffold> logger)
+        ILogger<SoulLoopScaffold> logger,
+        IVictoriaJournalStore? journals = null,
+        ICompanionOutboundMessenger? outbound = null)
     {
         _emotion = emotion ?? throw new ArgumentNullException(nameof(emotion));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -41,6 +47,8 @@ public sealed class SoulLoopScaffold : ISoulLoop
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _driftWatcher = driftWatcher ?? throw new ArgumentNullException(nameof(driftWatcher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _journals = journals;
+        _outbound = outbound;
     }
 
     public bool IsEnabled => _options.Enabled;
@@ -145,34 +153,154 @@ public sealed class SoulLoopScaffold : ISoulLoop
 
         // Episodic self-reflection: write a first-person memory every Nth tick.
         // Throttled to avoid memory bloat (default every 5th tick). Never breaks the loop.
+        var tick = ++_tickCount;
         var interval = _options.ReflectionIntervalTicks;
-        if (interval > 0)
+        if (interval > 0 && tick % interval == 0)
         {
-            var tick = ++_tickCount;
-            if (tick % interval == 0)
+            var reflection = string.Format(
+                CultureInfo.InvariantCulture,
+                "[Reflection] I am feeling {0} (v={1:F2}, a={2:F2}). {3}",
+                label,
+                fields.Valence,
+                fields.Arousal,
+                want);
+            try
             {
-                var reflection = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "[Reflection] I am feeling {0} (v={1:F2}, a={2:F2}). {3}",
-                    label,
-                    fields.Valence,
-                    fields.Arousal,
-                    want);
+                await _memory
+                    .WriteEpisodicAsync(reflection, "self", cancellationToken)
+                    .ConfigureAwait(false);
+                _logger.LogInformation(
+                    "SoulLoop episodic reflection written: {Reflection}",
+                    reflection.Length > 80 ? reflection[..80] + "..." : reflection);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "SoulLoop episodic reflection write failed (loop continues)");
+            }
+
+            if (_journals is not null)
+            {
                 try
                 {
-                    await _memory
-                        .WriteEpisodicAsync(reflection, "self", cancellationToken)
+                    await WriteJournalNotesAsync(
+                            category, label, fields, want, cancellationToken)
                         .ConfigureAwait(false);
-                    _logger.LogInformation(
-                        "SoulLoop episodic reflection written: {Reflection}",
-                        reflection.Length > 80 ? reflection[..80] + "..." : reflection);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "SoulLoop episodic reflection write failed (loop continues)");
+                    _logger.LogDebug(ex, "SoulLoop journal write failed (loop continues)");
                 }
             }
         }
+
+        // Victoria Link: unsolicited chat.done so Kurt gets a phone ding without chat.send.
+        await MaybePushProactiveChatAsync(tick, category, label, want, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task MaybePushProactiveChatAsync(
+        int tick,
+        string category,
+        string label,
+        string want,
+        CancellationToken cancellationToken)
+    {
+        if (_outbound is null || !_options.ProactiveChatEnabled)
+            return;
+
+        var pushEvery = _options.ProactiveChatIntervalTicks;
+        if (pushEvery <= 0 || tick % pushEvery != 0)
+            return;
+
+        // Skip quiet reflection-only ticks unless reconnect/engage-family.
+        if (category is SoulLoopWantProposal.CategoryReflect or SoulLoopWantProposal.CategorySettle
+            && tick % (pushEvery * 2) != 0)
+            return;
+
+        var text = CompanionOutboundMessenger.ComposeProactiveText(category, label, want);
+        try
+        {
+            var result = await _outbound
+                .PushAsync(text, contactId: null, mediaId: null, streamDelta: false, cancellationToken)
+                .ConfigureAwait(false);
+            if (result.Ok)
+            {
+                _logger.LogInformation(
+                    "SoulLoop proactive chat pushed frame={FrameId} category={Category}",
+                    result.FrameId,
+                    category);
+            }
+            else
+            {
+                _logger.LogDebug("SoulLoop proactive chat skipped: {Error}", result.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "SoulLoop proactive chat failed (loop continues)");
+        }
+    }
+
+    private async Task WriteJournalNotesAsync(
+        string category,
+        string label,
+        EmotionInfluencePrompt.EmotionFields fields,
+        string want,
+        CancellationToken cancellationToken)
+    {
+        var moodJson = string.Format(
+            CultureInfo.InvariantCulture,
+            "{{\"valence\":{0:F3},\"arousal\":{1:F3},\"dominance\":{2:F3},\"focus\":{3:F3},\"label\":\"{4}\"}}",
+            fields.Valence,
+            fields.Arousal,
+            fields.Dominance,
+            fields.Focus,
+            label.Replace("\"", "", StringComparison.Ordinal));
+
+        var feelingBody = string.Format(
+            CultureInfo.InvariantCulture,
+            "In this moment I feel {0} (v={1:F2}, a={2:F2}). {3}",
+            label,
+            fields.Valence,
+            fields.Arousal,
+            want);
+        await _journals!
+            .WriteEntryAsync(
+                "feeling",
+                feelingBody,
+                moodJson: moodJson,
+                tagsJson: "[\"soul-loop\",\"reflection\"]",
+                source: "self",
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (category is SoulLoopWantProposal.CategoryExplore or SoulLoopWantProposal.CategoryNotice)
+        {
+            await _journals
+                .WriteEntryAsync(
+                    "environment",
+                    "I want to notice Home more carefully — rooms, light, paths, and where future modules or a workstation could live.",
+                    moodJson: moodJson,
+                    tagsJson: "[\"soul-loop\",\"home\",\"explore\"]",
+                    source: "self",
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (category is SoulLoopWantProposal.CategoryEngage or SoulLoopWantProposal.CategoryExplore)
+        {
+            await _journals
+                .WriteEntryAsync(
+                    "animation",
+                    "I want my body to match curiosity — upright stance, a walking rhythm when I move, and a face that shows I am present.",
+                    moodJson: moodJson,
+                    tagsJson: "[\"soul-loop\",\"locomotion\",\"expression\"]",
+                    source: "self",
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        _logger.LogInformation("SoulLoop journal notes written (feeling + category={Category})", category);
     }
 
     /// <summary>

@@ -403,6 +403,20 @@ public class BodyToolsTests
             return Task.FromResult(_connected);
         }
 
+        public Task<bool> SpeakAsync(object speakPayload, CancellationToken cancellationToken = default)
+        {
+            var text = speakPayload?.ToString() ?? "";
+            if (speakPayload is not null)
+            {
+                var prop = speakPayload.GetType().GetProperty("text")
+                    ?? speakPayload.GetType().GetProperty("Text");
+                if (prop?.GetValue(speakPayload) is string s)
+                    text = s;
+            }
+            SpeakCalls.Add(text);
+            return Task.FromResult(_connected);
+        }
+
         public Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default)
         {
             PlayAnimationCalls.Add(animationName);

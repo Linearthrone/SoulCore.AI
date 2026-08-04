@@ -174,6 +174,97 @@ not the whole torso.
 | 4.4 | Set `EditorStartupMap` / `GameDefaultMap` → `/Game/Home` | OPS |
 | 4.5 | Redefine E-gates as **visual** assertions (transform delta over time, montage playing) not "Host forwarded" | QA |
 
+### Phase 5 — Motivated agency + discovery memory (product lock, 2026-08-02)
+
+Product intent (not "aimless patrol", not "freeze in body"):
+
+> Every body act needs a **why**. No why → no walk.  
+> She may also **explore without a pre-named goal**, notice novelty, identify
+> what she found, and **write it into memory** so later wants can use *her*
+> map — not only a designer catalog.
+
+#### Layer A — Motivated commitments (named + reason)
+
+Examples that are *not* aimless:
+
+| Why | Commitment shape | Body act |
+| --- | --- | --- |
+| Sunset / beauty | `go_to:balcony (reason=appreciate_sunset)` | Path to balcony, look out, linger |
+| Think / inspire | `wander:grounds (reason=contemplate)` | Soft loco with intent, not a timer loop |
+| Curiosity with a target | `go_to:hill_trees (reason=see_other_side)` | Path toward landmark / vista |
+| Memory of us during a task | `message:kurt (reason=memory_surge)` | Companion / chat push (Host can do this before perfect loco) |
+
+SoulLoop today proposes `want[…]` text and journals intent; it does **not** call
+Unreal verbs. Phase 5 adds **want → commitment → act** with rate limits, and
+keeps device agency (TV / Win11 desk / phone) in a separate want namespace.
+
+#### Layer B — Genuine exploration → identify → remember
+
+Named places exist for *affordances* (balcony, living room, entertainment
+center). They do **not** replace lived discovery.
+
+**Story A — outdoor find**  
+She walks behind the house (curiosity / contemplate). Perception reports an
+unfamiliar clearing + water + large seating frame. She approaches, orients,
+classifies (pond; wide swinging chair on the **north** side), then writes an
+episodic memory in her own words. Later she can want "sit by the pond swing"
+because *she* found it.
+
+**Story B — indoor novelty**  
+She crosses the living room. Something on the entertainment center was not in
+her prior map of that stand. She looks closer (`focus` / approach), identifies
+a PS5, writes episodic + updates place knowledge ("PS5 on entertainment center
+as of …").
+
+Pipeline:
+
+```text
+explore want / soft wander
+    → sensor nearby_objects[] + spatial hints
+    → novelty vs her place-map / episodic (not vs full UE catalog alone)
+    → approach + look / focus (closer look)
+    → identify (label + relations: "north of pond", "on entertainment center")
+    → WriteEpisodicAsync (source=discovery) + optional semantic place fact
+    → future wants may cite her discoveries
+```
+
+#### Dual world knowledge
+
+| Store | Who fills it | Role |
+| --- | --- | --- |
+| **Seed catalog** (optional) | Designers / UE tags | Named destinations & interactables for intentional wants and go_to |
+| **Personal map** | Victoria via discovery | Places and objects *she* has found, relations, first-seen / changed |
+
+UE may expose anonymous or weakly labeled volumes ("water body", "seat",
+"console-shaped mesh"). **Her** name and story come from identification +
+memory, not only from a pre-baked display name.
+
+#### Novelty
+
+"Hasn't been there" requires comparing current perception of a place to her
+last known layout for that place (personal map / episodic), not only
+"object exists in level." New / moved / gone → notice → closer look →
+identify → remember.
+
+#### Host / UE work (depends on Phases 1–3)
+
+| # | Work | Role |
+| --- | --- | --- |
+| 5.1 | Ingest `sensor_frame` into Host (`IUnrealSensorState`); no act without connection + rate limits | BED |
+| 5.2 | SoulLoop **commitment** after want: look / soft anim first; `go_to` only with reason + destination (named or discovery target) | BED |
+| 5.3 | `nearby_objects[]` with id, rough class, room/area, pose; `focus_object` for closer look | DEV/BED |
+| 5.4 | Discovery writer: identify → episodic (`source=discovery`) + place-fact upsert | BED |
+| 5.5 | Novelty gate: diff perception vs personal map before "new object" wants | BED |
+| 5.6 | Memory-surge → `ICompanionOutboundMessenger` (proactive message) with cooldown | BED |
+| 5.7 | Stub affordance wants for future TV/Xbox, Win11 desk, Galaxy S23 (no fake walks) | BED |
+
+**Hard bans:** timer-only patrol; random `LocoAsync` with empty reason; treating
+seed catalog as her only knowledge of the world.
+
+**Exit gate (Layer B):** walk / explore path yields at least one Host episodic
+of the form "I found …" with spatial relation, and a later tick can propose a
+want that cites that discovery.
+
 ---
 
 ## Decisions needed from user
@@ -183,6 +274,10 @@ not the whole torso.
 2. **Player embodiment** — should Kayleigh be a grounded body in the house or
    keep the free-fly camera?
 3. **Scope order** — Phase 1 only, or Phase 1+2 together (walking + gestures)?
+4. **Discovery labeling** — UE weak classes + Host/LLM identify, vs require
+   authored display names for everything she can "find"?
+5. **First Host slice** — (a) design-only (this section), (b) sensor + look/linger
+   + discovery episodic stubs, (c) + proactive memory→message?
 
 ---
 
@@ -196,3 +291,8 @@ not the whole torso.
 - Motion matching sets are large; VRAM/package size on a 16 GB card shared with
   a 32K-context LLM.
 - Live Coding blocks full plugin rebuilds; C++ changes need editor closed.
+- Open exploration without NavMesh + perception will invent destinations;
+  keep discovery gated on real `nearby_objects` / volumes, not hallucinated
+  ponds.
+- Novelty without a personal map will either never fire or fire on every prop;
+  Phase 5.5 is required for "PS5 appeared" stories.

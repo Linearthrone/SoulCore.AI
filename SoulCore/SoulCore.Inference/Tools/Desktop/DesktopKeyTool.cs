@@ -29,7 +29,9 @@ public sealed class DesktopKeyTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_key",
-        Description: "Press a key (e.g. Enter, Escape).",
+        Description:
+            "Press a single key (Enter, Escape, Tab, etc.) on the window you last clicked. " +
+            "Requires a prior desktop_click and AllowComputerControl.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

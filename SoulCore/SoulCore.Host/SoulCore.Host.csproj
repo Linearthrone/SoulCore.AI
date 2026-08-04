@@ -17,4 +17,8 @@
     <UserSecretsId>soulcore-host-phase0-dev</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Windows.Extensions" Version="8.0.0" />
+  </ItemGroup>
+
 </Project>

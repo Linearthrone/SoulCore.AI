@@ -29,7 +29,9 @@ public sealed class DesktopTypeTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_type",
-        Description: "Type text at the current focus.",
+        Description:
+            "Type text into the window you last clicked (cua background delivery). " +
+            "Call desktop_click on the target first. Requires AllowComputerControl.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

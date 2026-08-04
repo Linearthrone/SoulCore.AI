@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using House.ChatDesktop.Models;
@@ -19,15 +22,35 @@ public partial class MainWindow : Window
     private readonly SoulCoreHealthClient _health = new();
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
+    private readonly SoulCoreDesktopViewClient _desktopView = new();
+    private readonly LocalStackControl _stack = new();
     private readonly ChatHistoryStore _chatHistory = new();
+    private readonly SoulCoreVoiceClient _voice = new();
+    private readonly PushToTalkRecorder _ptt = new();
+    private bool _pttBusy;
     private bool _toolsAccessHydrating;
+    private bool _servicesBusy;
     private readonly DispatcherTimer _pollTimer;
+    private readonly DispatcherTimer _desktopViewTimer;
+    private bool _desktopViewBusy;
+    private int _desktopImageWidth;
+    private int _desktopImageHeight;
+    private int? _desktopCursorX;
+    private int? _desktopCursorY;
+    private string? _lastDesktopImageHash;
+    private Window? _desktopPopOut;
+    private Image? _desktopPopOutImage;
+    private Canvas? _desktopPopOutCursorLayer;
+    private Ellipse? _desktopPopOutCursor;
     private readonly IBrush _okBrush;
     private readonly IBrush _warnBrush;
     private readonly IBrush _badBrush;
+    private readonly IBrush _mutedBrush;
     private LocalUiSettings _uiSettings = LocalUiSettings.Load();
     private readonly NotificationService _notifications;
     private SoulCoreHealthSnapshot _lastHealth = new();
+    private bool? _lastAllowComputerControl;
+    private bool? _lastAllowDesktopCapture;
     private bool _presenceFromWs;
     private ChatMessage? _streamingAssistant;
     private double _lastValence;
@@ -45,6 +68,7 @@ public partial class MainWindow : Window
         _okBrush = Res("OkBrush");
         _warnBrush = Res("WarnBrush");
         _badBrush = Res("BadBrush");
+        _mutedBrush = Res("MutedBrush");
 
         _notifications = new NotificationService(_uiSettings.Notifications);
         _notifications.ReloadPlayer();
@@ -55,22 +79,37 @@ public partial class MainWindow : Window
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += async (_, _) => await ProbeHealthAsync();
 
+        _desktopViewTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        _desktopViewTimer.Tick += async (_, _) => await RefreshDesktopViewAsync();
+
+        Opened += async (_, _) =>
+        {
+            WirePushToTalk();
+            await RefreshVoiceStatusAsync();
+        };
+
         Opened += async (_, _) =>
         {
             LoadChatHistory();
             await _ws.ConnectAsync();
             await ProbeHealthAsync();
             _pollTimer.Start();
+            _desktopViewTimer.Start();
+            await RefreshDesktopViewAsync();
         };
 
         Closed += async (_, _) =>
         {
             _pollTimer.Stop();
+            _desktopViewTimer.Stop();
+            _desktopPopOut?.Close();
             SaveDisplayNameFromEditor();
             await _ws.DisposeAsync();
             _notifications.Dispose();
             _health.Dispose();
             _toolsSettings.Dispose();
+            _desktopView.Dispose();
+            _stack.Dispose();
             _chatHistory.Dispose();
         };
     }
@@ -112,6 +151,10 @@ public partial class MainWindow : Window
             ApplySystemStatus(_lastHealth);
             SeedNotificationControls();
             _ = RefreshToolsAccessAsync();
+        }
+        else
+        {
+            _ = RefreshDesktopViewAsync();
         }
     }
 
@@ -340,6 +383,8 @@ public partial class MainWindow : Window
         }
 
         ApplyUnrealStatus(snap);
+        ApplyServiceIndicators(snap);
+        await RefreshServicesPanelAsync(snap).ConfigureAwait(true);
 
         // Auto-reconnect attempt when Host comes back while we were unavailable.
         if (snap.Alive
@@ -349,6 +394,300 @@ public partial class MainWindow : Window
         }
 
         UpdateConnectionChrome(snap);
+    }
+
+    /// <summary>
+    /// Emotion-row indicator lights: CUA / HST / OLL / HER / UE.
+    /// Green = ready, amber = partial, red = down, muted = off/unknown.
+    /// </summary>
+    private void ApplyServiceIndicators(SoulCoreHealthSnapshot? health = null, ToolsAccessSnapshot? tools = null)
+    {
+        if (IndCuaDot is null || IndHstDot is null || IndOllDot is null || IndHerDot is null || IndUeDot is null)
+            return;
+
+        var snap = health ?? _lastHealth;
+
+        if (tools is not null)
+        {
+            _lastAllowComputerControl = tools.AllowComputerControl;
+            _lastAllowDesktopCapture = tools.AllowDesktopCapture;
+        }
+        else if (snap.AllowComputerControl is not null)
+        {
+            _lastAllowComputerControl = snap.AllowComputerControl;
+            _lastAllowDesktopCapture = snap.AllowDesktopCapture;
+        }
+
+        var backend = (snap.DesktopBackend ?? tools?.DesktopBackend ?? "cua").Trim();
+        var isCuaBackend = backend.Equals("cua", StringComparison.OrdinalIgnoreCase)
+            || backend.Equals("auto", StringComparison.OrdinalIgnoreCase);
+        var driverOk = snap.CuaDriverAvailable == true
+            || tools?.CuaDriverAvailable == true
+            || !isCuaBackend;
+
+        // CUA — computer-use write path / driver
+        if (!snap.Reachable)
+        {
+            IndCuaDot.Fill = _badBrush;
+            ToolTip.SetTip(IndCuaDot.Parent as Control ?? IndCuaDot, "CUA — Host unreachable");
+        }
+        else if (isCuaBackend && snap.CuaDriverAvailable == false)
+        {
+            IndCuaDot.Fill = _badBrush;
+            ToolTip.SetTip(IndCuaDot.Parent as Control ?? IndCuaDot,
+                "CUA — cua-driver not found (install or set SOULCORE_CUA_DRIVER)");
+        }
+        else if (_lastAllowComputerControl == true && driverOk)
+        {
+            IndCuaDot.Fill = _okBrush;
+            ToolTip.SetTip(IndCuaDot.Parent as Control ?? IndCuaDot,
+                $"CUA — computer-use ON ({backend})");
+        }
+        else if (_lastAllowDesktopCapture == true)
+        {
+            IndCuaDot.Fill = _warnBrush;
+            ToolTip.SetTip(IndCuaDot.Parent as Control ?? IndCuaDot,
+                "CUA — capture only (AllowComputerControl off)");
+        }
+        else
+        {
+            IndCuaDot.Fill = _mutedBrush;
+            ToolTip.SetTip(IndCuaDot.Parent as Control ?? IndCuaDot, "CUA — computer-use off");
+        }
+
+        // HST — Host
+        IndHstDot.Fill = snap.Alive ? _okBrush : _badBrush;
+        ToolTip.SetTip(IndHstDot.Parent as Control ?? IndHstDot,
+            snap.Alive ? "HST — Host OK" : "HST — Host down");
+
+        // OLL — Ollama / inference
+        if (!snap.Reachable)
+            IndOllDot.Fill = _badBrush;
+        else
+            IndOllDot.Fill = snap.InferenceEnabled ? _okBrush : _mutedBrush;
+        ToolTip.SetTip(IndOllDot.Parent as Control ?? IndOllDot,
+            snap.InferenceEnabled ? "OLL — inference enabled" : "OLL — inference off");
+
+        // HER — gateway up preferred; Host Hermes.Enabled is secondary
+        if (snap.HermesGatewayUp == true)
+        {
+            IndHerDot.Fill = _okBrush;
+            var clientNote = snap.HermesEnabled ? "Host client on" : "Host Hermes.Enabled=false (gateway still up)";
+            ToolTip.SetTip(IndHerDot.Parent as Control ?? IndHerDot, $"HER — gateway :8642 up · {clientNote}");
+        }
+        else if (!snap.Reachable)
+        {
+            IndHerDot.Fill = _badBrush;
+            ToolTip.SetTip(IndHerDot.Parent as Control ?? IndHerDot, "HER — Host unreachable (gateway unknown)");
+        }
+        else if (snap.HermesEnabled)
+        {
+            IndHerDot.Fill = _warnBrush;
+            ToolTip.SetTip(IndHerDot.Parent as Control ?? IndHerDot,
+                "HER — Host client enabled but gateway :8642 down");
+        }
+        else
+        {
+            IndHerDot.Fill = _mutedBrush;
+            ToolTip.SetTip(IndHerDot.Parent as Control ?? IndHerDot, "HER — gateway down / Hermes off");
+        }
+
+        // UE — Unreal bridge
+        if (!snap.Reachable)
+            IndUeDot.Fill = _badBrush;
+        else if (snap.UnrealConnected == true)
+            IndUeDot.Fill = _okBrush;
+        else if (snap.UnrealEnabled == true)
+            IndUeDot.Fill = _warnBrush;
+        else
+            IndUeDot.Fill = _mutedBrush;
+        ToolTip.SetTip(IndUeDot.Parent as Control ?? IndUeDot,
+            snap.UnrealConnected == true
+                ? "UE — Unreal connected"
+                : snap.UnrealEnabled == true
+                    ? "UE — Unreal enabled, not connected"
+                    : "UE — Unreal off");
+    }
+
+    private async Task RefreshServicesPanelAsync(SoulCoreHealthSnapshot? health = null)
+    {
+        if (SvcHostDot is null)
+            return;
+
+        var snap = health ?? _lastHealth;
+        var ollamaUp = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
+        var hermesUp = snap.HermesGatewayUp ?? await _stack.ProbeHermesAsync().ConfigureAwait(true);
+        var comfyUp = await _stack.ProbeComfyAsync().ConfigureAwait(true);
+
+        SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
+        SvcHostStatus.Text = snap.Alive ? "up" : "down";
+        SvcHostDetail.Text = snap.Alive
+            ? $"http://{ConnectionDefaults.DisplayEndpoint}/health"
+            : (snap.Detail ?? "Host not answering");
+
+        SvcOllamaDot.Fill = ollamaUp ? _okBrush : _badBrush;
+        SvcOllamaStatus.Text = ollamaUp ? "up" : "down";
+        SvcOllamaDetail.Text = ollamaUp
+            ? (snap.InferenceEnabled ? "tags OK · Host inference on" : "tags OK · Host inference off")
+            : "unreachable :11434 — Start runs ollama serve";
+
+        SvcHermesDot.Fill = hermesUp
+            ? _okBrush
+            : (snap.HermesEnabled ? _warnBrush : _mutedBrush);
+        SvcHermesStatus.Text = hermesUp ? "gateway up" : "gateway down";
+        SvcHermesDetail.Text = hermesUp
+            ? (snap.HermesEnabled
+                ? "http://127.0.0.1:8642 · Host Hermes client enabled"
+                : "http://127.0.0.1:8642 · Host Hermes.Enabled=false (OK for MCP later)")
+            : "start via start-hermes.ps1 (soft-fail in ALLSTART)";
+
+        var backend = snap.DesktopBackend ?? "cua";
+        var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
+        if (!snap.Reachable)
+        {
+            SvcCuaDot.Fill = _badBrush;
+            SvcCuaStatus.Text = "host down";
+            SvcCuaDetail.Text = "Enable needs Host /settings/tools";
+        }
+        else if (snap.CuaDriverAvailable == false && backend.Equals("cua", StringComparison.OrdinalIgnoreCase))
+        {
+            SvcCuaDot.Fill = _badBrush;
+            SvcCuaStatus.Text = "driver missing";
+            SvcCuaDetail.Text = "cua-driver.exe not found";
+        }
+        else if (_lastAllowComputerControl == true && driverOk)
+        {
+            SvcCuaDot.Fill = _okBrush;
+            SvcCuaStatus.Text = "control on";
+            SvcCuaDetail.Text = string.IsNullOrWhiteSpace(snap.CuaDriverPath)
+                ? $"backend={backend}"
+                : $"backend={backend} · {snap.CuaDriverPath}";
+        }
+        else if (_lastAllowDesktopCapture == true)
+        {
+            SvcCuaDot.Fill = _warnBrush;
+            SvcCuaStatus.Text = "capture only";
+            SvcCuaDetail.Text = "AllowComputerControl off — Enable to turn green";
+        }
+        else
+        {
+            SvcCuaDot.Fill = _mutedBrush;
+            SvcCuaStatus.Text = "off";
+            SvcCuaDetail.Text = "desktop capture + control off";
+        }
+
+        if (snap.UnrealConnected == true)
+        {
+            SvcUeDot.Fill = _okBrush;
+            SvcUeStatus.Text = "connected";
+        }
+        else if (snap.UnrealEnabled == true)
+        {
+            SvcUeDot.Fill = _warnBrush;
+            SvcUeStatus.Text = "enabled, not connected";
+        }
+        else
+        {
+            SvcUeDot.Fill = snap.Reachable ? _mutedBrush : _badBrush;
+            SvcUeStatus.Text = "off / unknown";
+        }
+        SvcUeDetail.Text = snap.UnrealTarget ?? "avatar bridge (status only)";
+
+        SvcComfyDot.Fill = comfyUp ? _okBrush : _mutedBrush;
+        SvcComfyStatus.Text = comfyUp ? "up" : "down";
+        SvcComfyDetail.Text = comfyUp
+            ? "http://127.0.0.1:8188"
+            : ":8188 not answering (Companion media generate needs ComfyUI)";
+    }
+
+    private async void ServicesRefresh_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ServicesStatusText is not null)
+            ServicesStatusText.Text = "Refreshing…";
+        await ProbeHealthAsync().ConfigureAwait(true);
+        if (ServicesStatusText is not null)
+            ServicesStatusText.Text = "Refreshed";
+    }
+
+    private async void ServicesAction_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_servicesBusy)
+            return;
+        if (sender is not Button { Tag: string tag })
+            return;
+
+        _servicesBusy = true;
+        if (ServicesStatusText is not null)
+            ServicesStatusText.Text = $"Running {tag}…";
+
+        try
+        {
+            LocalStackActionResult result;
+            switch (tag)
+            {
+                case "host-start":
+                    result = await _stack.StartHostAsync().ConfigureAwait(true);
+                    break;
+                case "host-stop":
+                    result = await _stack.StopHostAsync().ConfigureAwait(true);
+                    break;
+                case "host-restart":
+                    result = await _stack.RestartHostAsync().ConfigureAwait(true);
+                    break;
+                case "hermes-start":
+                    result = await _stack.StartHermesAsync().ConfigureAwait(true);
+                    break;
+                case "hermes-stop":
+                    result = await _stack.StopHermesAsync().ConfigureAwait(true);
+                    break;
+                case "hermes-restart":
+                    result = await _stack.RestartHermesAsync().ConfigureAwait(true);
+                    break;
+                case "ollama-start":
+                    result = await _stack.StartOllamaAsync().ConfigureAwait(true);
+                    break;
+                case "gui-restart":
+                    result = await _stack.RestartChatDesktopAsync().ConfigureAwait(true);
+                    break;
+                case "cua-enable":
+                {
+                    var snap = await _toolsSettings.PatchAsync(allowComputerControl: true).ConfigureAwait(true);
+                    ApplyToolsAccess(snap, saved: true);
+                    ApplyServiceIndicators(_lastHealth, snap);
+                    result = snap.Reachable && snap.AllowComputerControl
+                        ? LocalStackActionResult.Succeed("AllowComputerControl=true")
+                        : LocalStackActionResult.Fail(snap.Detail ?? "patch failed");
+                    break;
+                }
+                case "cua-disable":
+                {
+                    var snap = await _toolsSettings.PatchAsync(allowComputerControl: false).ConfigureAwait(true);
+                    ApplyToolsAccess(snap, saved: true);
+                    ApplyServiceIndicators(_lastHealth, snap);
+                    result = snap.Reachable && !snap.AllowComputerControl
+                        ? LocalStackActionResult.Succeed("AllowComputerControl=false")
+                        : LocalStackActionResult.Fail(snap.Detail ?? "patch failed");
+                    break;
+                }
+                default:
+                    result = LocalStackActionResult.Fail($"unknown action {tag}");
+                    break;
+            }
+
+            if (ServicesStatusText is not null)
+                ServicesStatusText.Text = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
+
+            await ProbeHealthAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            if (ServicesStatusText is not null)
+                ServicesStatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _servicesBusy = false;
+        }
     }
 
     private void ApplyUnrealStatus(SoulCoreHealthSnapshot snap)
@@ -386,6 +725,86 @@ public partial class MainWindow : Window
     {
         await ProbeHealthAsync();
         ApplySystemStatus(_lastHealth);
+    }
+
+    private void WirePushToTalk()
+    {
+        if (PttButton is null) return;
+        PttButton.AddHandler(PointerPressedEvent, PttPressed, RoutingStrategies.Tunnel);
+        PttButton.AddHandler(PointerReleasedEvent, PttReleased, RoutingStrategies.Tunnel);
+        PttButton.AddHandler(PointerCaptureLostEvent, PttCaptureLost, RoutingStrategies.Tunnel);
+    }
+
+    private async void RefreshVoice_Click(object? sender, RoutedEventArgs e) =>
+        await RefreshVoiceStatusAsync();
+
+    private async Task RefreshVoiceStatusAsync()
+    {
+        if (VoiceStatusBox is null) return;
+        var h = await _voice.GetHealthAsync();
+        var stt = h.Stt?.Ok == true ? "STT ok" : "STT down";
+        var tts = h.Tts?.Ok == true ? "TTS ok" : "TTS down";
+        VoiceStatusBox.Text = h.Enabled
+            ? $"Enabled · {stt} · {tts} · speakers={(h.PlayOnHostSpeakers ? "on" : "off")} · unreal={(h.PlayInUnreal ? "on" : "off")}"
+            : "Voice disabled in Host config";
+        VoiceStatusBox.Foreground = h.Enabled && h.Stt?.Ok == true && h.Tts?.Ok == true ? _okBrush : _warnBrush;
+    }
+
+    private void PttPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_pttBusy || _ptt.IsRecording) return;
+        try
+        {
+            _ptt.Start();
+            if (PttHintText is not null) PttHintText.Text = "Listening… release to send.";
+            if (PttButton is not null) PttButton.Content = "Recording…";
+        }
+        catch (Exception ex)
+        {
+            if (PttHintText is not null) PttHintText.Text = $"Mic error: {ex.Message}";
+        }
+    }
+
+    private async void PttReleased(object? sender, PointerReleasedEventArgs e) =>
+        await FinishPttAsync();
+
+    private async void PttCaptureLost(object? sender, PointerCaptureLostEventArgs e) =>
+        await FinishPttAsync();
+
+    private async Task FinishPttAsync()
+    {
+        if (_pttBusy || !_ptt.IsRecording) return;
+        _pttBusy = true;
+        try
+        {
+            if (PttButton is not null) PttButton.Content = "Transcribing…";
+            var wav = await Task.Run(() => _ptt.Stop());
+            if (wav.Length < 1000)
+            {
+                if (PttHintText is not null) PttHintText.Text = "Too short — hold longer and try again.";
+                return;
+            }
+
+            var (ok, text, error) = await _voice.TranscribeAsync(wav);
+            if (!ok || string.IsNullOrWhiteSpace(text))
+            {
+                if (PttHintText is not null) PttHintText.Text = $"STT failed: {error ?? "empty"}";
+                return;
+            }
+
+            if (PttHintText is not null) PttHintText.Text = $"Heard: {text}";
+            if (ChatInput is not null) ChatInput.Text = text;
+            await SendCurrentAsync();
+        }
+        catch (Exception ex)
+        {
+            if (PttHintText is not null) PttHintText.Text = $"PTT error: {ex.Message}";
+        }
+        finally
+        {
+            if (PttButton is not null) PttButton.Content = "Hold to talk";
+            _pttBusy = false;
+        }
     }
 
     private void ViewCharterAnchors_Click(object? sender, RoutedEventArgs e)
@@ -483,6 +902,7 @@ public partial class MainWindow : Window
         if (ToolsAllowDesktopCaptureCheck is null
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
+            || ToolsSoftCursorRestoreCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null)
         {
@@ -496,6 +916,7 @@ public partial class MainWindow : Window
             allowDesktopCapture: ToolsAllowDesktopCaptureCheck.IsChecked == true,
             allowBrowserCapture: ToolsAllowBrowserCaptureCheck.IsChecked == true,
             allowComputerControl: ToolsAllowComputerControlCheck.IsChecked == true,
+            softCursorRestore: ToolsSoftCursorRestoreCheck.IsChecked == true,
             allowMt4Read: ToolsAllowMt4ReadCheck.IsChecked == true,
             allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true).ConfigureAwait(true);
 
@@ -516,6 +937,7 @@ public partial class MainWindow : Window
         if (ToolsAllowDesktopCaptureCheck is null
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
+            || ToolsSoftCursorRestoreCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null
             || ToolsDesktopBackendBox is null
@@ -531,6 +953,7 @@ public partial class MainWindow : Window
             ToolsAllowDesktopCaptureCheck.IsChecked = snap.AllowDesktopCapture;
             ToolsAllowBrowserCaptureCheck.IsChecked = snap.AllowBrowserCapture;
             ToolsAllowComputerControlCheck.IsChecked = snap.AllowComputerControl;
+            ToolsSoftCursorRestoreCheck.IsChecked = snap.SoftCursorRestore;
             ToolsAllowMt4ReadCheck.IsChecked = snap.AllowMt4Read;
             ToolsAllowMt4TradeCheck.IsChecked = snap.AllowMt4Trade;
             ToolsDesktopBackendBox.Text = snap.DesktopBackend ?? "—";
@@ -548,6 +971,7 @@ public partial class MainWindow : Window
         {
             ToolsAccessStatusText.Text = snap.Detail ?? "Host unreachable";
             ToolsAccessStatusText.Foreground = _badBrush;
+            ApplyServiceIndicators(tools: snap);
             return;
         }
 
@@ -555,6 +979,7 @@ public partial class MainWindow : Window
         {
             ToolsAccessStatusText.Text = snap.Detail;
             ToolsAccessStatusText.Foreground = _badBrush;
+            ApplyServiceIndicators(tools: snap);
             return;
         }
 
@@ -562,6 +987,199 @@ public partial class MainWindow : Window
             ? $"Saved · session until Host restart · {DateTimeOffset.Now:h:mm tt}"
             : $"Loaded · {(snap.Scope ?? "session")} · {DateTimeOffset.Now:h:mm tt}";
         ToolsAccessStatusText.Foreground = Res("MutedBrush");
+
+        ApplyServiceIndicators(tools: snap);
+    }
+
+    private async Task RefreshDesktopViewAsync()
+    {
+        if (_desktopViewBusy) return;
+        if (PresenceView is { IsVisible: false } && _desktopPopOut is null) return;
+
+        _desktopViewBusy = true;
+        try
+        {
+            var snap = await _desktopView.GetAsync(includeImage: true).ConfigureAwait(true);
+            ApplyDesktopView(snap);
+        }
+        finally
+        {
+            _desktopViewBusy = false;
+        }
+    }
+
+    private void ApplyDesktopView(DesktopViewSnapshot snap)
+    {
+        if (DesktopViewActionText is null || DesktopViewMetaText is null) return;
+
+        if (!snap.Reachable)
+        {
+            DesktopViewActionText.Text = snap.Detail ?? "Host unreachable";
+            DesktopViewMetaText.Text = "Start SoulCore.Host to see Victoria's screen.";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snap.Detail) && snap.Detail.StartsWith("HTTP", StringComparison.Ordinal))
+        {
+            DesktopViewActionText.Text = snap.Detail;
+            return;
+        }
+
+        _desktopImageWidth = snap.Width;
+        _desktopImageHeight = snap.Height;
+        _desktopCursorX = snap.CursorX;
+        _desktopCursorY = snap.CursorY;
+
+        DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
+            ? "Waiting for desktop activity…"
+            : snap.LastAction;
+
+        var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "—";
+        var soft = snap.SoftCursorRestore ? "agent/background" : "foreground ok";
+        DesktopViewMetaText.Text = snap.HasImage
+            ? $"{snap.Width}×{snap.Height} · {soft} · updated {when}"
+            : $"No capture yet · {soft} · cua overlay on real desktop when she works";
+
+        if (snap.ImageBytes is { Length: > 0 })
+        {
+            var hash = $"{snap.ImageBytes.Length}:{snap.UpdatedAt:O}:{snap.Width}x{snap.Height}";
+            if (!string.Equals(hash, _lastDesktopImageHash, StringComparison.Ordinal))
+            {
+                _lastDesktopImageHash = hash;
+                try
+                {
+                    using var ms = new MemoryStream(snap.ImageBytes);
+                    var bmp = new Bitmap(ms);
+                    if (DesktopViewImage is not null)
+                    {
+                        DesktopViewImage.Source = bmp;
+                        DesktopViewImage.IsVisible = true;
+                    }
+
+                    if (DesktopViewEmptyText is not null)
+                        DesktopViewEmptyText.IsVisible = false;
+
+                    if (_desktopPopOutImage is not null)
+                        _desktopPopOutImage.Source = bmp;
+                }
+                catch (Exception ex)
+                {
+                    DesktopViewActionText.Text = $"Image decode failed: {ex.Message}";
+                }
+            }
+        }
+        else if (DesktopViewEmptyText is not null && DesktopViewImage is not null)
+        {
+            DesktopViewEmptyText.IsVisible = true;
+            DesktopViewImage.IsVisible = false;
+        }
+
+        PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
+        PositionDesktopCursor(_desktopPopOutImage?.Parent as Control, _desktopPopOutCursorLayer, _desktopPopOutCursor);
+    }
+
+    private void DesktopViewSurface_SizeChanged(object? sender, SizeChangedEventArgs e) =>
+        PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
+
+    private void PositionDesktopCursor(Control? surface, Canvas? layer, Ellipse? cursor)
+    {
+        if (surface is null || layer is null || cursor is null) return;
+
+        if (_desktopCursorX is not int cx || _desktopCursorY is not int cy
+            || _desktopImageWidth <= 0 || _desktopImageHeight <= 0)
+        {
+            layer.IsVisible = false;
+            return;
+        }
+
+        var bounds = surface.Bounds;
+        if (bounds.Width <= 1 || bounds.Height <= 1)
+        {
+            layer.IsVisible = false;
+            return;
+        }
+
+        var scale = Math.Min(bounds.Width / _desktopImageWidth, bounds.Height / _desktopImageHeight);
+        var drawW = _desktopImageWidth * scale;
+        var drawH = _desktopImageHeight * scale;
+        var offsetX = (bounds.Width - drawW) / 2;
+        var offsetY = (bounds.Height - drawH) / 2;
+
+        var left = offsetX + (cx * scale) - (cursor.Width / 2);
+        var top = offsetY + (cy * scale) - (cursor.Height / 2);
+        Canvas.SetLeft(cursor, left);
+        Canvas.SetTop(cursor, top);
+        layer.IsVisible = true;
+        layer.Width = bounds.Width;
+        layer.Height = bounds.Height;
+    }
+
+    private void DesktopViewPopOut_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_desktopPopOut is not null)
+        {
+            _desktopPopOut.Activate();
+            return;
+        }
+
+        var cursor = new Ellipse
+        {
+            Width = 22,
+            Height = 22,
+            Stroke = new SolidColorBrush(Color.Parse("#E8C547")),
+            StrokeThickness = 2,
+            Fill = new SolidColorBrush(Color.Parse("#66E8C547"))
+        };
+        var layer = new Canvas { IsHitTestVisible = false };
+        layer.Children.Add(cursor);
+        var image = new Image { Stretch = Stretch.Uniform };
+        if (DesktopViewImage?.Source is { } src)
+            image.Source = src;
+
+        var surface = new Grid { Background = new SolidColorBrush(Color.Parse("#1a1a1a")) };
+        surface.Children.Add(image);
+        surface.Children.Add(layer);
+        surface.SizeChanged += (_, _) => PositionDesktopCursor(surface, layer, cursor);
+
+        _desktopPopOutImage = image;
+        _desktopPopOutCursorLayer = layer;
+        _desktopPopOutCursor = cursor;
+
+        var hint = new TextBlock
+        {
+            Margin = new Thickness(0, 8, 0, 0),
+            FontSize = 11,
+            Foreground = Res("MutedBrush"),
+            Text = "Her blue agent cursor is drawn by cua-driver on the real desktop (same as LLMOD). Your OS mouse never moves.",
+            TextWrapping = TextWrapping.Wrap
+        };
+        Grid.SetRow(hint, 1);
+
+        var root = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
+        root.Children.Add(surface);
+        root.Children.Add(hint);
+
+        var win = new Window
+        {
+            Title = "Victoria's screen",
+            Width = 960,
+            Height = 640,
+            Content = new Border
+            {
+                Padding = new Thickness(12),
+                Child = root
+            }
+        };
+        win.Closed += (_, _) =>
+        {
+            _desktopPopOut = null;
+            _desktopPopOutImage = null;
+            _desktopPopOutCursorLayer = null;
+            _desktopPopOutCursor = null;
+        };
+        _desktopPopOut = win;
+        win.Show(this);
+        PositionDesktopCursor(surface, layer, cursor);
     }
 
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)

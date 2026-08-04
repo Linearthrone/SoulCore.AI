@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Trading;
 
@@ -28,7 +29,12 @@ public sealed class ExecuteTradeTool : Mt4ToolBase
         """);
 
     public ExecuteTradeTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public ExecuteTradeTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -93,7 +99,12 @@ public sealed class ClosePositionTool : Mt4ToolBase
         """);
 
     public ClosePositionTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public ClosePositionTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -136,7 +147,12 @@ public sealed class RunBacktestTool : Mt4ToolBase
         """);
 
     public RunBacktestTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public RunBacktestTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 

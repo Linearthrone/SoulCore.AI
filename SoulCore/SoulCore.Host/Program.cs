@@ -13,7 +13,9 @@ using SoulCore.Core.Charter;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host;
+using SoulCore.Host.Companion;
 using SoulCore.Host.Loop;
+using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools;
@@ -78,10 +80,14 @@ builder.Services.Configure<HermesOptions>(
     builder.Configuration.GetSection(HermesOptions.SectionName));
 builder.Services.Configure<UnrealBridgeOptions>(
     builder.Configuration.GetSection(UnrealBridgeOptions.SectionName));
+builder.Services.Configure<VoiceOptions>(
+    builder.Configuration.GetSection(VoiceOptions.SectionName));
 builder.Services.Configure<ChatWsOptions>(
     builder.Configuration.GetSection(ChatWsOptions.SectionName));
 builder.Services.Configure<SoulLoopOptions>(
     builder.Configuration.GetSection(SoulLoopOptions.SectionName));
+builder.Services.Configure<CompanionOptions>(
+    builder.Configuration.GetSection(CompanionOptions.SectionName));
 builder.Services.Configure<SafetyOptions>(
     builder.Configuration.GetSection(SafetyOptions.SectionName));
 builder.Services.Configure<ToolsOptions>(
@@ -102,6 +108,10 @@ var hermesOptions = builder.Configuration
 var unrealOptions = builder.Configuration
     .GetSection(UnrealBridgeOptions.SectionName)
     .Get<UnrealBridgeOptions>() ?? new UnrealBridgeOptions();
+
+var voiceOptions = builder.Configuration
+    .GetSection(VoiceOptions.SectionName)
+    .Get<VoiceOptions>() ?? new VoiceOptions();
 
 var chatWsOptions = builder.Configuration
     .GetSection(ChatWsOptions.SectionName)
@@ -166,6 +176,8 @@ builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteM
 builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 // BED-141: Victoria's workflow store (victoria_workflows) — ordered steps via workflow_* tools.
 builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// Victoria journals: feeling / animation / environment notebooks.
+builder.Services.AddSingleton<IVictoriaJournalStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
@@ -239,6 +251,7 @@ builder.Services.AddSingleton<ITool, StoreMemoryTool>();
 // wrap IUnrealVerbClient so the model can choose body actions mid-loop.
 // Keyword detectors remain as Strategy A fallback (BED-128).
 builder.Services.AddSingleton<ITool, SpeakTool>();
+builder.Services.AddSingleton<ITool, VictoriaEyeCaptureTool>();
 builder.Services.AddSingleton<ITool, PlayAnimationTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
@@ -300,26 +313,64 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 
 // Desktop tools (BED-135): capture + click/type/key with session opt-in gate.
 // AllowComputerControl defaults false; AllowDesktopCapture defaults true.
-// Backend: Tools:DesktopBackend = "native" | "hermes" (hermes stub → BED-144).
+// Backend: Tools:DesktopBackend = "cua" | "native" | "hermes".
+// cua = local cua-driver agent cursor (LLMOD blue overlay; OS mouse untouched).
 // Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
 builder.Services.AddSingleton<ComputerControlGate>();
 builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
-var desktopBackend = (toolsOptions.DesktopBackend ?? "native").Trim();
+builder.Services.AddSingleton<IDesktopViewHub>(sp =>
+    new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+var desktopBackend = (toolsOptions.DesktopBackend ?? "cua").Trim();
 if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
 }
+else if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
+         || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
+{
+    var cuaExe = CuaDriverCli.TryFindExe();
+    if (cuaExe is not null)
+    {
+        builder.Services.AddSingleton(_ => new CuaDriverCli(cuaExe));
+        builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
+            new CuaDriverDesktopBackend(
+                sp.GetRequiredService<CuaDriverCli>(),
+                sp.GetRequiredService<IDesktopViewHub>(),
+                sp.GetRequiredService<IToolsAccessSettings>()));
+    }
+    else
+    {
+        builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
+            new NativeDesktopControlBackend(
+                sp.GetRequiredService<IDesktopViewHub>(),
+                sp.GetRequiredService<IToolsAccessSettings>()));
+    }
+}
 else
 {
-    builder.Services.AddSingleton<IDesktopControlBackend, NativeDesktopControlBackend>();
+    builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
+        new NativeDesktopControlBackend(
+            sp.GetRequiredService<IDesktopViewHub>(),
+            sp.GetRequiredService<IToolsAccessSettings>()));
 }
 builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
 builder.Services.AddSingleton<ITool, DesktopClickTool>();
+builder.Services.AddSingleton<ITool, DesktopDragTool>();
 builder.Services.AddSingleton<ITool, DesktopTypeTool>();
 builder.Services.AddSingleton<ITool, DesktopKeyTool>();
 builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
 builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
+
+// Chief Architect X17 playbook tools (plan → recipe → desktop_* execution).
+builder.Services.AddSingleton<SoulCore.Inference.Tools.ChiefArchitect.CaPlaybookLibrary>();
+builder.Services.AddSingleton<SoulCore.Inference.Tools.ChiefArchitect.CaSessionState>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaCompileBriefTool>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaPlanProjectTool>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaGetRecipeTool>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaNextStepTool>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaWorldHintTool>();
+builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaVerifyChecklistTool>();
 
 // Browser tools (BED-136): browser_health / capture_tab / click / type / key / scroll.
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
@@ -341,18 +392,25 @@ builder.Services.AddSingleton<ITool, BrowserKeyTool>();
 builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 // MT4 trading tools (BED-138): AllowMt4Read / AllowMt4Trade + confirmed=true gate.
+// Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169, shadow housevictoria:8080).
 // Mt4Backend=hermes → HermesMt4Bridge via CallMcpToolAsync (BED-144).
+builder.Services.AddHttpClient<LlmodHttpMt4Bridge>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddSingleton<IMt4Bridge>(sp =>
 {
     var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
-    var backend = (tools.Mt4Backend ?? ToolsOptions.BackendHermes).Trim();
-    if (!string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-    {
-        return new UnavailableMt4Bridge(
-            $"mt4 backend '{backend}' not supported — only 'hermes' is implemented (BED-138)");
-    }
+    var backend = (tools.Mt4Backend ?? ToolsOptions.BackendLlmod).Trim();
 
-    return new HermesMt4Bridge(sp.GetRequiredService<IHermesClient>());
+    if (HermesToolRouting.IsHermesBackend(backend))
+        return new HermesMt4Bridge(sp.GetRequiredService<IHermesClient>());
+
+    if (HermesToolRouting.IsLlmodBackend(backend))
+        return sp.GetRequiredService<LlmodHttpMt4Bridge>();
+
+    return new UnavailableMt4Bridge(
+        $"mt4 backend '{backend}' not supported — use '{ToolsOptions.BackendLlmod}', '{ToolsOptions.BackendNative}', or '{ToolsOptions.BackendHermes}'");
 });
 builder.Services.AddSingleton<ITool, Mt4StatusTool>();
 builder.Services.AddSingleton<ITool, ListSymbolsTool>();
@@ -368,6 +426,10 @@ builder.Services.AddSingleton<ITool, RunBacktestTool>();
 
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
+builder.Services.AddSingleton<ICompanionOutboundMessenger, CompanionOutboundMessenger>();
+builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
+builder.Services.AddSingleton<ComfyUiClient>();
+builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
 builder.Services.AddSingleton<SoulLoopScaffold>();
 builder.Services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
 builder.Services.AddHostedService<SoulLoopHostedService>();
@@ -381,6 +443,44 @@ if (unrealOptions.Enabled)
 else
 {
     builder.Services.AddSingleton<IUnrealVerbClient, NullUnrealVerbClient>();
+}
+
+// Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).
+builder.Services.AddHttpClient("voice-stt", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<VoiceOptions>>().Value;
+    client.BaseAddress = new Uri(opts.SttUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+});
+builder.Services.AddHttpClient("voice-tts", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<VoiceOptions>>().Value;
+    client.BaseAddress = new Uri(opts.TtsUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+});
+builder.Services.AddSingleton<ISttClient>(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    return new WhisperSttClient(
+        factory.CreateClient("voice-stt"),
+        sp.GetRequiredService<IOptions<VoiceOptions>>(),
+        sp.GetRequiredService<ILogger<WhisperSttClient>>());
+});
+builder.Services.AddSingleton<ITtsClient>(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    return new ChatterboxTtsClient(
+        factory.CreateClient("voice-tts"),
+        sp.GetRequiredService<IOptions<VoiceOptions>>(),
+        sp.GetRequiredService<ILogger<ChatterboxTtsClient>>());
+});
+if (voiceOptions.Enabled)
+{
+    builder.Services.AddSingleton<IVoiceSpeakService, VoiceSpeakService>();
+}
+else
+{
+    builder.Services.AddSingleton<IVoiceSpeakService, PassthroughVoiceSpeakService>();
 }
 
 var app = builder.Build();
@@ -425,6 +525,9 @@ app.Map(wsPath, async context =>
     var handler = context.RequestServices.GetRequiredService<ChatWebSocketHandler>();
     await handler.RunAsync(socket, context.RequestAborted);
 });
+
+app.MapCompanionApi();
+app.MapVoiceApi();
 
 app.MapGet("/health", async (
     IOptions<HostBindOptions> opts,
@@ -553,19 +656,26 @@ app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
     return Results.Json(new { acked });
 });
 
-static object ToolsSettingsDto(IToolsAccessSettings access) => new
+static object ToolsSettingsDto(IToolsAccessSettings access)
 {
-    allowDesktopCapture = access.AllowDesktopCapture,
-    allowBrowserCapture = access.AllowBrowserCapture,
-    allowComputerControl = access.AllowComputerControl,
-    allowMt4Read = access.AllowMt4Read,
-    allowMt4Trade = access.AllowMt4Trade,
-    desktopBackend = access.DesktopBackend,
-    browserBackend = access.BrowserBackend,
-    mt4Backend = access.Mt4Backend,
-    scope = "session",
-    note = "Session gates until Host restart. Seeded from Tools in appsettings.json."
-};
+    var cuaPath = CuaDriverCli.TryFindExe();
+    return new
+    {
+        allowDesktopCapture = access.AllowDesktopCapture,
+        allowBrowserCapture = access.AllowBrowserCapture,
+        allowComputerControl = access.AllowComputerControl,
+        softCursorRestore = access.SoftCursorRestore,
+        allowMt4Read = access.AllowMt4Read,
+        allowMt4Trade = access.AllowMt4Trade,
+        desktopBackend = access.DesktopBackend,
+        browserBackend = access.BrowserBackend,
+        mt4Backend = access.Mt4Backend,
+        cuaDriverAvailable = cuaPath is not null,
+        cuaDriverPath = cuaPath,
+        scope = "session",
+        note = "Session gates until Host restart. Seeded from Tools in appsettings.json. SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put)."
+    };
+}
 
 app.MapGet("/settings/tools", (IToolsAccessSettings access) => Results.Json(ToolsSettingsDto(access)));
 
@@ -594,12 +704,46 @@ app.MapPost("/settings/tools", async (HttpRequest request, IToolsAccessSettings 
         access.SetAllowBrowserCapture(browserCap);
     if (ReadBool(root, "allowComputerControl") is { } control)
         access.SetAllowComputerControl(control);
+    if (ReadBool(root, "softCursorRestore") is { } soft)
+        access.SetSoftCursorRestore(soft);
     if (ReadBool(root, "allowMt4Read") is { } mt4Read)
         access.SetAllowMt4Read(mt4Read);
     if (ReadBool(root, "allowMt4Trade") is { } mt4Trade)
         access.SetAllowMt4Trade(mt4Trade);
 
     return Results.Json(ToolsSettingsDto(access));
+});
+
+app.MapGet("/desktop/view", (IDesktopViewHub view) =>
+{
+    var snap = view.GetSnapshot();
+    return Results.Json(new
+    {
+        hasImage = snap.HasImage,
+        imagePath = "/desktop/view/image",
+        format = snap.Format,
+        width = snap.Width,
+        height = snap.Height,
+        cursorX = snap.CursorX,
+        cursorY = snap.CursorY,
+        lastAction = snap.LastAction,
+        updatedAt = snap.UpdatedAt,
+        softCursorRestore = snap.SoftCursorRestore,
+        note = "Victoria's last desktop screenshot + agent-cursor position. With DesktopBackend=cua, the large blue overlay is drawn by cua-driver on the real desktop (same as LLMOD) — your OS mouse never moves."
+    });
+});
+
+app.MapGet("/desktop/view/image", (IDesktopViewHub view) =>
+{
+    var bytes = view.TryGetImageBytes();
+    if (bytes is null || bytes.Length == 0)
+        return Results.NotFound();
+
+    var snap = view.GetSnapshot();
+    var contentType = string.Equals(snap.Format, "png", StringComparison.OrdinalIgnoreCase)
+        ? "image/png"
+        : "image/bmp";
+    return Results.File(bytes, contentType);
 });
 
 app.MapGet("/", () => Results.Redirect("/health"));

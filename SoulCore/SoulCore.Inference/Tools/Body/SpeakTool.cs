@@ -4,7 +4,8 @@ using SoulCore.Adapters.Ws;
 namespace SoulCore.Inference.Tools.Body;
 
 /// <summary>
-/// Model-callable speak tool (BED-132). Wraps <see cref="IUnrealVerbClient.SpeakAsync"/>.
+/// Model-callable speak tool (BED-132). Prefers <see cref="IVoiceSpeakService"/> (TTS + UE)
+/// when registered; otherwise wraps <see cref="IUnrealVerbClient.SpeakAsync"/>.
 /// </summary>
 /// <remarks>
 /// The chat handler already auto-speaks the final reply via TTS. This tool is for
@@ -17,10 +18,12 @@ public sealed class SpeakTool : ITool
     private static readonly JsonElement ParametersSchema = BuildParametersSchema();
 
     private readonly IUnrealVerbClient _unreal;
+    private readonly IVoiceSpeakService? _voice;
 
-    public SpeakTool(IUnrealVerbClient unreal)
+    public SpeakTool(IUnrealVerbClient unreal, IVoiceSpeakService? voice = null)
     {
         _unreal = unreal ?? throw new ArgumentNullException(nameof(unreal));
+        _voice = voice;
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -53,6 +56,19 @@ public sealed class SpeakTool : ITool
                 Success: false,
                 Content: "error: speak 'text' must be non-empty.",
                 Data: null);
+        }
+
+        if (_voice is not null)
+        {
+            try
+            {
+                await _voice.SpeakAloudAsync(text, ct).ConfigureAwait(false);
+                return new ToolResult(Success: true, Content: "spoke", Data: new { text });
+            }
+            catch (Exception ex)
+            {
+                return new ToolResult(Success: false, Content: $"speak failed: {ex.Message}", Data: null);
+            }
         }
 
         return await BodyToolBridge.InvokeAsync(

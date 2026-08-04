@@ -35,7 +35,11 @@ public sealed class DesktopClickTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_click",
-        Description: "Click at screen coordinates.",
+        Description:
+            "Click at absolute screen coordinates (pixels, top-left origin). " +
+            "Get coords from list_desktop_windows bounds (click center: x+width/2, y+height/2) or from a screenshot. " +
+            "Moves your blue agent cursor overlay only — does not steal Kurt's mouse. " +
+            "Requires AllowComputerControl.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

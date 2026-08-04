@@ -11,6 +11,8 @@ using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.ChiefArchitect;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
@@ -30,6 +32,7 @@ public sealed class ChatWebSocketHandler
     private readonly IEmbeddingClient _embeddings;
     private readonly ICharter _charter;
     private readonly IUnrealVerbClient _unreal;
+    private readonly IVoiceSpeakService? _voiceSpeak;
     private readonly ISoulLoop _soulLoop;
     private readonly IToolRegistry _toolRegistry;
     private readonly IChatSessionHistoryStore _sessionHistory;
@@ -68,7 +71,8 @@ public sealed class ChatWebSocketHandler
         IOptions<ChatWsOptions> chatOptions,
         IOptions<InferenceOptions> inferenceOptions,
         IOptions<HermesOptions> hermesOptions,
-        ILogger<ChatWebSocketHandler> logger)
+        ILogger<ChatWebSocketHandler> logger,
+        IVoiceSpeakService? voiceSpeak = null)
     {
         _inference = inference;
         _hermes = hermes;
@@ -77,6 +81,7 @@ public sealed class ChatWebSocketHandler
         _embeddings = embeddings;
         _charter = charter;
         _unreal = unreal;
+        _voiceSpeak = voiceSpeak;
         _soulLoop = soulLoop;
         _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
         _sessionHistory = sessionHistory ?? throw new ArgumentNullException(nameof(sessionHistory));
@@ -361,7 +366,11 @@ public sealed class ChatWebSocketHandler
         var contextPreamble = BuildContextPreamble(identityAnchors, recentMemories, emotionPreamble);
         // BED-162: agency guidance so NL workflow prompts dispatch tools (ISSUE-001).
         if (_chatOptions.UseToolLoop)
+        {
             contextPreamble = ToolAgencyGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = ComputerUseGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = ChiefArchitectGuidance.AppendToPreamble(contextPreamble);
+        }
 
         var spendSummary = _spendMeter.GetSummary();
         if (spendSummary.CapExceeded)
@@ -543,7 +552,16 @@ public sealed class ChatWebSocketHandler
                     dominance = fields.Dominance
                 }, sideEffectCt).ConfigureAwait(false);
 
-                var spoke = await _unreal.SpeakAsync(reply, sideEffectCt).ConfigureAwait(false);
+                var spoke = false;
+                if (_voiceSpeak is not null)
+                {
+                    await _voiceSpeak.SpeakAloudAsync(reply, sideEffectCt).ConfigureAwait(false);
+                    spoke = true;
+                }
+                else
+                {
+                    spoke = await _unreal.SpeakAsync(reply, sideEffectCt).ConfigureAwait(false);
+                }
                 if (spoke)
                 {
                     _logger.LogInformation(
@@ -1416,6 +1434,20 @@ public sealed class ChatWebSocketHandler
             _logger.LogInformation(
                 "MT4 NL intent matched: intent={Intent} forceTool={Tool}",
                 mt4Intent.Intent, mt4Intent.ToolName);
+        }
+        else if (ChiefArchitectToolIntent.TryMatch(text, out var caIntent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = caIntent.ToolName };
+            _logger.LogInformation(
+                "ChiefArchitect NL intent matched: intent={Intent} forceTool={Tool}",
+                caIntent.Intent, caIntent.ToolName);
+        }
+        else if (DesktopToolIntent.TryMatch(text, out var desktopIntent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = desktopIntent.ToolName };
+            _logger.LogInformation(
+                "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
+                desktopIntent.Intent, desktopIntent.ToolName);
         }
         else if (WorkflowToolIntent.TryMatch(text, out var intent))
         {

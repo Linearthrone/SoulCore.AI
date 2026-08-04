@@ -17,6 +17,8 @@ public static class SoulLoopWantProposal
     public const string CategoryClarify = "clarify";
     public const string CategoryRecall = "recall";
     public const string CategoryNotice = "notice";
+    /// <summary>Curious walkabout / room discovery in the Home environment.</summary>
+    public const string CategoryExplore = "explore";
 
     /// <summary>
     /// Builds a want string. Same inputs always yield the same output (InvariantCulture).
@@ -77,6 +79,8 @@ public static class SoulLoopWantProposal
             return CategoryClarify;
         if (episodicHint == CategoryRecall)
             return CategoryRecall;
+        if (episodicHint == CategoryExplore)
+            return CategoryExplore;
 
         var fromEmotion = label switch
         {
@@ -120,6 +124,8 @@ public static class SoulLoopWantProposal
                 fields.Focus >= 0.65
                     ? $"stay with the thread and engage attentively ({episodeCue})"
                     : $"lean in with bright, curious presence ({episodeCue})",
+            CategoryExplore =>
+                $"walk the Home with open curiosity — notice rooms, light, and places worth returning to ({episodeCue})",
             CategoryClarify =>
                 $"gently clarify what was meant before moving on ({episodeCue})",
             CategoryRecall =>
@@ -148,6 +154,11 @@ public static class SoulLoopWantProposal
             if (ContainsAny(row,
                     "remember", "earlier", "yesterday", "previously", "last time", "ago", "recall"))
                 return CategoryRecall;
+
+            if (ContainsAny(row,
+                    "explore", "home", "room", "walkabout", "wander", "curious",
+                    "education module", "entertainment", "workstation", "vm desk"))
+                return CategoryExplore;
         }
 
         return null;

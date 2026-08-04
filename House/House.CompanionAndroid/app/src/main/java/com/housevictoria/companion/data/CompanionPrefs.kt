@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.housevictoria.companion.net.CompanionMediaClient
 
 /**
  * Connection settings for SoulCore.Host.
@@ -17,7 +18,11 @@ import androidx.security.crypto.MasterKey
  */
 data class CompanionConfig(
     val wsUrl: String,
-    val token: String
+    val token: String,
+    /** HTTP origin for `/api/companion/v1` (derived from WS when blank). */
+    val httpBaseUrl: String = "",
+    /** Framework stub — single Victoria for now; future persona service may add more. */
+    val contactId: String = "victoria"
 ) {
     fun validate(): String? {
         if (wsUrl.isBlank()) return "WebSocket URL is required."
@@ -28,6 +33,12 @@ data class CompanionConfig(
             return "URL should end with /ws (SoulCore chat endpoint)."
         }
         return null
+    }
+
+    fun resolvedHttpBase(): String {
+        val explicit = httpBaseUrl.trim().trimEnd('/')
+        if (explicit.isNotEmpty()) return explicit
+        return CompanionMediaClient.httpBaseFromWs(wsUrl)
     }
 }
 
@@ -48,6 +59,8 @@ object CompanionPrefs {
     private const val SECURE_PREFS = "companion_secure_prefs"
     private const val KEY_WS_URL = "ws_url"
     private const val KEY_TOKEN = "token"
+    private const val KEY_HTTP_BASE = "http_base_url"
+    private const val KEY_CONTACT_ID = "contact_id"
 
     /** FED-151 reply notification keys (plain prefs — non-secret). */
     const val KEY_NOTIF_ENABLED = "notif_enabled"
@@ -56,6 +69,7 @@ object CompanionPrefs {
 
     /** Emulator / on-device loopback default — mirrors House.ChatDesktop ConnectionDefaults. */
     const val DEFAULT_WS_URL = "ws://127.0.0.1:7700/ws"
+    const val DEFAULT_CONTACT_ID = "victoria"
 
     /**
      * Tailscale serve placeholder for a real phone (OPS/SEC path).
@@ -68,7 +82,10 @@ object CompanionPrefs {
         val prefs = plainPrefs(context)
         return CompanionConfig(
             wsUrl = prefs.getString(KEY_WS_URL, DEFAULT_WS_URL).orEmpty(),
-            token = securePrefs(context).getString(KEY_TOKEN, "").orEmpty()
+            token = securePrefs(context).getString(KEY_TOKEN, "").orEmpty(),
+            httpBaseUrl = prefs.getString(KEY_HTTP_BASE, "").orEmpty(),
+            contactId = prefs.getString(KEY_CONTACT_ID, DEFAULT_CONTACT_ID).orEmpty()
+                .ifBlank { DEFAULT_CONTACT_ID }
         )
     }
 
@@ -76,6 +93,8 @@ object CompanionPrefs {
         plainPrefs(context)
             .edit()
             .putString(KEY_WS_URL, config.wsUrl.trim())
+            .putString(KEY_HTTP_BASE, config.httpBaseUrl.trim())
+            .putString(KEY_CONTACT_ID, config.contactId.trim().ifBlank { DEFAULT_CONTACT_ID })
             .apply()
         // Drop any leftover plaintext token from Phase 0 shell.
         plainPrefs(context).edit().remove(KEY_TOKEN).apply()

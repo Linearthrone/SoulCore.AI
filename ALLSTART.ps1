@@ -1,11 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
+  Start Hermes gateway, local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
 .DESCRIPTION
-  Refuses to attach the GUI to a foreign :7700 occupant (e.g. Cursor cloud port-forward
-  to a Linux/ubuntu Host). If 7700 is stolen, starts local Host on -AlternatePort and
-  points the GUI there via HOUSE_SOULCORE_PORT.
+  Starts Hermes on :8642 (soft-fail if missing), then Host. Refuses to attach the GUI to a foreign :7700
+  occupant (e.g. Cursor cloud port-forward to a Linux/ubuntu Host). If 7700 is stolen, starts local Host
+  on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
+  Does not enable AllowComputerControl (CUA stays yellow until Services / Tools & Access).
 .EXAMPLE
   .\ALLSTART.ps1
   .\ALLSTART.ps1 -SkipPreflight
@@ -19,13 +20,16 @@ param(
     [int]$AlternatePort = 7701,
     [switch]$SkipPreflight,
     [switch]$ForceRebuild,
-    [int]$HealthTimeoutSec = 45
+    [int]$HealthTimeoutSec = 45,
+    [switch]$SkipTailscaleServe
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = $PSScriptRoot
 $StartHost = Join-Path $RepoRoot "SoulCore\scripts\start-soulcore.ps1"
+$StartHermes = Join-Path $RepoRoot "SoulCore\scripts\start-hermes.ps1"
 $StartGui = Join-Path $RepoRoot "start-desktopgui.ps1"
+$TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
 
 if (-not (Test-Path -LiteralPath $StartHost)) {
     throw "Missing Host start script: $StartHost"
@@ -55,7 +59,7 @@ function Test-LocalVictoriaHealth {
     if ($path.StartsWith($expectedRoot, [StringComparison]::OrdinalIgnoreCase)) { return $true }
     if ($path -match '(?i)\\AppData\\Local\\SoulCore\\') { return $true }
 
-    # Cloud / Linux agent Host — not this machine's Victoria
+    # Cloud / Linux agent Host - not this machine's Victoria
     if ($path -match '^/home/' -or $path -match '/\.local/share/SoulCore') { return $false }
     if ($path -match '(?i)/ubuntu/') { return $false }
 
@@ -139,6 +143,74 @@ function Test-OllamaChatModel {
 Write-Host "=== ALLSTART: Ollama chat model ==="
 [void](Test-OllamaChatModel -Model "gemma4:latest")
 
+# --- Tailscale serve: AllowedHosts sync (before Host start) ---
+# Resolves Tailscale IP + MagicDNS and patches appsettings.json AllowedHosts
+# so the Host will accept proxied requests once it starts. Soft-fail: a missing
+# Tailscale CLI or sync error must NOT block local startup.
+$tailscaleSynced = $false
+if ($SkipTailscaleServe) {
+    Write-Host "=== ALLSTART: Tailscale serve skipped (-SkipTailscaleServe) ==="
+} elseif (-not (Test-Path -LiteralPath $TailscaleServe)) {
+    Write-Warning "tailscale-serve-soulcore.ps1 not found at $TailscaleServe - skipping"
+} else {
+    Write-Host "=== ALLSTART: Tailscale AllowedHosts sync ==="
+    try {
+        $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SyncAllowedHostsOnly")
+        $tsProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $tsArgs `
+            -WorkingDirectory $RepoRoot `
+            -Wait -PassThru -NoNewWindow
+        if ($tsProc.ExitCode -eq 0) {
+            $tailscaleSynced = $true
+        } else {
+            Write-Warning "tailscale-serve-soulcore.ps1 -SyncAllowedHostsOnly exited $($tsProc.ExitCode) - continuing"
+        }
+    } catch {
+        Write-Warning "Tailscale AllowedHosts sync failed - $($_.Exception.Message)"
+        Write-Warning "Continuing without Tailscale serve. Host stays loopback-only."
+    }
+}
+
+Write-Host "=== ALLSTART: Hermes gateway :8642 ==="
+$hermesOk = $false
+if (-not (Test-Path -LiteralPath $StartHermes)) {
+    Write-Warning "Missing Hermes start script: $StartHermes - skipping"
+} else {
+    try {
+        $hermesArgList = @(
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", $StartHermes
+        )
+        if ($SkipPreflight) { $hermesArgList += "-SkipPreflight" }
+        $hermesProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $hermesArgList `
+            -WorkingDirectory $RepoRoot `
+            -Wait -PassThru -NoNewWindow
+        if ($hermesProc.ExitCode -ne 0) {
+            Write-Warning "start-hermes.ps1 exited $($hermesProc.ExitCode) - continuing without Hermes gateway"
+        } else {
+            try {
+                $hh = Invoke-WebRequest -Uri "http://127.0.0.1:8642/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+                if ($hh.StatusCode -eq 200) {
+                    Write-Host "Hermes gateway OK: http://127.0.0.1:8642/health"
+                    $hermesOk = $true
+                }
+            } catch {
+                Write-Warning "Hermes start reported OK but :8642/health not ready yet - $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warning "Hermes gateway start failed - $($_.Exception.Message)"
+        Write-Warning "Host will still start (Ollama-only). Restore hermes.exe if MCP/PreferHermes needed."
+    }
+}
+if (-not $hermesOk) {
+    Write-Warning "Hermes gateway not confirmed on :8642 (soft-fail; Host continues)."
+}
+
+Write-Host "CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools & Access enable it."
+
 Write-Host "=== ALLSTART: locate local Victoria Host ==="
 $chosenPort = $Port
 $existing = Get-HealthObject -LocalPort $Port
@@ -163,7 +235,7 @@ if (Test-LocalVictoriaHealth -Health $existing) {
 } else {
     Write-Host "=== ALLSTART: SoulCore.Host :$chosenPort ==="
     Start-LocalSoulCore -LocalPort $chosenPort
-    # start-soulcore exits early if *anything* listens — re-validate identity
+    # start-soulcore exits early if *anything* listens - re-validate identity
     $after = Get-HealthObject -LocalPort $chosenPort
     if (-not (Test-LocalVictoriaHealth -Health $after)) {
         if ($null -ne $after) {
@@ -184,6 +256,46 @@ if (Test-LocalVictoriaHealth -Health $existing) {
 $env:HOUSE_SOULCORE_HOST = "127.0.0.1"
 $env:HOUSE_SOULCORE_PORT = "$chosenPort"
 Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
+
+# --- Tailscale serve: enable proxies now that Host is healthy ---
+# Applies TCP :7700 + HTTPS :8443 (tailnet-only). Soft-fail: local desktop
+# still works without it. Skipped entirely if -SkipTailscaleServe or sync failed.
+if ($SkipTailscaleServe) {
+    Write-Host "=== ALLSTART: Tailscale serve enable skipped (-SkipTailscaleServe) ==="
+} elseif (-not $tailscaleSynced) {
+    Write-Warning "Skipping Tailscale serve enable (AllowedHosts sync did not succeed)."
+} elseif (-not (Test-Path -LiteralPath $TailscaleServe)) {
+    Write-Warning "tailscale-serve-soulcore.ps1 not found - cannot enable serve"
+} else {
+    Write-Host "=== ALLSTART: Tailscale serve enable (TCP 7700 + HTTPS 8443) ==="
+    try {
+        $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SkipAllowedHosts")
+        $tsProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $tsArgs `
+            -WorkingDirectory $RepoRoot `
+            -Wait -PassThru -NoNewWindow
+        if ($tsProc.ExitCode -ne 0) {
+            Write-Warning "tailscale-serve-soulcore.ps1 enable exited $($tsProc.ExitCode) - continuing"
+        }
+    } catch {
+        Write-Warning "Tailscale serve enable failed - $($_.Exception.Message)"
+        Write-Warning "Local desktop still works; phone companion will not reach Host over Tailscale."
+    }
+}
+
+Write-Host "=== ALLSTART: House.Voice (STT + Chatterbox TTS) ==="
+$StartStt = Join-Path $RepoRoot "House\House.Voice\start-stt.ps1"
+$StartTts = Join-Path $RepoRoot "House\House.Voice\start-tts.ps1"
+if (Test-Path -LiteralPath $StartStt) {
+    try { & $StartStt } catch { Write-Warning "STT start: $_" }
+} else {
+    Write-Warning "Missing $StartStt"
+}
+if (Test-Path -LiteralPath $StartTts) {
+    try { & $StartTts } catch { Write-Warning "TTS start: $_" }
+} else {
+    Write-Warning "Missing $StartTts"
+}
 
 Write-Host "=== ALLSTART: House.ChatDesktop (Victoria Presence) ==="
 & $StartGui -Configuration $Configuration

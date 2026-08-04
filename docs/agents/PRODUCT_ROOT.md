@@ -44,6 +44,7 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
 9. **Wave 26/27 embodiment decisions** — TT-01 / PROP-EMBODIMENT-01:
    - **Locomotion source**: Game Animation Sample (motion matching) vs Manny/Quinn blendspace — **provisional default in BED-115 = Manny/Quinn**; confirm or override
    - **Player embodiment**: grounded Kayleigh body vs keep free-fly `ADefaultPawn` — deferred to Wave 29 / Phase 4
+   - **Avatar MetaHuman (user 2026-07-30):** use new MH **`VictoriaBody`**. → **TASK-171 Partial** (rewire scripts + bridge avatar_count fix; asset missing on main — sync from shadow then run Python rewire). Note: live Character mesh had drifted to Fab Performance Runner, not MHC_Victoria.
    - ~~**Scope**: Phase 1 only vs Phase 1+2~~ — **CLEARED 2026-07-26**: user **"yes move phase 2 asap"** → Wave 27 Phase 2 (gestures + verb correctness + head gaze) **in flight now**, parallel with Phase 1; do **not** wait for QA-118
 10. **Wave 27 Phase 3 agent-loop decisions** — TT-01 / PROP-AGENT-LOOP-01:
    - ~~**Tool-calling model**: `gemma4` vs `qwen2.5:14b`~~ — **CLEARED**; gates used `qwen2.5:14b`. **Local daily baseline 2026-07-30:** **`gemma4:latest`** (user — settling / speed)
@@ -57,6 +58,9 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
 
 ## In flight (PM)
 
+- **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, SLOP-160, **BED-169 Partial**, **OPS-170 Fail** (shadow `:8080` not listening — needs Kurt on shadow).
+- **MT4:** LLMOD-owned; shadow MagicDNS **`house-victoria`** (hyphen). Host default endpoint corrected 2026-07-30. Live blocked until MCP HTTP + EA on shadow.
+- **Real blockers (2 open issues):** ISSUE-006 PIE travel=0 (BED-160); ISSUE-008 Hermes capture timeout (QA-137).
 - **2026-07-29 TINA:** BED-140 **Pass** (PR #3) · DBD-157 **Pass** (PR #4) archived → next BED-141 · BED-158 · OPS-143 · QA-134 — `reports/TASK-20260729-PM01-cold-start-patrol.md`
 - **Merge order:** PR #4 (mig 003) **before** PR #3 (mig 004) — both touch `SqliteMemoryStore.cs`
 - **Held (no UE / no adb):** BED-116/117 · QA-118 · BED-121 re-probe · QA-123 · QA-154
@@ -100,19 +104,11 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
   - ~~OPS-143~~ **Pass** (archived) — Hermes `gemma4:64k` @65536
   - QA-134 gated on QA-118 (**BED-160 paused — UE on shadow PC**)
   - QA-137/139 after embodiment / next wave as needed
-- **Wave 28 — Phone companion Phase 0** (from TT-146):
-  - Tickets FED-147…151 + SEC-152 + OPS-153 + QA-154 issued; reply archived `log/TASK-20260727-146-PM01-to-TT01.md`
-  - ~~FED-147~~ **Pass** (archived) — `House/House.CompanionAndroid/` Compose shell
-  - ~~FED-148~~ **Pass** (archived) — OkHttp WS `chat.send` + delta/done streaming
-  - ~~FED-149~~ **Pass** (archived) — Keystore token + Bearer/`X-Api-Key` (aligned BED-155)
-  - ~~FED-150~~ **Pass** (archived) — FGS keeps WS alive + connected notification
-  - ~~FED-151~~ **Pass** (archived) — `chat.done` background `victoria_replies` alerts
-  - ~~QA-154~~ **Pass** (archived 2026-07-27) — emulator + `adb reverse` Phase 0 exit (chat RT, background notif, tap-open, vib toggle)
-  - Post-QA fix: `AppForeground` seed `false` (START_STICKY no-Activity restart was suppressing alerts) — no new ticket; FED-151 follow-up in tree
-  - Wave 28 Phase 0 **CLEARED** (remote Tailscale on-device still optional soak)
-  - ~~SEC-152~~ **Pass (conditional)** archived — Tailscale+Keystore OK; **LAN bind Fail**
-  - ~~BED-155~~ **Pass** (archived) — fail-closed `/ws` via `SOULCORE_COMPANION_API_TOKEN` (Bearer / X-Api-Key)
-  - ~~OPS-153~~ **Pass** (archived) — runbook `docs/runbooks/tailscale-serve-soulcore.md` + `tailscale-serve-soulcore.ps1`
+- **Wave 28 — Phone companion / Victoria Link** (from TT-146 → Link port 2026-08-02):
+  - Phase 0 text+notif **CLEARED** (FED-147…151, QA-154, SEC-152, BED-155, OPS-153)
+  - **Link thin-client (in tree):** Home/MediaGen/Gallery/Settings; Host proactive `chat.done`; `/api/companion/v1` media + ComfyUI; `contactId=victoria` stub for future external persona service
+  - Remote Tailscale soak still optional — `docs/runbooks/tailscale-serve-soulcore.md`
+  - Explicit non-goals: phone computer-use, multi-persona UI, voice, WPF overlay
 - **Blocked on user**: soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
 
 ## Completed since last update

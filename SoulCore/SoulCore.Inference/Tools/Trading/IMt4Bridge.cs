@@ -9,9 +9,9 @@ namespace SoulCore.Inference.Tools.Trading;
 /// never be invoked when a gate is closed.
 /// </summary>
 /// <remarks>
-/// Preferred implementation is <see cref="HermesMt4Bridge"/> which routes to
-/// <c>house_victoria</c> MCP <c>mt4_*</c> tools via the Hermes gateway
-/// (<c>Mt4Backend=hermes</c>). Native C# MT4 client is out of scope for BED-138.
+/// Default implementation is <see cref="LlmodHttpMt4Bridge"/> which routes to
+/// LLMOD MCP HTTP on shadow (<c>Mt4Backend=llmod</c> or <c>native</c> alias).
+/// <see cref="HermesMt4Bridge"/> remains optional when <c>Mt4Backend=hermes</c>.
 /// </remarks>
 public interface IMt4Bridge
 {

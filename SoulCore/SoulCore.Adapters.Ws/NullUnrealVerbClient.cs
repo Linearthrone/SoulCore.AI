@@ -16,6 +16,9 @@ public sealed class NullUnrealVerbClient : IUnrealVerbClient
     public Task<bool> SpeakAsync(string text, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
 
+    public Task<bool> SpeakAsync(object speakPayload, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
     public Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
 

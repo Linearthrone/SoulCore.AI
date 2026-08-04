@@ -2,11 +2,13 @@ package com.housevictoria.companion.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,13 +45,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.housevictoria.companion.data.ChatMessage
 import com.housevictoria.companion.data.CompanionPrefs
+import com.housevictoria.companion.data.GalleryStore
 import com.housevictoria.companion.data.MessageRole
 import com.housevictoria.companion.net.CompanionConnection
+import com.housevictoria.companion.net.CompanionMediaClient
 import com.housevictoria.companion.net.SoulCoreFrame
 import com.housevictoria.companion.net.WsConnectionState
 import kotlinx.coroutines.flow.collectLatest
@@ -82,9 +89,28 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
         messages.add(ChatMessage(role = MessageRole.SYSTEM, content = text))
     }
 
+    fun fetchMediaIntoMessage(messageId: String, mediaId: String) {
+        Thread {
+            val cfg = CompanionPrefs.load(context)
+            val bytes = CompanionMediaClient.downloadMedia(cfg.resolvedHttpBase(), cfg.token, mediaId)
+            bytes.onSuccess { png ->
+                val item = GalleryStore.saveBytes(context, png, mediaId = mediaId)
+                onMain {
+                    val idx = messages.indexOfFirst { it.id == messageId }
+                    if (idx >= 0) {
+                        messages[idx] = messages[idx].copy(localImagePath = item.localPath)
+                    }
+                }
+            }
+        }.start()
+    }
+
     fun appendOrUpdateAssistant(frame: SoulCoreFrame, finalize: Boolean) {
         val text = frame.payloadText()
-        if (text.isNullOrEmpty() && finalize) {
+        val mediaId = frame.payloadString("mediaId")
+        val hasMedia = frame.payload?.optBoolean("hasMedia", false) == true || !mediaId.isNullOrBlank()
+        val proactive = frame.payload?.optBoolean("proactive", false) == true
+        if (text.isNullOrEmpty() && finalize && !hasMedia) {
             streamingAssistantId.set(null)
             return
         }
@@ -96,21 +122,33 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                 val existing = messages[idx]
                 if (frame.id.isBlank() || existing.frameId == frame.id || existing.frameId.isNullOrBlank()) {
                     messages[idx] = existing.copy(
-                        content = content,
-                        frameId = frame.id.ifBlank { existing.frameId }
+                        content = content.ifEmpty { existing.content },
+                        frameId = frame.id.ifBlank { existing.frameId },
+                        mediaId = mediaId ?: existing.mediaId,
+                        proactive = proactive || existing.proactive
                     )
-                    if (finalize) streamingAssistantId.set(null)
+                    if (finalize) {
+                        streamingAssistantId.set(null)
+                        if (hasMedia && !mediaId.isNullOrBlank()) {
+                            fetchMediaIntoMessage(messages[idx].id, mediaId)
+                        }
+                    }
                     return
                 }
             }
         }
         val bubble = ChatMessage(
             role = MessageRole.ASSISTANT,
-            content = content,
-            frameId = frame.id.ifBlank { null }
+            content = content.ifEmpty { if (hasMedia) "(image)" else "" },
+            frameId = frame.id.ifBlank { null },
+            mediaId = mediaId,
+            proactive = proactive
         )
         messages.add(bubble)
         streamingAssistantId.set(if (finalize) null else bubble.id)
+        if (finalize && hasMedia && !mediaId.isNullOrBlank()) {
+            fetchMediaIntoMessage(bubble.id, mediaId)
+        }
     }
 
     fun applyFrame(frame: SoulCoreFrame) {
@@ -130,7 +168,9 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
             }
             SoulCoreFrame.PRESENCE_STATUS,
             SoulCoreFrame.EMOTION_SNAPSHOT,
-            SoulCoreFrame.PONG -> Unit
+            SoulCoreFrame.PONG,
+            "loop.want",
+            "loop.tick.ok" -> Unit
             else -> appendSystem("frame ${frame.type} id=${frame.id}")
         }
     }
@@ -184,7 +224,7 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Victoria")
+                        Text("Victoria Link")
                         Text(
                             text = "$connLabel · ${config.wsUrl}",
                             style = MaterialTheme.typography.labelSmall,
@@ -275,13 +315,36 @@ private fun MessageBubble(message: ChatMessage) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .background(bg, RoundedCornerShape(16.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(text = message.content, color = fg, style = MaterialTheme.typography.bodyMedium)
+            if (message.content.isNotBlank()) {
+                Text(text = message.content, color = fg, style = MaterialTheme.typography.bodyMedium)
+            }
+            message.localImagePath?.let { path ->
+                val bmp = remember(path) { BitmapFactory.decodeFile(path) }
+                if (bmp != null) {
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "Image from Victoria",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+            if (message.proactive && message.role == MessageRole.ASSISTANT) {
+                Text(
+                    "reached out",
+                    color = fg.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }

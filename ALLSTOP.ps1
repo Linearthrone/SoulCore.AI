@@ -1,10 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop House.ChatDesktop and local SoulCore.Host (Victoria) started by ALLSTART.
+  Stop House.ChatDesktop, local SoulCore.Host (Victoria), and Hermes gateway.
 .DESCRIPTION
   Does not kill foreign :7700 occupants (e.g. Cursor cloud port-forward).
   Stops local Host on 7700 and/or 7701 when /health memory path is this machine's Victoria.
+  Stops Hermes gateway on :8642 (hermes gateway stop + pid/port cleanup).
 .EXAMPLE
   .\ALLSTOP.ps1
 #>
@@ -17,7 +18,10 @@ $ErrorActionPreference = "Continue"
 $RepoRoot = $PSScriptRoot
 $StopHost = Join-Path $RepoRoot "SoulCore\scripts\stop-soulcore.ps1"
 $PidFile = Join-Path $RepoRoot "SoulCore\scripts\.soulcore-host.pid"
+$HermesPidFile = Join-Path $RepoRoot "SoulCore\scripts\.hermes.pid"
+$HermesPort = 8642
 $BindAddress = "127.0.0.1"
+$TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
 
 function Test-LocalVictoriaHealth {
     param($Health)
@@ -110,8 +114,68 @@ function Stop-LocalHostOnPort {
     }
 }
 
+function Stop-HermesGateway {
+    Write-Host "=== ALLSTOP: Hermes gateway :$HermesPort ==="
+    try {
+        $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
+        if ($hermesCmd) {
+            & hermes gateway stop 2>$null | Out-Null
+            Write-Host "hermes gateway stop invoked"
+        }
+    } catch {
+        Write-Warning ("hermes gateway stop failed - " + $_.Exception.Message)
+    }
+
+    if (Test-Path -LiteralPath $HermesPidFile) {
+        $outerPid = 0
+        try { $outerPid = [int](Get-Content -LiteralPath $HermesPidFile -ErrorAction SilentlyContinue | Select-Object -First 1) } catch { }
+        if ($outerPid -gt 0) {
+            $p = Get-Process -Id $outerPid -ErrorAction SilentlyContinue
+            if ($p) {
+                Write-Host "Stopping Hermes outer PID $outerPid"
+                Stop-Process -Id $outerPid -Force -ErrorAction SilentlyContinue
+            }
+        }
+        Remove-Item -LiteralPath $HermesPidFile -Force -ErrorAction SilentlyContinue
+    }
+
+    $conns = Get-NetTCPConnection -LocalPort $HermesPort -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -eq $BindAddress }
+    foreach ($c in @($conns)) {
+        Write-Host "Stopping Hermes listen PID $($c.OwningProcess) on :$HermesPort"
+        Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+
+    Start-Sleep -Milliseconds 400
+    try {
+        $null = Invoke-WebRequest -Uri "http://${BindAddress}:${HermesPort}/health" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+        Write-Warning ":${HermesPort} still answers /health"
+    } catch {
+        Write-Host ":${HermesPort} free (no /health)"
+    }
+}
+
 Write-Host "=== ALLSTOP ==="
 Stop-ChatDesktop
+
+# --- Tailscale serve: tear down (soft-fail) ---
+if (-not (Test-Path -LiteralPath $TailscaleServe)) {
+    Write-Warning "tailscale-serve-soulcore.ps1 not found - skipping serve teardown"
+} else {
+    Write-Host "=== ALLSTOP: Tailscale serve ==="
+    try {
+        $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-Off")
+        $tsProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $tsArgs `
+            -WorkingDirectory $RepoRoot `
+            -Wait -PassThru -NoNewWindow
+        if ($tsProc.ExitCode -ne 0) {
+            Write-Warning "tailscale-serve-soulcore.ps1 -Off exited $($tsProc.ExitCode) - continuing"
+        }
+    } catch {
+        Write-Warning "Tailscale serve teardown failed - $($_.Exception.Message)"
+    }
+}
 
 Write-Host "=== ALLSTOP: SoulCore.Host (local Victoria only) ==="
 foreach ($port in $Ports) {
@@ -131,6 +195,8 @@ if (Test-Path -LiteralPath $StopHost) {
 if (Test-Path -LiteralPath $PidFile) {
     Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
+
+Stop-HermesGateway
 
 Start-Sleep -Milliseconds 300
 Write-Host "=== ALLSTOP done ==="

@@ -15,5 +15,8 @@ data class ChatMessage(
     val content: String,
     /** Correlates streaming `chat.delta` / `chat.done` frames (Host frame id). */
     val frameId: String? = null,
-    val timestampMs: Long = System.currentTimeMillis()
+    val timestampMs: Long = System.currentTimeMillis(),
+    val mediaId: String? = null,
+    val localImagePath: String? = null,
+    val proactive: Boolean = false
 )

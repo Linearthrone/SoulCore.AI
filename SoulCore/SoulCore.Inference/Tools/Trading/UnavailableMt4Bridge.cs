@@ -3,9 +3,9 @@ using System.Text.Json;
 namespace SoulCore.Inference.Tools.Trading;
 
 /// <summary>
-/// Stub bridge used when <c>Tools.Mt4Backend</c> is not <c>hermes</c> (native
-/// path is out of scope for BED-138). Always returns Success:false without
-/// contacting any backend — used to prove gates never auto-fallback.
+/// Stub bridge used when <c>Tools.Mt4Backend</c> is neither <c>llmod</c>,
+/// <c>native</c>, nor <c>hermes</c>. Always returns Success:false without
+/// contacting any backend.
 /// </summary>
 public sealed class UnavailableMt4Bridge : IMt4Bridge
 {

@@ -12,6 +12,13 @@ public interface IDesktopControlBackend
 
     Task<DesktopOpResult> ClickAsync(int x, int y, string button, CancellationToken ct = default);
 
+    /// <summary>
+    /// Press-drag-release from (<paramref name="x1"/>,<paramref name="y1"/>) to
+    /// (<paramref name="x2"/>,<paramref name="y2"/>) in screen pixels (top-left origin).
+    /// </summary>
+    Task<DesktopOpResult> DragAsync(
+        int x1, int y1, int x2, int y2, string button, CancellationToken ct = default);
+
     Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default);
 
     Task<DesktopOpResult> KeyAsync(string key, CancellationToken ct = default);

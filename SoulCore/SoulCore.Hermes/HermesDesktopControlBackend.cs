@@ -29,6 +29,20 @@ public sealed class HermesDesktopControlBackend : IDesktopControlBackend
             HermesToolRouting.EmptyArgs(),
             new Dictionary<string, object?> { ["action"] = "click", ["x"] = x, ["y"] = y, ["button"] = button }), ct);
 
+    public Task<DesktopOpResult> DragAsync(
+        int x1, int y1, int x2, int y2, string button, CancellationToken ct = default) =>
+        CallAsync("computer_use", HermesToolRouting.MergeObject(
+            HermesToolRouting.EmptyArgs(),
+            new Dictionary<string, object?>
+            {
+                ["action"] = "drag",
+                ["x1"] = x1,
+                ["y1"] = y1,
+                ["x2"] = x2,
+                ["y2"] = y2,
+                ["button"] = button,
+            }), ct);
+
     public Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default) =>
         CallAsync("computer_use", HermesToolRouting.MergeObject(
             HermesToolRouting.EmptyArgs(),

@@ -689,6 +689,12 @@ public class ChatWebSocketHandlerToolLoopTests
             SpeakCalls.Add(text);
             return Task.FromResult(IsConnected);
         }
+
+        public Task<bool> SpeakAsync(object speakPayload, CancellationToken cancellationToken = default)
+        {
+            SpeakCalls.Add(speakPayload?.ToString() ?? "");
+            return Task.FromResult(IsConnected);
+        }
         public Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default)
         {
             PlayAnimationCalls.Add(animationName);

@@ -25,7 +25,7 @@ namespace SoulCore.Protocol;
 /// </code>
 /// chat.send payload: { "text": "...", "sessionId": "optional" }
 /// chat.delta payload: { "text": "partial" }
-/// chat.done payload: { "text": "full reply optional" }
+/// chat.done payload: { "text": "full reply optional", "proactive"?: bool, "contactId"?: "victoria", "hasMedia"?: bool, "mediaId"?: "…" }
 /// emotion.snapshot payload: { "valence", "arousal", "dominance", "focus", "label", "note?", "revision" }
 /// emotion.correct payload (client → Host): { "valence": -1..1, "arousal": 0..1, "dominance": 0..1, "focus": 0..1, "note?" }
 /// presence.status payload: { "alive": true, "warm": true, "phase": 1 }

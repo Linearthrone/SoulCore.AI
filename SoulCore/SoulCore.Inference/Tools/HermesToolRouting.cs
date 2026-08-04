@@ -39,6 +39,14 @@ public static class HermesToolRouting
             ToolsOptions.BackendNative,
             StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>BED-169: direct LLMOD MCP HTTP on shadow (<c>llmod</c> or <c>native</c> alias).</summary>
+    public static bool IsLlmodBackend(string? backend)
+    {
+        var b = (backend ?? string.Empty).Trim();
+        return string.Equals(b, ToolsOptions.BackendLlmod, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(b, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static JsonElement EmptyArgs() =>
         JsonDocument.Parse("{}").RootElement.Clone();
 
@@ -151,6 +159,7 @@ public static class HermesToolRouting
             {
                 "screenshot" or "capture" or "screen" => "desktop_screenshot",
                 "click" or "left_click" or "right_click" => "desktop_click",
+                "drag" or "mouse_drag" or "left_click_drag" => "desktop_drag",
                 "type" or "type_text" => "desktop_type",
                 "key" or "hotkey" or "press" => "desktop_key",
                 _ => "desktop_screenshot"

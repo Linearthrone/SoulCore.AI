@@ -27,4 +27,17 @@ public sealed class SoulLoopOptions
     /// Set to 0 to disable loop-authored reflection writes entirely.
     /// </summary>
     public int ReflectionIntervalTicks { get; set; } = 5;
+
+    /// <summary>
+    /// When true (default with Enabled), emit an unsolicited <c>chat.done</c> to companion WS
+    /// clients on a throttle (see <see cref="ProactiveChatIntervalTicks"/>) so Victoria can
+    /// message Kurt without a preceding <c>chat.send</c>.
+    /// </summary>
+    public bool ProactiveChatEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Push a proactive chat message every Nth tick when <see cref="ProactiveChatEnabled"/>.
+    /// Default 5 (~5 min at 60s ticks). Set 0 to disable proactive chat even if Enabled.
+    /// </summary>
+    public int ProactiveChatIntervalTicks { get; set; } = 5;
 }

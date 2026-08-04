@@ -20,6 +20,8 @@
     <EmbeddedResource Include="Migrations\003_victoria_tasks.sql" LogicalName="SoulCore.Memory.Migrations.003_victoria_tasks.sql" />
     <EmbeddedResource Include="Migrations\004_victoria_workflows.sql" LogicalName="SoulCore.Memory.Migrations.004_victoria_workflows.sql" />
     <EmbeddedResource Include="Migrations\005_episodic_source_model.sql" LogicalName="SoulCore.Memory.Migrations.005_episodic_source_model.sql" />
+    <EmbeddedResource Include="Migrations\006_victoria_journals.sql" LogicalName="SoulCore.Memory.Migrations.006_victoria_journals.sql" />
+    <EmbeddedResource Include="Schema\006_victoria_journals.sql" LogicalName="SoulCore.Memory.Schema.006_victoria_journals.sql" />
   </ItemGroup>
 
   <PropertyGroup>

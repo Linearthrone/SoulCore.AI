@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Workflow;
 
 namespace SoulCore.Inference;
@@ -441,12 +442,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
 
                 // BED-125 contract: forward ToolResult.Content as the role:"tool"
                 // message string. ToolResult.Data is host-side only — never
-                // serialized to the model.
+                // serialized as JSON to the model. Screenshot bytes may attach
+                // as Ollama images[] so vision models can see the desktop.
+                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
                 ollamaMessages.Add(new OllamaChatMessage
                 {
                     Role = "tool",
                     Name = name,
-                    Content = result.Content ?? string.Empty
+                    Content = result.Content ?? string.Empty,
+                    Images = images
                 });
             }
 
@@ -1053,6 +1057,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
         public string? Content { get; set; }
         public string? Name { get; set; }
         public List<OllamaToolCallDto>? ToolCalls { get; set; }
+
+        /// <summary>Base64 image payloads (no data-URI prefix) for vision models.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Images { get; set; }
     }
 
     private sealed class OllamaToolCallDto

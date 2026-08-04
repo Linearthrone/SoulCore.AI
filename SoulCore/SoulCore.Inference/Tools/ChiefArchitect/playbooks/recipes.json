@@ -1,0 +1,210 @@
+{
+  "recipes": {
+    "session.focus": {
+      "id": "session.focus",
+      "summary": "Focus the Chief Architect window",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "window_title", "match": "Chief Architect" },
+      "gesture": { "type": "focus_window", "title_contains": "Chief Architect" },
+      "desktop_tools": ["list_desktop_windows", "focus_desktop_window"],
+      "params": [],
+      "verify": ["chief_architect_foreground"]
+    },
+    "session.new_plan": {
+      "id": "session.new_plan",
+      "summary": "Start a new plan from the default template (File > New Plan)",
+      "menu": ["File", "New Plan"],
+      "hotkey_hint": "Ctrl+N",
+      "ui": { "find": "menu_or_hotkey", "verify_cursor": null },
+      "gesture": { "type": "hotkey_or_menu", "prefer": "hotkey" },
+      "desktop_tools": ["desktop_key", "desktop_click"],
+      "params": [],
+      "verify": ["plan_view_empty_or_new"]
+    },
+    "session.plan_view": {
+      "id": "session.plan_view",
+      "summary": "Confirm Floor Plan view is active (not 3D/camera)",
+      "menu": ["Tools", "Active View", "Floor Plan"],
+      "hotkey_hint": null,
+      "ui": { "find": "menu_or_toolbar", "verify_cursor": "plan" },
+      "gesture": { "type": "menu" },
+      "desktop_tools": ["desktop_click", "desktop_screenshot"],
+      "params": [],
+      "verify": ["plan_view_visible"]
+    },
+    "session.grid_snaps_on": {
+      "id": "session.grid_snaps_on",
+      "summary": "Enable Grid Snaps for shell walls",
+      "menu": ["Edit", "Snap Settings", "Grid Snaps"],
+      "hotkey_hint": null,
+      "ui": { "find": "menu", "toggle": "on" },
+      "gesture": { "type": "menu" },
+      "desktop_tools": ["desktop_click"],
+      "params": [],
+      "verify": ["grid_snaps_enabled"]
+    },
+    "wall.straight_exterior.activate": {
+      "id": "wall.straight_exterior.activate",
+      "summary": "Activate Straight Exterior Wall tool",
+      "menu": ["Build", "Wall", "Straight Exterior Wall"],
+      "hotkey_hint": null,
+      "ui": { "find": "toolbar_or_menu", "verify_cursor": "wall_draw" },
+      "gesture": { "type": "menu" },
+      "desktop_tools": ["desktop_click"],
+      "params": [],
+      "verify": ["wall_tool_active"]
+    },
+    "wall.draw_perimeter_rect": {
+      "id": "wall.draw_perimeter_rect",
+      "summary": "Click-drag four exterior walls approximating footprint (width_ft x depth_ft)",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "plan_canvas", "verify_cursor": "wall_draw" },
+      "gesture": {
+        "type": "click_drag_sequence",
+        "segments": "rectangle",
+        "from": "plan_origin_approx",
+        "note": "Use desktop_drag for each side. Sketch approximate lengths; do not require pixel-perfect feet."
+      },
+      "desktop_tools": ["desktop_drag", "desktop_screenshot"],
+      "params": ["width_ft", "depth_ft", "origin_screen_xy"],
+      "verify": ["four_exterior_walls_visible", "status_bar_length_visible"]
+    },
+    "wall.close_loop_verify": {
+      "id": "wall.close_loop_verify",
+      "summary": "Ensure perimeter closes into a room",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "plan_canvas" },
+      "gesture": { "type": "screenshot_check" },
+      "desktop_tools": ["desktop_screenshot"],
+      "params": [],
+      "verify": ["closed_room_formed"]
+    },
+    "dim.select_and_set_length": {
+      "id": "dim.select_and_set_length",
+      "summary": "Select each exterior wall and set exact length from brief dimensions",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "dimension_or_wall_dialog" },
+      "gesture": {
+        "type": "click_then_type",
+        "note": "Click temporary dimension or open Wall Specification; type exact feet-inches."
+      },
+      "desktop_tools": ["desktop_click", "desktop_type", "desktop_key"],
+      "params": ["width_ft", "depth_ft"],
+      "verify": ["walls_match_brief_dims"]
+    },
+    "wall.straight_interior.activate": {
+      "id": "wall.straight_interior.activate",
+      "summary": "Activate Straight Interior Wall tool",
+      "menu": ["Build", "Wall", "Straight Interior Wall"],
+      "hotkey_hint": null,
+      "ui": { "find": "toolbar_or_menu", "verify_cursor": "wall_draw" },
+      "gesture": { "type": "menu" },
+      "desktop_tools": ["desktop_click"],
+      "params": [],
+      "verify": ["interior_wall_tool_active"]
+    },
+    "wall.draw_interior_partitions": {
+      "id": "wall.draw_interior_partitions",
+      "summary": "Sketch interior partitions for bedrooms, baths, living, kitchen per program",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "plan_canvas" },
+      "gesture": { "type": "click_drag_sequence", "segments": "program_partitions" },
+      "desktop_tools": ["desktop_drag", "desktop_screenshot"],
+      "params": ["bedrooms", "rooms"],
+      "verify": ["interior_walls_visible"]
+    },
+    "room.set_types_3br": {
+      "id": "room.set_types_3br",
+      "summary": "Assign room types (Bedroom xN, Kitchen, Living, Bath, etc.) via Room Specification",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "room_spec_dialog" },
+      "gesture": { "type": "double_click_room_then_dialog" },
+      "desktop_tools": ["desktop_click", "desktop_type"],
+      "params": ["bedrooms", "rooms"],
+      "verify": ["room_labels_present"]
+    },
+    "opening.hinged_door.place": {
+      "id": "opening.hinged_door.place",
+      "summary": "Place hinged doors on exterior and bedroom walls",
+      "menu": ["Build", "Door", "Hinged Door"],
+      "hotkey_hint": null,
+      "ui": { "find": "toolbar_or_menu" },
+      "gesture": { "type": "click_on_wall" },
+      "desktop_tools": ["desktop_click"],
+      "params": ["door_count"],
+      "verify": ["doors_visible"]
+    },
+    "opening.window.place": {
+      "id": "opening.window.place",
+      "summary": "Place windows on exterior walls",
+      "menu": ["Build", "Window", "Window"],
+      "hotkey_hint": null,
+      "ui": { "find": "toolbar_or_menu" },
+      "gesture": { "type": "click_on_wall" },
+      "desktop_tools": ["desktop_click"],
+      "params": ["window_count"],
+      "verify": ["windows_visible"]
+    },
+    "foundation.build_dialog": {
+      "id": "foundation.build_dialog",
+      "summary": "Open Build Foundation dialog (after floor-1 perimeter exists)",
+      "menu": ["Build", "Floor", "Build Foundation"],
+      "hotkey_hint": null,
+      "ui": { "find": "menu", "dialog": "Build Foundation" },
+      "gesture": { "type": "menu" },
+      "desktop_tools": ["desktop_click"],
+      "params": [],
+      "verify": ["foundation_dialog_open"]
+    },
+    "foundation.choose_slab": {
+      "id": "foundation.choose_slab",
+      "summary": "Select monolithic / slab foundation type in the dialog",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "foundation_dialog", "option": "slab" },
+      "gesture": { "type": "click_option", "labels": ["Monolithic Slab", "Slab", "Slab Foundation"] },
+      "desktop_tools": ["desktop_click"],
+      "params": ["foundation"],
+      "verify": ["slab_option_selected"]
+    },
+    "foundation.confirm": {
+      "id": "foundation.confirm",
+      "summary": "Confirm Build Foundation and inspect Floor 0 / foundation level",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "dialog_ok" },
+      "gesture": { "type": "click_ok" },
+      "desktop_tools": ["desktop_click", "desktop_screenshot"],
+      "params": [],
+      "verify": ["foundation_built"]
+    },
+    "verify.closed_perimeter": {
+      "id": "verify.closed_perimeter",
+      "summary": "Screenshot: closed exterior perimeter and room labels",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "plan_canvas" },
+      "gesture": { "type": "screenshot_check" },
+      "desktop_tools": ["desktop_screenshot"],
+      "params": [],
+      "verify": ["closed_perimeter", "room_labels_present"]
+    },
+    "verify.foundation_present": {
+      "id": "verify.foundation_present",
+      "summary": "Screenshot: foundation / slab level present",
+      "menu": null,
+      "hotkey_hint": null,
+      "ui": { "find": "plan_or_3d" },
+      "gesture": { "type": "screenshot_check" },
+      "desktop_tools": ["desktop_screenshot"],
+      "params": [],
+      "verify": ["foundation_present"]
+    }
+  }
+}

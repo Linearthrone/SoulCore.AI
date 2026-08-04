@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Trading;
 
@@ -8,7 +9,12 @@ namespace SoulCore.Inference.Tools.Trading;
 public sealed class Mt4StatusTool : Mt4ToolBase
 {
     public Mt4StatusTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public Mt4StatusTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -29,7 +35,12 @@ public sealed class Mt4StatusTool : Mt4ToolBase
 public sealed class ListSymbolsTool : Mt4ToolBase
 {
     public ListSymbolsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public ListSymbolsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -58,7 +69,12 @@ public sealed class GetMarketDataTool : Mt4ToolBase
         """);
 
     public GetMarketDataTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public GetMarketDataTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -81,7 +97,12 @@ public sealed class GetMarketDataTool : Mt4ToolBase
 public sealed class GetOpenPositionsTool : Mt4ToolBase
 {
     public GetOpenPositionsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public GetOpenPositionsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -109,7 +130,12 @@ public sealed class VerifyTicketTool : Mt4ToolBase
         """);
 
     public VerifyTicketTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public VerifyTicketTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -130,7 +156,12 @@ public sealed class VerifyTicketTool : Mt4ToolBase
 public sealed class MarketWatchStatusTool : Mt4ToolBase
 {
     public MarketWatchStatusTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public MarketWatchStatusTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -159,7 +190,12 @@ public sealed class ExportHistoryTool : Mt4ToolBase
         """);
 
     public ExportHistoryTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public ExportHistoryTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 
@@ -195,7 +231,12 @@ public sealed class GetHistoricalBarsTool : Mt4ToolBase
         """);
 
     public GetHistoricalBarsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : base(bridge, options)
+        : this(bridge, options, new ComputerControlGate(options))
+    {
+    }
+
+    public GetHistoricalBarsTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
+        : base(bridge, options, access)
     {
     }
 

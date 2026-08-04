@@ -1,0 +1,1052 @@
+info: SoulCore.Memory.SqliteMemoryStore[0]
+      SqliteMemoryStore ready at C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db
+info: SoulCore.Host[0]
+      SoulCore.Host listening on http://127.0.0.1:7700 (health: /health, ws: /ws); memory=C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db; inference=ollama; hermes=null; soulLoop=enabled; unreal=ws://127.0.0.1:8888
+info: SoulCore.Adapters.Ws.PresenceWsHub[0]
+      PresenceWsHub ready (loopback /ws)
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Loop.SoulLoopHostedService[0]
+      SoulLoop hosted timer started (interval=60s). Scaffold only - no high-agency acts.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:7700
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,?????????????????????,??????????????"run that workflow",???????????,??. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,?????????????????????,??????????????"run that workflow",???????????,??. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,?????????????????????,??????????????"run that workflow",???????????,??. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 71c17487-787e-41f5-8f3f-8761176b6f38 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,?????????????????????,??????????????"run that workflow",???????????,??. (+2 more)
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 35661.6174ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 35666.996ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 5244.231ms - 404
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 5244.3342ms - 404
+warn: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama /api/chat failed at iteration 0: 404 {"error":"model 'qwen2.5:14b' not found"}
+warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Chat model path failed; stub=False useToolLoop=True
+      System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+         at SoulCore.Host.Ws.ChatWebSocketHandler.CompleteChatWithToolsAsync(String text, String contextPreamble, String historySessionId, HashSet`1 dispatchedToolNames, List`1 toolTrace, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 1470
+         at SoulCore.Host.Ws.ChatWebSocketHandler.HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, Guid connectionSessionId, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 399
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 71c17487-787e-41f5-8f3f-8761176b6f38 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,?????????????????????,??????????????"run that workflow",???????????,??. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 79d0ee8e-dfe2-4439-a3d3-0087b5f86bb7 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 296.8225ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 296.9157ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 85.9391ms - 404
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 86.047ms - 404
+warn: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama /api/chat failed at iteration 0: 404 {"error":"model 'qwen2.5:14b' not found"}
+warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Chat model path failed; stub=False useToolLoop=True
+      System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+         at SoulCore.Host.Ws.ChatWebSocketHandler.CompleteChatWithToolsAsync(String text, String contextPreamble, String historySessionId, HashSet`1 dispatchedToolNames, List`1 toolTrace, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 1470
+         at SoulCore.Host.Ws.ChatWebSocketHandler.HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, Guid connectionSessionId, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 399
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 79d0ee8e-dfe2-4439-a3d3-0087b5f86bb7 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 4da0f697-4001-4100-b6c8-a45dc41cc0ba accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 4403.2068ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 4403.299ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 32503.2914ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 32503.3804ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_create recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_create success=True contentLen=13
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2709.0804ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2709.1621ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2840.6822ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2840.7522ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 222.4809ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 222.557ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 4da0f697-4001-4100-b6c8-a45dc41cc0ba closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 7e55413a-365c-4f32-a94c-82d9afd9855e accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 18.0119ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 18.0682ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered to ask Alan to create a reminder for me to review the charter, and . (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 37669.1494ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 37669.2342ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_get recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_get success=True contentLen=74
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#1 name=task_update_status recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#1 name=task_update_status success=True contentLen=32
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 4186.8319ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 4186.8997ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2151.5704ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2151.6323ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 25.5251ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 25.579ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,??????????,??????"???"?????????????????,?????????? (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 7e55413a-365c-4f32-a94c-82d9afd9855e closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 03de16e4-f7c5-4280-8178-9fa6d889a2d7 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 53.8919ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 53.9629ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????,??????????,??????"???"?????????????????,?????????? (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 37771.5754ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 37771.6614ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_update_status recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_update_status success=True contentLen=25
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2295.8572ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2295.9811ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2226.7375ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2226.8132ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 24.4505ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 24.555ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=????Victoria??????????????"???",??????????????????????,????????????? (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 03de16e4-f7c5-4280-8178-9fa6d889a2d7 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 842c60cb-b8ce-4e54-a6aa-1e5de3c1e28d accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 44.0356ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 44.1172ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 36254.4383ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 36254.5228ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=task_list recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=task_list success=True contentLen=172
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 9522.3438ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 9522.4073ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3901.1317ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3901.1973ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 34.7331ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 34.7945ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=???????????,?????????,??????????,????????????????????"???????",??????????????,??. (+2 more)
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 842c60cb-b8ce-4e54-a6aa-1e5de3c1e28d closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 823092ab-ecee-478a-ab9c-f23babac022b accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 58.9605ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 59.0459ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=???????????,?????????,??????????,????????????????????"???????",??????????????,??. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 55858.3552ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 55858.4276ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 4730.0639ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 4730.1461ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 26.7235ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 26.7749ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered discussing with the assistant how to create a workflow for recallin. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 823092ab-ecee-478a-ab9c-f23babac022b closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 3719bf65-1ede-4e00-8e64-f15718a67f51 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 42.7823ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 42.8544ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 33564.9894ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 33565.0556ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=workflow_create recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=workflow_create success=True contentLen=50
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 5146.6871ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 5146.7719ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2099.2166ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2099.2721ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 23.2156ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 23.2676ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????,????????????????????????????????????????? (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 3719bf65-1ede-4e00-8e64-f15718a67f51 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session afe71ae6-a2e7-42e2-ae56-d78d6e44b537 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 67.1037ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 67.1456ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 37189.2907ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 37189.3512ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3117.6819ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3117.7235ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 160.3532ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 160.4113ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????????????,??????????????,??????????????????????????????????,?????????,??. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session afe71ae6-a2e7-42e2-ae56-d78d6e44b537 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 76d02dca-893f-4f6f-b493-7ed51b71fa52 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 29.604ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 29.6522ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=?????????????????,??????????????,??????????????????????????????????,?????????,??. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 37211.8606ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 37211.9142ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=recall_memory recovered=False
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 38.4124ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 38.4606ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=recall_memory success=True contentLen=887
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 13683.8149ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 13683.8548ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3612.1929ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3612.248ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 121.9211ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 121.992ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=???????????????,??????????????,?????????????????????,???????,???????????????????. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 76d02dca-893f-4f6f-b493-7ed51b71fa52 closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session ec9b757a-f702-4389-aae8-96cba620a8f5 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 52.316ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 52.3651ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 29702.6287ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 29702.6728ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=speak recovered=False
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=speak success=False contentLen=25
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2902.586ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2902.6287ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2400.5177ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2400.558ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 19.8627ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 19.9099ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=When I tried to use the speak tool, it didn't work because the Unreal Bridge was. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session ec9b757a-f702-4389-aae8-96cba620a8f5 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session cffc9e07-c90e-4ab0-b27c-030eb011dceb accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 93.0058ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 93.0625ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 24933.036ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 24933.0831ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=workflow_create recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=workflow_create success=True contentLen=45
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 4858.2897ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 4858.3294ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[notice]: want[notice]: notice what just happened and stay lightly aware (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[notice]: notice what ju. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3277.7524ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3277.7954ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 20.8121ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 20.847ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal loco intent dispatched: forward=200 right=0 up=0 (from chat text)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered creating the workflow with the name 'qa142-recall-speak' and was su. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session cffc9e07-c90e-4ab0-b27c-030eb011dceb closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 3b6770c3-8a55-4a07-95aa-62b94cb28efa accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 49.642ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 49.7146ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 20742.6614ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 20742.7049ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=workflow_execute recovered=False
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 21.3538ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 21.3915ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=workflow_execute success=True contentLen=1041
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 6963.7857ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 6963.8209ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3344.0825ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3344.1214ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 21.9732ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 22.0112ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered reviewing the charter documents just as we had planned, setting up . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered reviewing the charter documents just as we had planned, setting up . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 3b6770c3-8a55-4a07-95aa-62b94cb28efa closed
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 6f8153cc-fa22-41fb-87ab-cbffdb2ba649 accepted
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 48.7216ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 48.7677ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2044.4664ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2044.5239ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=workflow_execute recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=workflow_execute success=False contentLen=17
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2516.5855ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2516.6201ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 2624.8838ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 2624.9241ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 29.2469ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 29.2866ms - 200
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS unavailable at ws://127.0.0.1:8888 - verbs will no-op until UE is up (Host continues)
+      System.Threading.Tasks.TaskCanceledException: A task was canceled.
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
+         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
+         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 62
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync attempted - Unreal not connected (no-op)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered double-checking the workflow ID 8 and realizing it had already been. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered double-checking the workflow ID 8 and realizing it had already been. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 6f8153cc-fa22-41fb-87ab-cbffdb2ba649 closed
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered double-checking the workflow ID 8 and realizing it had already been. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered double-checking the workflow ID 8 and realizing it had already been. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=I remembered double-checking the workflow ID 8 and realizing it had already been. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=neutral v=0.01 a=0.51 d=0.50 f=0.50); recent=[Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling neutral (v=0.01, a=0.51). want[recall]: recall the rec...

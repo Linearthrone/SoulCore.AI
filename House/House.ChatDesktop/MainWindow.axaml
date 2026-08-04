@@ -98,12 +98,40 @@
               <TextBlock Text="arousal" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
               <TextBlock x:Name="ArousalText" Text="0.0"/>
             </StackPanel>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+              <!-- Compact service / computer-use lights (ABBR + dot) -->
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                          ToolTip.Tip="Service lights: green=ready, amber=partial, red/gray=down or off">
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                            ToolTip.Tip="CUA — computer-use (AllowComputerControl)">
+                  <Ellipse x:Name="IndCuaDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="CUA" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                            ToolTip.Tip="HST — SoulCore Host (:7700)">
+                  <Ellipse x:Name="IndHstDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="HST" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                            ToolTip.Tip="OLL — Ollama / inference">
+                  <Ellipse x:Name="IndOllDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="OLL" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                            ToolTip.Tip="HER — Hermes">
+                  <Ellipse x:Name="IndHerDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="HER" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                            ToolTip.Tip="UE — Unreal avatar bridge">
+                  <Ellipse x:Name="IndUeDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"/>
+                  <TextBlock Text="UE" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </StackPanel>
               <TextBlock Text="via WS"
                          Foreground="{DynamicResource MutedBrush}"
                          FontSize="11"
-                         VerticalAlignment="Center"
-                         Margin="0,0,12,0"/>
+                         VerticalAlignment="Center"/>
               <Button x:Name="CorrectEmotionButton"
                       Classes="ghost"
                       Content="Correct…"
@@ -276,38 +304,107 @@
         </Grid>
       </Border>
 
-      <!-- Transcript -->
-      <Border Grid.Row="3"
-              Background="{DynamicResource PanelBrush}"
-              BorderBrush="{DynamicResource PanelBorderBrush}"
-              BorderThickness="1"
-              CornerRadius="6"
-              Padding="8">
-        <ScrollViewer x:Name="TranscriptScroll" VerticalScrollBarVisibility="Auto">
-          <ItemsControl x:Name="TranscriptList">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Classes="bubble" Classes.user="{Binding IsUser}" Classes.system="{Binding IsSystem}">
-                  <StackPanel>
-                    <DockPanel Margin="0,0,0,4">
-                      <TextBlock Text="{Binding DisplayTime}"
-                                 DockPanel.Dock="Right"
-                                 FontSize="10"
-                                 Foreground="{DynamicResource MutedBrush}"
-                                 VerticalAlignment="Center"/>
-                      <TextBlock Text="{Binding DisplayRole}"
-                                 FontSize="11"
-                                 Foreground="{DynamicResource AccentBrush}"/>
-                    </DockPanel>
-                    <TextBlock Text="{Binding Text}"
-                               TextWrapping="Wrap"/>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-      </Border>
+      <!-- Chat + Victoria's screen -->
+      <Grid Grid.Row="3" ColumnDefinitions="*,320" ColumnSpacing="10">
+        <Border Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="8">
+          <ScrollViewer x:Name="TranscriptScroll" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="TranscriptList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="bubble" Classes.user="{Binding IsUser}" Classes.system="{Binding IsSystem}">
+                    <StackPanel>
+                      <DockPanel Margin="0,0,0,4">
+                        <TextBlock Text="{Binding DisplayTime}"
+                                   DockPanel.Dock="Right"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DisplayRole}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource AccentBrush}"/>
+                      </DockPanel>
+                      <TextBlock Text="{Binding Text}"
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+
+        <Border Grid.Column="1"
+                Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10">
+          <Grid RowDefinitions="Auto,*,Auto,Auto">
+            <DockPanel Margin="0,0,0,8">
+              <Button DockPanel.Dock="Right"
+                      Classes="ghost"
+                      Content="Pop out"
+                      FontSize="11"
+                      Padding="8,4"
+                      ToolTip.Tip="Open Victoria's screen in a larger window"
+                      Click="DesktopViewPopOut_Click"/>
+              <TextBlock Text="Victoria's screen"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"/>
+            </DockPanel>
+
+            <Border Grid.Row="1"
+                    Background="#1a1a1a"
+                    CornerRadius="4"
+                    ClipToBounds="True"
+                    MinHeight="160">
+              <Grid x:Name="DesktopViewSurface" SizeChanged="DesktopViewSurface_SizeChanged">
+                <TextBlock x:Name="DesktopViewEmptyText"
+                           Text="No capture yet — when she screenshots or clicks, her view appears here."
+                           Foreground="{DynamicResource MutedBrush}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="12"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                <Image x:Name="DesktopViewImage"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch"
+                       IsVisible="False"/>
+                <Canvas x:Name="DesktopViewCursorLayer"
+                        IsHitTestVisible="False"
+                        IsVisible="False">
+                  <Ellipse x:Name="DesktopViewCursor"
+                           Width="18" Height="18"
+                           Stroke="#E8C547"
+                           StrokeThickness="2"
+                           Fill="#66E8C547"/>
+                </Canvas>
+              </Grid>
+            </Border>
+
+            <TextBlock x:Name="DesktopViewActionText"
+                       Grid.Row="2"
+                       Margin="0,8,0,0"
+                       FontSize="11"
+                       Foreground="{DynamicResource MutedBrush}"
+                       TextWrapping="Wrap"
+                       Text="Waiting for desktop activity…"/>
+            <TextBlock x:Name="DesktopViewMetaText"
+                       Grid.Row="3"
+                       Margin="0,4,0,0"
+                       FontSize="10"
+                       Foreground="{DynamicResource MutedBrush}"
+                       TextWrapping="Wrap"
+                       Text="DesktopBackend=cua → same LLMOD blue overlay on the real desktop; your mouse is never taken. Gold dot mirrors her last click."/>
+          </Grid>
+        </Border>
+      </Grid>
 
       <!-- Input -->
       <DockPanel Grid.Row="4" Margin="0,10,0,0">
@@ -432,6 +529,142 @@
             </StackPanel>
           </TabItem>
 
+          <TabItem Header="Services">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="12" Spacing="4">
+                <TextBlock Text="Services" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedBrush}"
+                           FontSize="11"
+                           Text="Local stack only (127.0.0.1). CUA is a session gate + on-demand cua-driver — Enable turns computer control on. Yellow CUA = capture only."
+                           Margin="0,0,0,12"/>
+
+                <!-- Host -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcHostDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Host" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SvcHostStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                      </StackPanel>
+                      <TextBlock x:Name="SvcHostDetail" Text="SoulCore.Host :7700" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Classes="ghost" Content="Start" Tag="host-start" Click="ServicesAction_Click"/>
+                      <Button Classes="ghost" Content="Stop" Tag="host-stop" Click="ServicesAction_Click"/>
+                      <Button Classes="ghost" Content="Restart" Tag="host-restart" Click="ServicesAction_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <!-- ChatDesktop -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcGuiDot" Width="10" Height="10" Fill="{DynamicResource OkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="ChatDesktop" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="running" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                      </StackPanel>
+                      <TextBlock Text="This window — Restart relaunches via start-desktopgui.ps1" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Classes="ghost" Content="Restart" Tag="gui-restart" Click="ServicesAction_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <!-- Ollama -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcOllamaDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Ollama" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SvcOllamaStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                      </StackPanel>
+                      <TextBlock x:Name="SvcOllamaDetail" Text=":11434" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Classes="ghost" Content="Start" Tag="ollama-start" Click="ServicesAction_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <!-- Hermes -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcHermesDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Hermes" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SvcHermesStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                      </StackPanel>
+                      <TextBlock x:Name="SvcHermesDetail" Text="gateway :8642" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Classes="ghost" Content="Start" Tag="hermes-start" Click="ServicesAction_Click"/>
+                      <Button Classes="ghost" Content="Stop" Tag="hermes-stop" Click="ServicesAction_Click"/>
+                      <Button Classes="ghost" Content="Restart" Tag="hermes-restart" Click="ServicesAction_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <!-- CUA -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcCuaDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="CUA" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SvcCuaStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                      </StackPanel>
+                      <TextBlock x:Name="SvcCuaDetail" Text="AllowComputerControl gate + cua-driver" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Classes="ghost" Content="Enable" Tag="cua-enable" Click="ServicesAction_Click"/>
+                      <Button Classes="ghost" Content="Disable" Tag="cua-disable" Click="ServicesAction_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <!-- Unreal -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Ellipse x:Name="SvcUeDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                      <TextBlock Text="Unreal" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="SvcUeStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SvcUeDetail" Text="avatar bridge (status only)" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+
+                <!-- ComfyUI -->
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Ellipse x:Name="SvcComfyDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                      <TextBlock Text="ComfyUI" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="SvcComfyStatus" Text="—" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SvcComfyDetail" Text=":8188 (status only)" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                  <Button Classes="ghost" Content="Refresh" Click="ServicesRefresh_Click"/>
+                  <TextBlock x:Name="ServicesStatusText"
+                             Text=""
+                             Foreground="{DynamicResource MutedBrush}"
+                             VerticalAlignment="Center"
+                             FontSize="11"/>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
           <TabItem Header="Tools &amp; Access">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <StackPanel Margin="12">
@@ -458,8 +691,17 @@
                 <CheckBox x:Name="ToolsAllowComputerControlCheck"
                           Content="Allow computer control (click / type / key)"
                           FontWeight="SemiBold"
-                          Margin="0,0,0,16"
+                          Margin="0,0,0,6"
                           Click="ToolsAccessToggle_Click"/>
+                <CheckBox x:Name="ToolsSoftCursorRestoreCheck"
+                          Content="Agent cursor — don't move my mouse (cua / background clicks)"
+                          Margin="0,0,0,8"
+                          Click="ToolsAccessToggle_Click"/>
+                <TextBlock TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Same as LLMOD: cua-driver draws her large blue overlay on the desktop. Your hardware mouse stays put. Presence → Victoria's screen mirrors what she last captured."
+                           Margin="0,0,0,16"/>
 
                 <TextBlock Text="Trading (MT4)" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <TextBlock TextWrapping="Wrap"
@@ -615,27 +857,30 @@
               <TextBlock Text="Voice / Video" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
               <TextBlock TextWrapping="Wrap"
                          Foreground="{DynamicResource MutedBrush}"
-                         Text="Future STT + Chatterbox (TTS) integration. Full-duplex audio is on the V1 path; WebRTC video is V1.1."
+                         Text="Push-to-talk sends mic audio to SoulCore /api/stt (Whisper). Her replies play on PC speakers via Chatterbox, and in Unreal when PIE is connected."
                          Margin="0,0,0,16"/>
 
-              <TextBlock Text="Voice" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-              <TextBox Classes="input" IsReadOnly="True" Text="Not configured (V1.1 target)"
-                       Padding="8" Margin="0,0,0,12"/>
+              <TextBlock Text="Voice status" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+              <TextBox x:Name="VoiceStatusBox" Classes="input" IsReadOnly="True"
+                       Text="Checking…" Padding="8" Margin="0,0,0,12"/>
 
-              <TextBlock Text="Video (WebRTC)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-              <TextBox Classes="input" IsReadOnly="True" Text="Deferred to V1.1 parallel spike"
-                       Padding="8" Margin="0,0,0,16"/>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <Button Classes="ghost" Content="Refresh voice"
+                        Click="RefreshVoice_Click" HorizontalAlignment="Left"/>
+                <Button x:Name="PttButton" Classes="primary" Content="Hold to talk"
+                        HorizontalAlignment="Left"/>
+              </StackPanel>
 
-              <Button Classes="ghost"
-                      Content="Configure Voice"
-                      IsEnabled="False"
-                      HorizontalAlignment="Left"
-                      Margin="0,0,0,12"/>
-
-              <TextBlock TextWrapping="Wrap"
+              <TextBlock x:Name="PttHintText"
+                         TextWrapping="Wrap"
                          Foreground="{DynamicResource MutedBrush}"
                          FontSize="11"
-                         Text="Full-duplex audio is on the V1 path; WebRTC video is V1.1."/>
+                         Text="Press and hold Hold to talk, release to send. Requires STT on :8000 and Host /api/stt."
+                         Margin="0,0,0,16"/>
+
+              <TextBlock Text="Video (WebRTC)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+              <TextBox Classes="input" IsReadOnly="True" Text="Deferred — eye camera is SceneCapture in UE (separate path)"
+                       Padding="8" Margin="0,0,0,12"/>
             </StackPanel>
           </TabItem>
 

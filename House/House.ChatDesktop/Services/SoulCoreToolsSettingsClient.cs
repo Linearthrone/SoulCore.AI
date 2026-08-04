@@ -11,11 +11,14 @@ public sealed class ToolsAccessSnapshot
     public bool AllowDesktopCapture { get; init; }
     public bool AllowBrowserCapture { get; init; }
     public bool AllowComputerControl { get; init; }
+    public bool SoftCursorRestore { get; init; } = true;
     public bool AllowMt4Read { get; init; }
     public bool AllowMt4Trade { get; init; }
     public string? DesktopBackend { get; init; }
     public string? BrowserBackend { get; init; }
     public string? Mt4Backend { get; init; }
+    public bool CuaDriverAvailable { get; init; }
+    public string? CuaDriverPath { get; init; }
     public string? Scope { get; init; }
     public string? Note { get; init; }
     public bool Reachable { get; init; }
@@ -76,6 +79,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         bool? allowDesktopCapture = null,
         bool? allowBrowserCapture = null,
         bool? allowComputerControl = null,
+        bool? softCursorRestore = null,
         bool? allowMt4Read = null,
         bool? allowMt4Trade = null,
         CancellationToken cancellationToken = default)
@@ -95,6 +99,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
             if (allowDesktopCapture is { } d) doc["allowDesktopCapture"] = d;
             if (allowBrowserCapture is { } b) doc["allowBrowserCapture"] = b;
             if (allowComputerControl is { } c) doc["allowComputerControl"] = c;
+            if (softCursorRestore is { } soft) doc["softCursorRestore"] = soft;
             if (allowMt4Read is { } r) doc["allowMt4Read"] = r;
             if (allowMt4Trade is { } t) doc["allowMt4Trade"] = t;
 
@@ -127,11 +132,14 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         AllowDesktopCapture = dto?.AllowDesktopCapture ?? false,
         AllowBrowserCapture = dto?.AllowBrowserCapture ?? false,
         AllowComputerControl = dto?.AllowComputerControl ?? false,
+        SoftCursorRestore = dto?.SoftCursorRestore ?? true,
         AllowMt4Read = dto?.AllowMt4Read ?? false,
         AllowMt4Trade = dto?.AllowMt4Trade ?? false,
         DesktopBackend = dto?.DesktopBackend,
         BrowserBackend = dto?.BrowserBackend,
         Mt4Backend = dto?.Mt4Backend,
+        CuaDriverAvailable = dto?.CuaDriverAvailable ?? false,
+        CuaDriverPath = dto?.CuaDriverPath,
         Scope = dto?.Scope,
         Note = dto?.Note
     };
@@ -149,6 +157,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         [JsonPropertyName("allowComputerControl")]
         public bool AllowComputerControl { get; set; }
 
+        [JsonPropertyName("softCursorRestore")]
+        public bool SoftCursorRestore { get; set; }
+
         [JsonPropertyName("allowMt4Read")]
         public bool AllowMt4Read { get; set; }
 
@@ -163,6 +174,12 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
 
         [JsonPropertyName("mt4Backend")]
         public string? Mt4Backend { get; set; }
+
+        [JsonPropertyName("cuaDriverAvailable")]
+        public bool CuaDriverAvailable { get; set; }
+
+        [JsonPropertyName("cuaDriverPath")]
+        public string? CuaDriverPath { get; set; }
 
         [JsonPropertyName("scope")]
         public string? Scope { get; set; }

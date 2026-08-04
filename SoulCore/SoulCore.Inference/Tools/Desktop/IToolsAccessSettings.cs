@@ -12,7 +12,10 @@ public interface IToolsAccessSettings
     bool AllowMt4Read { get; }
     bool AllowMt4Trade { get; }
 
-    /// <summary>Read-only backend label from config (<c>native</c> / <c>hermes</c>).</summary>
+    /// <summary>Restore user cursor after Victoria's native click (soft cursor mode).</summary>
+    bool SoftCursorRestore { get; }
+
+    /// <summary>Read-only backend label from config (<c>llmod</c> / <c>native</c> / <c>hermes</c>).</summary>
     string DesktopBackend { get; }
 
     string BrowserBackend { get; }
@@ -23,4 +26,5 @@ public interface IToolsAccessSettings
     void SetAllowComputerControl(bool enabled);
     void SetAllowMt4Read(bool enabled);
     void SetAllowMt4Trade(bool enabled);
+    void SetSoftCursorRestore(bool enabled);
 }

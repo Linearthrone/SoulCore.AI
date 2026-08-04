@@ -44,6 +44,13 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         var socket = new ClientWebSocket();
         try
         {
+            var token = CompanionToken.Resolve();
+            if (!string.IsNullOrEmpty(token))
+            {
+                // Host requires Bearer / X-Api-Key when SOULCORE_COMPANION_API_TOKEN is set.
+                socket.Options.SetRequestHeader("Authorization", "Bearer " + token);
+            }
+
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
             await socket.ConnectAsync(ConnectionDefaults.WsUri, timeout.Token).ConfigureAwait(false);
@@ -56,9 +63,10 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         {
             socket.Dispose();
             _socket = null;
-            SetState(
-                WsConnectionState.Unavailable,
-                $"Host WS down at {ConnectionDefaults.WsUri} ({ex.GetType().Name}: {ex.Message}). Start SoulCore.Host, then Refresh.");
+            var hint = GuessAuthFailure(ex)
+                ? $"Host rejected WS auth at {ConnectionDefaults.WsUri}. Set {CompanionToken.EnvName} (SoulCore/.env) and restart ChatDesktop."
+                : $"Host WS down at {ConnectionDefaults.WsUri} ({ex.GetType().Name}: {ex.Message}). Start SoulCore.Host, then Refresh.";
+            SetState(WsConnectionState.Unavailable, hint);
         }
     }
 
@@ -202,6 +210,13 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         State = state;
         LastError = detail;
         StateChanged?.Invoke(state, detail);
+    }
+
+    private static bool GuessAuthFailure(Exception ex)
+    {
+        var msg = ex.Message ?? string.Empty;
+        return msg.Contains("401", StringComparison.Ordinal)
+            || msg.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase);
     }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);

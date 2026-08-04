@@ -30,6 +30,25 @@ public sealed class SoulCoreHealthSnapshot
     public decimal? SpendEstimatedCost { get; init; }
     public decimal? SpendMonthlyCap { get; init; }
     public bool? SpendCapExceeded { get; init; }
+
+    /// <summary>Session gate: Victoria may click/type/drag (computer-use write path).</summary>
+    public bool? AllowComputerControl { get; init; }
+
+    /// <summary>Session gate: screenshot / list windows.</summary>
+    public bool? AllowDesktopCapture { get; init; }
+
+    /// <summary>Desktop backend name from Host (<c>cua</c>/<c>native</c>/<c>hermes</c>).</summary>
+    public string? DesktopBackend { get; init; }
+
+    /// <summary>Whether local <c>cua-driver.exe</c> was found on the Host machine.</summary>
+    public bool? CuaDriverAvailable { get; init; }
+
+    /// <summary>Resolved cua-driver path when available.</summary>
+    public string? CuaDriverPath { get; init; }
+
+    /// <summary>Hermes gateway :8642 reachable (probed by desktop, independent of Host Hermes.Enabled).</summary>
+    public bool? HermesGatewayUp { get; init; }
+
     public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>Alive = host HTTP health answered.</summary>
@@ -80,6 +99,8 @@ public sealed class SoulCoreHealthClient : IDisposable
             var dto = await response.Content.ReadFromJsonAsync<HealthDto>(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
+            var hermesGatewayUp = await ProbeHermesGatewayAsync(cancellationToken).ConfigureAwait(false);
+
             return new SoulCoreHealthSnapshot
             {
                 Reachable = true,
@@ -88,6 +109,7 @@ public sealed class SoulCoreHealthClient : IDisposable
                 MemoryPath = dto?.Memory?.Path,
                 InferenceEnabled = dto?.Inference?.Enabled ?? false,
                 HermesEnabled = dto?.Hermes?.Enabled ?? false,
+                HermesGatewayUp = hermesGatewayUp,
                 Phase = dto?.Phase,
                 UnrealEnabled = dto?.Unreal?.Enabled,
                 UnrealTarget = dto?.Unreal?.Target,
@@ -105,6 +127,11 @@ public sealed class SoulCoreHealthClient : IDisposable
                 SpendEstimatedCost = dto?.Safety?.Spend?.EstimatedCostUsd,
                 SpendMonthlyCap = dto?.Safety?.Spend?.MonthlyCapUsd,
                 SpendCapExceeded = dto?.Safety?.Spend?.CapExceeded,
+                AllowComputerControl = dto?.Tools?.AllowComputerControl,
+                AllowDesktopCapture = dto?.Tools?.AllowDesktopCapture,
+                DesktopBackend = dto?.Tools?.DesktopBackend,
+                CuaDriverAvailable = dto?.Tools?.CuaDriverAvailable,
+                CuaDriverPath = dto?.Tools?.CuaDriverPath,
                 Detail = null
             };
         }
@@ -120,6 +147,20 @@ public sealed class SoulCoreHealthClient : IDisposable
     }
 
     public void Dispose() => _http.Dispose();
+
+    private async Task<bool> ProbeHermesGatewayAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _http.GetAsync("http://127.0.0.1:8642/health", cancellationToken)
+                .ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private sealed class HealthDto
     {
@@ -149,6 +190,27 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("safety")]
         public SafetyDto? Safety { get; set; }
+
+        [JsonPropertyName("tools")]
+        public ToolsDto? Tools { get; set; }
+    }
+
+    private sealed class ToolsDto
+    {
+        [JsonPropertyName("allowComputerControl")]
+        public bool? AllowComputerControl { get; set; }
+
+        [JsonPropertyName("allowDesktopCapture")]
+        public bool? AllowDesktopCapture { get; set; }
+
+        [JsonPropertyName("desktopBackend")]
+        public string? DesktopBackend { get; set; }
+
+        [JsonPropertyName("cuaDriverAvailable")]
+        public bool? CuaDriverAvailable { get; set; }
+
+        [JsonPropertyName("cuaDriverPath")]
+        public string? CuaDriverPath { get; set; }
     }
 
     private sealed class CharterDto

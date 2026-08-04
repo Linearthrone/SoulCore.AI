@@ -13,8 +13,9 @@ namespace SoulCore.Adapters.Ws;
 /// Serializes SoulCore verbs to UE wire frames: plain <c>speak</c> / <c>move_avatar_relative</c> (PlainArgs),
 /// and <c>{type:command,payload:{name,args}}</c> for play_animation / look / set_emotion.
 /// Connection failures are logged; Host must keep running.
+/// Also implements <see cref="IUnrealEyeCaptureClient"/> (request/response <c>eye_capture</c>).
 /// </summary>
-public sealed class UnrealVerbClientStub : IUnrealVerbClient, IAsyncDisposable
+public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureClient, IAsyncDisposable
 {
     private readonly UnrealBridgeOptions _options;
     private readonly ILogger<UnrealVerbClientStub> _logger;
@@ -83,7 +84,10 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IAsyncDisposable
         SendVerbAsync(UnrealVerbTypes.SetEmotion, emotionPayload, cancellationToken);
 
     public Task<bool> SpeakAsync(string text, CancellationToken cancellationToken = default) =>
-        SendVerbAsync(UnrealVerbTypes.Speak, new { text }, cancellationToken);
+        SpeakAsync(new { text }, cancellationToken);
+
+    public Task<bool> SpeakAsync(object speakPayload, CancellationToken cancellationToken = default) =>
+        SendVerbAsync(UnrealVerbTypes.Speak, speakPayload, cancellationToken);
 
     public Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default) =>
         SendVerbAsync(UnrealVerbTypes.PlayAnimation, new { name = animationName }, cancellationToken);
@@ -99,6 +103,89 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IAsyncDisposable
 
     public Task<bool> LookAsync(object lookPayload, CancellationToken cancellationToken = default) =>
         SendVerbAsync(UnrealVerbTypes.Look, lookPayload, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<EyeFrame?> CaptureEyeAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled)
+            return null;
+
+        await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
+        if (!IsConnected || _socket is null)
+            return null;
+
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!IsConnected || _socket is null)
+                return null;
+
+            var wire = """{"type":"command","payload":{"name":"eye_capture","args":{}}}""";
+            var bytes = Encoding.UTF8.GetBytes(wire);
+            await _socket.SendAsync(bytes, WebSocketMessageType.Text, endOfMessage: true, cancellationToken)
+                .ConfigureAwait(false);
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(12));
+
+            var buffer = new byte[1024 * 1024];
+            while (!timeout.IsCancellationRequested)
+            {
+                using var ms = new MemoryStream();
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await _socket.ReceiveAsync(buffer, timeout.Token).ConfigureAwait(false);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        return null;
+                    ms.Write(buffer, 0, result.Count);
+                } while (!result.EndOfMessage);
+
+                var json = Encoding.UTF8.GetString(ms.ToArray());
+                if (TryParseEyeFrame(json, out var frame))
+                    return frame;
+            }
+        }
+        catch (Exception ex) when (ex is WebSocketException or OperationCanceledException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "eye_capture failed");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        return null;
+    }
+
+    private static bool TryParseEyeFrame(string json, out EyeFrame? frame)
+    {
+        frame = null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var type = root.TryGetProperty("type", out var t) ? t.GetString() : null;
+            if (!string.Equals(type, "eye_frame", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var b64 = root.TryGetProperty("bytes_b64", out var b) ? b.GetString()
+                : root.TryGetProperty("bytes", out var b2) ? b2.GetString() : null;
+            if (string.IsNullOrWhiteSpace(b64))
+                return false;
+
+            var bytes = Convert.FromBase64String(b64);
+            var format = root.TryGetProperty("format", out var f) ? f.GetString() ?? "png" : "png";
+            var width = root.TryGetProperty("width", out var w) && w.TryGetInt32(out var wi) ? wi : 0;
+            var height = root.TryGetProperty("height", out var h) && h.TryGetInt32(out var hi) ? hi : 0;
+            frame = new EyeFrame(bytes, format, width, height);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private async Task<bool> SendVerbAsync(string type, object? payload, CancellationToken cancellationToken)
     {

@@ -23,6 +23,7 @@ public class DesktopToolsTests
 
     [Theory]
     [InlineData("desktop_click", """{"x":10,"y":20}""")]
+    [InlineData("desktop_drag", """{"x1":10,"y1":20,"x2":30,"y2":40}""")]
     [InlineData("desktop_type", """{"text":"hi"}""")]
     [InlineData("desktop_key", """{"key":"Enter"}""")]
     public async Task ControlTools_GateClosed_RefuseAndDoNotDispatch(string toolName, string argsJson)
@@ -38,6 +39,7 @@ public class DesktopToolsTests
         Assert.Equal(AuthMsg, result.Content);
         Assert.Equal(0, backend.TotalCalls);
         Assert.Empty(backend.ClickCalls);
+        Assert.Empty(backend.DragCalls);
         Assert.Empty(backend.TypeCalls);
         Assert.Empty(backend.KeyCalls);
     }
@@ -50,6 +52,8 @@ public class DesktopToolsTests
 
         await new DesktopClickTool(gate, backend).ExecuteAsync(
             JsonDocument.Parse("""{"x":1,"y":2}""").RootElement);
+        await new DesktopDragTool(gate, backend).ExecuteAsync(
+            JsonDocument.Parse("""{"x1":1,"y1":2,"x2":3,"y2":4}""").RootElement);
         await new DesktopTypeTool(gate, backend).ExecuteAsync(
             JsonDocument.Parse("""{"text":"x"}""").RootElement);
         await new DesktopKeyTool(gate, backend).ExecuteAsync(
@@ -76,6 +80,22 @@ public class DesktopToolsTests
         Assert.Single(backend.ClickCalls);
         Assert.Equal((100, 200, "right"), backend.ClickCalls[0]);
         Assert.Contains("clicked", result.Content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DesktopDrag_GateOpen_DispatchesToBackend()
+    {
+        var backend = new MockDesktopBackend();
+        var gate = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true);
+        var tool = new DesktopDragTool(gate, backend);
+        var args = JsonDocument.Parse("""{"x1":10,"y1":20,"x2":110,"y2":20,"button":"left"}""").RootElement.Clone();
+
+        var result = await tool.ExecuteAsync(args);
+
+        Assert.True(result.Success);
+        Assert.Single(backend.DragCalls);
+        Assert.Equal((10, 20, 110, 20, "left"), backend.DragCalls[0]);
+        Assert.Contains("dragged", result.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -200,6 +220,7 @@ public class DesktopToolsTests
     [Theory]
     [InlineData("desktop_screenshot")]
     [InlineData("desktop_click")]
+    [InlineData("desktop_drag")]
     [InlineData("desktop_type")]
     [InlineData("desktop_key")]
     [InlineData("list_desktop_windows")]
@@ -212,6 +233,7 @@ public class DesktopToolsTests
         {
             "desktop_screenshot" => new DesktopScreenshotTool(gate, backend),
             "desktop_click" => new DesktopClickTool(gate, backend),
+            "desktop_drag" => new DesktopDragTool(gate, backend),
             "desktop_type" => new DesktopTypeTool(gate, backend),
             "desktop_key" => new DesktopKeyTool(gate, backend),
             "list_desktop_windows" => new ListDesktopWindowsTool(gate, backend),
@@ -223,7 +245,7 @@ public class DesktopToolsTests
     }
 
     [Fact]
-    public void Registry_IncludesAllSixDesktopTools()
+    public void Registry_IncludesAllSevenDesktopTools()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IOptions<ToolsOptions>>(Options.Create(new ToolsOptions
@@ -238,6 +260,7 @@ public class DesktopToolsTests
         services.AddSingleton<IDesktopControlBackend, MockDesktopBackend>();
         services.AddSingleton<ITool, DesktopScreenshotTool>();
         services.AddSingleton<ITool, DesktopClickTool>();
+        services.AddSingleton<ITool, DesktopDragTool>();
         services.AddSingleton<ITool, DesktopTypeTool>();
         services.AddSingleton<ITool, DesktopKeyTool>();
         services.AddSingleton<ITool, ListDesktopWindowsTool>();
@@ -250,11 +273,12 @@ public class DesktopToolsTests
 
         Assert.Contains("desktop_screenshot", names);
         Assert.Contains("desktop_click", names);
+        Assert.Contains("desktop_drag", names);
         Assert.Contains("desktop_type", names);
         Assert.Contains("desktop_key", names);
         Assert.Contains("list_desktop_windows", names);
         Assert.Contains("focus_desktop_window", names);
-        Assert.Equal(6, names.Count);
+        Assert.Equal(7, names.Count);
     }
 
     [Fact]
@@ -287,13 +311,14 @@ public class DesktopToolsTests
         var opts = new ToolsOptions();
         Assert.True(opts.AllowDesktopCapture);
         Assert.False(opts.AllowComputerControl);
-        Assert.Equal("native", opts.DesktopBackend);
+        Assert.Equal("cua", opts.DesktopBackend);
     }
 
     private static ITool CreateControlTool(string name, IComputerControlGate gate, IDesktopControlBackend backend)
         => name switch
         {
             "desktop_click" => new DesktopClickTool(gate, backend),
+            "desktop_drag" => new DesktopDragTool(gate, backend),
             "desktop_type" => new DesktopTypeTool(gate, backend),
             "desktop_key" => new DesktopKeyTool(gate, backend),
             _ => throw new InvalidOperationException(name),
@@ -302,6 +327,7 @@ public class DesktopToolsTests
     private sealed class MockDesktopBackend : IDesktopControlBackend
     {
         public List<(int x, int y, string button)> ClickCalls { get; } = new();
+        public List<(int x1, int y1, int x2, int y2, string button)> DragCalls { get; } = new();
         public List<string> TypeCalls { get; } = new();
         public List<string> KeyCalls { get; } = new();
         public List<int> ScreenshotCalls { get; } = new();
@@ -309,7 +335,7 @@ public class DesktopToolsTests
         public int ListWindowsCalls { get; private set; }
 
         public int TotalCalls =>
-            ClickCalls.Count + TypeCalls.Count + KeyCalls.Count
+            ClickCalls.Count + DragCalls.Count + TypeCalls.Count + KeyCalls.Count
             + ScreenshotCalls.Count + FocusCalls.Count + ListWindowsCalls;
 
         public DesktopOpResult? ScreenshotResult { get; set; }
@@ -327,6 +353,14 @@ public class DesktopToolsTests
             return Task.FromResult(new DesktopOpResult(true, $"clicked {button} at ({x},{y})", null));
         }
 
+        public Task<DesktopOpResult> DragAsync(
+            int x1, int y1, int x2, int y2, string button, CancellationToken ct = default)
+        {
+            DragCalls.Add((x1, y1, x2, y2, button));
+            return Task.FromResult(new DesktopOpResult(
+                true, $"dragged {button} from ({x1},{y1}) to ({x2},{y2})", null));
+        }
+
         public Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default)
         {
             TypeCalls.Add(text);
@@ -342,7 +376,7 @@ public class DesktopToolsTests
         public Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)
         {
             ListWindowsCalls++;
-            return Task.FromResult(ListWindowsResult ?? new DesktopOpResult(true, "open desktop windows:", Array.Empty<string>()));
+            return Task.FromResult(ListWindowsResult ?? new DesktopOpResult(true, "open desktop windows:", Array.Empty<object>()));
         }
 
         public Task<DesktopOpResult> FocusWindowAsync(string title, CancellationToken ct = default)

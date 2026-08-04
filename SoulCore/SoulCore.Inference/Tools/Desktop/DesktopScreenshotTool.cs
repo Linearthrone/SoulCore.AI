@@ -33,7 +33,10 @@ public sealed class DesktopScreenshotTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_screenshot",
-        Description: "Capture the desktop screen.",
+        Description:
+            "Capture the full desktop (PNG). Returns size plus a window list with screen bounds. " +
+            "Use with desktop_click (screen x,y). Prefer list_desktop_windows first when you only need titles/bounds. " +
+            "Your blue agent cursor will show where you act; Kurt's mouse stays put.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -52,6 +55,28 @@ public sealed class DesktopScreenshotTool : ITool
         }
 
         var result = await _backend.ScreenshotAsync(monitor, ct).ConfigureAwait(false);
-        return DesktopToolGate.FromBackend(result);
+        if (!result.Success)
+            return DesktopToolGate.FromBackend(result);
+
+        // Enrich Content with window bounds so the model can click without
+        // relying solely on vision of a huge multi-monitor PNG.
+        string? windowLines = null;
+        try
+        {
+            var windows = await _backend.ListWindowsAsync(ct).ConfigureAwait(false);
+            if (windows.Success && !string.IsNullOrWhiteSpace(windows.Content))
+                windowLines = windows.Content;
+        }
+        catch
+        {
+            // best-effort enrichment
+        }
+
+        var content = result.Content;
+        if (!string.IsNullOrWhiteSpace(windowLines))
+            content = content + "\n\n" + windowLines +
+                      "\nUse desktop_click with screen coords (window center ≈ x+width/2, y+height/2).";
+
+        return new ToolResult(result.Success, content, result.Data);
     }
 }

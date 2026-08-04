@@ -15,6 +15,12 @@ public interface IUnrealVerbClient
 
     Task<bool> SpeakAsync(string text, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Speak with optional payload fields (<c>text</c>, <c>audio_url</c>).
+    /// When payload is a string-like object with only text, behaves like <see cref="SpeakAsync(string, CancellationToken)"/>.
+    /// </summary>
+    Task<bool> SpeakAsync(object speakPayload, CancellationToken cancellationToken = default);
+
     Task<bool> PlayAnimationAsync(string animationName, CancellationToken cancellationToken = default);
 
     /// <summary>

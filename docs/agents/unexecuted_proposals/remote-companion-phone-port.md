@@ -3,11 +3,14 @@ type: proposal
 id: PROP-COMPANION-01
 from: TT-01
 created: 2026-07-27
-status: unexecuted
-title: Remote companion phone app — port to SoulCore (text-chat first)
+updated: 2026-08-02
+status: partially-executed
+title: Remote companion phone app — Victoria Link on SoulCore (thin client)
 ---
 
 # Remote companion phone app — port to SoulCore
+
+> **2026-08-02 update:** Scope expanded from text-only Phase 0 to **Victoria Link thin client** on SoulCore (proactive chat, ComfyUI MediaGen/Gallery, single Victoria + `contactId` stub). Phase 0 text+notifications shipped; Link waves A–C landed in tree under `House/House.CompanionAndroid/` + Host `/api/companion/v1`. No LLMOD overlay / `:17890`. No phone computer-use. Multi-persona UI deferred to a future external persona service.
 
 ## Why this exists
 

@@ -52,14 +52,25 @@ public static class UeVerbWireMapper
     }
 
     /// <summary>
-    /// MyProject BridgeServer <c>speak</c> reads text from PlainArgs, not JSON <c>payload.args.text</c>.
-    /// Emit plain <c>speak &lt;text&gt;</c> so UE returns <c>success:true</c>.
+    /// MyProject BridgeServer <c>speak</c> reads PlainArgs for text-only.
+    /// When <c>audio_url</c> is present, emit JSON so UE can download and play WAV.
     /// </summary>
     private static UeWireMapResult MapSpeak(object? payload)
     {
         var text = ExtractString(payload, "text") ?? string.Empty;
-        // Collapse control whitespace so a single-line plain frame stays ParseWebSocketMessage-safe.
+        var audioUrl = ExtractString(payload, "audio_url")
+            ?? ExtractString(payload, "audioUrl");
         var plain = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        if (!string.IsNullOrWhiteSpace(audioUrl))
+        {
+            return Send(UnrealVerbTypes.Speak, "speak", new
+            {
+                text = plain,
+                audio_url = audioUrl.Trim()
+            });
+        }
+
         var wire = string.IsNullOrEmpty(plain) ? "speak" : $"speak {plain}";
         return new UeWireMapResult(UeWireMapKind.Send, UnrealVerbTypes.Speak, "speak", wire);
     }

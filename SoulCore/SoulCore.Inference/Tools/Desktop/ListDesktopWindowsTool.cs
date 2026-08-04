@@ -22,7 +22,9 @@ public sealed class ListDesktopWindowsTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "list_desktop_windows",
-        Description: "List open desktop windows.",
+        Description:
+            "List visible desktop windows with title and screen bounds (x,y,width,height). " +
+            "Prefer this before clicking — compute click targets from bounds (center = x+width/2, y+height/2).",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
