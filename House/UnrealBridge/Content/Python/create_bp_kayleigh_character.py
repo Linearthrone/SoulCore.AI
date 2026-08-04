@@ -52,6 +52,12 @@ CAMERA_FORWARD_OFFSET = 10.0
 
 LOG_BASENAME = "create_bp_kayleigh_character"
 
+# C++ drop-in parent (BED-172) — try HouseVictoriaBridge module first, then KayleighPlayer.
+KAYLEIGH_CPP_PARENT_CANDIDATES = [
+    "/Script/HouseVictoriaBridge.KayleighPlayerCharacter",
+    "/Script/KayleighPlayer.KayleighPlayerCharacter",
+]
+
 
 def _log(msg: str) -> None:
     line = f"[{LOG_BASENAME}] {msg}"
@@ -106,6 +112,52 @@ def _load_class(path: str):
     except Exception as exc:
         _log(f"WARN load_class({path}): {exc}")
         return None
+
+
+def _resolve_kayleigh_parent_class():
+    """Prefer compiled KayleighPlayerCharacter C++; else Engine.Character."""
+    for script_path in KAYLEIGH_CPP_PARENT_CANDIDATES:
+        try:
+            parent = unreal.load_class(None, script_path)
+            if parent is not None:
+                _log(
+                    f"Parent class: {script_path} -> {parent.get_name()} "
+                    f"(module={parent.get_outer().get_name() if parent.get_outer() else '?'})"
+                )
+                return parent, script_path
+        except Exception as exc:
+            _log(f"WARN load_class({script_path}): {exc}")
+
+    fallback = unreal.Character
+    _log(
+        "Parent class: fallback unreal.Character "
+        "(KayleighPlayerCharacter C++ not loaded — rebuild plugin/module)"
+    )
+    return fallback, "Engine.Character"
+
+
+def _try_reparent_blueprint(blueprint, parent_class, parent_label: str) -> bool:
+    """Reparent BP to C++ KayleighPlayerCharacter when available."""
+    try:
+        generated = blueprint.generated_class()
+        if generated is None:
+            return False
+        current = generated.get_super_class()
+        if current == parent_class:
+            _log(f"Blueprint already parented to {parent_label}")
+            return True
+        if hasattr(unreal.BlueprintEditorLibrary, "reparent_blueprint"):
+            unreal.BlueprintEditorLibrary.reparent_blueprint(blueprint, parent_class)
+        elif hasattr(unreal.EditorAssetLibrary, "set_blueprint_parent_class"):
+            unreal.EditorAssetLibrary.set_blueprint_parent_class(blueprint, parent_class)
+        else:
+            blueprint.set_editor_property("parent_class", parent_class)
+        unreal.BlueprintEditorLibrary.compile_blueprint(blueprint)
+        _log(f"Reparented Blueprint to {parent_label}")
+        return True
+    except Exception as exc:
+        _log(f"WARN reparent to {parent_label}: {exc}")
+        return False
 
 
 def _probe_kayleigh_mesh() -> str:
@@ -210,19 +262,23 @@ def _ensure_bp_component(blueprint, parent_handle, component_class, name: str):
 
 
 def _create_or_load_blueprint():
+    parent_class, parent_label = _resolve_kayleigh_parent_class()
+
     if _asset_exists(BP_PATH):
         bp = unreal.EditorAssetLibrary.load_asset(BP_PATH)
         _log(f"Reusing existing Blueprint: {BP_PATH}")
+        if parent_label != "Engine.Character":
+            _try_reparent_blueprint(bp, parent_class, parent_label)
         return bp
 
     factory = unreal.BlueprintFactory()
-    factory.set_editor_property("parent_class", unreal.Character)
+    factory.set_editor_property("parent_class", parent_class)
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
     with unreal.ScopedEditorTransaction("Create BP_KayleighCharacter"):
         bp = asset_tools.create_asset(BP_NAME, BP_PACKAGE, unreal.Blueprint, factory)
     if bp is None:
         raise RuntimeError(f"Failed to create Blueprint at {BP_PATH}")
-    _log(f"Created Blueprint: {BP_PATH}")
+    _log(f"Created Blueprint: {BP_PATH} parent={parent_label}")
     return bp
 
 
