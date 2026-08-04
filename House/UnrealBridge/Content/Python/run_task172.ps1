@@ -50,14 +50,23 @@ if (-not $EditorCmd) {
 
 $UProject = Join-Path $ProjectRoot "MyProject.uproject"
 $PythonDir = Join-Path $ProjectRoot "Content\Python"
-$RepoPython = Join-Path $PSScriptRoot "."  # when copied, scripts live next to this ps1
+# Copy from repo when this script lives in SoulCore checkout
+$SoulCorePython = $PSScriptRoot
+$marker = Join-Path $SoulCorePython "create_bp_kayleigh_character.py"
+if (-not (Test-Path $marker)) {
+    Write-Host "ERROR: create_bp_kayleigh_character.py not next to run_task172.ps1"
+    exit 2
+}
 
-# Copy from repo sibling if running from SoulCore checkout
-$SoulCorePython = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent) "House\UnrealBridge\Content\Python"
-if (Test-Path $SoulCorePython) {
+# If we are running from SoulCore (not yet inside MyProject Content\Python), copy into project
+$runningFromProject = ($PythonDir -eq (Resolve-Path $SoulCorePython).Path)
+if (-not $runningFromProject) {
     Write-Host "Syncing Python scripts from repo: $SoulCorePython -> $PythonDir"
     New-Item -ItemType Directory -Force -Path $PythonDir | Out-Null
     Copy-Item -Path (Join-Path $SoulCorePython "*.py") -Destination $PythonDir -Force
+    Copy-Item -Path (Join-Path $SoulCorePython "run_task172.ps1") -Destination $PythonDir -Force
+} else {
+    Write-Host "Scripts already in project Content\Python: $PythonDir"
 }
 
 $scripts = @(

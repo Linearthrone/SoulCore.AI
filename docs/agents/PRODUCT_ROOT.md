@@ -110,10 +110,10 @@ updated: 2026-08-04 (TINA: Wave 29 Kayleigh player GO — BED-172)
   - Remote Tailscale soak still optional — `docs/runbooks/tailscale-serve-soulcore.md`
   - Explicit non-goals: phone computer-use, multi-persona UI, voice, WPF overlay
 - **Wave 29 — Phase 4 player embodiment** (GO 2026-08-04):
-  - **BED-172 Pending** — `BP_KayleighCharacter` eye camera + walk + collision + env hear + prox chat (`tasks/TASK-20260804-172-PM01-to-BED01.md`)
-  - **QA-173 Pending** — gated on 172 Pass
-  - Runbook: `docs/runbooks/kayleigh-player-pawn-setup.md` · PM note: `reports/TASK-20260804-PM01-wave29-kayleigh-go.md`
-- **Blocked on user**: soak #2 · Wave 26 loco source confirm
+  - **BED-172 Partial** — UE Python + `KayleighPlayerCharacter` C++ in `House/UnrealBridge/` (cloud); **shadow Cmd/PIE still required for Full Pass** — report `reports/TASK-20260804-172-BED01-to-PM01.md`
+  - **QA-173 Blocked** — waiting on shadow PIE — `reports/TASK-20260804-173-QA01-to-PM01.md`
+  - Runbook: `docs/runbooks/kayleigh-player-pawn-setup.md`
+- **Blocked on user**: soak #2 · Wave 26 loco source confirm · **shadow one-shot for BED-172** (`Content/Python/run_task172.ps1`)
 
 ## Completed since last update
 
