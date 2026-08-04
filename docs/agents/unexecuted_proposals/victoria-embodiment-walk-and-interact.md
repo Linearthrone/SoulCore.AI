@@ -168,11 +168,13 @@ not the whole torso.
 
 | # | Work | Role |
 | --- | --- | --- |
-| 4.1 | Decide player pawn: keep flying `ADefaultPawn` or grounded observer | Product |
-| 4.2 | Custom GameMode + `DefaultPawnClass` if grounded chosen | DEV/BED |
-| 4.3 | Idle presence: breathing, weight shift, look-around when idle | DEV/BED |
+| 4.1 | Decide player pawn: keep flying `ADefaultPawn` or grounded observer | Product — **CLEARED 2026-08-04: grounded Kayleigh** |
+| 4.2 | Custom GameMode + `DefaultPawnClass` if grounded chosen | BED-172 (`BP_KayleighCharacter` + prox chat + env audio) |
+| 4.3 | Idle presence: breathing, weight shift, look-around when idle | DEV/BED (after 172) |
 | 4.4 | Set `EditorStartupMap` / `GameDefaultMap` → `/Game/Home` | OPS |
 | 4.5 | Redefine E-gates as **visual** assertions (transform delta over time, montage playing) not "Host forwarded" | QA |
+
+Runbook: `docs/runbooks/kayleigh-player-pawn-setup.md`
 
 ### Phase 5 — Motivated agency + discovery memory (product lock, 2026-08-02)
 
@@ -271,8 +273,7 @@ want that cites that discovery.
 
 1. **Locomotion source** — UE5 Game Animation Sample (motion matching, best
    quality, large) vs. simple Manny/Quinn retarget blendspace (fast, adequate)?
-2. **Player embodiment** — should Kayleigh be a grounded body in the house or
-   keep the free-fly camera?
+2. ~~**Player embodiment** — grounded vs free-fly?~~ — **CLEARED 2026-08-04: grounded Kayleigh** (BED-172)
 3. **Scope order** — Phase 1 only, or Phase 1+2 together (walking + gestures)?
 4. **Discovery labeling** — UE weak classes + Host/LLM identify, vs require
    authored display names for everything she can "find"?

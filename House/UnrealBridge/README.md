@@ -85,7 +85,8 @@ Logical SoulCore verb names remain in `UnrealVerbTypes`.
 | Built module | `Plugins/HouseVictoriaBridge/Binaries/Win64/UnrealEditor-HouseVictoriaBridge.dll` |
 | Default port | **8888** (`DefaultGame.ini` â†’ `WebSocketPort=8888`, `bAutoStartServer=True`) |
 | Bind | `0.0.0.0` |
-| Avatar map | `/Game/Home` â†’ `Content/Home.umap` (has `BP_MHC_Victoria*`) |
+| Avatar map | `/Game/Home` â†’ `Content/Home.umap` (Victoria: `BP_VictoriaCharacter` / tag `VictoriaAvatar`) |
+| Player pawn (Wave 29) | Grounded **`BP_KayleighCharacter`** — see `docs/runbooks/kayleigh-player-pawn-setup.md` (BED-172) |
 | Smoke client | `bridge_test_client.py` (repo root of MyProject) |
 | Rebuild | `build_bridge.ps1` / `build_bridge.bat` â†’ UE 5.8 `Build.bat MyProjectEditor` |
 

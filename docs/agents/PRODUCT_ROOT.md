@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
+updated: 2026-08-04 (TINA: Wave 29 Kayleigh player GO — BED-172)
 ---
 
 # Product Root Declaration
@@ -43,7 +43,7 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
 8. **Soak #2** — authorize when you want a long soak with SoulLoop + embeddings + safety live
 9. **Wave 26/27 embodiment decisions** — TT-01 / PROP-EMBODIMENT-01:
    - **Locomotion source**: Game Animation Sample (motion matching) vs Manny/Quinn blendspace — **provisional default in BED-115 = Manny/Quinn**; confirm or override
-   - **Player embodiment**: grounded Kayleigh body vs keep free-fly `ADefaultPawn` — deferred to Wave 29 / Phase 4
+   - ~~**Player embodiment**: grounded Kayleigh body vs keep free-fly `ADefaultPawn`~~ — **CLEARED 2026-08-04**: user chose **grounded Kayleigh** (eye cam + walk + env audio + prox chat) → Wave 29 BED-172 / QA-173; runbook `docs/runbooks/kayleigh-player-pawn-setup.md`
    - **Avatar MetaHuman (user 2026-07-30):** use new MH **`VictoriaBody`**. → **TASK-171 Partial** (rewire scripts + bridge avatar_count fix; asset missing on main — sync from shadow then run Python rewire). Note: live Character mesh had drifted to Fab Performance Runner, not MHC_Victoria.
    - ~~**Scope**: Phase 1 only vs Phase 1+2~~ — **CLEARED 2026-07-26**: user **"yes move phase 2 asap"** → Wave 27 Phase 2 (gestures + verb correctness + head gaze) **in flight now**, parallel with Phase 1; do **not** wait for QA-118
 10. **Wave 27 Phase 3 agent-loop decisions** — TT-01 / PROP-AGENT-LOOP-01:
@@ -109,7 +109,11 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
   - **Link thin-client (in tree):** Home/MediaGen/Gallery/Settings; Host proactive `chat.done`; `/api/companion/v1` media + ComfyUI; `contactId=victoria` stub for future external persona service
   - Remote Tailscale soak still optional — `docs/runbooks/tailscale-serve-soulcore.md`
   - Explicit non-goals: phone computer-use, multi-persona UI, voice, WPF overlay
-- **Blocked on user**: soak #2 · Wave 26 loco source confirm · player pawn (Phase 4)
+- **Wave 29 — Phase 4 player embodiment** (GO 2026-08-04):
+  - **BED-172 Pending** — `BP_KayleighCharacter` eye camera + walk + collision + env hear + prox chat (`tasks/TASK-20260804-172-PM01-to-BED01.md`)
+  - **QA-173 Pending** — gated on 172 Pass
+  - Runbook: `docs/runbooks/kayleigh-player-pawn-setup.md` · PM note: `reports/TASK-20260804-PM01-wave29-kayleigh-go.md`
+- **Blocked on user**: soak #2 · Wave 26 loco source confirm
 
 ## Completed since last update
 
