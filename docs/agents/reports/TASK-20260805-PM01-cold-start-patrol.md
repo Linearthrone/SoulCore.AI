@@ -37,7 +37,8 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 | QA-137 | QA-01 | none | **Hold** — desktop/browser + Hermes; ISSUE-008 capture timeout open |
 | QA-139 | QA-01 | none | **Hold** — blocked on OPS-170 live MT4 edge |
 | BED-160 | BED-01 | none | **Hold** — ISSUE-006 PIE travel=0; UE on shadow |
-| SLOP-160 | SLOP-01 | findings (5) | **Accepted** → BED-172 for F1/F2/F3/F5; F4 ask-user to Kurt |
+| SLOP-160 | SLOP-01 | findings (5) | **Archived** with BED-172 Pass; F4 ask-user still open |
+| BED-172 | BED-01 | Pass | **Archived** — code on `cursor/bed-172-slop-cleanup-169c` |
 | BED-169 | BED-01 | Partial (code Pass) | **Accept code** — live verify after shadow MCP |
 | OPS-170 | OPS-01 | Fail | **Accept Fail** — Kurt must start MCP `:8080` + EA on `house-victoria` |
 | BED-171 | BED-01 | Partial | **Accept Partial** — sync `VictoriaBody` asset then run rewire scripts |

@@ -58,8 +58,8 @@ updated: 2026-08-05 (TINA cold-start; Host stub up on cloud; SLOP-160 re-dispatc
 
 ## In flight (PM)
 
-- **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 findings accepted** → **BED-172** cleanup dispatched. Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
-- **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, SLOP-160 (findings), **BED-172**, **BED-169 Partial-Accepted**, **OPS-170 Blocked-User**, **BED-171 Partial-Accepted**.
+- **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5); F4 ask-user still open. Code branch `cursor/bed-172-slop-cleanup-169c`. Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
+- **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, **BED-169 Partial-Accepted**, **OPS-170 Blocked-User**, **BED-171 Partial-Accepted**.
 - **MT4:** LLMOD-owned; shadow MagicDNS **`house-victoria`** (hyphen). Host default endpoint corrected 2026-07-30. Live blocked until MCP HTTP + EA on shadow.
 - **Real blockers (2 open issues):** ISSUE-006 PIE travel=0 (BED-160); ISSUE-008 Hermes capture timeout (QA-137).
 - **2026-07-29 TINA:** BED-140 **Pass** (PR #3) · DBD-157 **Pass** (PR #4) archived → next BED-141 · BED-158 · OPS-143 · QA-134 — `reports/TASK-20260729-PM01-cold-start-patrol.md`
