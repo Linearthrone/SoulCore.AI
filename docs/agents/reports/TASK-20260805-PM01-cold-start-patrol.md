@@ -37,7 +37,7 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 | QA-137 | QA-01 | none | **Hold** — desktop/browser + Hermes; ISSUE-008 capture timeout open |
 | QA-139 | QA-01 | none | **Hold** — blocked on OPS-170 live MT4 edge |
 | BED-160 | BED-01 | none | **Hold** — ISSUE-006 PIE travel=0; UE on shadow |
-| SLOP-160 | SLOP-01 | **missing** | **Dispatch now** — Phase E post-QA audit overdue |
+| SLOP-160 | SLOP-01 | findings (5) | **Accepted** → BED-172 for F1/F2/F3/F5; F4 ask-user to Kurt |
 | BED-169 | BED-01 | Partial (code Pass) | **Accept code** — live verify after shadow MCP |
 | OPS-170 | OPS-01 | Fail | **Accept Fail** — Kurt must start MCP `:8080` + EA on `house-victoria` |
 | BED-171 | BED-01 | Partial | **Accept Partial** — sync `VictoriaBody` asset then run rewire scripts |
@@ -57,8 +57,9 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 | Assume TINA / PM-01 | Done |
 | Bring Host up (stub LLM) | Done — health ok |
 | Accept BED-169 / OPS-170 / BED-171 / QA-134 soft | Done (status notes on tickets) |
-| Hand off SLOP-160 | Same turn |
-| New code tickets | None — no cloud-executable product path without shadow/UE/model |
+| Hand off SLOP-160 | Done — findings report landed |
+| Ticket BED-172 cleanup | Done — dispatched same turn |
+| New code tickets | BED-172 (cloud-executable hygiene) |
 
 ## Recommended priority
 
