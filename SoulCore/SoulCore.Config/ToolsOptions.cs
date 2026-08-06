@@ -43,8 +43,14 @@ public sealed class ToolsOptions
     /// <summary>Desktop backend: <c>cua</c> (default when installed), <c>native</c>, or <c>hermes</c>.</summary>
     public string DesktopBackend { get; set; } = BackendCua;
 
-    /// <summary>Browser backend: <c>hermes</c> (default). Native not implemented.</summary>
-    public string BrowserBackend { get; set; } = BackendHermes;
+    /// <summary>
+    /// Browser backend: <c>native</c> (default, BED-182 — <c>BrowserCaptureBridge</c> :17891
+    /// + unpacked <c>BrowserCaptureExtension</c>) or <c>hermes</c> (legacy MCP).
+    /// </summary>
+    public string BrowserBackend { get; set; } = BackendNative;
+
+    /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>
+    public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17891";
 
     /// <summary>When false (default), all MT4 read tools refuse.</summary>
     public bool AllowMt4Read { get; set; }

@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -303,12 +306,107 @@ public class BrowserToolsTests
     [Fact]
     public async Task UnsupportedBrowserBridge_ReturnsClearError()
     {
-        var bridge = new UnsupportedBrowserBridge("native");
+        var bridge = new UnsupportedBrowserBridge("foobar");
         var result = await bridge.HealthAsync();
 
         Assert.False(result.Success);
+        Assert.Contains("foobar", result.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("native", result.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("hermes", result.Content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task NativeBrowserBridge_HealthOk_WhenBridgeResponds()
+    {
+        var handler = new FixedJsonHandler(
+            """{"ok":true,"service":"hv-browser-capture-bridge","pending_jobs":0}""");
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var bridge = new NativeBrowserBridge(http, toolsOptions: null);
+
+        var result = await bridge.HealthAsync();
+
+        Assert.True(result.Success);
+        Assert.Contains("browser bridge ok", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("GET", handler.LastMethod);
+        Assert.Contains("/health", handler.LastPath, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NativeBrowserBridge_CaptureTab_FormatsPathAndPageMap()
+    {
+        var handler = new FixedJsonHandler(
+            """{"ok":true,"url":"https://example.com","title":"Example","screenshot_path":"C:\\tmp\\tab.png","page_map":{"elements":[{"index":1,"tag":"a","text":"Hi"}]}}""");
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var bridge = new NativeBrowserBridge(http, toolsOptions: null);
+
+        var result = await bridge.CaptureTabAsync(0);
+
+        Assert.True(result.Success);
+        Assert.Contains("captured tab screenshot:", result.Content, StringComparison.Ordinal);
+        Assert.Contains("C:\\tmp\\tab.png", result.Content, StringComparison.Ordinal);
+        Assert.Contains("page_map", result.Content, StringComparison.Ordinal);
+        Assert.Equal("POST", handler.LastMethod);
+        Assert.Contains("/capture", handler.LastPath, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NativeBrowserBridge_Click_PostsAction()
+    {
+        var handler = new FixedJsonHandler(
+            """{"ok":true,"detail":"clicked","url":"https://example.com","title":"Example"}""");
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var bridge = new NativeBrowserBridge(http, toolsOptions: null);
+
+        var result = await bridge.ClickAsync(10, 20);
+
+        Assert.True(result.Success);
+        Assert.Equal("POST", handler.LastMethod);
+        Assert.Contains("/action", handler.LastPath, StringComparison.Ordinal);
+        Assert.Contains("\"action\":\"click\"", handler.LastBody ?? "", StringComparison.Ordinal);
+        Assert.Contains("\"x\":10", handler.LastBody ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NativeBrowserBridge_WhenUnreachable_ReturnsUnavailable()
+    {
+        var handler = new FailingHandler();
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var bridge = new NativeBrowserBridge(http, toolsOptions: null);
+
+        var result = await bridge.HealthAsync();
+
+        Assert.False(result.Success);
+        Assert.Contains("unavailable", result.Content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class FixedJsonHandler : HttpMessageHandler
+    {
+        private readonly string _json;
+        public string LastMethod { get; private set; } = "";
+        public string LastPath { get; private set; } = "";
+        public string? LastBody { get; private set; }
+
+        public FixedJsonHandler(string json) => _json = json;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastMethod = request.Method.Method;
+            LastPath = request.RequestUri?.AbsolutePath ?? "";
+            LastBody = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(_json, Encoding.UTF8, "application/json")
+            };
+        }
+    }
+
+    private sealed class FailingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new HttpRequestException("connection refused");
     }
 
     // ─────────────────────────────────────────────────────────────────────

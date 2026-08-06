@@ -1,8 +1,9 @@
 namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
-/// Browser tab control backend (BED-136). Preferred implementation routes
-/// through Hermes MCP <c>browser_bridge_*</c> when
+/// Browser tab control backend (BED-136 / BED-182). Preferred implementation is
+/// <c>NativeBrowserBridge</c> → local <c>BrowserCaptureBridge</c> :17891 +
+/// unpacked Chrome extension. Legacy: Hermes MCP <c>browser_bridge_*</c> when
 /// <c>Tools:BrowserBackend=hermes</c>. Tools gate capture/control before
 /// calling this surface — the bridge itself does not re-check session opt-in.
 /// </summary>

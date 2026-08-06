@@ -374,17 +374,36 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaN
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaWorldHintTool>();
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaVerifyChecklistTool>();
 
-// Browser tools (BED-136): browser_health / capture_tab / click / type / key / scroll.
+// Browser tools (BED-136 / BED-182): browser_health / capture_tab / click / type / key / scroll.
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
-// Backend: Tools.BrowserBackend=hermes → HermesBrowserBridge (BED-144 CallMcpToolAsync).
+// Backend: Tools.BrowserBackend=native (default) → BrowserCaptureBridge :17891 + Chrome extension.
+//          Tools.BrowserBackend=hermes → HermesBrowserBridge (legacy MCP).
+builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(opts.BrowserBridgeUrl)
+        ? NativeBrowserBridge.DefaultBaseUrl
+        : opts.BrowserBridgeUrl.Trim().TrimEnd('/');
+    client.BaseAddress = new Uri(baseUrl + "/");
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
-    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendHermes).Trim();
-    if (!string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        return new UnsupportedBrowserBridge(backend);
-
-    return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
+    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
+    if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+        return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
+    if (string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, "llmod", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, "auto", StringComparison.OrdinalIgnoreCase))
+    {
+        var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("browser-bridge");
+        return new NativeBrowserBridge(
+            http,
+            sp.GetRequiredService<IOptions<ToolsOptions>>(),
+            sp.GetService<ILogger<NativeBrowserBridge>>());
+    }
+    return new UnsupportedBrowserBridge(backend);
 });
 builder.Services.AddSingleton<ITool, BrowserHealthTool>();
 builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
