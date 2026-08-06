@@ -217,7 +217,17 @@ public sealed class SoulLoopScaffold : ISoulLoop
             && tick % (pushEvery * 2) != 0)
             return;
 
+        // Natural SMS only — never push Inner-focus / want scaffold phrases into chat.done.
         var text = CompanionOutboundMessenger.ComposeProactiveText(category, label, want);
+        if (string.IsNullOrWhiteSpace(text)
+            || CompanionOutboundMessenger.ContainsScaffoldLeak(text))
+        {
+            _logger.LogDebug(
+                "SoulLoop proactive chat skipped (no natural line) category={Category}",
+                category);
+            return;
+        }
+
         try
         {
             var result = await _outbound

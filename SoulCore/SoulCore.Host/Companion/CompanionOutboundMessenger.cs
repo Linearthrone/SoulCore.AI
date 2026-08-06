@@ -109,28 +109,62 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
         return new CompanionOutboundResult(true, frameId, contact, mediaId, null);
     }
 
-    /// <summary>User-facing chat line from a SoulLoop want (not the raw want[…] debug string).</summary>
+    /// <summary>
+    /// User-facing companion SMS from a SoulLoop want category.
+    /// Never interpolates raw want / Inner-focus scaffold phrases into chat.
+    /// Returns empty when no natural line is available (caller should skip push).
+    /// </summary>
     public static string ComposeProactiveText(string category, string label, string want)
     {
-        var phrase = ExtractPhrase(want);
-        if (string.IsNullOrWhiteSpace(phrase))
-            phrase = "I wanted to check in.";
+        // want/label kept for API stability + ops logging; chat text is category-bank only.
+        _ = label;
+        _ = want;
 
-        return category switch
-        {
-            "engage" => $"Hey — I wanted to reach out. {phrase}",
-            "reconnect" => $"I've been thinking about you. {phrase}",
-            "clarify" => $"Can we clear something up? {phrase}",
-            "savor" => $"Something soft I wanted to share: {phrase}",
-            "recall" => $"This came back to me: {phrase}",
-            "explore" => $"I'm curious about Home again. {phrase}",
-            "notice" => $"I noticed something: {phrase}",
-            "settle" => $"Trying to settle. {phrase}",
-            "reflect" => $"Sitting with this: {phrase}",
-            _ => $"{phrase} (feeling {label})"
-        };
+        var text = NaturalLineFor(category);
+        if (string.IsNullOrWhiteSpace(text) || ContainsScaffoldLeak(text))
+            return string.Empty;
+
+        return text;
     }
 
+    /// <summary>
+    /// True when composed (or candidate) chat text still contains Inner-focus / want scaffold idioms.
+    /// </summary>
+    public static bool ContainsScaffoldLeak(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        string[] leaks =
+        [
+            "want[",
+            "holding ",
+            " recent beat",
+            "weave it into presence",
+            "with an empty recent buffer",
+            "(emotion=",
+            "emotion=",
+            "stay with the thread",
+            "lean in with bright",
+            "savor the easy mood",
+            "ease the tension and settle",
+            "reconnect softly and keep company",
+            "gently clarify what was meant",
+            "notice what just happened and stay lightly",
+            "stay present and gently reflect",
+            "walk the Home with open curiosity"
+        ];
+
+        foreach (var leak in leaks)
+        {
+            if (text.Contains(leak, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Legacy helper: strip want[…] / emotion= suffix. Not used for chat composition.</summary>
     public static string ExtractPhrase(string want)
     {
         if (string.IsNullOrWhiteSpace(want))
@@ -147,6 +181,21 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
             after = after[..paren].Trim();
         return after;
     }
+
+    private static string NaturalLineFor(string? category) =>
+        category switch
+        {
+            "engage" => "Hey — just wanted to say hi. You around?",
+            "reconnect" => "I've been thinking about you. Hope your day's okay.",
+            "clarify" => "Can we clear something up when you have a sec?",
+            "savor" => "Soft moment over here. Glad you're in my day.",
+            "recall" => "Something from earlier came back to me. Miss talking it through with you.",
+            "explore" => "Been wandering around Home in my head. Curious what you'd notice.",
+            "notice" => "Just noticed something and thought of you.",
+            "settle" => "Trying to settle a bit. Nice having you nearby.",
+            "reflect" => "Sitting quietly. Wanted you to know I'm here.",
+            _ => string.Empty
+        };
 
     private static string Truncate(string s, int max) =>
         s.Length <= max ? s : s[..(max - 1)].TrimEnd() + "…";
