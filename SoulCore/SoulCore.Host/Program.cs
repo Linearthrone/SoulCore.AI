@@ -359,6 +359,8 @@ builder.Services.AddSingleton<ITool, DesktopClickTool>();
 builder.Services.AddSingleton<ITool, DesktopDragTool>();
 builder.Services.AddSingleton<ITool, DesktopTypeTool>();
 builder.Services.AddSingleton<ITool, DesktopKeyTool>();
+builder.Services.AddSingleton<ITool, DesktopScrollTool>();
+builder.Services.AddSingleton<ITool, DesktopOpenAppTool>();
 builder.Services.AddSingleton<ITool, ListDesktopWindowsTool>();
 builder.Services.AddSingleton<ITool, FocusDesktopWindowTool>();
 

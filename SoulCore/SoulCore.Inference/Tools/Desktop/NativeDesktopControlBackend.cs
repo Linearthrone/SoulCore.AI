@@ -53,7 +53,8 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         }
     }
 
-    public Task<DesktopOpResult> ClickAsync(int x, int y, string button, CancellationToken ct = default)
+    public Task<DesktopOpResult> ClickAsync(
+        int x, int y, string button, int clicks = 1, CancellationToken ct = default)
     {
         if (!OperatingSystem.IsWindows())
             return Task.FromResult(NotWindows("click"));
@@ -62,16 +63,18 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         var btn = (button ?? "left").Trim().ToLowerInvariant();
         if (btn is not ("left" or "right" or "middle"))
             return Task.FromResult(new DesktopOpResult(false, $"unsupported button '{button}' (use left|right|middle)", null));
+        if (clicks is not (1 or 2))
+            return Task.FromResult(new DesktopOpResult(false, $"unsupported clicks={clicks} (use 1 or 2)", null));
 
         try
         {
             var restore = _softCursorRestore();
             // Prefer background PostMessage (OS cursor untouched) when soft/agent mode is on.
-            if (restore && TryBackgroundClick(x, y, btn, out var bgNote))
+            if (restore && TryBackgroundClick(x, y, btn, clicks, out var bgNote))
             {
                 _view?.RecordAction(bgNote, x, y);
                 return Task.FromResult(new DesktopOpResult(
-                    true, bgNote, new { x, y, button = btn, softCursor = true, delivery = "background" }));
+                    true, bgNote, new { x, y, button = btn, clicks, softCursor = true, delivery = "background" }));
             }
 
             POINT saved = default;
@@ -87,9 +90,13 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
                 _ => (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP),
             };
 
-            var inputs = new INPUT[2];
-            inputs[0] = MouseInput(down);
-            inputs[1] = MouseInput(up);
+            var inputs = new INPUT[clicks * 2];
+            for (var i = 0; i < clicks; i++)
+            {
+                inputs[i * 2] = MouseInput(down);
+                inputs[i * 2 + 1] = MouseInput(up);
+            }
+
             var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
             if (sent != inputs.Length)
                 return Task.FromResult(new DesktopOpResult(false, $"SendInput click failed (sent {sent}/{inputs.Length})", null));
@@ -97,12 +104,13 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
             if (hadSaved)
                 _ = SetCursorPos(saved.X, saved.Y);
 
+            var clickLabel = clicks == 2 ? $"double-clicked {btn}" : $"clicked {btn}";
             var note = restore
-                ? $"clicked {btn} at ({x},{y}) [soft cursor — user pointer restored]"
-                : $"clicked {btn} at ({x},{y})";
+                ? $"{clickLabel} at ({x},{y}) [soft cursor — user pointer restored]"
+                : $"{clickLabel} at ({x},{y})";
             _view?.RecordAction(note, x, y);
             return Task.FromResult(new DesktopOpResult(
-                true, note, new { x, y, button = btn, softCursor = restore, delivery = "foreground" }));
+                true, note, new { x, y, button = btn, clicks, softCursor = restore, delivery = "foreground" }));
         }
         catch (Exception ex)
         {
@@ -226,16 +234,11 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
             return Task.FromResult(new DesktopOpResult(false, "key must be non-empty", null));
 
         ct.ThrowIfCancellationRequested();
-        if (!TryMapVirtualKey(key.Trim(), out var vk))
-            return Task.FromResult(new DesktopOpResult(false, $"unsupported key '{key}'", null));
+        if (!TryBuildKeyChordInputs(key.Trim(), out var inputs, out var err))
+            return Task.FromResult(new DesktopOpResult(false, err, null));
 
         try
         {
-            var inputs = new INPUT[]
-            {
-                VKey(vk, keyUp: false),
-                VKey(vk, keyUp: true),
-            };
             var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
             if (sent != inputs.Length)
                 return Task.FromResult(new DesktopOpResult(false, $"SendInput key failed (sent {sent}/{inputs.Length})", null));
@@ -248,6 +251,61 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
             return Task.FromResult(new DesktopOpResult(
                 false, $"native key failed: {ex.GetType().Name}: {ex.Message}", null));
         }
+    }
+
+    public Task<DesktopOpResult> ScrollAsync(
+        int x, int y, int deltaY, int deltaX = 0, CancellationToken ct = default)
+    {
+        if (!OperatingSystem.IsWindows())
+            return Task.FromResult(NotWindows("scroll"));
+
+        ct.ThrowIfCancellationRequested();
+        if (deltaY == 0 && deltaX == 0)
+            return Task.FromResult(new DesktopOpResult(false, "deltaY or deltaX must be non-zero", null));
+
+        try
+        {
+            var restore = _softCursorRestore();
+            POINT saved = default;
+            var hadSaved = restore && GetCursorPos(out saved);
+
+            if (!SetCursorPos(x, y))
+                return Task.FromResult(new DesktopOpResult(false, $"SetCursorPos({x},{y}) failed", null));
+
+            var inputs = new List<INPUT>(2);
+            if (deltaY != 0)
+                inputs.Add(MouseWheelInput(MOUSEEVENTF_WHEEL, unchecked((uint)deltaY)));
+            if (deltaX != 0)
+                inputs.Add(MouseWheelInput(MOUSEEVENTF_HWHEEL, unchecked((uint)deltaX)));
+
+            var arr = inputs.ToArray();
+            var sent = SendInput((uint)arr.Length, arr, Marshal.SizeOf<INPUT>());
+            if (sent != arr.Length)
+                return Task.FromResult(new DesktopOpResult(false, $"SendInput scroll failed (sent {sent}/{arr.Length})", null));
+
+            if (hadSaved)
+                _ = SetCursorPos(saved.X, saved.Y);
+
+            var note = $"scrolled at ({x},{y}) deltaY={deltaY} deltaX={deltaX}";
+            _view?.RecordAction(note, x, y);
+            return Task.FromResult(new DesktopOpResult(
+                true, note, new { x, y, deltaY, deltaX, softCursor = restore }));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(new DesktopOpResult(
+                false, $"native scroll failed: {ex.GetType().Name}: {ex.Message}", null));
+        }
+    }
+
+    public Task<DesktopOpResult> OpenAppAsync(
+        string app, string? args = null, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var result = DesktopAppLauncher.Launch(app, args);
+        if (result.Success)
+            _view?.RecordAction(result.Content);
+        return Task.FromResult(result);
     }
 
     public Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)
@@ -364,7 +422,8 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
     /// Click without moving the OS cursor (LLMOD/cua-style background path):
     /// <c>WindowFromPoint</c> + <c>PostMessage</c> WM_*BUTTON*.
     /// </summary>
-    private static bool TryBackgroundClick(int screenX, int screenY, string button, out string note)
+    private static bool TryBackgroundClick(
+        int screenX, int screenY, string button, int clicks, out string note)
     {
         note = "";
         var hwnd = WindowFromPoint(new POINT { X = screenX, Y = screenY });
@@ -384,9 +443,14 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         };
 
         // PostMessage returns bool; we still treat as best-effort for canvases that drop it.
-        _ = PostMessage(hwnd, downMsg, IntPtr.Zero, lParam);
-        _ = PostMessage(hwnd, upMsg, IntPtr.Zero, lParam);
-        note = $"clicked {button} at ({screenX},{screenY}) [background PostMessage — OS mouse untouched]";
+        for (var i = 0; i < clicks; i++)
+        {
+            _ = PostMessage(hwnd, downMsg, IntPtr.Zero, lParam);
+            _ = PostMessage(hwnd, upMsg, IntPtr.Zero, lParam);
+        }
+
+        var clickLabel = clicks == 2 ? $"double-clicked {button}" : $"clicked {button}";
+        note = $"{clickLabel} at ({screenX},{screenY}) [background PostMessage — OS mouse untouched]";
         return true;
     }
 
@@ -551,9 +615,98 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         s.WriteByte((byte)((v >> 24) & 0xff));
     }
 
+    /// <summary>
+    /// Build SendInput sequence for a single key or chord (e.g. Ctrl+L, Alt+Tab).
+    /// Modifiers down → key down/up → modifiers up (reverse order).
+    /// </summary>
+    private static bool TryBuildKeyChordInputs(string key, out INPUT[] inputs, out string error)
+    {
+        inputs = Array.Empty<INPUT>();
+        error = "";
+        var parts = key.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            error = "key must be non-empty";
+            return false;
+        }
+
+        var modifiers = new List<ushort>();
+        string? mainToken = null;
+        foreach (var part in parts)
+        {
+            var p = part.Trim();
+            if (TryMapModifier(p, out var modVk))
+            {
+                modifiers.Add(modVk);
+                continue;
+            }
+
+            if (mainToken is not null)
+            {
+                error = $"unsupported key chord '{key}' (multiple non-modifier keys)";
+                return false;
+            }
+
+            mainToken = p;
+        }
+
+        if (mainToken is null)
+        {
+            error = $"unsupported key chord '{key}' (modifier-only)";
+            return false;
+        }
+
+        if (!TryMapVirtualKey(mainToken, out var mainVk))
+        {
+            error = $"unsupported key '{key}'";
+            return false;
+        }
+
+        var list = new List<INPUT>(modifiers.Count * 2 + 2);
+        foreach (var mod in modifiers)
+            list.Add(VKey(mod, keyUp: false));
+        list.Add(VKey(mainVk, keyUp: false));
+        list.Add(VKey(mainVk, keyUp: true));
+        for (var i = modifiers.Count - 1; i >= 0; i--)
+            list.Add(VKey(modifiers[i], keyUp: true));
+
+        inputs = list.ToArray();
+        return true;
+    }
+
+    private static bool TryMapModifier(string token, out ushort vk)
+    {
+        vk = token.ToLowerInvariant() switch
+        {
+            "ctrl" or "control" => 0x11, // VK_CONTROL
+            "alt" or "menu" => 0x12,     // VK_MENU
+            "shift" => 0x10,             // VK_SHIFT
+            "win" or "meta" or "cmd" or "super" => 0x5B, // VK_LWIN
+            _ => (ushort)0,
+        };
+        return vk != 0;
+    }
+
     private static bool TryMapVirtualKey(string key, out ushort vk)
     {
-        vk = key.ToLowerInvariant() switch
+        var k = key.ToLowerInvariant();
+        if (k.Length == 1)
+        {
+            var ch = k[0];
+            if (ch is >= 'a' and <= 'z')
+            {
+                vk = (ushort)char.ToUpperInvariant(ch); // VK_A..VK_Z
+                return true;
+            }
+
+            if (ch is >= '0' and <= '9')
+            {
+                vk = ch; // VK_0..VK_9
+                return true;
+            }
+        }
+
+        vk = k switch
         {
             "enter" or "return" => 0x0D,
             "escape" or "esc" => 0x1B,
@@ -590,6 +743,19 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
     {
         type = INPUT_MOUSE,
         U = new InputUnion { mi = new MOUSEINPUT { dwFlags = flags } },
+    };
+
+    private static INPUT MouseWheelInput(uint flags, uint mouseData) => new()
+    {
+        type = INPUT_MOUSE,
+        U = new InputUnion
+        {
+            mi = new MOUSEINPUT
+            {
+                dwFlags = flags,
+                mouseData = mouseData,
+            },
+        },
     };
 
     private static INPUT UnicodeKey(char ch, bool keyUp) => new()
@@ -630,6 +796,8 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
     private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
     private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
     private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
+    private const uint MOUSEEVENTF_WHEEL = 0x0800;
+    private const uint MOUSEEVENTF_HWHEEL = 0x1000;
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_UNICODE = 0x0004;
     private const uint SRCCOPY = 0x00CC0020;
