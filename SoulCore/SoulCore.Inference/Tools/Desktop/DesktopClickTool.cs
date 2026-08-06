@@ -4,6 +4,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
 /// <c>desktop_click</c> — requires session <see cref="IComputerControlGate.AllowComputerControl"/>.
+/// Optional <c>clicks: 2</c> for double-click (BED-174).
 /// </summary>
 public sealed class DesktopClickTool : ITool
 {
@@ -18,6 +19,11 @@ public sealed class DesktopClickTool : ITool
               "type": "string",
               "description": "Mouse button: left, right, or middle.",
               "default": "left"
+            },
+            "clicks": {
+              "type": "integer",
+              "description": "Number of clicks: 1 (default) or 2 for double-click.",
+              "default": 1
             }
           },
           "required": ["x", "y"]
@@ -37,6 +43,7 @@ public sealed class DesktopClickTool : ITool
         Name: "desktop_click",
         Description:
             "Click at absolute screen coordinates (pixels, top-left origin). " +
+            "Optional clicks:2 for double-click. " +
             "Get coords from list_desktop_windows bounds (click center: x+width/2, y+height/2) or from a screenshot. " +
             "Moves your blue agent cursor overlay only — does not steal Kurt's mouse. " +
             "Requires AllowComputerControl.",
@@ -61,7 +68,17 @@ public sealed class DesktopClickTool : ITool
                 button = s;
         }
 
-        var result = await _backend.ClickAsync(x, y, button, ct).ConfigureAwait(false);
+        var clicks = 1;
+        if (args.TryGetProperty("clicks", out var c) && c.ValueKind == JsonValueKind.Number
+            && c.TryGetInt32(out var cVal))
+        {
+            clicks = cVal;
+        }
+
+        if (clicks is not (1 or 2))
+            return new ToolResult(false, "error: desktop_click 'clicks' must be 1 or 2.", null);
+
+        var result = await _backend.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
         return DesktopToolGate.FromBackend(result);
     }
 

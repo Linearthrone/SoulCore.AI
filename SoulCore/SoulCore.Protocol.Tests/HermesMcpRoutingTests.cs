@@ -147,7 +147,9 @@ public class HermesMcpRoutingTests
             healthOk: true,
             chatBodies: new[]
             {
-                OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}""")
+                OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}"""),
+                // DesktopScreenshotTool enriches with ListWindowsAsync after capture.
+                OpenAIContentResponse("open desktop windows:\n[0] Notepad")
             });
         var hermes = MakeClient(handler);
         var tool = MakeDesktopScreenshot(hermes);
@@ -157,15 +159,10 @@ public class HermesMcpRoutingTests
 
         Assert.True(result.Success);
         Assert.Contains("screenshot", result.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(1, handler.ChatCallCount);
+        // screenshot (computer_use) + enrichment list_desktop_windows
+        Assert.Equal(2, handler.ChatCallCount);
         Assert.NotNull(handler.LastChatBody);
-        using var doc = JsonDocument.Parse(handler.LastChatBody!);
-        Assert.True(doc.RootElement.TryGetProperty("tools", out var tools));
-        Assert.Contains("computer_use", tools.GetRawText(), StringComparison.Ordinal);
-        Assert.True(doc.RootElement.TryGetProperty("tool_choice", out var tc));
-        Assert.Equal(JsonValueKind.Object, tc.ValueKind);
-        Assert.Equal("computer_use", tc.GetProperty("function").GetProperty("name").GetString());
-        Assert.Contains("\"action\"", handler.LastChatBody!, StringComparison.Ordinal);
+        Assert.Contains("list_desktop_windows", handler.LastChatBody!, StringComparison.Ordinal);
     }
 
     // ---------------------------------------------------------------------

@@ -4,6 +4,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
 /// <c>desktop_key</c> — requires session <see cref="IComputerControlGate.AllowComputerControl"/>.
+/// Supports single keys and chords like <c>Ctrl+L</c> (BED-174).
 /// </summary>
 public sealed class DesktopKeyTool : ITool
 {
@@ -12,7 +13,10 @@ public sealed class DesktopKeyTool : ITool
         {
           "type": "object",
           "properties": {
-            "key": { "type": "string", "description": "Key to press (e.g. Enter, Escape, Tab)." }
+            "key": {
+              "type": "string",
+              "description": "Key or chord to press (e.g. Enter, Escape, Tab, Ctrl+L, Alt+Tab, Ctrl+T)."
+            }
           },
           "required": ["key"]
         }
@@ -30,8 +34,8 @@ public sealed class DesktopKeyTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_key",
         Description:
-            "Press a single key (Enter, Escape, Tab, etc.) on the window you last clicked. " +
-            "Requires a prior desktop_click and AllowComputerControl.",
+            "Press a key or chord (Enter, Escape, Tab, Ctrl+L, Alt+Tab, Ctrl+T, etc.) " +
+            "on the window you last clicked. Requires a prior desktop_click and AllowComputerControl.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

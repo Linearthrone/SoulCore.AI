@@ -85,11 +85,14 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
             new { path, bytes, format = "png", width, height, backend = BackendName });
     }
 
-    public async Task<DesktopOpResult> ClickAsync(int x, int y, string button, CancellationToken ct = default)
+    public async Task<DesktopOpResult> ClickAsync(
+        int x, int y, string button, int clicks = 1, CancellationToken ct = default)
     {
         var btn = (button ?? "left").Trim().ToLowerInvariant();
         if (btn is not ("left" or "right" or "middle"))
             return new DesktopOpResult(false, $"unsupported button '{button}' (use left|right|middle)", null);
+        if (clicks is not (1 or 2))
+            return new DesktopOpResult(false, $"unsupported clicks={clicks} (use 1 or 2)", null);
 
         var ready = await EnsureSessionAsync(ct).ConfigureAwait(false);
         if (!ready.Success)
@@ -98,6 +101,21 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
         await MoveAgentCursorAsync(x, y, ct).ConfigureAwait(false);
         RememberTargetUnderPoint(x, y);
 
+        for (var i = 0; i < clicks; i++)
+        {
+            var once = await ClickOnceAsync(x, y, btn, ct).ConfigureAwait(false);
+            if (!once.Success)
+                return once;
+        }
+
+        var clickLabel = clicks == 2 ? $"double-clicked {btn}" : $"clicked {btn}";
+        var note = $"{clickLabel} at ({x},{y}) via cua agent cursor";
+        _view?.RecordAction(note, x, y);
+        return new DesktopOpResult(true, note, new { x, y, button = btn, clicks, backend = BackendName });
+    }
+
+    private async Task<DesktopOpResult> ClickOnceAsync(int x, int y, string btn, CancellationToken ct)
+    {
         var delivery = _preferBackground() ? "background" : "foreground";
         var call = await _cli.CallAsync("click", new Dictionary<string, object?>
         {
@@ -112,7 +130,6 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
             && (call.Error?.Contains("background_unavailable", StringComparison.OrdinalIgnoreCase) == true
                 || call.Error?.Contains("foreground", StringComparison.OrdinalIgnoreCase) == true))
         {
-            // Escalate only when cua says background can't land — same LLMOD/cua contract.
             call = await _cli.CallAsync("click", new Dictionary<string, object?>
             {
                 ["x"] = x,
@@ -127,11 +144,7 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
         if (!call.Success)
             return new DesktopOpResult(false, $"cua click failed: {call.Error}", null);
 
-        var note = delivery == "background"
-            ? $"clicked {btn} at ({x},{y}) via cua agent cursor [OS mouse untouched]"
-            : $"clicked {btn} at ({x},{y}) via cua foreground fallback";
-        _view?.RecordAction(note, x, y);
-        return new DesktopOpResult(true, note, new { x, y, button = btn, delivery, backend = BackendName });
+        return new DesktopOpResult(true, $"clicked {btn}", new { delivery });
     }
 
     public async Task<DesktopOpResult> DragAsync(
@@ -254,6 +267,60 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
         _view?.RecordAction($"pressed key '{key}' via cua");
         return new DesktopOpResult(true, $"pressed key '{key}' via cua-driver",
             new { key, pid, backend = BackendName });
+    }
+
+    public async Task<DesktopOpResult> ScrollAsync(
+        int x, int y, int deltaY, int deltaX = 0, CancellationToken ct = default)
+    {
+        if (deltaY == 0 && deltaX == 0)
+            return new DesktopOpResult(false, "deltaY or deltaX must be non-zero", null);
+
+        var ready = await EnsureSessionAsync(ct).ConfigureAwait(false);
+        if (!ready.Success)
+            return ready;
+
+        await MoveAgentCursorAsync(x, y, ct).ConfigureAwait(false);
+        RememberTargetUnderPoint(x, y);
+
+        var delivery = _preferBackground() ? "background" : "foreground";
+        var args = new Dictionary<string, object?>
+        {
+            ["x"] = x,
+            ["y"] = y,
+            ["delta_y"] = deltaY,
+            ["delta_x"] = deltaX,
+            ["delivery_mode"] = delivery,
+            ["session"] = _sessionId,
+        };
+        if (_lastPid is int pid)
+            args["pid"] = pid;
+        if (_lastWindowId is int wid)
+            args["window_id"] = wid;
+
+        var call = await _cli.CallAsync("scroll", args, ct).ConfigureAwait(false);
+        if (!call.Success)
+        {
+            // Fallback verb name used by some cua-driver builds.
+            call = await _cli.CallAsync("mouse_scroll", args, ct).ConfigureAwait(false);
+        }
+
+        if (!call.Success)
+            return new DesktopOpResult(false, $"cua scroll failed: {call.Error}", null);
+
+        var note = $"scrolled at ({x},{y}) deltaY={deltaY} deltaX={deltaX} via cua-driver";
+        _view?.RecordAction(note, x, y);
+        return new DesktopOpResult(true, note, new { x, y, deltaY, deltaX, backend = BackendName });
+    }
+
+    public Task<DesktopOpResult> OpenAppAsync(
+        string app, string? args = null, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        // cua-driver does not own process create — launch via allowlisted native Process.Start.
+        var result = DesktopAppLauncher.Launch(app, args);
+        if (result.Success)
+            _view?.RecordAction(result.Content);
+        return Task.FromResult(result);
     }
 
     public async Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)
