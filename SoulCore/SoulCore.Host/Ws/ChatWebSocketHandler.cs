@@ -11,6 +11,7 @@ using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.ChiefArchitect;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Trading;
@@ -369,6 +370,7 @@ public sealed class ChatWebSocketHandler
         {
             contextPreamble = ToolAgencyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ComputerUseGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = HomeBodyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ChiefArchitectGuidance.AppendToPreamble(contextPreamble);
         }
 
@@ -1448,6 +1450,13 @@ public sealed class ChatWebSocketHandler
             _logger.LogInformation(
                 "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
                 desktopIntent.Intent, desktopIntent.ToolName);
+        }
+        else if (HomeBodyToolIntent.TryMatch(text, out var homeIntent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = homeIntent.ToolName };
+            _logger.LogInformation(
+                "HomeBody NL intent matched: intent={Intent} forceTool={Tool}",
+                homeIntent.Intent, homeIntent.ToolName);
         }
         else if (WorkflowToolIntent.TryMatch(text, out var intent))
         {

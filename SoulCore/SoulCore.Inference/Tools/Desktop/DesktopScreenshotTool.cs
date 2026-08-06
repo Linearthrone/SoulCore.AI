@@ -24,19 +24,25 @@ public sealed class DesktopScreenshotTool : ITool
 
     private readonly IComputerControlGate _gate;
     private readonly IDesktopControlBackend _backend;
+    private readonly IDesktopViewHub? _view;
 
-    public DesktopScreenshotTool(IComputerControlGate gate, IDesktopControlBackend backend)
+    public DesktopScreenshotTool(
+        IComputerControlGate gate,
+        IDesktopControlBackend backend,
+        IDesktopViewHub? view = null)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _view = view;
     }
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_screenshot",
         Description:
             "Capture the full desktop (PNG). Returns size plus a window list with screen bounds. " +
-            "Use with desktop_click (screen x,y). Prefer list_desktop_windows first when you only need titles/bounds. " +
-            "Your blue agent cursor will show where you act; Kurt's mouse stays put.",
+            "REQUIRED before claiming you looked at Kurt's screen. " +
+            "list_desktop_windows alone is titles/bounds — not vision. " +
+            "Use with desktop_click (screen x,y). Your blue agent cursor will show where you act; Kurt's mouse stays put.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -57,6 +63,13 @@ public sealed class DesktopScreenshotTool : ITool
         var result = await _backend.ScreenshotAsync(monitor, ct).ConfigureAwait(false);
         if (!result.Success)
             return DesktopToolGate.FromBackend(result);
+
+        // Ensure Presence “What she saw” updates even when the backend forgot to.
+        DesktopViewHub.TryRecordFromToolData(
+            _view,
+            result.Data,
+            DesktopViewHub.SourceDesktop,
+            "desktop_screenshot");
 
         // Enrich Content with window bounds so the model can click without
         // relying solely on vision of a huge multi-monitor PNG.

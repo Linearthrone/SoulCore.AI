@@ -89,6 +89,25 @@ Logical SoulCore verb names remain in `UnrealVerbTypes`.
 | Smoke client | `bridge_test_client.py` (repo root of MyProject) |
 | Rebuild | `build_bridge.ps1` / `build_bridge.bat` â†’ UE 5.8 `Build.bat MyProjectEditor` |
 
+### PIE as your grounded avatar (not the flying ghost) — BED-184
+
+Stock GameMode uses flying `ADefaultPawn` (spectator “ghost”). Victoria is a
+separate `BP_VictoriaCharacter` (tag `VictoriaAvatar`, AI-possessed). Your body
+on the floor is not possessed until GameMode Default Pawn Class is set.
+
+**Product lock:** PIE should start as Kurt’s grounded Character, not free-fly.
+
+1. Open `/Game/Home` in UE 5.8.
+2. Tag your floor avatar `PlayerAvatar` (not `VictoriaAvatar`).
+3. Run Editor Python: `tools/ue_nav/set_pie_player_pawn.py`  
+   (creates `/Game/Blueprints/BP_HouseGameMode`, sets Default Pawn Class, PlayerStart, World GameMode Override).
+4. Press Play — you should be the grounded body; Victoria stays AI-controlled.
+5. Manual fallback: World Settings → GameMode Override → set Default Pawn Class to your Character BP.
+
+Note: Victoria walk may still return API-ok with travel=0 in PIE (ISSUE-006 /
+path-follow). Eyes (`victoria_eye_capture`) and Presence “What she saw” are
+independent of that motion bug.
+
 ### Launch so `:8888` listens
 
 1. Open `MyProject.uproject` with **UE 5.8**  

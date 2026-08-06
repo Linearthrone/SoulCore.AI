@@ -18,7 +18,8 @@ public static class ComputerUseGuidance
         "Preferred workflow:\n" +
         "1) If the app is not already running, call desktop_open_app with an allowlisted alias " +
         "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers.\n" +
-        "2) Call list_desktop_windows (or desktop_screenshot) to see what is open. " +
+        "2) Call desktop_screenshot when you need to SEE the screen (Presence shows that frame). " +
+        "list_desktop_windows is titles/bounds only — not vision; do not claim you looked after list alone. " +
         "Window results include screen bounds (x,y,width,height) — use those, do not guess. " +
         "focus_desktop_window only activates already-running titles.\n" +
         "3) Click with desktop_click at screen coordinates (optional clicks:2 for double-click). " +

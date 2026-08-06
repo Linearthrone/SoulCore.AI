@@ -251,8 +251,12 @@ builder.Services.AddSingleton<ITool, StoreMemoryTool>();
 // wrap IUnrealVerbClient so the model can choose body actions mid-loop.
 // Keyword detectors remain as Strategy A fallback (BED-128).
 builder.Services.AddSingleton<ITool, SpeakTool>();
-builder.Services.AddSingleton<ITool, VictoriaEyeCaptureTool>();
+// Hub injected after IDesktopViewHub registration (factory resolves at first use).
+builder.Services.AddSingleton<ITool>(sp => new VictoriaEyeCaptureTool(
+    sp.GetRequiredService<IUnrealVerbClient>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, PlayAnimationTool>();
+builder.Services.AddSingleton<ITool, LocoTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
@@ -324,7 +328,10 @@ builder.Services.AddSingleton<IDesktopViewHub>(sp =>
 var desktopBackend = (toolsOptions.DesktopBackend ?? "cua").Trim();
 if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
+    builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
+        new HermesDesktopControlBackend(
+            sp.GetRequiredService<IHermesClient>(),
+            sp.GetRequiredService<IDesktopViewHub>()));
 }
 else if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
          || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
@@ -354,7 +361,10 @@ else
             sp.GetRequiredService<IDesktopViewHub>(),
             sp.GetRequiredService<IToolsAccessSettings>()));
 }
-builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
+    sp.GetRequiredService<IComputerControlGate>(),
+    sp.GetRequiredService<IDesktopControlBackend>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, DesktopClickTool>();
 builder.Services.AddSingleton<ITool, DesktopDragTool>();
 builder.Services.AddSingleton<ITool, DesktopTypeTool>();
@@ -387,7 +397,10 @@ builder.Services.AddSingleton<IBrowserBridge>(sp =>
     return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
 });
 builder.Services.AddSingleton<ITool, BrowserHealthTool>();
-builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
+    sp.GetRequiredService<IBrowserBridge>(),
+    sp.GetRequiredService<IToolsAccessSettings>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, BrowserClickTool>();
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();
@@ -782,7 +795,8 @@ app.MapGet("/desktop/view", (IDesktopViewHub view) =>
         lastAction = snap.LastAction,
         updatedAt = snap.UpdatedAt,
         softCursorRestore = snap.SoftCursorRestore,
-        note = "Victoria's last desktop screenshot + agent-cursor position. With DesktopBackend=cua, the large blue overlay is drawn by cua-driver on the real desktop (same as LLMOD) — your OS mouse never moves."
+        source = snap.Source,
+        note = "Last image Victoria actually captured (source=desktop|eyes|browser). Cursor overlay applies to desktop captures. Stale frames mean she has not captured again yet."
     });
 });
 

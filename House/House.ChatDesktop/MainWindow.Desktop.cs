@@ -35,7 +35,16 @@ public partial class MainWindow
         if (!snap.Reachable)
         {
             DesktopViewActionText.Text = snap.Detail ?? "Host unreachable";
-            DesktopViewMetaText.Text = "Start SoulCore.Host to see her screen.";
+            DesktopViewMetaText.Text = "Start SoulCore.Host to see her last capture.";
+            if (DesktopViewImage is not null)
+            {
+                DesktopViewImage.Source = null;
+                DesktopViewImage.IsVisible = false;
+            }
+
+            if (DesktopViewEmptyText is not null)
+                DesktopViewEmptyText.IsVisible = true;
+            _lastDesktopImageHash = null;
             return;
         }
 
@@ -50,9 +59,16 @@ public partial class MainWindow
         _desktopCursorX = snap.CursorX;
         _desktopCursorY = snap.CursorY;
 
+        var sourceLabel = (snap.Source ?? "desktop").Trim().ToLowerInvariant() switch
+        {
+            "eyes" or "eye" => "Her eyes",
+            "browser" => "Browser tab",
+            _ => "Desktop"
+        };
+
         DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
-            ? "Waiting for desktop activity…"
-            : snap.LastAction;
+            ? "Waiting for a real capture (eyes / desktop / browser)…"
+            : $"{sourceLabel}: {snap.LastAction}";
 
         if (!string.IsNullOrWhiteSpace(snap.LastAction)
             && !snap.LastAction.Contains("Waiting", StringComparison.OrdinalIgnoreCase))
@@ -61,7 +77,12 @@ public partial class MainWindow
             if (string.IsNullOrWhiteSpace(_lastActivityPhrase)
                 || _lastActivityPhrase.Equals("Idle", StringComparison.OrdinalIgnoreCase))
             {
-                _lastActivityPhrase = "Using the desktop";
+                _lastActivityPhrase = sourceLabel switch
+                {
+                    "Her eyes" => "Looking through her eyes",
+                    "Browser tab" => "Looking at a browser tab",
+                    _ => "Using the desktop"
+                };
             }
 
             UpdateEngagementState();
@@ -70,7 +91,7 @@ public partial class MainWindow
         var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "—";
         var soft = snap.SoftCursorRestore ? "agent/background" : "foreground ok";
         DesktopViewMetaText.Text = snap.HasImage
-            ? $"{snap.Width}×{snap.Height} · {soft} · {when}"
+            ? $"{sourceLabel} · {snap.Width}×{snap.Height} · {soft} · {when}"
             : $"No capture yet · {soft}";
 
         if (snap.ImageBytes is { Length: > 0 })
