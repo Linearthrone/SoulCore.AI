@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
+updated: 2026-08-06 (TINA: BED-174 Pass — merge PR desktop-open)
 ---
 
 # Product Root Declaration
@@ -58,7 +58,10 @@ updated: 2026-07-30 (charter LOCKED; local gemma4 baseline; Phase E/F Pass)
 
 ## In flight (PM)
 
-- **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, SLOP-160, **BED-169 Partial**, **OPS-170 Fail** (shadow `:8080` not listening — needs Kurt on shadow).
+- **2026-08-06 TINA:** **BED-174 Pass archived** — `desktop_open_app` + scroll/chords/double-click; open-Chrome ForceTool fixed. Code PR on `cursor/bed-174-desktop-open-native-169c`. Merge after #22/#23 or independently if clean. Kurt: Allow computer control + Host recycle.
+- **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
+- **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
+- **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, **BED-169 Partial-Accepted**, **OPS-170 Blocked-User**, **BED-171 Partial-Accepted**.
 - **MT4:** LLMOD-owned; shadow MagicDNS **`house-victoria`** (hyphen). Host default endpoint corrected 2026-07-30. Live blocked until MCP HTTP + EA on shadow.
 - **Real blockers (2 open issues):** ISSUE-006 PIE travel=0 (BED-160); ISSUE-008 Hermes capture timeout (QA-137).
 - **2026-07-29 TINA:** BED-140 **Pass** (PR #3) · DBD-157 **Pass** (PR #4) archived → next BED-141 · BED-158 · OPS-143 · QA-134 — `reports/TASK-20260729-PM01-cold-start-patrol.md`
