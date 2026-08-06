@@ -794,3 +794,7 @@ info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop proactive chat pushed frame=bf73587d0fd74a0e800f9296cd092524 category=recall
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)

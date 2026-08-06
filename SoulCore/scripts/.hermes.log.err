@@ -1503,3 +1503,55 @@ WARNING tools.mcp_tool: MCP server 'elevenlabs' failed initial connection after 
 WARNING tools.mcp_tool: MCP server 'tradingview' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
 WARNING tools.mcp_tool: MCP server 'tradingview' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
 WARNING tools.mcp_tool: MCP server 'tradingview' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-drive' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-drive' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'gmail' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'gmail' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-drive' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'gmail' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-drive' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'gmail' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'github' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'github' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'github' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-calendar' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'github' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'mistral' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-calendar' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'mistral' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'sentry' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'mistral' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'sentry' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'sentry' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-calendar' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'mistral' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'sentry' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'alpaca' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'alpaca' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'google-calendar' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'alpaca' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'postgres' initial connection failed (attempt 1/3), retrying in 1s: 1 validation error for StdioServerParameters
+env.PGCONNECT_TIMEOUT
+  Input should be a valid string [type=string_type, input_value=10, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+WARNING tools.mcp_tool: MCP server 'postgres' initial connection failed (attempt 2/3), retrying in 2s: 1 validation error for StdioServerParameters
+env.PGCONNECT_TIMEOUT
+  Input should be a valid string [type=string_type, input_value=10, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+WARNING tools.mcp_tool: MCP server 'alpaca' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'postgres' initial connection failed (attempt 3/3), retrying in 4s: 1 validation error for StdioServerParameters
+env.PGCONNECT_TIMEOUT
+  Input should be a valid string [type=string_type, input_value=10, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+WARNING tools.mcp_tool: MCP server 'higgsfield' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'higgsfield' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'postgres' failed initial connection after 3 attempts, parking until a reconnect is requested: 1 validation error for StdioServerParameters
+env.PGCONNECT_TIMEOUT
+  Input should be a valid string [type=string_type, input_value=10, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+WARNING tools.mcp_tool: MCP server 'higgsfield' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'higgsfield' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'polygon-io' initial connection failed (attempt 1/3), retrying in 1s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'polygon-io' initial connection failed (attempt 2/3), retrying in 2s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'polygon-io' initial connection failed (attempt 3/3), retrying in 4s: unhandled errors in a TaskGroup (1 sub-exception)
+WARNING tools.mcp_tool: MCP server 'polygon-io' failed initial connection after 3 attempts, parking until a reconnect is requested: unhandled errors in a TaskGroup (1 sub-exception)
