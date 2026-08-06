@@ -2,8 +2,8 @@ namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
 /// Session gate for desktop (and later browser) control tools (BED-135).
-/// Capture defaults on; control defaults off and requires an explicit session
-/// opt-in via <see cref="SetAllowComputerControl"/>.
+/// Capture and computer control default on (TASK-177); still toggleable per
+/// session via <see cref="SetAllowComputerControl"/>.
 /// </summary>
 public interface IComputerControlGate
 {

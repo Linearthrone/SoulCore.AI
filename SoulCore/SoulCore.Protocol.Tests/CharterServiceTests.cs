@@ -207,4 +207,32 @@ public class CharterServiceTests : IDisposable
         Assert.Equal("Mid", anchors[1]);   // priority 50
         Assert.Equal("Low", anchors[2]);   // priority 200
     }
+
+    [Fact]
+    public async Task ListAnchorDetailsAsync_ReturnsStructuredRows_FilterableByKind()
+    {
+        var seeds = new[]
+        {
+            new CharterAnchorSeed("identity", "Core Identity", "I am Victoria, an artificial person.", 10, true, "imported"),
+            new CharterAnchorSeed("safety", "Primary Directive", "I must not cause harm.", 20, true, "imported"),
+            new CharterAnchorSeed("value", "Curiosity", "I value learning.", 50, false, "seed")
+        };
+        await _service.SeedAsync(seeds);
+
+        var all = await _service.ListAnchorDetailsAsync();
+        Assert.Equal(3, all.Count);
+        Assert.Equal("Core Identity", all[0].Title);
+        Assert.Equal("I am Victoria, an artificial person.", all[0].Body);
+        Assert.True(all[0].IsLocked);
+        Assert.Equal("imported", all[0].Source);
+
+        var identity = await _service.ListAnchorDetailsAsync("identity");
+        Assert.Single(identity);
+        Assert.Equal("identity", identity[0].Kind);
+        Assert.Equal("Core Identity", identity[0].Title);
+
+        var (total, locked) = await _service.GetLockCountsAsync();
+        Assert.Equal(3, total);
+        Assert.Equal(2, locked);
+    }
 }

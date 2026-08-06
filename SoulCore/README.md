@@ -7,6 +7,8 @@
 | Bind | `127.0.0.1` | SEC-004 V1 — localhost only |
 | Port | `7700` | Override via `Host:Port` in appsettings or env |
 | Health | `GET http://127.0.0.1:7700/health` | Includes Memory, WS URL, Unreal status |
+| Tools | `GET/POST http://127.0.0.1:7700/settings/tools` | Session gates; desktop/browser capture + computer control default **on** (TASK-177) |
+| Identity | `GET http://127.0.0.1:7700/settings/identity` | Display name (Victoria) + charter/identity anchors (read-only) |
 | **WS** | `ws://127.0.0.1:7700/ws` | Same Kestrel port; path via `ChatWs:Path` |
 
 ```powershell
