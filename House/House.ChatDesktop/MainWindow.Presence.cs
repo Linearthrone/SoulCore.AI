@@ -833,6 +833,22 @@ public partial class MainWindow
         var text = ReadPayloadString(frame, "text");
         var hasMedia = ReadPayloadBool(frame, "hasMedia") == true;
         var mediaId = ReadPayloadString(frame, "mediaId");
+        var proactive = ReadPayloadBool(frame, "proactive") == true;
+        var provider = ReadPayloadString(frame, "provider");
+
+        // SoulLoop phrase-bank / automated pings — not Victoria speaking.
+        if (proactive
+            && string.Equals(provider, "soul-loop", StringComparison.OrdinalIgnoreCase)
+            && IsAutomatedProactiveLine(text))
+        {
+            if (finalize)
+            {
+                _streamingAssistant = null;
+                SetTyping(false);
+            }
+
+            return;
+        }
 
         if (string.IsNullOrEmpty(text) && finalize && !hasMedia && string.IsNullOrWhiteSpace(mediaId))
         {
@@ -953,6 +969,25 @@ public partial class MainWindow
         if (payload.ValueKind != JsonValueKind.Object) return null;
         if (!payload.TryGetProperty(name, out var prop)) return null;
         return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
+    }
+
+    /// <summary>SoulLoop category phrase-bank lines that must not appear as chat bubbles.</summary>
+    internal static bool IsAutomatedProactiveLine(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var t = text.Trim();
+        return t is
+            "Hey — just wanted to say hi. You around?"
+            or "I've been thinking about you. Hope your day's okay."
+            or "Can we clear something up when you have a sec?"
+            or "Soft moment over here. Glad you're in my day."
+            or "Something from earlier came back to me. Miss talking it through with you."
+            or "Been wandering around Home in my head. Curious what you'd notice."
+            or "Just noticed something and thought of you."
+            or "Trying to settle a bit. Nice having you nearby."
+            or "Sitting quietly. Wanted you to know I'm here.";
     }
 
     private static bool? ReadPayloadBool(SoulCoreFrame frame, string name)

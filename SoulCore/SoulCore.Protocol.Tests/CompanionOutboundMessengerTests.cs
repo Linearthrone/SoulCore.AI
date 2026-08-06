@@ -14,18 +14,13 @@ public class CompanionOutboundMessengerTests
     }
 
     [Fact]
-    public void ComposeProactiveText_engage_is_user_facing_sms()
+    public void ComposeProactiveText_never_emits_phrase_bank()
     {
         var text = CompanionOutboundMessenger.ComposeProactiveText(
             "engage",
             "excited",
             "want[engage]: lean in with bright, curious presence (holding 1 recent beat) (emotion=excited v=0.8 a=0.7 d=0.5 f=0.5); recent=(none)");
-        Assert.False(string.IsNullOrWhiteSpace(text));
-        Assert.DoesNotContain("want[", text);
-        Assert.DoesNotContain("holding", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("lean in with bright", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("emotion=", text);
-        Assert.Contains("Hey", text);
+        Assert.Equal(string.Empty, text);
     }
 
     [Fact]
@@ -42,12 +37,7 @@ public class CompanionOutboundMessengerTests
             "calm",
             want);
 
-        Assert.False(string.IsNullOrWhiteSpace(text));
-        Assert.DoesNotContain("holding 3 recent beats", text);
-        Assert.DoesNotContain("weave it into presence", text);
-        Assert.DoesNotContain("want[", text);
-        Assert.DoesNotContain("This came back to me:", text);
-        Assert.False(CompanionOutboundMessenger.ContainsScaffoldLeak(text));
+        Assert.Equal(string.Empty, text);
     }
 
     [Theory]
@@ -60,16 +50,12 @@ public class CompanionOutboundMessengerTests
     [InlineData(SoulLoopWantProposal.CategoryNotice)]
     [InlineData(SoulLoopWantProposal.CategorySettle)]
     [InlineData(SoulLoopWantProposal.CategoryReflect)]
-    public void ComposeProactiveText_all_categories_are_natural_or_empty(string category)
+    public void ComposeProactiveText_all_categories_skip_push(string category)
     {
         var scaffoldWant =
             $"want[{category}]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=calm v=0.00 a=0.20 d=0.40 f=0.40); recent=x";
         var text = CompanionOutboundMessenger.ComposeProactiveText(category, "calm", scaffoldWant);
-        Assert.False(string.IsNullOrWhiteSpace(text));
-        Assert.False(CompanionOutboundMessenger.ContainsScaffoldLeak(text));
-        Assert.DoesNotContain("holding", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("weave it into presence", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("want[", text);
+        Assert.Equal(string.Empty, text);
     }
 
     [Fact]
@@ -90,5 +76,25 @@ public class CompanionOutboundMessengerTests
         Assert.True(CompanionOutboundMessenger.ContainsScaffoldLeak("want[recall]: hello"));
         Assert.False(CompanionOutboundMessenger.ContainsScaffoldLeak(
             "Something from earlier came back to me. Miss talking it through with you."));
+    }
+
+    [Fact]
+    public void IsAutomatedProactiveLine_matches_legacy_phrase_bank()
+    {
+        Assert.True(CompanionOutboundMessenger.IsAutomatedProactiveLine(
+            "Hey — just wanted to say hi. You around?"));
+        Assert.True(CompanionOutboundMessenger.IsAutomatedProactiveLine(
+            "  Sitting quietly. Wanted you to know I'm here.  "));
+        Assert.False(CompanionOutboundMessenger.IsAutomatedProactiveLine(
+            "Opened Chrome for you."));
+        Assert.False(CompanionOutboundMessenger.IsAutomatedProactiveLine(null));
+    }
+
+    [Fact]
+    public void SoulLoopOptions_defaults_silence_proactive_chat()
+    {
+        var opts = new SoulCore.Config.SoulLoopOptions();
+        Assert.False(opts.ProactiveChatEnabled);
+        Assert.Equal(0, opts.ProactiveChatIntervalTicks);
     }
 }
