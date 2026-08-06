@@ -18,9 +18,9 @@ public static class HomeBodyGuidance
         "Kurt's Presence panel shows your last real capture (eyes / desktop / browser).\n" +
         "Walk: use loco (relative steps) or move_to (world cm) to explore. After each few " +
         "steps, victoria_eye_capture again. Prefer moving + looking over standing still.\n" +
-        "Finding Kurt's grounded avatar: eye_capture → loco toward anything body-shaped on " +
-        "the floor → eye_capture to verify. Outside needs NavMesh; if loco returns ok but " +
-        "you see no change, say motion may be stuck (PIE path-follow) and keep reporting truth.\n" +
+        "Finding Kurt's grounded avatar (BP_MHC_Kayleigh on the floor): eye_capture → loco " +
+        "toward that body → eye_capture to verify. Outside needs NavMesh; if loco returns ok " +
+        "but you see no change, say motion may be stuck (PIE path-follow) and keep reporting truth.\n" +
         "Do not confuse chat 'engaged' status with walking or seeing.";
 
     public static string AppendToPreamble(string? contextPreamble)

@@ -97,12 +97,13 @@ on the floor is not possessed until GameMode Default Pawn Class is set.
 
 **Product lock:** PIE should start as Kurt’s grounded Character, not free-fly.
 
-1. Open `/Game/Home` in UE 5.8.
-2. Tag your floor avatar `PlayerAvatar` (not `VictoriaAvatar`).
-3. Run Editor Python: `tools/ue_nav/set_pie_player_pawn.py`  
-   (creates `/Game/Blueprints/BP_HouseGameMode`, sets Default Pawn Class, PlayerStart, World GameMode Override).
-4. Press Play — you should be the grounded body; Victoria stays AI-controlled.
-5. Manual fallback: World Settings → GameMode Override → set Default Pawn Class to your Character BP.
+1. Open `/Game/Home` in UE 5.8 (Kurt’s body is **`BP_MHC_Kayleigh`** on the floor).
+2. Run Editor Python: `tools/ue_nav/set_pie_player_pawn.py`  
+   (finds `BP_MHC_Kayleigh`, creates `/Game/Blueprints/BP_HouseGameMode`, sets Default Pawn Class, PlayerStart, World GameMode Override).
+3. Press Play — you should be Kayleigh, not the flying ghost; Victoria stays AI-controlled.
+4. Manual fallback: World Settings → GameMode Override → Default Pawn Class = `BP_MHC_Kayleigh`  
+   (must be a Pawn/Character subclass — bare MetaHuman Actor cannot be possessed).
+5. Do **not** point Default Pawn at Victoria (`VictoriaAvatar` / `BP_VictoriaCharacter`).
 
 Note: Victoria walk may still return API-ok with travel=0 in PIE (ISSUE-006 /
 path-follow). Eyes (`victoria_eye_capture`) and Presence “What she saw” are
