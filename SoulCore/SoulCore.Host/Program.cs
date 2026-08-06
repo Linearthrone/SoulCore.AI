@@ -311,8 +311,8 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
     return new ChatSessionHistoryStore(max);
 });
 
-// Desktop tools (BED-135): capture + click/type/key with session opt-in gate.
-// AllowComputerControl defaults false; AllowDesktopCapture defaults true.
+// Desktop tools (BED-135): capture + click/type/key with session gates.
+// AllowDesktopCapture / AllowBrowserCapture / AllowComputerControl default true (TASK-177).
 // Backend: Tools:DesktopBackend = "cua" | "native" | "hermes".
 // cua = local cua-driver agent cursor (LLMOD blue overlay; OS mouse untouched).
 // Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
@@ -675,7 +675,7 @@ static object ToolsSettingsDto(IToolsAccessSettings access)
         cuaDriverAvailable = cuaPath is not null,
         cuaDriverPath = cuaPath,
         scope = "session",
-        note = "Session gates until Host restart. Seeded from Tools in appsettings.json. SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put)."
+        note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put)."
     };
 }
 
@@ -714,6 +714,57 @@ app.MapPost("/settings/tools", async (HttpRequest request, IToolsAccessSettings 
         access.SetAllowMt4Trade(mt4Trade);
 
     return Results.Json(ToolsSettingsDto(access));
+});
+
+// TASK-177: Identity tab payload — Companion display name + charter anchor details
+// (read-only from CharterService; no fabricated biography).
+app.MapGet("/settings/identity", async (
+    IOptions<CompanionOptions> companionOpts,
+    CharterService charter,
+    CancellationToken cancellationToken) =>
+{
+    var companion = companionOpts.Value ?? new CompanionOptions();
+    int charterTotal = 0, charterLocked = 0;
+    IReadOnlyList<CharterAnchorInfo> identityAnchors = Array.Empty<CharterAnchorInfo>();
+    IReadOnlyList<CharterAnchorInfo> allAnchors = Array.Empty<CharterAnchorInfo>();
+    try
+    {
+        (charterTotal, charterLocked) = await charter.GetLockCountsAsync(cancellationToken).ConfigureAwait(false);
+        identityAnchors = await charter.ListAnchorDetailsAsync("identity", cancellationToken).ConfigureAwait(false);
+        allAnchors = await charter.ListAnchorDetailsAsync(kind: null, cancellationToken).ConfigureAwait(false);
+    }
+    catch (Exception)
+    {
+        // Return name + empty anchors rather than failing the Settings tab.
+    }
+
+    var fullyLocked = charterTotal > 0 && charterLocked == charterTotal;
+    static object AnchorDto(CharterAnchorInfo a) => new
+    {
+        id = a.Id,
+        kind = a.Kind,
+        title = a.Title,
+        body = a.Body,
+        priority = a.Priority,
+        isLocked = a.IsLocked,
+        source = a.Source
+    };
+
+    return Results.Json(new
+    {
+        displayName = companion.DefaultContactName,
+        contactId = companion.DefaultContactId,
+        charter = new
+        {
+            anchors = charterTotal,
+            locked = charterLocked,
+            fullyLocked,
+            mode = fullyLocked ? "locked" : (charterTotal == 0 ? "empty" : "calibration")
+        },
+        identityAnchors = identityAnchors.Select(AnchorDto).ToArray(),
+        anchors = allAnchors.Select(AnchorDto).ToArray(),
+        note = "Read-only charter/identity anchors from SoulCore SQLite. Display name from Companion options (Victoria)."
+    });
 });
 
 app.MapGet("/desktop/view", (IDesktopViewHub view) =>

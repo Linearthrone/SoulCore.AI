@@ -2,7 +2,8 @@ namespace SoulCore.Config;
 
 /// <summary>
 /// Non-secret knobs for filesystem (BED-133), desktop (BED-135), browser (BED-136),
-/// and MT4 (BED-138) tools. Write/control actions require session opt-in gates.
+/// and MT4 (BED-138) tools. Session gates seed from these values and remain mutable
+/// via <c>/settings/tools</c> for the Host process lifetime.
 /// </summary>
 public sealed class ToolsOptions
 {
@@ -25,7 +26,12 @@ public sealed class ToolsOptions
 
     public bool AllowDesktopCapture { get; set; } = true;
     public bool AllowBrowserCapture { get; set; } = true;
-    public bool AllowComputerControl { get; set; }
+    /// <summary>
+    /// Desktop/browser write control (click/type/key/open/scroll). Defaults
+    /// <c>true</c> (TASK-177) so fresh Host sessions match Settings → Tools &amp; Access
+    /// checkboxes; still toggleable per session. Security tradeoff vs prior opt-in.
+    /// </summary>
+    public bool AllowComputerControl { get; set; } = true;
 
     /// <summary>
     /// Prefer non-stealing desktop input. With <c>DesktopBackend=cua</c>: agent overlay +

@@ -91,6 +91,57 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         return (reader.GetInt32(0), reader.GetInt32(1));
     }
 
+    /// <summary>
+    /// Returns structured anchor rows (id/kind/title/body/…) ordered by priority.
+    /// Optional <paramref name="kind"/> filter (identity / safety / value / boundary / ritual).
+    /// Used by Host <c>GET /settings/identity</c> for the FED Identity tab.
+    /// </summary>
+    public async Task<IReadOnlyList<CharterAnchorInfo>> ListAnchorDetailsAsync(
+        string? kind = null,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await using var cmd = _connection.CreateCommand();
+        if (string.IsNullOrWhiteSpace(kind))
+        {
+            cmd.CommandText =
+                """
+                SELECT id, kind, title, body, priority, is_locked, source
+                FROM charter_anchors
+                ORDER BY priority ASC, id ASC;
+                """;
+        }
+        else
+        {
+            ValidateKind(kind);
+            cmd.CommandText =
+                """
+                SELECT id, kind, title, body, priority, is_locked, source
+                FROM charter_anchors
+                WHERE kind = $kind
+                ORDER BY priority ASC, id ASC;
+                """;
+            cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
+        }
+
+        var list = new List<CharterAnchorInfo>();
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            list.Add(new CharterAnchorInfo(
+                Id: reader.GetInt64(0),
+                Kind: reader.GetString(1),
+                Title: reader.GetString(2),
+                Body: reader.GetString(3),
+                Priority: reader.GetInt32(4),
+                IsLocked: reader.GetInt32(5) == 1,
+                Source: reader.GetString(6)));
+        }
+
+        return list;
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetAnchorsByKindAsync(
         string kind,

@@ -472,11 +472,12 @@ public class DesktopToolsTests
     }
 
     [Fact]
-    public void ToolsOptions_Defaults_GateClosedCaptureOpen()
+    public void ToolsOptions_Defaults_DesktopBrowserGatesOpen()
     {
         var opts = new ToolsOptions();
         Assert.True(opts.AllowDesktopCapture);
-        Assert.False(opts.AllowComputerControl);
+        Assert.True(opts.AllowBrowserCapture);
+        Assert.True(opts.AllowComputerControl);
         Assert.Equal("cua", opts.DesktopBackend);
     }
 
