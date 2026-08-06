@@ -59,10 +59,12 @@ public sealed class TaskCreateTool : ITool
         if (args.TryGetProperty("priority", out var priProp) && priProp.ValueKind == JsonValueKind.String)
             priority = priProp.GetString();
 
-        long id;
+        VictoriaTask? task;
         try
         {
-            id = await _tasks.CreateAsync(title!, description, priority, ct).ConfigureAwait(false);
+            // Authoritative payload comes from the persisted row (not store-type constants).
+            var id = await _tasks.CreateAsync(title!, description, priority, ct).ConfigureAwait(false);
+            task = await _tasks.GetAsync(id, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -76,21 +78,18 @@ public sealed class TaskCreateTool : ITool
                 Data: null);
         }
 
-        var resolvedPriority = string.IsNullOrWhiteSpace(priority)
-            ? SqliteMemoryStore.DefaultTaskPriority
-            : priority!.Trim().ToLowerInvariant();
+        if (task is null)
+        {
+            return new ToolResult(
+                Success: false,
+                Content: "error: task_create failed: persisted row not found after insert.",
+                Data: null);
+        }
 
         return new ToolResult(
             Success: true,
-            Content: $"created: id={id}",
-            Data: new
-            {
-                id,
-                title = title!.Trim(),
-                description = description?.Trim() ?? string.Empty,
-                status = SqliteMemoryStore.DefaultTaskStatus,
-                priority = resolvedPriority
-            });
+            Content: $"created: id={task.Id}",
+            Data: task);
     }
 
     private static JsonElement BuildParametersSchema()
