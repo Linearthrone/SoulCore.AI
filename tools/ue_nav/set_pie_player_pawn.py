@@ -37,12 +37,25 @@ PLAYER_MARKERS = (
 )
 GAME_MODE_PATH = "/Game/Blueprints/BP_HouseGameMode"
 LOG_PREFIX = "[set_pie_player_pawn]"
+EVIDENCE_DIR = r"C:\Users\kurtw\Soul_Core\tmpcode\bed184-pie-pawn"
+LOG_FILE = EVIDENCE_DIR + r"\set_pie_player_pawn.log"
+
+_out = []
 
 
 def log(msg: str) -> None:
     line = f"{LOG_PREFIX} {msg}"
+    _out.append(line)
     unreal.log(line)
     print(line)
+    try:
+        import os
+
+        os.makedirs(EVIDENCE_DIR, exist_ok=True)
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            f.write("\n".join(_out) + "\n")
+    except Exception:
+        pass
 
 
 def actor_label(actor) -> str:
@@ -57,6 +70,24 @@ def class_name(actor) -> str:
         return str(actor.get_class().get_name())
     except Exception:
         return ""
+
+
+def class_hierarchy(actor) -> str:
+    """e.g. BP_MHC_Kayleigh_C -> MHC_… -> Actor — shows if possessable."""
+    parts = []
+    try:
+        cls = actor.get_class()
+        for _ in range(12):
+            if cls is None:
+                break
+            parts.append(str(cls.get_name()))
+            try:
+                cls = cls.get_super_class()
+            except Exception:
+                break
+    except Exception as ex:
+        return f"(hierarchy error: {ex})"
+    return " → ".join(parts)
 
 
 def text_blob(actor) -> str:
@@ -221,9 +252,11 @@ def main():
             f"  candidate[{i}] label={actor_label(c)} class={class_name(c)} "
             f"pawn={is_pawn_like(c)} loc={c.get_actor_location()}"
         )
+        log(f"  candidate[{i}] hierarchy: {class_hierarchy(c)}")
 
     chosen = candidates[0]
     log(f"Using {actor_label(chosen)} ({class_name(chosen)}) as PIE player body")
+    log(f"Hierarchy: {class_hierarchy(chosen)}")
     ensure_player_start_near(chosen)
 
     pawn_class = None
