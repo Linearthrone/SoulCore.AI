@@ -109,6 +109,8 @@ dotnet run --project SoulCore.Host -- --soul-loop-tick --enabled
 
 When `Enabled=false`, Host registers null stubs. Hermes **chat** needs `SOULCORE_HERMES_API_KEY`; `GET /health` on Hermes does not.
 
+Hermes gateway bring-up (Windows): `SoulCore/scripts/start-hermes.ps1` (also via repo-root `ALLSTART.ps1`). On start it rewrites MCP `command:` entries from `python.exe` → `pythonw.exe` when a sibling `pythonw.exe` exists (OPS-178 — no blank persistent Python consoles). One-shot: `SoulCore/scripts/patch-hermes-mcp-pythonw.ps1`. Prefer `pythonw.exe` in LLMOD `Tools\setup-hermes-integration.ps1` so quarry re-setup does not regress. See `docs/agents/RUNBOOK-Hermes-PreferHermes-tool-calls.md` § OPS-178.
+
 ## Build
 
 ```powershell
