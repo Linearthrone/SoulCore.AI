@@ -43,7 +43,7 @@ public sealed class ChatHistoryStore : IDisposable
         using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
-            SELECT Id, Role, Text, AtUtc, FrameId
+            SELECT Id, Role, Text, AtUtc, FrameId, MediaPath, MediaId
             FROM Messages
             WHERE ConversationId = $cid
             ORDER BY AtUtc DESC, RowId DESC
@@ -62,7 +62,9 @@ public sealed class ChatHistoryStore : IDisposable
                 Role = reader.GetString(1),
                 Text = reader.GetString(2),
                 At = DateTimeOffset.Parse(reader.GetString(3), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                FrameId = reader.IsDBNull(4) ? null : reader.GetString(4)
+                FrameId = reader.IsDBNull(4) ? null : reader.GetString(4),
+                MediaPath = reader.IsDBNull(5) ? null : reader.GetString(5),
+                MediaId = reader.IsDBNull(6) ? null : reader.GetString(6)
             });
         }
 
@@ -81,12 +83,14 @@ public sealed class ChatHistoryStore : IDisposable
         using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
-            INSERT INTO Messages (Id, ConversationId, Role, Text, AtUtc, FrameId)
-            VALUES ($id, $cid, $role, $text, $at, $frame)
+            INSERT INTO Messages (Id, ConversationId, Role, Text, AtUtc, FrameId, MediaPath, MediaId)
+            VALUES ($id, $cid, $role, $text, $at, $frame, $mediaPath, $mediaId)
             ON CONFLICT(Id) DO UPDATE SET
                 Text = excluded.Text,
                 AtUtc = excluded.AtUtc,
-                FrameId = excluded.FrameId;
+                FrameId = excluded.FrameId,
+                MediaPath = excluded.MediaPath,
+                MediaId = excluded.MediaId;
             """;
         cmd.Parameters.AddWithValue("$id", message.Id);
         cmd.Parameters.AddWithValue("$cid", conversationId);
@@ -94,6 +98,8 @@ public sealed class ChatHistoryStore : IDisposable
         cmd.Parameters.AddWithValue("$text", message.Text ?? string.Empty);
         cmd.Parameters.AddWithValue("$at", message.At.ToUniversalTime().ToString("O"));
         cmd.Parameters.AddWithValue("$frame", (object?)message.FrameId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$mediaPath", (object?)message.MediaPath ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$mediaId", (object?)message.MediaId ?? DBNull.Value);
         cmd.ExecuteNonQuery();
     }
 
@@ -108,12 +114,33 @@ public sealed class ChatHistoryStore : IDisposable
                 Role TEXT NOT NULL,
                 Text TEXT NOT NULL,
                 AtUtc TEXT NOT NULL,
-                FrameId TEXT NULL
+                FrameId TEXT NULL,
+                MediaPath TEXT NULL,
+                MediaId TEXT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_messages_conv_at
                 ON Messages (ConversationId, AtUtc DESC);
             """;
         cmd.ExecuteNonQuery();
+
+        EnsureColumn("MediaPath", "TEXT NULL");
+        EnsureColumn("MediaId", "TEXT NULL");
+    }
+
+    private void EnsureColumn(string name, string decl)
+    {
+        using var check = _connection.CreateCommand();
+        check.CommandText = "PRAGMA table_info(Messages);";
+        using var reader = check.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), name, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+
+        using var alter = _connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE Messages ADD COLUMN {name} {decl};";
+        alter.ExecuteNonQuery();
     }
 
     public void Dispose()
