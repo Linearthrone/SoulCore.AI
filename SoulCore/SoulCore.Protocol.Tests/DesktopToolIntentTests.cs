@@ -60,5 +60,46 @@ public class DesktopToolIntentTests
         Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
+    }
+
+    // ---------------------------------------------------------------------
+    // BED-180: resolve open-app args + pure-open early-exit classification
+    // ---------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("open Google Chrome", "chrome", null)]
+    [InlineData("open my browser", "chrome", null)]
+    [InlineData("bring up chrome", "chrome", null)]
+    [InlineData("launch edge", "edge", null)]
+    [InlineData("start notepad", "notepad", null)]
+    [InlineData("open chrome to https://example.com", "chrome", "https://example.com")]
+    [InlineData("open browser at www.google.com", "chrome", "www.google.com")]
+    public void TryResolveOpenAppLaunch_ExtractsAliasAndOptionalUrl(
+        string text, string expectedApp, string? expectedArgs)
+    {
+        Assert.True(DesktopToolIntent.TryResolveOpenAppLaunch(text, out var app, out var args));
+        Assert.Equal(expectedApp, app);
+        Assert.Equal(expectedArgs, args);
+    }
+
+    [Theory]
+    [InlineData("open Google Chrome", true)]
+    [InlineData("open my browser", true)]
+    [InlineData("open chrome to https://example.com", true)]
+    [InlineData("open chrome and click the first link", false)]
+    [InlineData("open chrome then type hello", false)]
+    public void IsPureOpenPrompt_ClassifiesFollowOnActions(string text, bool expected)
+    {
+        Assert.Equal(expected, DesktopToolIntent.IsPureOpenPrompt(text));
+    }
+
+    [Fact]
+    public void BuildOpenedReply_FormatsConfirm()
+    {
+        Assert.Equal("Opened Chrome.", DesktopToolIntent.BuildOpenedReply("chrome", null));
+        Assert.Equal(
+            "Opened Chrome to https://example.com.",
+            DesktopToolIntent.BuildOpenedReply("chrome", "https://example.com"));
     }
 }
