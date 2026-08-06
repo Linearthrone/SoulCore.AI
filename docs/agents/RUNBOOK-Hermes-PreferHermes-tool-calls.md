@@ -10,6 +10,29 @@ SoulCore PreferHermes (BED-161) expects:
 
 Live gateway on this machine: `%LOCALAPPDATA%\hermes` / `SoulCore/scripts/start-hermes.ps1` → `127.0.0.1:8642`.
 
+## OPS-178 — hide blank MCP `python.exe` consoles
+
+Hermes gateway starts with `-WindowStyle Hidden`, but MCP stdio children from
+`%LOCALAPPDATA%\hermes\config.yaml` (`mcp_servers.*.command`) often point at
+console-subsystem `…\MCPServer\.venv\Scripts\python.exe`. Those allocate blank
+visible consoles that stay open until Hermes stops.
+
+**Durable fix (in-repo):**
+
+| Piece | Role |
+| --- | --- |
+| `SoulCore/scripts/patch-hermes-mcp-pythonw.ps1` | One-shot / re-apply: rewrite `command:` `python.exe` → `pythonw.exe` when sibling exists; backup `*.bak-ops178-*` |
+| `SoulCore/scripts/start-hermes.ps1` | Runs the patch on every start (unless `-SkipMcpPythonwPatch`); ForceRestarts if config changed |
+| `ALLSTART.ps1` | Calls `start-hermes.ps1` → inherits the patch |
+
+**After Hermes reinstall / LLMOD `Tools\setup-hermes-integration.ps1`:**
+
+1. Prefer editing quarry setup so MCP `command` writes `pythonw.exe` (not `python.exe`).
+2. Or just re-run ALLSTART / `start-hermes.ps1` — preflight rewrites again.
+3. Manual: `.\SoulCore\scripts\patch-hermes-mcp-pythonw.ps1` then `.\SoulCore\scripts\start-hermes.ps1 -ForceRestart`
+
+Do **not** kill MCP servers to hide windows (agency regression).
+
 ## Knobs checked (none flip client tool_calls)
 
 | Location | Keys / fields | Effect on PreferHermes |

@@ -11,6 +11,8 @@
     * Confirm config.yaml exists (hermes config path)
     * Confirm required MCP servers enabled in config (house_victoria,
       house_victoria_data, computer_use) - warn if missing
+    * OPS-178: rewrite MCP command python.exe → pythonw.exe when sibling
+      pythonw.exe exists (hides blank consoles; see patch-hermes-mcp-pythonw.ps1)
     * Clear PYTHONPATH/VIRTUAL_ENV so a project venv cannot break pydantic_core
     * Load %LOCALAPPDATA%\hermes\.env into the child process env
     * Probe Ollama :11434 (advisory; gateway still starts)
@@ -38,7 +40,8 @@ param(
     [string]$LlmodRoot = "C:\Users\kurtw\LLMOD\LLMOD-max-master",
     [string]$OllamaUrl = "http://127.0.0.1:11434",
     [switch]$SkipPreflight,
-    [switch]$ForceRestart
+    [switch]$ForceRestart,
+    [switch]$SkipMcpPythonwPatch
 )
 
 $ErrorActionPreference = "Stop"
@@ -115,6 +118,37 @@ $envFile = Join-Path $hermesDir ".env"
 Write-Host "Config: $configPath"
 Write-Host ".env:   $envFile (exists=$(Test-Path -LiteralPath $envFile))"
 
+# OPS-178: hide blank MCP python consoles (runs even with -SkipPreflight unless opted out).
+$mcpPythonwRewrites = 0
+if (-not $SkipMcpPythonwPatch) {
+    $patchScript = Join-Path $ScriptsDir "patch-hermes-mcp-pythonw.ps1"
+    if (Test-Path -LiteralPath $patchScript) {
+        try {
+            # Patch script Write-Hosts status; pipeline output is rewrite count.
+            $patchOut = & $patchScript -ConfigPath $configPath
+            foreach ($item in @($patchOut)) {
+                if ($null -eq $item) { continue }
+                if ($item -is [int] -or ($item -is [long])) {
+                    $mcpPythonwRewrites = [int]$item
+                } elseif (("$item") -match '^\d+$') {
+                    $mcpPythonwRewrites = [int]"$item"
+                }
+            }
+            if ($mcpPythonwRewrites -gt 0) {
+                Write-Host "OPS-178: MCP config changed ($mcpPythonwRewrites) - will restart gateway so pythonw children replace console python."
+                $ForceRestart = $true
+            }
+        } catch {
+            Write-Warning "OPS-178: MCP pythonw patch failed - $($_.Exception.Message)"
+            Write-Warning "Blank python.exe consoles may still appear. Re-run: $patchScript"
+        }
+    } else {
+        Write-Warning "OPS-178: missing $patchScript - cannot rewrite MCP python → pythonw"
+    }
+} else {
+    Write-Host "OPS-178: MCP pythonw patch skipped (-SkipMcpPythonwPatch)."
+}
+
 if (-not $SkipPreflight) {
     $cfgText = Get-Content -LiteralPath $configPath -Raw -ErrorAction SilentlyContinue
     foreach ($name in @("house_victoria", "house_victoria_data", "computer_use")) {
@@ -125,9 +159,13 @@ if (-not $SkipPreflight) {
             Write-Warning "mcp_servers.$name missing from $configPath - run LLMOD Tools\setup-hermes-integration.ps1"
         }
     }
+    $hvPyw = Join-Path $LlmodRoot "MCPServer\.venv\Scripts\pythonw.exe"
     $hvPy = Join-Path $LlmodRoot "MCPServer\.venv\Scripts\python.exe"
-    if (Test-Path -LiteralPath $hvPy) {
-        Write-Host "Preflight OK: house_victoria python at $hvPy"
+    if (Test-Path -LiteralPath $hvPyw) {
+        Write-Host "Preflight OK: house_victoria pythonw at $hvPyw (no console window)"
+    } elseif (Test-Path -LiteralPath $hvPy) {
+        Write-Warning "house_victoria pythonw.exe missing; console python present: $hvPy"
+        Write-Warning "MCP stdio children may show blank python.exe windows (OPS-178)."
     } else {
         Write-Warning "house_victoria venv missing: $hvPy"
     }
