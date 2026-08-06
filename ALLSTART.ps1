@@ -7,9 +7,13 @@
   occupant (e.g. Cursor cloud port-forward to a Linux/ubuntu Host). If 7700 is stolen, starts local Host
   on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
   Does not enable AllowComputerControl (CUA stays yellow until Services / Tools & Access).
+
+  OPS-179: child scripts run with timeouts so `hermes gateway stop`, Tailscale, or Voice
+  health probes cannot freeze this launcher forever.
 .EXAMPLE
   .\ALLSTART.ps1
   .\ALLSTART.ps1 -SkipPreflight
+  .\ALLSTART.ps1 -SkipHermes -SkipVoice
   .\ALLSTART.ps1 -Configuration Debug
 #>
 [CmdletBinding()]
@@ -21,7 +25,13 @@ param(
     [switch]$SkipPreflight,
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
-    [switch]$SkipTailscaleServe
+    [switch]$SkipTailscaleServe,
+    [switch]$SkipHermes,
+    [switch]$SkipVoice,
+    [int]$HermesTimeoutSec = 90,
+    [int]$HostStartTimeoutSec = 180,
+    [int]$TailscaleTimeoutSec = 30,
+    [int]$VoiceTimeoutSec = 45
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,6 +76,35 @@ function Test-LocalVictoriaHealth {
     return $false
 }
 
+# OPS-179: never Start-Process -Wait without a deadline.
+function Invoke-ScriptWithTimeout {
+    param(
+        [Parameter(Mandatory = $true)][string]$Label,
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList,
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)][int]$TimeoutSec
+    )
+    Write-Host "[$Label] starting (timeout ${TimeoutSec}s) ..."
+    $proc = Start-Process -FilePath "powershell.exe" `
+        -ArgumentList $ArgumentList `
+        -WorkingDirectory $WorkingDirectory `
+        -PassThru -NoNewWindow
+    if (-not $proc.WaitForExit($TimeoutSec * 1000)) {
+        Write-Warning "[$Label] timed out after ${TimeoutSec}s - stopping child PID $($proc.Id)"
+        try {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            # Tree-kill common leftover powershell kids (best-effort).
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object { $_.ParentProcessId -eq $proc.Id } |
+                ForEach-Object {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+                }
+        } catch { }
+        return @{ TimedOut = $true; ExitCode = -1 }
+    }
+    return @{ TimedOut = $false; ExitCode = $proc.ExitCode }
+}
+
 function Start-LocalSoulCore {
     param([int]$LocalPort)
     $hostArgList = @(
@@ -77,12 +116,16 @@ function Start-LocalSoulCore {
     if ($SkipPreflight) { $hostArgList += "-SkipPreflight" }
     if ($ForceRebuild) { $hostArgList += "-ForceRebuild" }
 
-    $hostProc = Start-Process -FilePath "powershell.exe" `
+    $result = Invoke-ScriptWithTimeout `
+        -Label "start-soulcore :$LocalPort" `
         -ArgumentList $hostArgList `
         -WorkingDirectory $RepoRoot `
-        -Wait -PassThru -NoNewWindow
-    if ($hostProc.ExitCode -ne 0) {
-        throw "start-soulcore.ps1 failed on port $LocalPort (exit $($hostProc.ExitCode))"
+        -TimeoutSec $HostStartTimeoutSec
+    if ($result.TimedOut) {
+        throw "start-soulcore.ps1 timed out after ${HostStartTimeoutSec}s on port $LocalPort"
+    }
+    if ($result.ExitCode -ne 0) {
+        throw "start-soulcore.ps1 failed on port $LocalPort (exit $($result.ExitCode))"
     }
 }
 
@@ -156,14 +199,17 @@ if ($SkipTailscaleServe) {
     Write-Host "=== ALLSTART: Tailscale AllowedHosts sync ==="
     try {
         $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SyncAllowedHostsOnly")
-        $tsProc = Start-Process -FilePath "powershell.exe" `
+        $tsResult = Invoke-ScriptWithTimeout `
+            -Label "tailscale AllowedHosts sync" `
             -ArgumentList $tsArgs `
             -WorkingDirectory $RepoRoot `
-            -Wait -PassThru -NoNewWindow
-        if ($tsProc.ExitCode -eq 0) {
+            -TimeoutSec $TailscaleTimeoutSec
+        if ($tsResult.TimedOut) {
+            Write-Warning "Tailscale AllowedHosts sync timed out - continuing"
+        } elseif ($tsResult.ExitCode -eq 0) {
             $tailscaleSynced = $true
         } else {
-            Write-Warning "tailscale-serve-soulcore.ps1 -SyncAllowedHostsOnly exited $($tsProc.ExitCode) - continuing"
+            Write-Warning "tailscale-serve-soulcore.ps1 -SyncAllowedHostsOnly exited $($tsResult.ExitCode) - continuing"
         }
     } catch {
         Write-Warning "Tailscale AllowedHosts sync failed - $($_.Exception.Message)"
@@ -173,7 +219,9 @@ if ($SkipTailscaleServe) {
 
 Write-Host "=== ALLSTART: Hermes gateway :8642 ==="
 $hermesOk = $false
-if (-not (Test-Path -LiteralPath $StartHermes)) {
+if ($SkipHermes) {
+    Write-Host "Hermes skipped (-SkipHermes)."
+} elseif (-not (Test-Path -LiteralPath $StartHermes)) {
     Write-Warning "Missing Hermes start script: $StartHermes - skipping"
 } else {
     try {
@@ -183,12 +231,16 @@ if (-not (Test-Path -LiteralPath $StartHermes)) {
             "-File", $StartHermes
         )
         if ($SkipPreflight) { $hermesArgList += "-SkipPreflight" }
-        $hermesProc = Start-Process -FilePath "powershell.exe" `
+        $hermesResult = Invoke-ScriptWithTimeout `
+            -Label "start-hermes" `
             -ArgumentList $hermesArgList `
             -WorkingDirectory $RepoRoot `
-            -Wait -PassThru -NoNewWindow
-        if ($hermesProc.ExitCode -ne 0) {
-            Write-Warning "start-hermes.ps1 exited $($hermesProc.ExitCode) - continuing without Hermes gateway"
+            -TimeoutSec $HermesTimeoutSec
+        if ($hermesResult.TimedOut) {
+            Write-Warning "start-hermes.ps1 timed out after ${HermesTimeoutSec}s - continuing without waiting for Hermes"
+            Write-Warning "If stuck on gateway stop: kill listeners on :8642 or re-run with -SkipHermes"
+        } elseif ($hermesResult.ExitCode -ne 0) {
+            Write-Warning "start-hermes.ps1 exited $($hermesResult.ExitCode) - continuing without Hermes gateway"
         } else {
             try {
                 $hh = Invoke-WebRequest -Uri "http://127.0.0.1:8642/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
@@ -205,7 +257,7 @@ if (-not (Test-Path -LiteralPath $StartHermes)) {
         Write-Warning "Host will still start (Ollama-only). Restore hermes.exe if MCP/PreferHermes needed."
     }
 }
-if (-not $hermesOk) {
+if (-not $hermesOk -and -not $SkipHermes) {
     Write-Warning "Hermes gateway not confirmed on :8642 (soft-fail; Host continues)."
 }
 
@@ -270,12 +322,15 @@ if ($SkipTailscaleServe) {
     Write-Host "=== ALLSTART: Tailscale serve enable (TCP 7700 + HTTPS 8443) ==="
     try {
         $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SkipAllowedHosts")
-        $tsProc = Start-Process -FilePath "powershell.exe" `
+        $tsResult = Invoke-ScriptWithTimeout `
+            -Label "tailscale serve enable" `
             -ArgumentList $tsArgs `
             -WorkingDirectory $RepoRoot `
-            -Wait -PassThru -NoNewWindow
-        if ($tsProc.ExitCode -ne 0) {
-            Write-Warning "tailscale-serve-soulcore.ps1 enable exited $($tsProc.ExitCode) - continuing"
+            -TimeoutSec $TailscaleTimeoutSec
+        if ($tsResult.TimedOut) {
+            Write-Warning "Tailscale serve enable timed out - continuing (local desktop still works)"
+        } elseif ($tsResult.ExitCode -ne 0) {
+            Write-Warning "tailscale-serve-soulcore.ps1 enable exited $($tsResult.ExitCode) - continuing"
         }
     } catch {
         Write-Warning "Tailscale serve enable failed - $($_.Exception.Message)"
@@ -286,15 +341,43 @@ if ($SkipTailscaleServe) {
 Write-Host "=== ALLSTART: House.Voice (STT + Chatterbox TTS) ==="
 $StartStt = Join-Path $RepoRoot "House\House.Voice\start-stt.ps1"
 $StartTts = Join-Path $RepoRoot "House\House.Voice\start-tts.ps1"
-if (Test-Path -LiteralPath $StartStt) {
-    try { & $StartStt } catch { Write-Warning "STT start: $_" }
+if ($SkipVoice) {
+    Write-Host "Voice skipped (-SkipVoice)."
 } else {
-    Write-Warning "Missing $StartStt"
-}
-if (Test-Path -LiteralPath $StartTts) {
-    try { & $StartTts } catch { Write-Warning "TTS start: $_" }
-} else {
-    Write-Warning "Missing $StartTts"
+    if (Test-Path -LiteralPath $StartStt) {
+        try {
+            $sttArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$StartStt)
+            $sttResult = Invoke-ScriptWithTimeout `
+                -Label "start-stt" `
+                -ArgumentList $sttArgs `
+                -WorkingDirectory $RepoRoot `
+                -TimeoutSec $VoiceTimeoutSec
+            if ($sttResult.TimedOut) {
+                Write-Warning "STT start timed out after ${VoiceTimeoutSec}s - continuing"
+            } elseif ($sttResult.ExitCode -ne 0) {
+                Write-Warning "STT start exited $($sttResult.ExitCode) - continuing"
+            }
+        } catch { Write-Warning "STT start: $_" }
+    } else {
+        Write-Warning "Missing $StartStt"
+    }
+    if (Test-Path -LiteralPath $StartTts) {
+        try {
+            $ttsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$StartTts)
+            $ttsResult = Invoke-ScriptWithTimeout `
+                -Label "start-tts" `
+                -ArgumentList $ttsArgs `
+                -WorkingDirectory $RepoRoot `
+                -TimeoutSec $VoiceTimeoutSec
+            if ($ttsResult.TimedOut) {
+                Write-Warning "TTS start timed out after ${VoiceTimeoutSec}s - continuing"
+            } elseif ($ttsResult.ExitCode -ne 0) {
+                Write-Warning "TTS start exited $($ttsResult.ExitCode) - continuing"
+            }
+        } catch { Write-Warning "TTS start: $_" }
+    } else {
+        Write-Warning "Missing $StartTts"
+    }
 }
 
 Write-Host "=== ALLSTART: House.ChatDesktop (Victoria Presence) ==="
