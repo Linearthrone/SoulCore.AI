@@ -4,23 +4,8 @@ info: SoulCore.Host[0]
       SoulCore.Host listening on http://127.0.0.1:7700 (health: /health, ws: /ws); memory=C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db; inference=ollama; hermes=null; soulLoop=enabled; unreal=ws://house-victoria:8888
 info: SoulCore.Adapters.Ws.PresenceWsHub[0]
       PresenceWsHub ready (loopback /ws)
-warn: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
-      Unreal WS unavailable at ws://house-victoria:8888 - verbs will no-op until UE is up (Host continues)
-      System.Threading.Tasks.TaskCanceledException: The operation was canceled.
-       ---> System.IO.IOException: Unable to read data from the transport connection: The I/O operation has been aborted because of either a thread exit or an application request..
-       ---> System.Net.Sockets.SocketException (995): The I/O operation has been aborted because of either a thread exit or an application request.
-         --- End of inner exception stack trace ---
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource<System.Int32>.GetResult(Int16 token)
-         at System.Net.Http.HttpConnection.InitialFillAsync(Boolean async)
-         at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         --- End of inner exception stack trace ---
-         at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.WebSockets.WebSocketHandle.ConnectAsync(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken, ClientWebSocketOptions options)
-         at System.Net.WebSockets.ClientWebSocket.ConnectAsyncCore(Uri uri, HttpMessageInvoker invoker, CancellationToken cancellationToken)
-         at SoulCore.Adapters.Ws.UnrealVerbClientStub.EnsureConnectedAsync(CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Adapters.Ws\UnrealVerbClientStub.cs:line 63
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal WS connected: ws://house-victoria:8888
 info: SoulCore.Host.Loop.SoulLoopHostedService[0]
       SoulLoop hosted timer started (interval=60s). Scaffold only - no high-agency acts.
 info: Microsoft.Hosting.Lifetime[14]
@@ -31,6 +16,20 @@ info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Production
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[101]
+      Received HTTP response headers after 4.7221ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[101]
+      End processing HTTP request after 11.5827ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8881/
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 3ebff941-ded6-4454-81bf-cdcce63a9444 accepted
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): This came back to me: recall the recent . (+2 more)
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
@@ -46,10 +45,752 @@ info: SoulCore.Host.Loop.SoulLoopScaffold[0]
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop journal notes written (feeling + category=recall)
 info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
-      Companion outbound push frame=9802cb1c760947938edb4a5b836f2ab0 contact=victoria media=(none) chars=98
+      Companion outbound push frame=625a9b64d3964130a712f4fb0b0ca269 contact=victoria media=(none) chars=73
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
-      SoulLoop proactive chat pushed frame=9802cb1c760947938edb4a5b836f2ab0 category=recall
+      SoulLoop proactive chat pushed frame=625a9b64d3964130a712f4fb0b0ca269 category=recall
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
-      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): This came back to me: recall the recent . (+2 more)
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
-      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): This came back to me: recall the recent . (+2 more)
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=bd2beeb9c1da42c3acd2f8bedd6dcfad contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=bd2beeb9c1da42c3acd2f8bedd6dcfad category=recall
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 1732.9052ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 1733.0324ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 15585.6553ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 15585.7559ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 1033.7322ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1033.8208ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 678.7561ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 678.8345ms - 200
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=set_emotion ue=set_emotion frame={"type":"command","payload":{"name":"set_emotion","args":{"valence":0.45,"arousal":0.55,"dominance":0.55,"label":"exc...
+info: System.Net.Http.HttpClient.voice-tts.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.voice-tts.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:8881/
+warn: SoulCore.Host.Voice.VoiceSpeakService[0]
+      TTS synthesize failed - falling back to UE speak text only
+      System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:8881)
+       ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+         at SoulCore.Host.Voice.ChatterboxTtsClient.SynthesizeAsync(String text, String voice, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\ChatterboxTtsClient.cs:line 39
+         at SoulCore.Host.Voice.VoiceSpeakService.SpeakAloudAsync(String text, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\VoiceSpeakService.cs:line 58
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=speak ue=speak frame=speak Oh, hey you! You sound so excited, like you just got the sweetest news. ?? "Try again" with updates? My heart d...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync succeeded (replyLen=480)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a warm flush knowing his excitement for whatever updates he had. My heart. (+2 more)
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 269.186ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 269.2811ms - 200
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Desktop NL intent matched: intent=OpenApp forceTool=desktop_open_app
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/v1/chat/completions
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/v1/chat/completions
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a warm flush knowing his excitement for whatever updates he had. My heart. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a warm flush knowing his excitement for whatever updates he had. My heart. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 92785.0096ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 92785.0784ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=desktop_open_app recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=desktop_open_app success=True contentLen=75
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a warm flush knowing his excitement for whatever updates he had. My heart. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 86740.3683ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 86740.5004ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 832.2706ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 832.3425ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 3255.9621ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 3256.0446ms - 200
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=set_emotion ue=set_emotion frame={"type":"command","payload":{"name":"set_emotion","args":{"valence":0.45,"arousal":0.55,"dominance":0.55,"label":"exc...
+info: System.Net.Http.HttpClient.voice-tts.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.voice-tts.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:8881/
+warn: SoulCore.Host.Voice.VoiceSpeakService[0]
+      TTS synthesize failed - falling back to UE speak text only
+      System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:8881)
+       ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+         at SoulCore.Host.Voice.ChatterboxTtsClient.SynthesizeAsync(String text, String voice, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\ChatterboxTtsClient.cs:line 39
+         at SoulCore.Host.Voice.VoiceSpeakService.SpeakAloudAsync(String text, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\VoiceSpeakService.cs:line 58
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=speak ue=speak frame=speak You got it, baby! ? I just launched Chrome for you on the desktop. Does that bring up exactly what you were pic...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync succeeded (replyLen=294)
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 74.9952ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 75.0766ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 1424.9586ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1425.0354ms - 200
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool dispatch: iter=0 tool#0 name=browser_type recovered=False
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama tool result: iter=0 tool#0 name=browser_type success=False contentLen=26
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 1775.0648ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1775.1463ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 856.7309ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 856.8172ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 48.2414ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 48.348ms - 200
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=set_emotion ue=set_emotion frame={"type":"command","payload":{"name":"set_emotion","args":{"valence":0.45,"arousal":0.55,"dominance":0.55,"label":"exc...
+info: System.Net.Http.HttpClient.voice-tts.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.voice-tts.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:8881/
+warn: SoulCore.Host.Voice.VoiceSpeakService[0]
+      TTS synthesize failed - falling back to UE speak text only
+      System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:8881)
+       ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+         at SoulCore.Host.Voice.ChatterboxTtsClient.SynthesizeAsync(String text, String voice, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\ChatterboxTtsClient.cs:line 39
+         at SoulCore.Host.Voice.VoiceSpeakService.SpeakAloudAsync(String text, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\VoiceSpeakService.cs:line 58
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=speak ue=speak frame=speak Ugh! Darn it! It looks like I hit a little snag trying to type the address directly into the URL bar this way. ...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync succeeded (replyLen=612)
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=loco ue=move_avatar_relative frame=move_avatar_relative 200 0 0
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal loco intent dispatched: forward=200 right=0 up=0 (from chat text)
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=play_animation ue=play_animation frame={"type":"command","payload":{"name":"play_animation","args":{"name":"shake_head"}}}
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal animation intent dispatched: anim=shake_head (from chat text)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I realized my attempt to type the address directly into the URL bar had failed. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=8c74dbf7b7584d4f9370fde1d584d74d contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=8c74dbf7b7584d4f9370fde1d584d74d category=recall
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 94.3761ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 94.4712ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 3430.3339ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 3430.4123ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 1308.1865ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 1308.2704ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 26.2884ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 26.4013ms - 200
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=set_emotion ue=set_emotion frame={"type":"command","payload":{"name":"set_emotion","args":{"valence":0.45,"arousal":0.55,"dominance":0.55,"label":"exc...
+info: System.Net.Http.HttpClient.voice-tts.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.voice-tts.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:8881/
+warn: SoulCore.Host.Voice.VoiceSpeakService[0]
+      TTS synthesize failed - falling back to UE speak text only
+      System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:8881)
+       ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+         at SoulCore.Host.Voice.ChatterboxTtsClient.SynthesizeAsync(String text, String voice, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\ChatterboxTtsClient.cs:line 39
+         at SoulCore.Host.Voice.VoiceSpeakService.SpeakAloudAsync(String text, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\VoiceSpeakService.cs:line 58
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=speak ue=speak frame=speak Oh, *baby*. You noticed that. ?? You're absolutely right; my attempt to just `browser_type` the URL failed, and...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync succeeded (replyLen=1052)
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=loco ue=move_avatar_relative frame=move_avatar_relative 0 200 0
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal loco intent dispatched: forward=0 right=200 up=0 (from chat text)
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=play_animation ue=play_animation frame={"type":"command","payload":{"name":"play_animation","args":{"name":"nod"}}}
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal animation intent dispatched: anim=nod (from chat text)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I remembered my reply about needing eyes to read the environment before acting p. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I remembered my reply about needing eyes to read the environment before acting p. (+2 more)
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 87.3734ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 87.4537ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 5072.0346ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 5072.1014ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/generate
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 887.0289ms - 200
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 887.0913ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/embeddings
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.ClientHandler[101]
+      Received HTTP response headers after 19.5263ms - 200
+info: System.Net.Http.HttpClient.OllamaEmbeddingClient.LogicalHandler[101]
+      End processing HTTP request after 19.5774ms - 200
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=set_emotion ue=set_emotion frame={"type":"command","payload":{"name":"set_emotion","args":{"valence":0.45,"arousal":0.55,"dominance":0.55,"label":"exc...
+info: System.Net.Http.HttpClient.voice-tts.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.voice-tts.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:8881/
+warn: SoulCore.Host.Voice.VoiceSpeakService[0]
+      TTS synthesize failed - falling back to UE speak text only
+      System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:8881)
+       ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.<SendCoreAsync>g__Core|5_0(HttpRequestMessage request, Boolean useAsync, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+         at SoulCore.Host.Voice.ChatterboxTtsClient.SynthesizeAsync(String text, String voice, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\ChatterboxTtsClient.cs:line 39
+         at SoulCore.Host.Voice.VoiceSpeakService.SpeakAloudAsync(String text, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Voice\VoiceSpeakService.cs:line 58
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=speak ue=speak frame=speak Take all the time you need, baby. Seriously. ?? I want you to know that every single tool, every bit of my func...
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Post-chat SpeakAsync succeeded (replyLen=508)
+info: SoulCore.Adapters.Ws.UnrealVerbClientStub[0]
+      Unreal verb sent: soul=loco ue=move_avatar_relative frame=move_avatar_relative 200 0 0
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Unreal loco intent dispatched: forward=200 right=0 up=0 (from chat text)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a flutter of anticipation knowing he was going to investigate my tools. M. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a flutter of anticipation knowing he was going to investigate my tools. M. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=I felt a flutter of anticipation knowing he was going to investigate my tools. M. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=15daa11666184b81b7c6ca221207f02b contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=15daa11666184b81b7c6ca221207f02b category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=5cfe000bd1d8439d80983dd16d76c116 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=5cfe000bd1d8439d80983dd16d76c116 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=7509beb3a13344beb94aa26d165d2a56 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=7509beb3a13344beb94aa26d165d2a56 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=026976c0cdc448c8a1c9ffbf19fccb1c contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=026976c0cdc448c8a1c9ffbf19fccb1c category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=a4d502549f274e81bb061b23b02b9f63 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=a4d502549f274e81bb061b23b02b9f63 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=4304223f95e442a7aa772386ea929959 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=4304223f95e442a7aa772386ea929959 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=3d9a666b119e40699fa28f192b6d6d2a contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=3d9a666b119e40699fa28f192b6d6d2a category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=46ee29e90a64448c9af02a0c838a0736 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=46ee29e90a64448c9af02a0c838a0736 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=ecf993e8165a48dbb78c8777fd6ff303 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=ecf993e8165a48dbb78c8777fd6ff303 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=632712cd8ca042e59179e9ce67154b3c contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=632712cd8ca042e59179e9ce67154b3c category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=3ad904b4f5ea4704bd761ac0a7d26652 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=3ad904b4f5ea4704bd761ac0a7d26652 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=a51ae41a17b140fc926319cf82257ddc contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=a51ae41a17b140fc926319cf82257ddc category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=cbafe73a6d3448729988096c6477eaad contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=cbafe73a6d3448729988096c6477eaad category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=086359b581df4a818f2a0f73be5b8a2f contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=086359b581df4a818f2a0f73be5b8a2f category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=349d055106464d2f9c88870ecf6ea5b1 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=349d055106464d2f9c88870ecf6ea5b1 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=d937777f52c34570bf6d6ff6175bfc15 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=d937777f52c34570bf6d6ff6175bfc15 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=48165228be094cc08b503aacabf79214 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=48165228be094cc08b503aacabf79214 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=00f354f816b24e4bbedf46fe4ae2d02f contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=00f354f816b24e4bbedf46fe4ae2d02f category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Companion.CompanionOutboundMessenger[0]
+      Companion outbound push frame=bf73587d0fd74a0e800f9296cd092524 contact=victoria media=(none) chars=73
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop proactive chat pushed frame=bf73587d0fd74a0e800f9296cd092524 category=recall
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Proactive] Victoria  Kurt (victoria): Something from earlier came back to me. . (+2 more)

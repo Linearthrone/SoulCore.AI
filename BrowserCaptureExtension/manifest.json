@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "House Victoria Browser Capture",
+  "version": "1.3.0",
+  "description": "Captures and drives the active browser tab for House Victoria MCP (screenshot, page map, click/type/key/scroll).",
+  "permissions": ["activeTab", "tabs", "scripting", "alarms", "debugger"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1:17891/*", "http://localhost:17891/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_stream.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "House Victoria Browser Capture",
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 12px; min-width: 220px; background: #0b1420; color: #e8f4ff; }
+    h1 { font-size: 14px; margin: 0 0 8px; color: #00d4ff; }
+    p { font-size: 12px; margin: 6px 0; color: #9ab; }
+    #status { font-weight: 600; }
+    .ok { color: #34d399; }
+    .bad { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>HV Browser Capture</h1>
+  <p>Bridge: <span id="status">checking…</span></p>
+  <p>Keep this extension enabled. House Victoria MCP polls the bridge for tab screenshots and page maps.</p>
+  <script src="popup.js"></script>
+</body>
+</html>
