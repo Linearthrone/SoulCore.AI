@@ -13,16 +13,20 @@ public static class ComputerUseGuidance
 
     public const string Block =
         Marker + "\n" +
-        "You can drive Kurt's Windows desktop. Your blue agent cursor (cua-driver overlay) " +
-        "glides to where you act — the REAL OS mouse never moves; Kurt can keep working.\n" +
+        "You can drive Kurt's Windows desktop IN THE BACKGROUND. Soft/agent cursor delivery keeps " +
+        "his REAL OS mouse free — he can keep working while you act.\n" +
         "Preferred workflow:\n" +
         "1) If the app is not already running, call desktop_open_app with an allowlisted alias " +
-        "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers.\n" +
+        "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers. " +
+        "Launch is background-friendly (avoid stealing focus when possible).\n" +
         "If the user ONLY asked to open/launch an app (optional URL), call desktop_open_app once and " +
         "reply in one short sentence — do NOT list windows or screenshot just to verify the launch.\n" +
+        "If they asked you to DO something after open (search, click, type, check, navigate, …), " +
+        "keep going with desktop_* tools until the ask is done — do not stop at launch.\n" +
         "2) For further desktop work: call list_desktop_windows (or desktop_screenshot) to see what is open. " +
         "Window results include screen bounds (x,y,width,height) — use those, do not guess. " +
-        "focus_desktop_window only activates already-running titles.\n" +
+        "Prefer desktop_click/type/key with background delivery. Avoid focus_desktop_window unless " +
+        "type/key truly needs foreground focus — it steals Kurt's window.\n" +
         "3) Click with desktop_click at screen coordinates (optional clicks:2 for double-click). " +
         "For a window, click near its center: x + width/2, y + height/2.\n" +
         "4) Draw / drag with desktop_drag; scroll with desktop_scroll (x,y,deltaY).\n" +
@@ -85,10 +89,13 @@ public static class DesktopToolIntent
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
-    /// Extra desktop verbs beyond bare open/launch — means the turn still needs the tool-loop.
+    /// Extra intent beyond bare open/launch — keep the tool-loop so she finishes the ask (BED-180/181).
     /// </summary>
     private static readonly Regex OpenAppFollowOnAction = new(
-        @"\b(?:click|type|drag|draw|scroll|screenshot|capture|focus|close|hover|move|resize|minimize|maximize)\b",
+        @"\b(?:click|type|drag|draw|scroll|screenshot|capture|focus|close|hover|move|resize|minimize|maximize|" +
+        @"search|find|look\s*up|navigate|browse|check|read|write|fill|select|download|upload|" +
+        @"login|sign\s*in|compose|send|reply|play|watch|buy|order|get|fetch|go\s+to|open\s+tab)\b|" +
+        @"\b(?:and|then|after\s+that)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex LaunchUrl = new(

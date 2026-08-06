@@ -89,6 +89,9 @@ public class DesktopToolIntentTests
     [InlineData("open chrome to https://example.com", true)]
     [InlineData("open chrome and click the first link", false)]
     [InlineData("open chrome then type hello", false)]
+    [InlineData("open chrome and search for cats", false)]
+    [InlineData("open my browser and check my email", false)]
+    [InlineData("open chrome and go to gmail", false)]
     public void IsPureOpenPrompt_ClassifiesFollowOnActions(string text, bool expected)
     {
         Assert.Equal(expected, DesktopToolIntent.IsPureOpenPrompt(text));

@@ -58,7 +58,7 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 
 ## In flight (PM)
 
-- **2026-08-06 TINA:** **BED-180 Pass (code)** — pure “open Chrome/browser” pre-dispatches `desktop_open_app` (no LLM wait) + early “Opened …”. Branch `cursor/bed-180-fast-open-app-169c`. Host recycle after merge.
+- **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Merged #31.
 
 - **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. On main; ForceRestart after rewrite was the ALLSTART hang trigger (OPS-179).

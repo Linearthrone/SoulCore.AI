@@ -455,6 +455,33 @@ public class OllamaToolLoopTests
     }
 
     [Fact]
+    public async Task ForceToolName_OpenApp_ContinuesLoop_WhenSearchFollowOnPresent()
+    {
+        // BED-181: "open … and search …" must not early-exit after launch.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "Searched for cats.", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", _ => new ToolResult(true, "opened app 'chrome' [background]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open chrome and search for cats" }
+            },
+            new[] { DesktopOpenAppToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "desktop_open_app" });
+
+        Assert.Equal("Searched for cats.", result);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_open_app");
+        Assert.Equal(1, handler.CallCount);
+    }
+
+    [Fact]
     public async Task ForceToolName_TextOnly_RetryNudge_ThenDispatches()
     {
         // No session id → cannot soft-dispatch; inject nudge and keep force
