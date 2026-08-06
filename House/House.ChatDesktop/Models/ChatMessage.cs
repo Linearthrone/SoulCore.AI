@@ -1,11 +1,15 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Avalonia.Media;
 
 namespace House.ChatDesktop.Models;
 
 public sealed class ChatMessage : INotifyPropertyChanged
 {
     private string _text = string.Empty;
+    private IImage? _image;
+    private string? _mediaPath;
+    private string? _mediaId;
 
     /// <summary>Stable id for SQLite upsert / dedupe (LLMOD-style).</summary>
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -20,6 +24,7 @@ public sealed class ChatMessage : INotifyPropertyChanged
             if (_text == value) return;
             _text = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasText));
         }
     }
 
@@ -27,6 +32,47 @@ public sealed class ChatMessage : INotifyPropertyChanged
 
     /// <summary>Correlation id from SoulCore frame (for streaming assistant bubbles).</summary>
     public string? FrameId { get; set; }
+
+    /// <summary>Companion media id from chat.done when Host ships MMS.</summary>
+    public string? MediaId
+    {
+        get => _mediaId;
+        set
+        {
+            if (_mediaId == value) return;
+            _mediaId = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Local path for attached / cached MMS image.</summary>
+    public string? MediaPath
+    {
+        get => _mediaPath;
+        set
+        {
+            if (_mediaPath == value) return;
+            _mediaPath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasImage));
+        }
+    }
+
+    public IImage? Image
+    {
+        get => _image;
+        set
+        {
+            if (ReferenceEquals(_image, value)) return;
+            _image = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasImage));
+        }
+    }
+
+    public bool HasImage => Image is not null || !string.IsNullOrWhiteSpace(MediaPath);
+
+    public bool HasText => !string.IsNullOrWhiteSpace(Text);
 
     public string DisplayRole => Role switch
     {
