@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-08-06 (TINA: Wave 29 Pass — BED-175/177 + FED-176)
+updated: 2026-08-06 (TINA: OPS-178 hide Hermes MCP python consoles)
 ---
 
 # Product Root Declaration
@@ -58,6 +58,7 @@ updated: 2026-08-06 (TINA: Wave 29 Pass — BED-175/177 + FED-176)
 
 ## In flight (PM)
 
+- **2026-08-06 TINA:** **OPS-178 P0** — blank persistent Python consoles at ALLSTART (Hermes MCP `python.exe` stdio kids). Hide via pythonw / CREATE_NO_WINDOW / start-hermes rewrite.
 - **2026-08-06 TINA Wave 29 complete:** **BED-175** + **BED-177** + **FED-176 Pass archived**. Merge order: #26 (proactive) · #27 (tools/identity) · fed-176 SMS UI · Host recycle + relaunch ChatDesktop. Optional follow-up: Host MMS outbound on chat.send. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
 - **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
