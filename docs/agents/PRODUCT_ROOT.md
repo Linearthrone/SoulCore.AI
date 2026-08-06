@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-08-06 (TINA: BED-175 Pass; FED-176 + BED-177 in flight)
+updated: 2026-08-06 (TINA: BED-175/177 Pass; FED-176 in flight)
 ---
 
 # Product Root Declaration
@@ -58,7 +58,7 @@ updated: 2026-08-06 (TINA: BED-175 Pass; FED-176 + BED-177 in flight)
 
 ## In flight (PM)
 
-- **2026-08-06 TINA Wave 29:** **BED-175 Pass archived** (human proactive SMS bank). Still in flight: **FED-176**, **BED-177**. Merge bed-175 after Host recycle. BED-174 PR #24 still open.
+- **2026-08-06 TINA Wave 29:** **BED-175** + **BED-177 Pass archived**. Still in flight: **FED-176** SMS UI. Merge bed-175 (#26) + bed-177; Host recycle. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
 - **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
 - **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, **BED-169 Partial-Accepted**, **OPS-170 Blocked-User**, **BED-171 Partial-Accepted**.
