@@ -122,75 +122,25 @@ public sealed class WorkflowCreateTool : ITool
         var index = 0;
         foreach (var el in stepsProp.EnumerateArray())
         {
-            if (el.ValueKind != JsonValueKind.Object)
+            if (!WorkflowStepJson.TryParseStep(el, index, out var step, out var stepError))
             {
-                error = $"error: workflow_create steps[{index}] must be an object.";
+                error = $"error: workflow_create {stepError}";
                 steps = new List<WorkflowStep>();
                 return false;
-            }
-
-            if (!el.TryGetProperty("description", out var descProp) || descProp.ValueKind != JsonValueKind.String)
-            {
-                error = $"error: workflow_create steps[{index}] requires 'description' (string).";
-                steps = new List<WorkflowStep>();
-                return false;
-            }
-
-            var description = descProp.GetString();
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                error = $"error: workflow_create steps[{index}] 'description' must be non-empty.";
-                steps = new List<WorkflowStep>();
-                return false;
-            }
-
-            string? tool = null;
-            if (el.TryGetProperty("tool", out var toolProp))
-            {
-                if (toolProp.ValueKind == JsonValueKind.Null)
-                {
-                    tool = null;
-                }
-                else if (toolProp.ValueKind == JsonValueKind.String)
-                {
-                    var t = toolProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(t))
-                        tool = t.Trim();
-                }
-                else
-                {
-                    error = $"error: workflow_create steps[{index}] 'tool' must be a string when present.";
-                    steps = new List<WorkflowStep>();
-                    return false;
-                }
             }
 
             // BED-162: when the model omits tool but the description clearly
             // names a known action (recall memory / speak), infer it so
             // workflow_execute nested dispatch stays useful (ISSUE-005 path).
-            if (string.IsNullOrWhiteSpace(tool))
-                tool = WorkflowToolIntent.InferToolFromDescription(description);
-
-            var args = default(JsonElement);
-            if (el.TryGetProperty("args", out var argsProp))
+            // Inference stays on create/ingress only — not in WorkflowStepJson.
+            if (string.IsNullOrWhiteSpace(step.Tool))
             {
-                if (argsProp.ValueKind == JsonValueKind.Null)
-                {
-                    args = default;
-                }
-                else if (argsProp.ValueKind == JsonValueKind.Object)
-                {
-                    args = argsProp.Clone();
-                }
-                else
-                {
-                    error = $"error: workflow_create steps[{index}] 'args' must be a JSON object when present.";
-                    steps = new List<WorkflowStep>();
-                    return false;
-                }
+                var inferred = WorkflowToolIntent.InferToolFromDescription(step.Description);
+                if (!string.IsNullOrWhiteSpace(inferred))
+                    step = step with { Tool = inferred };
             }
 
-            steps.Add(new WorkflowStep(description!.Trim(), tool, args));
+            steps.Add(step);
             index++;
         }
 

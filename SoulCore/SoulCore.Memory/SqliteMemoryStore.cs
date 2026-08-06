@@ -680,28 +680,14 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             throw new InvalidOperationException("victoria_workflows.steps_json must be a JSON array.");
 
         var list = new List<WorkflowStep>();
+        var index = 0;
         foreach (var el in doc.RootElement.EnumerateArray())
         {
-            if (el.ValueKind != JsonValueKind.Object)
-                throw new InvalidOperationException("Each workflow step must be a JSON object.");
+            if (!WorkflowStepJson.TryParseStep(el, index, out var step, out var error))
+                throw new InvalidOperationException(error!);
 
-            if (!el.TryGetProperty("description", out var descProp) || descProp.ValueKind != JsonValueKind.String)
-                throw new InvalidOperationException("Each workflow step requires a 'description' string.");
-
-            var description = descProp.GetString() ?? string.Empty;
-            string? tool = null;
-            if (el.TryGetProperty("tool", out var toolProp) && toolProp.ValueKind == JsonValueKind.String)
-            {
-                var t = toolProp.GetString();
-                if (!string.IsNullOrWhiteSpace(t))
-                    tool = t.Trim();
-            }
-
-            var args = default(JsonElement);
-            if (el.TryGetProperty("args", out var argsProp) && argsProp.ValueKind == JsonValueKind.Object)
-                args = argsProp.Clone();
-
-            list.Add(new WorkflowStep(description, tool, args));
+            list.Add(step);
+            index++;
         }
 
         return list;

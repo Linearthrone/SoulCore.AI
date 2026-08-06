@@ -6,7 +6,8 @@ namespace SoulCore.Inference.Tools.Workflow;
 /// <summary>
 /// Model-callable <c>task_update_status</c> (BED-140). Updates
 /// <c>status</c> + <c>updated_at</c> on a <c>victoria_tasks</c> row.
-/// Validates status against <c>todo|in_progress|done|blocked</c>.
+/// Allowed statuses (<c>todo|in_progress|done|blocked</c>) are enforced by
+/// <see cref="IVictoriaTaskStore.UpdateStatusAsync"/> (<see cref="ArgumentException"/>).
 /// </summary>
 public sealed class TaskUpdateStatusTool : ITool
 {
@@ -34,7 +35,7 @@ public sealed class TaskUpdateStatusTool : ITool
                 Data: null);
         }
 
-        if (!TryReadId(args, out var id, out var idError))
+        if (!ToolArgParsing.TryReadPositiveId(args, Definition.Name, out var id, out var idError))
         {
             return new ToolResult(Success: false, Content: idError!, Data: null);
         }
@@ -57,18 +58,14 @@ public sealed class TaskUpdateStatusTool : ITool
         }
 
         var normalized = status.Trim().ToLowerInvariant();
-        if (!SqliteMemoryStore.AllowedTaskStatuses.Contains(normalized))
-        {
-            return new ToolResult(
-                Success: false,
-                Content: $"error: invalid status '{status}'. Allowed: todo, in_progress, done, blocked.",
-                Data: null);
-        }
 
         bool updated;
+        VictoriaTask? task = null;
         try
         {
             updated = await _tasks.UpdateStatusAsync(id, normalized, ct).ConfigureAwait(false);
+            if (updated)
+                task = await _tasks.GetAsync(id, ct).ConfigureAwait(false);
         }
         catch (ArgumentException ex)
         {
@@ -97,36 +94,11 @@ public sealed class TaskUpdateStatusTool : ITool
                 Data: new { id });
         }
 
+        var resolvedStatus = task?.Status ?? normalized;
         return new ToolResult(
             Success: true,
-            Content: $"updated: id={id} status={normalized}",
-            Data: new { id, status = normalized });
-    }
-
-    private static bool TryReadId(JsonElement args, out long id, out string? error)
-    {
-        id = 0;
-        error = null;
-
-        if (!args.TryGetProperty("id", out var idProp))
-        {
-            error = "error: task_update_status requires 'id' (integer).";
-            return false;
-        }
-
-        if (idProp.ValueKind == JsonValueKind.Number && idProp.TryGetInt64(out id) && id > 0)
-            return true;
-
-        if (idProp.ValueKind == JsonValueKind.String
-            && long.TryParse(idProp.GetString(), out id)
-            && id > 0)
-        {
-            return true;
-        }
-
-        error = "error: task_update_status 'id' must be a positive integer.";
-        id = 0;
-        return false;
+            Content: $"updated: id={id} status={resolvedStatus}",
+            Data: task is not null ? task : new { id, status = resolvedStatus });
     }
 
     private static JsonElement BuildParametersSchema()
