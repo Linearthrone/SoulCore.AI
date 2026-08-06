@@ -224,6 +224,22 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.Null(inference.LastLoopOptions?.ForceToolName);
     }
 
+    [Fact]
+    public async Task DesktopNlOpenChrome_ForcesDesktopOpenApp()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Chrome." };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var handler = MakeHandler(inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true));
+
+        await RunOneChatTurnAsync(handler, "open Google Chrome");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+    }
+
     // ---------------------------------------------------------------------
     // BED-167 / ISSUE-003: NL MT4 status → ForceToolName=mt4_status
     // (Avenue B PreferHermes→Ollama too; exclusivity via BED-165)

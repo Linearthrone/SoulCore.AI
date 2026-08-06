@@ -13,20 +13,26 @@ public static class ComputerUseGuidance
 
     public const string Block =
         Marker + "\n" +
-        "You can drive Kurt's Windows desktop. Your blue agent cursor (cua-driver overlay) " +
-        "glides to where you act — the REAL OS mouse never moves; Kurt can keep working.\n" +
+        "You can drive Kurt's Windows desktop IN THE BACKGROUND. Soft/agent cursor delivery keeps " +
+        "his REAL OS mouse free — he can keep working while you act.\n" +
         "Preferred workflow:\n" +
         "1) If the app is not already running, call desktop_open_app with an allowlisted alias " +
-        "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers.\n" +
-        "2) Call list_desktop_windows (or desktop_screenshot) to see what is open. " +
+        "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers. " +
+        "Launch is background-friendly (avoid stealing focus when possible).\n" +
+        "If the user ONLY asked to open/launch an app (optional URL), call desktop_open_app once and " +
+        "reply in one short sentence — do NOT list windows or screenshot just to verify the launch.\n" +
+        "If they asked you to DO something after open (search, click, type, check, navigate, …), " +
+        "keep going with desktop_* tools until the ask is done — do not stop at launch.\n" +
+        "2) For further desktop work: call list_desktop_windows (or desktop_screenshot) to see what is open. " +
         "Window results include screen bounds (x,y,width,height) — use those, do not guess. " +
-        "focus_desktop_window only activates already-running titles.\n" +
+        "Prefer desktop_click/type/key with background delivery. Avoid focus_desktop_window unless " +
+        "type/key truly needs foreground focus — it steals Kurt's window.\n" +
         "3) Click with desktop_click at screen coordinates (optional clicks:2 for double-click). " +
         "For a window, click near its center: x + width/2, y + height/2.\n" +
         "4) Draw / drag with desktop_drag; scroll with desktop_scroll (x,y,deltaY).\n" +
         "5) Then desktop_type / desktop_key (chords OK: Ctrl+L, Alt+Tab, Ctrl+T, Enter). " +
         "Type/key need a click target first.\n" +
-        "6) After state-changing actions, list or screenshot again to verify.\n" +
+        "6) After multi-step state-changing actions (not bare open/launch), list or screenshot again to verify.\n" +
         "For local desktop launch/control use SoulCore desktop_* tools only. " +
         "Do NOT invent Hermes terminal, process, computer_use, or browser_navigate for local launch " +
         "when DesktopBackend is native/cua — those are wrong for opening Chrome on Kurt's PC.\n" +
@@ -79,7 +85,22 @@ public static class DesktopToolIntent
     /// Launch / open an allowlisted app — must win over UseComputer→list_windows.
     /// </summary>
     private static readonly Regex OpenApp = new(
-        @"\b(?:open|start|launch)\b[\s\S]{0,48}\b(?:google\s+chrome|chrome|msedge|microsoft\s+edge|edge|firefox|notepad|file\s+explorer|explorer|browser)\b",
+        @"\b(?:open|start|launch|bring\s+up|pull\s+up|fire\s+up|open\s+up)\b[\s\S]{0,48}\b(?:google\s+chrome|chrome|msedge|microsoft\s+edge|edge|firefox|notepad|file\s+explorer|explorer|browser)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Extra intent beyond bare open/launch — keep the tool-loop so she finishes the ask (BED-180/181).
+    /// </summary>
+    private static readonly Regex OpenAppFollowOnAction = new(
+        @"\b(?:click|type|drag|draw|scroll|screenshot|capture|focus|close|hover|move|resize|minimize|maximize|" +
+        @"search|find|look\s*up|navigate|browse|check|read|write|fill|select|download|upload|" +
+        @"login|sign\s*in|compose|send|reply|play|watch|buy|order|get|fetch|go\s+to|open\s+tab)\b|" +
+        @"\b(?:and|then|after\s+that)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex LaunchUrl = new(
+        @"\b(?:https?://[^\s]+|www\.[^\s]+)\b|" +
+        @"\b(?:to|at|url)\s+((?:https?://|www\.)?[^\s]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex UseComputer = new(
@@ -150,4 +171,105 @@ public static class DesktopToolIntent
 
         return false;
     }
+
+    /// <summary>
+    /// Resolve allowlisted app (+ optional browser URL) from an open/launch NL turn (BED-180).
+    /// </summary>
+    public static bool TryResolveOpenAppLaunch(string? userText, out string app, out string? launchArgs)
+    {
+        app = "";
+        launchArgs = null;
+        if (string.IsNullOrWhiteSpace(userText))
+            return false;
+
+        var text = userText.Trim();
+        if (!TryMatch(text, out var match) || match.Intent != Kind.OpenApp)
+            return false;
+
+        app = ResolveOpenAppAlias(text);
+        if (string.IsNullOrEmpty(app))
+            return false;
+
+        launchArgs = TryExtractLaunchUrl(text);
+        return true;
+    }
+
+    /// <summary>
+    /// True when the user only asked to open/launch (optional URL) — no click/type/etc.
+    /// Host can Process.Start and reply without further LLM rounds (BED-180).
+    /// </summary>
+    public static bool IsPureOpenPrompt(string? userText)
+    {
+        if (string.IsNullOrWhiteSpace(userText))
+            return false;
+        if (!TryMatch(userText, out var match) || match.Intent != Kind.OpenApp)
+            return false;
+        return !OpenAppFollowOnAction.IsMatch(userText);
+    }
+
+    /// <summary>Short user-facing confirm after a successful soft-dispatched open.</summary>
+    public static string BuildOpenedReply(string app, string? launchArgs)
+    {
+        var label = DisplayAppName(app);
+        if (!string.IsNullOrWhiteSpace(launchArgs))
+            return $"Opened {label} to {launchArgs.Trim()}.";
+        return $"Opened {label}.";
+    }
+
+    private static string ResolveOpenAppAlias(string text)
+    {
+        var lower = text.ToLowerInvariant();
+        if (lower.Contains("firefox", StringComparison.Ordinal))
+            return "firefox";
+        if (lower.Contains("msedge", StringComparison.Ordinal)
+            || lower.Contains("microsoft edge", StringComparison.Ordinal)
+            || Regex.IsMatch(lower, @"\bedge\b", RegexOptions.CultureInvariant))
+            return "edge";
+        if (lower.Contains("notepad", StringComparison.Ordinal))
+            return "notepad";
+        if (lower.Contains("file explorer", StringComparison.Ordinal)
+            || lower.Contains("explorer", StringComparison.Ordinal))
+            return "explorer";
+        if (lower.Contains("google chrome", StringComparison.Ordinal)
+            || lower.Contains("chrome", StringComparison.Ordinal)
+            || lower.Contains("browser", StringComparison.Ordinal)
+            || lower.Contains("desktop_open_app", StringComparison.Ordinal))
+            return "chrome";
+        return "";
+    }
+
+    private static string? TryExtractLaunchUrl(string text)
+    {
+        var m = LaunchUrl.Match(text);
+        if (!m.Success)
+            return null;
+
+        var raw = m.Groups.Count > 1 && m.Groups[1].Success && !string.IsNullOrWhiteSpace(m.Groups[1].Value)
+            ? m.Groups[1].Value
+            : m.Value;
+        raw = raw.Trim().TrimEnd('.', ',', ';', ')', ']');
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+        // Ignore bare "to"/"at" false positives without a host-looking token.
+        if (!raw.Contains('.', StringComparison.Ordinal)
+            && !raw.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return raw;
+    }
+
+    private static string DisplayAppName(string app) =>
+        NormalizeDisplayAlias(app) switch
+        {
+            "chrome" => "Chrome",
+            "edge" or "msedge" => "Edge",
+            "firefox" => "Firefox",
+            "notepad" => "Notepad",
+            "explorer" or "file_explorer" => "File Explorer",
+            "cmd" => "Command Prompt",
+            "powershell" => "PowerShell",
+            _ => string.IsNullOrWhiteSpace(app) ? "the app" : app.Trim(),
+        };
+
+    private static string NormalizeDisplayAlias(string app)
+        => app.Trim().ToLowerInvariant().Replace(".exe", "", StringComparison.Ordinal);
 }
