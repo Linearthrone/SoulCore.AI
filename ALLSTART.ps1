@@ -28,16 +28,19 @@ param(
     [switch]$SkipTailscaleServe,
     [switch]$SkipHermes,
     [switch]$SkipVoice,
+    [switch]$SkipBrowserBridge,
     [int]$HermesTimeoutSec = 90,
     [int]$HostStartTimeoutSec = 180,
     [int]$TailscaleTimeoutSec = 30,
-    [int]$VoiceTimeoutSec = 45
+    [int]$VoiceTimeoutSec = 45,
+    [int]$BrowserBridgeTimeoutSec = 45
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = $PSScriptRoot
 $StartHost = Join-Path $RepoRoot "SoulCore\scripts\start-soulcore.ps1"
 $StartHermes = Join-Path $RepoRoot "SoulCore\scripts\start-hermes.ps1"
+$StartBrowserBridge = Join-Path $RepoRoot "SoulCore\scripts\start-browser-bridge.ps1"
 $StartGui = Join-Path $RepoRoot "start-desktopgui.ps1"
 $TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
 
@@ -215,6 +218,46 @@ if ($SkipTailscaleServe) {
         Write-Warning "Tailscale AllowedHosts sync failed - $($_.Exception.Message)"
         Write-Warning "Continuing without Tailscale serve. Host stays loopback-only."
     }
+}
+
+Write-Host "=== ALLSTART: BrowserCaptureBridge :17891 ==="
+$browserBridgeOk = $false
+if ($SkipBrowserBridge) {
+    Write-Host "Browser bridge skipped (-SkipBrowserBridge)."
+} elseif (-not (Test-Path -LiteralPath $StartBrowserBridge)) {
+    Write-Warning "Missing $StartBrowserBridge - browser_capture_tab will fail until bridge is started"
+} else {
+    try {
+        $bbArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $StartBrowserBridge)
+        $bbResult = Invoke-ScriptWithTimeout `
+            -Label "start-browser-bridge" `
+            -ArgumentList $bbArgs `
+            -WorkingDirectory $RepoRoot `
+            -TimeoutSec $BrowserBridgeTimeoutSec
+        if ($bbResult.TimedOut) {
+            Write-Warning "start-browser-bridge timed out after ${BrowserBridgeTimeoutSec}s - continuing"
+        } elseif ($bbResult.ExitCode -ne 0) {
+            Write-Warning "start-browser-bridge exited $($bbResult.ExitCode) - continuing"
+        } else {
+            try {
+                $bh = Invoke-RestMethod -Uri "http://127.0.0.1:17891/health" -TimeoutSec 3 -ErrorAction Stop
+                if ($bh.ok -eq $true) {
+                    Write-Host "BrowserCaptureBridge OK: http://127.0.0.1:17891/health"
+                    $browserBridgeOk = $true
+                }
+            } catch {
+                Write-Warning "Browser bridge start reported OK but /health not ready - $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warning "BrowserCaptureBridge start failed - $($_.Exception.Message)"
+    }
+    $extDir = Join-Path $RepoRoot "BrowserCaptureExtension"
+    Write-Host "Chrome extension (Load unpacked): $extDir"
+}
+if (-not $browserBridgeOk -and -not $SkipBrowserBridge) {
+    Write-Warning "BrowserCaptureBridge not confirmed on :17891 (soft-fail; Host continues)."
+    Write-Warning "Load unpacked extension from BrowserCaptureExtension after bridge is up."
 }
 
 Write-Host "=== ALLSTART: Hermes gateway :8642 ==="
