@@ -73,11 +73,31 @@ function Get-HermesExecutable {
 }
 
 function Stop-HermesOnPort {
-    param([int]$LocalPort)
+    param(
+        [int]$LocalPort,
+        # OPS-179: `hermes gateway stop` can hang forever waiting on MCP stdio
+        # children (blank python / pythonw). Never block ALLSTART on it.
+        [int]$StopTimeoutSec = 12
+    )
     $stopped = $false
+    Write-Host "Stopping Hermes gateway (timeout ${StopTimeoutSec}s)..."
     try {
-        & hermes gateway stop 2>$null | Out-Null
-    } catch { }
+        $exe = Get-HermesExecutable
+        if ($exe) {
+            $stopProc = Start-Process -FilePath $exe `
+                -ArgumentList @("gateway", "stop") `
+                -WindowStyle Hidden `
+                -PassThru
+            if (-not $stopProc.WaitForExit($StopTimeoutSec * 1000)) {
+                Write-Warning "hermes gateway stop timed out after ${StopTimeoutSec}s - killing stop PID $($stopProc.Id) and force-clearing :$LocalPort"
+                Stop-Process -Id $stopProc.Id -Force -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Warning "hermes.exe not found for gateway stop - force-clearing :$LocalPort"
+        }
+    } catch {
+        Write-Warning "hermes gateway stop failed - $($_.Exception.Message)"
+    }
     Start-Sleep -Seconds 1
     $conns = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue
     foreach ($c in @($conns)) {

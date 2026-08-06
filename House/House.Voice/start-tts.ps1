@@ -45,9 +45,10 @@ Write-Host "Starting Chatterbox TTS on ${HostAddr}:${Port} with $PythonExe (voic
 Start-Process -FilePath $PythonExe -ArgumentList @($app) `
     -WorkingDirectory (Split-Path $app -Parent) -WindowStyle Minimized `
     -RedirectStandardError "$env:TEMP\chatterbox-err.log" -RedirectStandardOutput "$env:TEMP\chatterbox-out.log"
-Start-Sleep 8
+# OPS-179: short probe — CUDA/model load can exceed this; do not block ALLSTART.
+Start-Sleep 5
 try {
-    $r = Invoke-WebRequest -Uri "http://${HostAddr}:${Port}/" -TimeoutSec 30 -UseBasicParsing
+    $r = Invoke-WebRequest -Uri "http://${HostAddr}:${Port}/" -TimeoutSec 5 -UseBasicParsing
     Write-Host "Chatterbox healthy (HTTP $($r.StatusCode))"
 } catch {
     Write-Warning "Chatterbox started but not ready yet: $_"

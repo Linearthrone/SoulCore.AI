@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-08-06 (TINA: OPS-178 Pass — MCP pythonw hide)
+updated: 2026-08-06 (TINA: OPS-179 ALLSTART hang timeouts)
 ---
 
 # Product Root Declaration
@@ -58,7 +58,8 @@ updated: 2026-08-06 (TINA: OPS-178 Pass — MCP pythonw hide)
 
 ## In flight (PM)
 
-- **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. Merge ops-178 branch; re-run ALLSTART to clear blank consoles.
+- **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
+- **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. On main; ForceRestart after rewrite was the ALLSTART hang trigger (OPS-179).
 - **2026-08-06 TINA Wave 29 complete:** **BED-175** + **BED-177** + **FED-176 Pass archived**. Merge order: #26 (proactive) · #27 (tools/identity) · fed-176 SMS UI · Host recycle + relaunch ChatDesktop. Optional follow-up: Host MMS outbound on chat.send. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
 - **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
