@@ -217,13 +217,15 @@ public sealed class SoulLoopScaffold : ISoulLoop
             && tick % (pushEvery * 2) != 0)
             return;
 
-        // Natural SMS only — never push Inner-focus / want scaffold phrases into chat.done.
+        // Only model-authored proactive text belongs in chat. Phrase-bank / scaffold lines
+        // are not Victoria speaking — skip them even if ProactiveChatEnabled was forced on.
         var text = CompanionOutboundMessenger.ComposeProactiveText(category, label, want);
         if (string.IsNullOrWhiteSpace(text)
-            || CompanionOutboundMessenger.ContainsScaffoldLeak(text))
+            || CompanionOutboundMessenger.ContainsScaffoldLeak(text)
+            || CompanionOutboundMessenger.IsAutomatedProactiveLine(text))
         {
             _logger.LogDebug(
-                "SoulLoop proactive chat skipped (no natural line) category={Category}",
+                "SoulLoop proactive chat skipped (no model line) category={Category}",
                 category);
             return;
         }

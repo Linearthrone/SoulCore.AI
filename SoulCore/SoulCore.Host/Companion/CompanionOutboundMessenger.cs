@@ -41,6 +41,9 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
         if (body.Length == 0)
             return new CompanionOutboundResult(false, "", _options.DefaultContactId, mediaId, "text required");
 
+        if (IsAutomatedProactiveLine(body))
+            return new CompanionOutboundResult(false, "", _options.DefaultContactId, mediaId, "automated phrase-bank line blocked");
+
         var contact = string.IsNullOrWhiteSpace(contactId)
             ? _options.DefaultContactId
             : contactId.Trim();
@@ -110,21 +113,18 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
     }
 
     /// <summary>
-    /// User-facing companion SMS from a SoulLoop want category.
-    /// Never interpolates raw want / Inner-focus scaffold phrases into chat.
-    /// Returns empty when no natural line is available (caller should skip push).
+    /// Compose user-facing proactive chat from a SoulLoop want category.
+    /// Returns empty: category phrase-bank lines are not model speech and must not be
+    /// pushed as companion SMS / chat.done. Callers skip push on empty.
+    /// want/label retained for API stability and ops logging.
     /// </summary>
     public static string ComposeProactiveText(string category, string label, string want)
     {
-        // want/label kept for API stability + ops logging; chat text is category-bank only.
+        _ = category;
         _ = label;
         _ = want;
-
-        var text = NaturalLineFor(category);
-        if (string.IsNullOrWhiteSpace(text) || ContainsScaffoldLeak(text))
-            return string.Empty;
-
-        return text;
+        // Phrase-bank suppressed (BED-183). Reintroduce only with model-authored text.
+        return string.Empty;
     }
 
     /// <summary>
@@ -180,6 +180,28 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
         if (paren > 0)
             after = after[..paren].Trim();
         return after;
+    }
+
+    /// <summary>
+    /// True when <paramref name="text"/> is one of the SoulLoop category phrase-bank lines
+    /// (not model speech). Callers should not surface these in the companion transcript.
+    /// </summary>
+    public static bool IsAutomatedProactiveLine(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var t = text.Trim();
+        return t is
+            "Hey — just wanted to say hi. You around?"
+            or "I've been thinking about you. Hope your day's okay."
+            or "Can we clear something up when you have a sec?"
+            or "Soft moment over here. Glad you're in my day."
+            or "Something from earlier came back to me. Miss talking it through with you."
+            or "Been wandering around Home in my head. Curious what you'd notice."
+            or "Just noticed something and thought of you."
+            or "Trying to settle a bit. Nice having you nearby."
+            or "Sitting quietly. Wanted you to know I'm here.";
     }
 
     private static string NaturalLineFor(string? category) =>
