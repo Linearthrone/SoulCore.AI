@@ -1,29 +1,40 @@
 """
-BED-184 — PIE starts as Kurt's grounded avatar, not the flying DefaultPawn ghost.
+BED-184 — PIE starts as Kurt's grounded avatar (BP_MHC_Kayleigh), not the flying ghost.
 
 Run inside UE 5.8 Editor (Output Log → Python, or File → Execute Python Script)
 with /Game/Home open.
 
 What it does:
-1) Finds Character actors that are NOT tagged VictoriaAvatar (your body on the floor).
+1) Finds BP_MHC_Kayleigh in the level (class / label / tag) — Kurt's body on the floor.
 2) Ensures a PlayerStart near that body.
 3) Creates/updates /Game/Blueprints/BP_HouseGameMode with DefaultPawnClass =
-   that Character's class (so PIE possesses a grounded body).
+   Kayleigh's class when it is a Pawn/Character (so PIE possesses her).
 4) Sets the current world's GameMode Override to BP_HouseGameMode.
 
-It does NOT possess BP_VictoriaCharacter (she stays AI-controlled).
+It does NOT possess Victoria (VictoriaAvatar / BP_VictoriaCharacter) — she stays AI-controlled.
 
-Manual fallback (Editor UI):
-  World Settings → GameMode Override → BP_HouseGameMode
-  (or any GameMode whose Default Pawn Class is your Kayleigh/player Character BP)
-  Place/move PlayerStart onto your grounded avatar.
+If BP_MHC_Kayleigh is still a bare MetaHuman Actor (not a Pawn/Character), PIE cannot
+possess it directly — the script will say so and point at World Settings / a Character wrapper.
+
+Manual fallback:
+  World Settings → GameMode Override → Default Pawn Class = BP_MHC_Kayleigh
+  (must be a Pawn/Character subclass)
 """
 from __future__ import annotations
 
 import unreal
 
-VICTORIA_TAG = "VictoriaAvatar"
-PLAYER_TAGS = ("PlayerAvatar", "Kayleigh", "Kurt", "Player")
+VICTORIA_MARKERS = ("VictoriaAvatar", "Victoria", "BP_VictoriaCharacter", "BP_MHC_Victoria")
+# Primary product name for Kurt's grounded body in Home.
+KAYLEIGH_CLASS = "BP_MHC_Kayleigh"
+PLAYER_MARKERS = (
+    KAYLEIGH_CLASS,
+    "MHC_Kayleigh",
+    "Kayleigh",
+    "PlayerAvatar",
+    "Kurt",
+    "Player",
+)
 GAME_MODE_PATH = "/Game/Blueprints/BP_HouseGameMode"
 LOG_PREFIX = "[set_pie_player_pawn]"
 
@@ -41,44 +52,63 @@ def actor_label(actor) -> str:
         return str(actor)
 
 
-def has_any_tag(actor, tags) -> bool:
+def class_name(actor) -> str:
     try:
-        for t in actor.tags:
-            if str(t) in tags:
-                return True
+        return str(actor.get_class().get_name())
+    except Exception:
+        return ""
+
+
+def text_blob(actor) -> str:
+    bits = [actor_label(actor), class_name(actor)]
+    try:
+        bits.extend(str(t) for t in actor.tags)
     except Exception:
         pass
-    name = actor_label(actor).lower()
-    class_name = str(actor.get_class().get_name()).lower()
-    for t in tags:
-        if t.lower() in name or t.lower() in class_name:
-            return True
-    return False
+    return " ".join(bits)
+
+
+def matches_any(actor, markers) -> bool:
+    blob = text_blob(actor).lower()
+    return any(m.lower() in blob for m in markers)
 
 
 def is_victoria(actor) -> bool:
-    return has_any_tag(actor, (VICTORIA_TAG, "Victoria"))
+    return matches_any(actor, VICTORIA_MARKERS)
 
 
-def find_player_character_candidates():
-    """Prefer tagged/named player Characters; fall back to non-Victoria Characters."""
+def is_kayleigh(actor) -> bool:
+    return matches_any(actor, (KAYLEIGH_CLASS, "MHC_Kayleigh", "Kayleigh"))
+
+
+def is_pawn_like(actor) -> bool:
+    try:
+        return isinstance(actor, unreal.Pawn) or isinstance(actor, unreal.Character)
+    except Exception:
+        return False
+
+
+def find_kayleigh_candidates():
+    """Prefer BP_MHC_Kayleigh; never return Victoria."""
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    actors = subsystem.get_all_level_actors()
-    characters = []
+    actors = list(subsystem.get_all_level_actors())
+
+    kayleigh = [a for a in actors if is_kayleigh(a) and not is_victoria(a)]
+    if kayleigh:
+        # Prefer pawn-like instances first
+        pawnish = [a for a in kayleigh if is_pawn_like(a)]
+        return pawnish or kayleigh
+
+    # Fallback: other player-marked non-Victoria pawns
+    others = []
     for a in actors:
-        try:
-            if not isinstance(a, unreal.Character):
-                # Some BP Characters report as Pawn
-                if not isinstance(a, unreal.Pawn):
-                    continue
-        except Exception:
-            continue
         if is_victoria(a):
             continue
-        characters.append(a)
-
-    preferred = [c for c in characters if has_any_tag(c, PLAYER_TAGS)]
-    return preferred or characters
+        if not is_pawn_like(a):
+            continue
+        if matches_any(a, PLAYER_MARKERS):
+            others.append(a)
+    return others
 
 
 def ensure_player_start_near(actor) -> None:
@@ -100,7 +130,7 @@ def ensure_player_start_near(actor) -> None:
     if ps:
         log(f"Spawned PlayerStart at {loc}")
     else:
-        log("WARN: could not spawn PlayerStart — place one manually near your avatar")
+        log("WARN: could not spawn PlayerStart — place one manually on BP_MHC_Kayleigh")
 
 
 def load_or_create_game_mode(pawn_class):
@@ -126,7 +156,6 @@ def load_or_create_game_mode(pawn_class):
             raise RuntimeError("Failed to create BP_HouseGameMode")
         log(f"Created {asset_path}")
 
-    # Set Default Pawn Class on the generated class CDO when possible.
     try:
         generated = gm.generated_class()
         cdo = unreal.get_default_object(generated)
@@ -135,7 +164,7 @@ def load_or_create_game_mode(pawn_class):
     except Exception as ex:
         log(
             f"WARN: could not set DefaultPawnClass via Python ({ex}). "
-            f"Open {asset_path} and set Default Pawn Class to your player Character BP."
+            f"Open {asset_path} and set Default Pawn Class = {KAYLEIGH_CLASS}."
         )
 
     unreal.EditorAssetLibrary.save_asset(asset_path)
@@ -153,30 +182,72 @@ def set_world_game_mode(gm_asset) -> None:
         log(f"WARN: set GameMode Override manually — {ex}")
 
 
+def try_load_kayleigh_class_asset():
+    """If the placed actor is awkward, try loading the BP asset class directly."""
+    candidates = (
+        f"/Game/MetaHumans/MHC_Kayleigh/{KAYLEIGH_CLASS}",
+        f"/Game/MetaHumans/{KAYLEIGH_CLASS}",
+        f"/Game/Characters/{KAYLEIGH_CLASS}",
+        f"/Game/{KAYLEIGH_CLASS}",
+    )
+    for path in candidates:
+        asset = unreal.EditorAssetLibrary.load_asset(path)
+        if asset is None:
+            continue
+        try:
+            if hasattr(asset, "generated_class"):
+                return asset.generated_class()
+        except Exception:
+            pass
+        try:
+            return asset.get_class()
+        except Exception:
+            continue
+    return None
+
+
 def main():
-    log("Scanning /Game/Home for grounded player avatar (non-Victoria Character)…")
-    candidates = find_player_character_candidates()
+    log(f"Looking for {KAYLEIGH_CLASS} in /Game/Home (not Victoria)…")
+    candidates = find_kayleigh_candidates()
     if not candidates:
         log(
-            "FAIL: no non-Victoria Character/Pawn found. "
-            "Place your Kayleigh/player Character in Home (not VictoriaAvatar), "
-            "tag it PlayerAvatar, then re-run."
+            f"FAIL: no {KAYLEIGH_CLASS} (or Kayleigh-named pawn) found in the level. "
+            "Open /Game/Home, confirm BP_MHC_Kayleigh is placed, then re-run."
         )
         return
 
     for i, c in enumerate(candidates):
-        log(f"  candidate[{i}] label={actor_label(c)} class={c.get_class().get_name()} loc={c.get_actor_location()}")
+        log(
+            f"  candidate[{i}] label={actor_label(c)} class={class_name(c)} "
+            f"pawn={is_pawn_like(c)} loc={c.get_actor_location()}"
+        )
 
     chosen = candidates[0]
-    log(f"Using {actor_label(chosen)} as PIE player body class seed")
+    log(f"Using {actor_label(chosen)} ({class_name(chosen)}) as PIE player body")
     ensure_player_start_near(chosen)
-    gm = load_or_create_game_mode(chosen.get_class())
+
+    pawn_class = None
+    if is_pawn_like(chosen):
+        pawn_class = chosen.get_class()
+    else:
+        log(
+            f"NOTE: placed {class_name(chosen)} is not a Pawn/Character — "
+            "PIE cannot possess a bare MetaHuman Actor. Trying asset class load…"
+        )
+        pawn_class = try_load_kayleigh_class_asset()
+        if pawn_class is None:
+            log(
+                "FAIL: load the Kayleigh Character BP (or reparent BP_MHC_Kayleigh under "
+                "ACharacter), set World Settings → Default Pawn Class manually, then Play."
+            )
+            return
+
+    gm = load_or_create_game_mode(pawn_class)
     set_world_game_mode(gm)
     unreal.EditorLevelLibrary.save_current_level()
     log(
-        "DONE. Press Play (PIE). You should spawn as a grounded Character, "
-        "not the flying ghost. Victoria remains AI-possessed separately. "
-        "If you still float: World Settings → GameMode Override + Default Pawn Class."
+        f"DONE. Press Play (PIE). You should spawn as {KAYLEIGH_CLASS}, not the flying ghost. "
+        "Victoria remains AI-possessed separately."
     )
 
 
