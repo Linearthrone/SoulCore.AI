@@ -38,7 +38,7 @@ Write-Host "Starting faster-whisper STT on ${HostAddr}:${Port} with $PythonExe .
 $env:WHISPER_MODEL = if ($env:WHISPER_MODEL) { $env:WHISPER_MODEL } else { "base" }
 Start-Process -FilePath $PythonExe -ArgumentList @("-m", "uvicorn", "app:app", "--host", $HostAddr, "--port", "$Port") `
     -WorkingDirectory (Split-Path $app -Parent) -WindowStyle Minimized
-# OPS-179: short probe — model load can exceed this; do not block ALLSTART.
+# OPS-179: short probe - model load can exceed this; do not block ALLSTART.
 Start-Sleep 3
 try {
     $h = Invoke-RestMethod -Uri "http://${HostAddr}:${Port}/health" -TimeoutSec 5
