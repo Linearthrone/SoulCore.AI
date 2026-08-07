@@ -279,9 +279,9 @@ public class ChatWebSocketHandlerToolLoopTests
 
         await RunOneChatTurnAsync(handler, "what's my MT4 status?");
 
-        Assert.True(hermes.EnsureMcpReadyCalled);
-        Assert.False(hermes.CompleteWithToolsCalled,
-            "PreferHermes Avenue B must not call Hermes.CompleteWithToolsAsync");
+        // BED-185: PreferHermes ignored — no MCP preflight; Ollama tool-loop only.
+        Assert.False(hermes.EnsureMcpReadyCalled);
+        Assert.False(hermes.CompleteWithToolsCalled);
         Assert.True(inference.CompleteWithToolsCalled);
         Assert.Equal("mt4_status", inference.LastLoopOptions?.ForceToolName);
     }
@@ -330,12 +330,12 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     // ---------------------------------------------------------------------
-    // BED-164 Avenue B: PreferHermes=true → Ollama tool-loop; Hermes MCP-only
-    // (EnsureMcpReadyAsync + CallMcpToolAsync). Never Hermes CompleteWithToolsAsync.
+    // BED-185: PreferHermes is ignored — always Ollama tool-loop; never MCP
+    // preflight / gateway-offline fail-fast / Hermes CompleteWithToolsAsync.
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task PreferHermes_True_RoutesToOllamaToolLoop_HermesMcpOnly()
+    public async Task PreferHermes_True_IsIgnored_UsesOllamaToolLoop()
     {
         var inference = new ScriptedInferenceClient
         {
@@ -354,29 +354,22 @@ public class ChatWebSocketHandlerToolLoopTests
 
         var frames = await RunOneChatTurnAsync(handler, "hello via preferhermes avenue b");
 
-        Assert.True(hermes.EnsureMcpReadyCalled,
-            "PreferHermes must preflight Hermes MCP readiness");
-        Assert.False(hermes.CompleteWithToolsCalled,
-            "PreferHermes must NOT call Hermes.CompleteWithToolsAsync (Avenue B)");
-        Assert.True(inference.CompleteWithToolsCalled,
-            "PreferHermes tool-loop must run on Ollama.CompleteWithToolsAsync");
+        Assert.False(hermes.EnsureMcpReadyCalled,
+            "BED-185: PreferHermes must not preflight Hermes MCP");
+        Assert.False(hermes.CompleteWithToolsCalled);
+        Assert.True(inference.CompleteWithToolsCalled);
         var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
         Assert.NotNull(done);
         Assert.Equal("ollama preferhermes reply", done!.Payload?.GetProperty("text").GetString());
         Assert.Equal("ollama", done.Payload?.GetProperty("provider").GetString());
     }
 
-    // ---------------------------------------------------------------------
-    // BED-164: PreferHermes MCP preflight fail-fast — no Ollama loop when
-    // Hermes gateway/key is down; never Hermes CompleteWithToolsAsync.
-    // ---------------------------------------------------------------------
-
     [Fact]
-    public async Task PreferHermes_HermesMcpDown_FailFast_DoesNotRunOllamaToolLoop()
+    public async Task PreferHermes_HermesMcpDown_StillRunsOllamaToolLoop()
     {
         var inference = new ScriptedInferenceClient
         {
-            CompleteWithToolsReply = "ollama should not run"
+            CompleteWithToolsReply = "ollama ok despite hermes down"
         };
         var hermes = new ScriptedHermesClient
         {
@@ -390,20 +383,18 @@ public class ChatWebSocketHandlerToolLoopTests
             MakeChatOptions(useToolLoop: true, preferHermes: true),
             hermesOptions: MakeHermesOptions(enabled: true));
 
-        var frames = await RunOneChatTurnAsync(handler, "hello via preferhermes");
+        var frames = await RunOneChatTurnAsync(handler, "open chrome and go to https://example.com");
 
-        Assert.True(hermes.EnsureMcpReadyCalled);
-        Assert.False(hermes.CompleteWithToolsCalled,
-            "PreferHermes must never call Hermes.CompleteWithToolsAsync");
-        Assert.False(inference.CompleteWithToolsCalled,
-            "PreferHermes must not run Ollama tool-loop when Hermes MCP preflight fails");
+        Assert.False(hermes.EnsureMcpReadyCalled);
+        Assert.False(hermes.CompleteWithToolsCalled);
+        Assert.True(inference.CompleteWithToolsCalled,
+            "BED-185: gateway down must NOT block Ollama / desktop_open_app");
         var err = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.Error);
-        Assert.NotNull(err);
-        Assert.Equal("chat.model_down", err!.Payload?.GetProperty("code").GetString());
-        Assert.Contains(
-            IHermesMcpInvoker.UnavailableMessage,
-            err.Payload?.GetProperty("message").GetString() ?? "",
-            StringComparison.Ordinal);
+        Assert.Null(err);
+        var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
+        Assert.NotNull(done);
+        Assert.Equal("ollama ok despite hermes down", done!.Payload?.GetProperty("text").GetString());
+        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
     }
 
     // ---------------------------------------------------------------------

@@ -34,8 +34,10 @@ public static class ComputerUseGuidance
         "Type/key need a click target first.\n" +
         "6) After multi-step state-changing actions (not bare open/launch), list or screenshot again to verify.\n" +
         "For local desktop launch/control use SoulCore desktop_* tools only. " +
-        "Do NOT invent Hermes terminal, process, computer_use, or browser_navigate for local launch " +
-        "when DesktopBackend is native/cua — those are wrong for opening Chrome on Kurt's PC.\n" +
+        "To open a website: desktop_open_app app=chrome args=<url> (or edge/firefox). " +
+        "Do NOT invent Hermes MCP/gateway tool calls. " +
+        "Do NOT call browser_* tools, browser_navigate, computer_use, or terminal — " +
+        "those paths are unavailable; open sites with desktop_open_app only.\n" +
         "If a tool says AllowComputerControl is required, tell Kurt to enable it in " +
         "Settings → Tools & Access — do not pretend you clicked.\n" +
         "Do not click password/payment/permission dialogs unless Kurt explicitly asked. " +
