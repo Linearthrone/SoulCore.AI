@@ -27,15 +27,28 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowMt4Read = opts.AllowMt4Read ? 1 : 0;
         _allowMt4Trade = opts.AllowMt4Trade ? 1 : 0;
         _softCursorRestore = opts.SoftCursorRestore ? 1 : 0;
-            DesktopBackend = string.IsNullOrWhiteSpace(opts.DesktopBackend)
+
+        var desktop = string.IsNullOrWhiteSpace(opts.DesktopBackend)
             ? ToolsOptions.BackendCua
             : opts.DesktopBackend.Trim();
-        BrowserBackend = string.IsNullOrWhiteSpace(opts.BrowserBackend)
-            ? ToolsOptions.BackendHermes
+        var browser = string.IsNullOrWhiteSpace(opts.BrowserBackend)
+            ? "none"
             : opts.BrowserBackend.Trim();
-        Mt4Backend = string.IsNullOrWhiteSpace(opts.Mt4Backend)
+        var mt4 = string.IsNullOrWhiteSpace(opts.Mt4Backend)
             ? ToolsOptions.BackendLlmod
             : opts.Mt4Backend.Trim();
+
+        // BED-185: never keep hermes backends live.
+        if (string.Equals(desktop, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+            desktop = ToolsOptions.BackendCua;
+        if (string.Equals(browser, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+            browser = "none";
+        if (string.Equals(mt4, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+            mt4 = ToolsOptions.BackendLlmod;
+
+        DesktopBackend = desktop;
+        BrowserBackend = browser;
+        Mt4Backend = mt4;
     }
 
     /// <summary>Test ctor — bypasses options binding.</summary>
@@ -57,8 +70,8 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         bool allowMt4Read,
         bool allowMt4Trade,
         string desktopBackend = ToolsOptions.BackendNative,
-        string browserBackend = ToolsOptions.BackendHermes,
-        string mt4Backend = ToolsOptions.BackendHermes,
+        string browserBackend = "none",
+        string mt4Backend = ToolsOptions.BackendLlmod,
         bool softCursorRestore = true)
     {
         _allowDesktopCapture = allowDesktopCapture ? 1 : 0;

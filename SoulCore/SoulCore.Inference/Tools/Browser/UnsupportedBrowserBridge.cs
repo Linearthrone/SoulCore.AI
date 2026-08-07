@@ -35,6 +35,6 @@ public sealed class UnsupportedBrowserBridge : IBrowserBridge
 
     private BrowserBridgeResult Fail() => new(
         Success: false,
-        Content: $"browser backend '{_backend}' is not supported — use Tools.BrowserBackend=hermes (native fallback out of scope for BED-136)",
+        Content: $"browser backend '{_backend}' is unavailable — Hermes is retired (BED-185). Open sites with desktop_open_app (chrome/edge + URL args).",
         Data: null);
 }

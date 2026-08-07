@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-08-05 (TASK-180 → BOB: PIE possess BP_MHC_Kayleigh)
+updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 ---
 
 # Product Root Declaration
@@ -61,6 +61,8 @@ updated: 2026-08-05 (TASK-180 → BOB: PIE possess BP_MHC_Kayleigh)
 
 - **2026-08-05 TASK-180 → BOB (UE LiveCoding Agent, ACTIVE):** PIE must possess **`BP_MHC_Kayleigh`**, not flying DefaultPawn. Pull `cursor/bed-184-eyes-view-and-pie-avatar-169c`, run `tools/ue_nav/run_set_pie_player_pawn.ps1` with UE `/Game/Home`, Live Code if Actor-only. Seat: `Agents/BOB.md`. Ticket: `docs/agents/tasks/TASK-20260805-180-PM01-to-BOB.md`.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
+- **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
+- **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Merged #31.
 - **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. On main; ForceRestart after rewrite was the ALLSTART hang trigger (OPS-179).
 - **2026-08-06 TINA Wave 29 complete:** **BED-175** + **BED-177** + **FED-176 Pass archived**. Merge order: #26 (proactive) · #27 (tools/identity) · fed-176 SMS UI · Host recycle + relaunch ChatDesktop. Optional follow-up: Host MMS outbound on chat.send. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
