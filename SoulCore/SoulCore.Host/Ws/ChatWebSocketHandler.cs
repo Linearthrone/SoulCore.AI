@@ -20,13 +20,13 @@ using SoulCore.Memory;
 namespace SoulCore.Host.Ws;
 
 /// <summary>
-/// Presence chat WebSocket session: chat.send → inference/Hermes → emotion.snapshot + chat.delta/done,
+/// Presence chat WebSocket session: chat.send → Ollama (tool-loop) → emotion.snapshot + chat.delta/done,
 /// optional episodic write + Unreal speak/set_emotion side-effects.
+/// Hermes retired (BED-185); <see cref="IHermesClient"/> is retained only for DI signature compat.
 /// </summary>
 public sealed class ChatWebSocketHandler
 {
     private readonly IInferenceClient _inference;
-    private readonly IHermesClient _hermes;
     private readonly IEmotionState _emotion;
     private readonly IMemoryStore _memory;
     private readonly IEmbeddingClient _embeddings;
@@ -41,7 +41,6 @@ public sealed class ChatWebSocketHandler
     private readonly PresenceWsHub _hub;
     private readonly ChatWsOptions _chatOptions;
     private readonly InferenceOptions _inferenceOptions;
-    private readonly HermesOptions _hermesOptions;
     private readonly ILogger<ChatWebSocketHandler> _logger;
 
     /// <summary>Max chars of the combined identity+memory preamble (before emotion).</summary>
@@ -75,7 +74,8 @@ public sealed class ChatWebSocketHandler
         IVoiceSpeakService? voiceSpeak = null)
     {
         _inference = inference;
-        _hermes = hermes;
+        _ = hermes; // BED-185: unused — NullHermesClient only
+        _ = hermesOptions;
         _emotion = emotion;
         _memory = memory;
         _embeddings = embeddings;
@@ -90,7 +90,6 @@ public sealed class ChatWebSocketHandler
         _hub = hub;
         _chatOptions = chatOptions.Value;
         _inferenceOptions = inferenceOptions.Value;
-        _hermesOptions = hermesOptions.Value;
         _logger = logger;
     }
 
@@ -704,20 +703,8 @@ public sealed class ChatWebSocketHandler
             string? authored = null;
             var authorProvider = chatProvider;
 
-            var preferHermes = string.Equals(chatProvider, "hermes", StringComparison.OrdinalIgnoreCase);
-
-            if (preferHermes && _hermesOptions.Enabled)
-            {
-                authored = await _hermes
-                    .ChatAsync(
-                        userPayload,
-                        system,
-                        cancellationToken,
-                        EpisodicMemoryPrompt.AuthorMaxTokens)
-                    .ConfigureAwait(false);
-                authorProvider = "hermes";
-            }
-            else if (_inferenceOptions.Enabled)
+            // BED-185: memory authoring uses Ollama only (Hermes retired).
+            if (_inferenceOptions.Enabled)
             {
                 authored = await _inference
                     .CompleteAsync(
@@ -727,17 +714,6 @@ public sealed class ChatWebSocketHandler
                         EpisodicMemoryPrompt.AuthorMaxTokens)
                     .ConfigureAwait(false);
                 authorProvider = "ollama";
-            }
-            else if (_hermesOptions.Enabled)
-            {
-                authored = await _hermes
-                    .ChatAsync(
-                        userPayload,
-                        system,
-                        cancellationToken,
-                        EpisodicMemoryPrompt.AuthorMaxTokens)
-                    .ConfigureAwait(false);
-                authorProvider = "hermes";
             }
 
             if (string.IsNullOrWhiteSpace(authored))
@@ -766,92 +742,39 @@ public sealed class ChatWebSocketHandler
         string contextPreamble,
         CancellationToken cancellationToken)
     {
-        var anyEnabled = _inferenceOptions.Enabled || _hermesOptions.Enabled;
-        if (!anyEnabled)
+        if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled / Hermes:Enabled). Refusing stub-as-success.");
+                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
         }
 
         Exception? lastError = null;
 
-        // PreferHermes fail-fast (BED-161): no Ollama fallback when Hermes is preferred.
-        if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        // BED-185: Hermes chat path retired — Ollama only.
+        if (_chatOptions.PreferHermes)
         {
-            var hermes = await TryHermesAsync(
-                    text,
-                    contextPreamble,
-                    "Hermes chat failed with PreferHermes=true — fail-fast (no Ollama fallback)",
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (hermes.Result is not null)
-                return hermes.Result;
-            throw hermes.Error ?? new InvalidOperationException(
-                "Hermes chat failed while PreferHermes=true.");
+            _logger.LogWarning("PreferHermes ignored (BED-185 Hermes retired) — Ollama only");
         }
 
-        if (_inferenceOptions.Enabled)
-        {
-            try
-            {
-                var inferenceReply = await _inference
-                    .CompleteAsync(text, contextPreamble, cancellationToken)
-                    .ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(inferenceReply))
-                {
-                    RecordSpend("ollama", text, contextPreamble, inferenceReply);
-                    return new ChatCompletionResult(inferenceReply.Trim(), "ollama");
-                }
-            }
-            catch (Exception ex)
-            {
-                lastError = ex;
-                _logger.LogDebug(ex, "Ollama inference failed");
-            }
-        }
-
-        if (_hermesOptions.Enabled)
-        {
-            var hermes = await TryHermesAsync(
-                    text,
-                    contextPreamble,
-                    "Hermes chat failed (secondary)",
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (hermes.Result is not null)
-                return hermes.Result;
-            if (hermes.Error is not null)
-                lastError = hermes.Error;
-        }
-
-        throw lastError ?? new InvalidOperationException(
-            "LLM returned empty reply from enabled Hermes/Ollama clients.");
-    }
-
-    /// <summary>Single Hermes call site for PreferHermes primary and secondary failover.</summary>
-    private async Task<(ChatCompletionResult? Result, Exception? Error)> TryHermesAsync(
-        string text,
-        string contextPreamble,
-        string failLogMessage,
-        CancellationToken cancellationToken)
-    {
         try
         {
-            var hermesReply = await _hermes
-                .ChatAsync(text, contextPreamble, cancellationToken)
+            var inferenceReply = await _inference
+                .CompleteAsync(text, contextPreamble, cancellationToken)
                 .ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(hermesReply))
+            if (!string.IsNullOrWhiteSpace(inferenceReply))
             {
-                RecordSpend("hermes", text, contextPreamble, hermesReply);
-                return (new ChatCompletionResult(hermesReply.Trim(), "hermes"), null);
+                RecordSpend("ollama", text, contextPreamble, inferenceReply);
+                return new ChatCompletionResult(inferenceReply.Trim(), "ollama");
             }
-            return (null, null);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, failLogMessage);
-            return (null, ex);
+            lastError = ex;
+            _logger.LogDebug(ex, "Ollama inference failed");
         }
+
+        throw lastError ?? new InvalidOperationException(
+            "LLM returned empty reply from Ollama (Hermes retired — BED-185).");
     }
 
     /// <summary>
@@ -1388,11 +1311,10 @@ public sealed class ChatWebSocketHandler
         List<ToolTraceEntry> toolTrace,
         CancellationToken cancellationToken)
     {
-        var anyEnabled = _inferenceOptions.Enabled || _hermesOptions.Enabled;
-        if (!anyEnabled)
+        if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled / Hermes:Enabled). Refusing stub-as-success.");
+                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
         }
 
         // Build the agent-loop messages[]: system preamble + prior turns + user.
@@ -1457,63 +1379,13 @@ public sealed class ChatWebSocketHandler
                 intent.Intent, intent.ToolName);
         }
 
-        // PreferHermes Avenue B (BED-164 / ISSUE-002): tool-loop on Ollama;
-        // Hermes is MCP-only via CallMcpToolAsync. Never send tools[] through
-        // Hermes CompleteWithToolsAsync (hermes-agent 0.18.2 tool_execution:server
-        // bypasses SoulCore ITools). Fail-fast when Hermes MCP gateway/key is down.
-        if (_chatOptions.PreferHermes && _hermesOptions.Enabled)
+        // BED-185: Hermes / PreferHermes MCP preflight retired — Ollama tool-loop only.
+        if (_chatOptions.PreferHermes)
         {
-            try
-            {
-                await _hermes.EnsureMcpReadyAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "PreferHermes MCP preflight failed — fail-fast (no Ollama tool-loop)");
-                throw;
-            }
-
-            if (!_inferenceOptions.Enabled)
-            {
-                throw new InvalidOperationException(
-                    "PreferHermes requires Inference:Enabled (Ollama tool-loop); Hermes is MCP-only.");
-            }
-
-            try
-            {
-                var reply = await _inference
-                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken, ollamaLoopOptions)
-                    .ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(reply))
-                {
-                    replyText = reply.Trim();
-                    provider = "ollama";
-                    RecordSpend("ollama", text, contextPreamble, replyText);
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        "Ollama tool-loop returned empty reply while PreferHermes=true.");
-                }
-            }
-            catch (Exception ex)
-            {
-                // PreferHermes already passed MCP preflight — surface Ollama failures
-                // as model_down without falling through to Hermes CompleteWithToolsAsync.
-                _logger.LogWarning(
-                    ex,
-                    "Ollama tool-loop failed with PreferHermes=true — fail-fast (Hermes CompleteWithToolsAsync forbidden)");
-                throw;
-            }
-
-            // Persist + return — do not fall through to Hermes CompleteWithToolsAsync.
-            AppendToolLoopTurn(historySessionId, text, toolTrace, replyText!);
-            return new ChatCompletionResult(replyText!, provider!);
+            _logger.LogWarning(
+                "PreferHermes ignored (BED-185 Hermes retired) — Ollama tool-loop only");
         }
 
-        // Ollama primary (PreferHermes=false).
         if (replyText is null && _inferenceOptions.Enabled)
         {
             try
@@ -1535,32 +1407,10 @@ public sealed class ChatWebSocketHandler
             }
         }
 
-        // Secondary Hermes (when PreferHermes=false and Ollama failed/disabled).
-        if (replyText is null && _hermesOptions.Enabled)
-        {
-            try
-            {
-                var reply = await _hermes
-                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken)
-                    .ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(reply))
-                {
-                    replyText = reply.Trim();
-                    provider = "hermes";
-                    RecordSpend("hermes", text, contextPreamble, replyText);
-                }
-            }
-            catch (Exception ex)
-            {
-                lastError = ex;
-                _logger.LogDebug(ex, "Hermes tool-loop failed (secondary)");
-            }
-        }
-
         if (replyText is null || provider is null)
         {
             throw lastError ?? new InvalidOperationException(
-                "LLM tool-loop returned empty reply from enabled Hermes/Ollama clients.");
+                "LLM tool-loop returned empty reply from Ollama (Hermes retired — BED-185).");
         }
 
         // Persist this turn (user + tool trace + final assistant) for the next send.

@@ -108,10 +108,10 @@ public partial class MainWindow
         SvcHermesDot.Fill = hermesUp
             ? _okBrush
             : (snap.HermesEnabled ? _warnBrush : _mutedBrush);
-        SvcHermesStatus.Text = hermesUp ? "gateway up" : "gateway down";
-        SvcHermesDetail.Text = hermesUp
-            ? (snap.HermesEnabled ? "gateway + Host client" : "gateway up · Host client off")
-            : "start Hermes gateway :8642";
+        SvcHermesStatus.Text = "retired";
+        SvcHermesDetail.Text = "BED-185: unused — open Chrome via desktop_open_app (Ollama)";
+        SvcHermesDot.Fill = _mutedBrush;
+        _ = hermesUp; // legacy probe retained; UI no longer steers Kurt to start Hermes
 
         var backend = snap.DesktopBackend ?? "cua";
         var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
@@ -204,13 +204,11 @@ public partial class MainWindow
                     result = await _stack.RestartHostAsync().ConfigureAwait(true);
                     break;
                 case "hermes-start":
-                    result = await _stack.StartHermesAsync().ConfigureAwait(true);
-                    break;
                 case "hermes-stop":
-                    result = await _stack.StopHermesAsync().ConfigureAwait(true);
-                    break;
                 case "hermes-restart":
-                    result = await _stack.RestartHermesAsync().ConfigureAwait(true);
+                    result = new LocalStackActionResult(
+                        false,
+                        "Hermes retired (BED-185) — not started. Open Chrome via desktop_open_app.");
                     break;
                 case "ollama-start":
                     result = await _stack.StartOllamaAsync().ConfigureAwait(true);
@@ -535,10 +533,8 @@ public partial class MainWindow
         SystemInferenceBox.Text = snap.InferenceEnabled ? "enabled (Ollama)" : "disabled";
         SystemInferenceBox.Foreground = snap.InferenceEnabled ? _okBrush : _warnBrush;
 
-        SystemHermesBox.Text = snap.HermesEnabled
-            ? (snap.HermesGatewayUp == true ? "enabled · gateway up" : "enabled · gateway down")
-            : (snap.HermesGatewayUp == true ? "Host client off · gateway up" : "disabled");
-        SystemHermesBox.Foreground = snap.HermesGatewayUp == true || snap.HermesEnabled ? _okBrush : _warnBrush;
+        SystemHermesBox.Text = "retired (BED-185)";
+        SystemHermesBox.Foreground = _mutedBrush;
 
         SystemMemoryPathBox.Text = string.IsNullOrWhiteSpace(snap.MemoryPath)
             ? "(missing memory.path)"
