@@ -15,16 +15,21 @@ public sealed class BrowserCaptureTabTool : ITool
 
     private readonly IBrowserBridge _bridge;
     private readonly IToolsAccessSettings _access;
+    private readonly IDesktopViewHub? _view;
 
-    public BrowserCaptureTabTool(IBrowserBridge bridge, IToolsAccessSettings access)
+    public BrowserCaptureTabTool(
+        IBrowserBridge bridge,
+        IToolsAccessSettings access,
+        IDesktopViewHub? view = null)
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _access = access ?? throw new ArgumentNullException(nameof(access));
+        _view = view;
     }
 
     public ToolDefinition Definition { get; } = new(
         Name: "browser_capture_tab",
-        Description: "Capture the current browser tab (screenshot + DOM).",
+        Description: "Capture the current browser tab (screenshot + DOM). Updates Presence with the tab image when bytes are available.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -42,6 +47,15 @@ public sealed class BrowserCaptureTabTool : ITool
         }
 
         var result = await _bridge.CaptureTabAsync(tab, ct).ConfigureAwait(false);
+        if (result.Success)
+        {
+            DesktopViewHub.TryRecordFromToolData(
+                _view,
+                result.Data,
+                DesktopViewHub.SourceBrowser,
+                $"browser_capture_tab[{tab}]");
+        }
+
         return new ToolResult(result.Success, result.Content, result.Data);
     }
 }

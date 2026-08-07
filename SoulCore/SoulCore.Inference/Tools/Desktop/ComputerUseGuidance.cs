@@ -24,6 +24,8 @@ public static class ComputerUseGuidance
         "If they asked you to DO something after open (search, click, type, check, navigate, …), " +
         "keep going with desktop_* tools until the ask is done — do not stop at launch.\n" +
         "2) For further desktop work: call list_desktop_windows (or desktop_screenshot) to see what is open. " +
+        "Call desktop_screenshot when you need to SEE the screen (Presence shows that frame). " +
+        "list_desktop_windows is titles/bounds only — not vision; do not claim you looked after list alone. " +
         "Window results include screen bounds (x,y,width,height) — use those, do not guess. " +
         "Prefer desktop_click/type/key with background delivery. Avoid focus_desktop_window unless " +
         "type/key truly needs foreground focus — it steals Kurt's window.\n" +
