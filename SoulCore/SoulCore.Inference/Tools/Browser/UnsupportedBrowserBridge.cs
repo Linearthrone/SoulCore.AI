@@ -34,6 +34,6 @@ public sealed class UnsupportedBrowserBridge : IBrowserBridge
 
     private BrowserBridgeResult Fail() => new(
         Success: false,
-        Content: $"browser backend '{_backend}' is not supported — use Tools.BrowserBackend=native (BrowserCaptureBridge :17891) or hermes",
+        Content: $"browser backend '{_backend}' is not supported — use Tools.BrowserBackend=native (BrowserCaptureBridge :17891). Hermes browser backend is retired (BED-185).",
         Data: null);
 }

@@ -7,8 +7,11 @@ public sealed class HermesOptions
 {
     public const string SectionName = "Hermes";
 
-    /// <summary>When false, Host registers <c>NullHermesClient</c>.</summary>
-    public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// Retired (BED-185). Host always forces <c>false</c> and registers
+    /// <c>NullHermesClient</c> — do not re-enable without an explicit product reopen.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
 
     public string BaseUrl { get; set; } = "http://127.0.0.1:8642";
 

@@ -212,17 +212,14 @@
                     </Grid>
                   </Border>
                   <Border Classes="carbon" Padding="8">
-                    <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="2">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                          <Ellipse x:Name="SvcHermesDot" Width="9" Height="9" Fill="{DynamicResource MutedBrush}"/>
-                          <TextBlock Text="Hermes" FontWeight="SemiBold"/>
-                          <TextBlock x:Name="SvcHermesStatus" Text="—" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
-                        </StackPanel>
-                        <TextBlock x:Name="SvcHermesDetail" Text=":8642" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    <StackPanel Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcHermesDot" Width="9" Height="9" Fill="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="Hermes" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="SvcHermesStatus" Text="retired" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
                       </StackPanel>
-                      <Button Grid.Column="1" Classes="chrome" Content="Start" Tag="hermes-start" Click="ServicesAction_Click"/>
-                    </Grid>
+                      <TextBlock x:Name="SvcHermesDetail" Text="BED-185: unused — open Chrome via desktop_open_app" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
                   </Border>
                   <Border Classes="carbon" Padding="8">
                     <Grid ColumnDefinitions="*,Auto">
@@ -278,12 +275,12 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Ellipse Classes="screw"/>
-                  <TextBlock Text="Her screen" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <TextBlock Text="What she saw" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
               </DockPanel>
               <Border Grid.Row="1" Classes="carbon" ClipToBounds="True" MinHeight="100">
                 <Grid x:Name="DesktopViewSurface" SizeChanged="DesktopViewSurface_SizeChanged">
-                  <TextBlock x:Name="DesktopViewEmptyText" Text="No capture yet"
+                  <TextBlock x:Name="DesktopViewEmptyText" Text="No capture yet — she must call eyes/desktop/browser tools"
                              Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
                              Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                   <Image x:Name="DesktopViewImage" Stretch="Uniform" IsVisible="False"/>

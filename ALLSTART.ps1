@@ -1,19 +1,18 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start Hermes gateway, local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
+  Start local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
 .DESCRIPTION
-  Starts Hermes on :8642 (soft-fail if missing), then Host. Refuses to attach the GUI to a foreign :7700
+  Starts Host (Ollama tool-loop). Hermes gateway is RETIRED (BED-185) and skipped by default.
+  Use -WithHermes only for legacy experiments. Refuses to attach the GUI to a foreign :7700
   occupant (e.g. Cursor cloud port-forward to a Linux/ubuntu Host). If 7700 is stolen, starts local Host
   on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
-  Does not enable AllowComputerControl (CUA stays yellow until Services / Tools & Access).
 
-  OPS-179: child scripts run with timeouts so `hermes gateway stop`, Tailscale, or Voice
-  health probes cannot freeze this launcher forever.
+  OPS-179: child scripts run with timeouts so Tailscale / Voice health probes cannot freeze forever.
 .EXAMPLE
   .\ALLSTART.ps1
   .\ALLSTART.ps1 -SkipPreflight
-  .\ALLSTART.ps1 -SkipHermes -SkipVoice
+  .\ALLSTART.ps1 -SkipVoice
   .\ALLSTART.ps1 -Configuration Debug
 #>
 [CmdletBinding()]
@@ -26,7 +25,10 @@ param(
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
     [switch]$SkipTailscaleServe,
+    # Retired by default (BED-185). Kept for CLI compat; ignored unless -WithHermes.
     [switch]$SkipHermes,
+    # Opt-in only: start Hermes Agent Gateway (not used for House Victoria chat/tools).
+    [switch]$WithHermes,
     [switch]$SkipVoice,
     [switch]$SkipBrowserBridge,
     [int]$HermesTimeoutSec = 90,
@@ -260,10 +262,15 @@ if (-not $browserBridgeOk -and -not $SkipBrowserBridge) {
     Write-Warning "Load unpacked extension from BrowserCaptureExtension after bridge is up."
 }
 
-Write-Host "=== ALLSTART: Hermes gateway :8642 ==="
+Write-Host "=== ALLSTART: Hermes gateway (retired BED-185) ==="
 $hermesOk = $false
+# Hermes is retired for House Victoria. Do not start unless -WithHermes.
+if (-not $WithHermes) {
+    $SkipHermes = $true
+    Write-Host "Hermes skipped by default (BED-185). Pass -WithHermes only if you intentionally need the gateway."
+}
 if ($SkipHermes) {
-    Write-Host "Hermes skipped (-SkipHermes)."
+    Write-Host "Hermes skipped — open Chrome/websites via desktop_open_app (Ollama), not the gateway."
 } elseif (-not (Test-Path -LiteralPath $StartHermes)) {
     Write-Warning "Missing Hermes start script: $StartHermes - skipping"
 } else {
@@ -281,7 +288,6 @@ if ($SkipHermes) {
             -TimeoutSec $HermesTimeoutSec
         if ($hermesResult.TimedOut) {
             Write-Warning "start-hermes.ps1 timed out after ${HermesTimeoutSec}s - continuing without waiting for Hermes"
-            Write-Warning "If stuck on gateway stop: kill listeners on :8642 or re-run with -SkipHermes"
         } elseif ($hermesResult.ExitCode -ne 0) {
             Write-Warning "start-hermes.ps1 exited $($hermesResult.ExitCode) - continuing without Hermes gateway"
         } else {
@@ -297,10 +303,10 @@ if ($SkipHermes) {
         }
     } catch {
         Write-Warning "Hermes gateway start failed - $($_.Exception.Message)"
-        Write-Warning "Host will still start (Ollama-only). Restore hermes.exe if MCP/PreferHermes needed."
+        Write-Warning "Host will still start (Ollama-only)."
     }
 }
-if (-not $hermesOk -and -not $SkipHermes) {
+if (-not $hermesOk -and $WithHermes) {
     Write-Warning "Hermes gateway not confirmed on :8642 (soft-fail; Host continues)."
 }
 

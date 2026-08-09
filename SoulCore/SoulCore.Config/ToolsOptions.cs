@@ -45,7 +45,7 @@ public sealed class ToolsOptions
 
     /// <summary>
     /// Browser backend: <c>native</c> (default, BED-182 — <c>BrowserCaptureBridge</c> :17891
-    /// + unpacked <c>BrowserCaptureExtension</c>) or <c>hermes</c> (legacy MCP).
+    /// + unpacked <c>BrowserCaptureExtension</c>). Hermes retired (BED-185).
     /// </summary>
     public string BrowserBackend { get; set; } = BackendNative;
 

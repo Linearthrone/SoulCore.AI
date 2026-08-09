@@ -16,6 +16,8 @@ public sealed class DesktopViewSnapshot
     public DateTimeOffset? UpdatedAt { get; init; }
     public bool SoftCursorRestore { get; init; }
     public string? Format { get; init; }
+    /// <summary>desktop | eyes | browser — which capture path produced the frame.</summary>
+    public string? Source { get; init; }
     public bool Reachable { get; init; }
     public string? Detail { get; init; }
     public byte[]? ImageBytes { get; init; }
@@ -91,6 +93,7 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
                 UpdatedAt = dto?.UpdatedAt,
                 SoftCursorRestore = dto?.SoftCursorRestore ?? true,
                 Format = dto?.Format,
+                Source = dto?.Source,
                 ImageBytes = imageBytes,
                 Detail = dto?.Note
             };
@@ -131,6 +134,9 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
 
         [JsonPropertyName("format")]
         public string? Format { get; set; }
+
+        [JsonPropertyName("source")]
+        public string? Source { get; set; }
 
         [JsonPropertyName("note")]
         public string? Note { get; set; }

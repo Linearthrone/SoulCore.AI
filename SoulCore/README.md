@@ -112,15 +112,16 @@ dotnet run --project SoulCore.Host -- --soul-loop-tick --enabled
 Load unpacked once: `chrome://extensions` → Developer mode → Load unpacked → select repo `BrowserCaptureExtension`. Popup should show bridge connected. SoulCore tools: `browser_health`, `browser_capture_tab`, `browser_click`, `browser_type`, `browser_key`, `browser_scroll`.
 
 ## Inference / Hermes (quarry loopback)
+## Inference (Ollama)
 
 | Client | Default base | Feature flag |
 | --- | --- | --- |
 | Ollama (`OllamaInferenceClient`) | `http://127.0.0.1:11434` | `Inference:Enabled` |
-| Hermes (`HermesHttpClient`) | `http://127.0.0.1:8642` | `Hermes:Enabled` |
 
-When `Enabled=false`, Host registers null stubs. Hermes **chat** needs `SOULCORE_HERMES_API_KEY`; `GET /health` on Hermes does not.
-
-Hermes gateway bring-up (Windows): `SoulCore/scripts/start-hermes.ps1` (also via repo-root `ALLSTART.ps1`). On start it rewrites MCP `command:` entries from `python.exe` → `pythonw.exe` when a sibling `pythonw.exe` exists (OPS-178 — no blank persistent Python consoles). One-shot: `SoulCore/scripts/patch-hermes-mcp-pythonw.ps1`. Prefer `pythonw.exe` in LLMOD `Tools\setup-hermes-integration.ps1` so quarry re-setup does not regress. See `docs/agents/RUNBOOK-Hermes-PreferHermes-tool-calls.md` § OPS-178.
+When `Inference:Enabled=false`, Host registers a null stub. **Hermes is retired (BED-185)** —
+Host always registers `NullHermesClient`, forces `Hermes:Enabled=false` / `PreferHermes=false`,
+and remaps `BrowserBackend=hermes` → `none`. Open Chrome/websites with `desktop_open_app`
+(chrome + URL). `ALLSTART.ps1` skips the gateway unless `-WithHermes`.
 
 ## Build
 

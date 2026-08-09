@@ -133,29 +133,40 @@ var toolsOptions = builder.Configuration
     .GetSection(ToolsOptions.SectionName)
     .Get<ToolsOptions>() ?? new ToolsOptions();
 
-// BED-161 / ISSUE-009: Hermes API key preflight — never read secrets from git.
-// Warn (do not crash) when Hermes is enabled or PreferHermes is set but the key
-// is missing; chat/MCP will fail-fast at call time with a clear message.
+// BED-185: Hermes retired — hard-disable regardless of appsettings / SOULCORE_* env.
+// Open Chrome + URLs via desktop_open_app (Ollama tool-loop), never Hermes gateway.
+if (hermesOptions.Enabled || chatWsOptions.PreferHermes
+    || string.Equals(toolsOptions.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(toolsOptions.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(toolsOptions.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
 {
-    var hermesKeyPresent = !string.IsNullOrWhiteSpace(
-        Environment.GetEnvironmentVariable(SecretNames.HermesApiKey))
-        || !string.IsNullOrWhiteSpace(hermesOptions.ApiKey);
-    if ((hermesOptions.Enabled || chatWsOptions.PreferHermes) && !hermesKeyPresent)
-    {
-        Console.Error.WriteLine(
-            $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
-            $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
-            "PreferHermes MCP preflight and hermes-backend MCP tools will fail-fast until the key is provided. " +
-            "Do not put ApiKey values in appsettings.json.");
-    }
-
-    if (!string.IsNullOrWhiteSpace(hermesOptions.ApiKey))
-    {
-        Console.Error.WriteLine(
-            $"[SoulCore] WARNING: Hermes:ApiKey is set in configuration. Prefer env " +
-            $"{SecretNames.HermesApiKey} / user-secrets — never commit API keys.");
-    }
+    Console.WriteLine(
+        "[SoulCore] BED-185: Hermes retired — forcing Hermes.Enabled=false PreferHermes=false; "
+        + "hermes tool backends remapped (desktop=cua, browser=none, mt4=llmod).");
 }
+
+hermesOptions.Enabled = false;
+chatWsOptions.PreferHermes = false;
+if (string.Equals(toolsOptions.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
+    || string.IsNullOrWhiteSpace(toolsOptions.BrowserBackend))
+    toolsOptions.BrowserBackend = "none";
+if (string.Equals(toolsOptions.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+    toolsOptions.DesktopBackend = ToolsOptions.BackendCua;
+if (string.Equals(toolsOptions.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+    toolsOptions.Mt4Backend = ToolsOptions.BackendLlmod;
+
+builder.Services.PostConfigure<HermesOptions>(o => o.Enabled = false);
+builder.Services.PostConfigure<ChatWsOptions>(o => o.PreferHermes = false);
+builder.Services.PostConfigure<ToolsOptions>(o =>
+{
+    if (string.Equals(o.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
+        || string.IsNullOrWhiteSpace(o.BrowserBackend))
+        o.BrowserBackend = "none";
+    if (string.Equals(o.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+        o.DesktopBackend = ToolsOptions.BackendCua;
+    if (string.Equals(o.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
+        o.Mt4Backend = ToolsOptions.BackendLlmod;
+});
 
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
 if (!IsLoopback(bindOptions.BindAddress))
@@ -251,8 +262,12 @@ builder.Services.AddSingleton<ITool, StoreMemoryTool>();
 // wrap IUnrealVerbClient so the model can choose body actions mid-loop.
 // Keyword detectors remain as Strategy A fallback (BED-128).
 builder.Services.AddSingleton<ITool, SpeakTool>();
-builder.Services.AddSingleton<ITool, VictoriaEyeCaptureTool>();
+// Hub injected after IDesktopViewHub registration (factory resolves at first use).
+builder.Services.AddSingleton<ITool>(sp => new VictoriaEyeCaptureTool(
+    sp.GetRequiredService<IUnrealVerbClient>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, PlayAnimationTool>();
+builder.Services.AddSingleton<ITool, LocoTool>();
 builder.Services.AddSingleton<ITool, MoveToTool>();
 builder.Services.AddSingleton<ITool, LookAtTool>();
 builder.Services.AddSingleton<ITool, SetEmotionTool>();
@@ -288,20 +303,8 @@ else
     builder.Services.AddSingleton<IEmbeddingClient, NullEmbeddingClient>();
 }
 
-if (hermesOptions.Enabled)
-{
-    builder.Services.AddHttpClient<HermesHttpClient>((sp, client) =>
-    {
-        var opts = sp.GetRequiredService<IOptions<HermesOptions>>().Value;
-        client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
-    });
-    builder.Services.AddTransient<IHermesClient>(sp => sp.GetRequiredService<HermesHttpClient>());
-}
-else
-{
-    builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
-}
+// BED-185: never wire HermesHttpClient — NullHermesClient only.
+builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
 
 // BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
 builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
@@ -323,10 +326,8 @@ builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
 var desktopBackend = (toolsOptions.DesktopBackend ?? "cua").Trim();
 if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
-{
-    builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
-}
-else if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
+    desktopBackend = "cua"; // BED-185: Hermes desktop backend retired
+if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
          || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
 {
     var cuaExe = CuaDriverCli.TryFindExe();
@@ -354,7 +355,10 @@ else
             sp.GetRequiredService<IDesktopViewHub>(),
             sp.GetRequiredService<IToolsAccessSettings>()));
 }
-builder.Services.AddSingleton<ITool, DesktopScreenshotTool>();
+builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
+    sp.GetRequiredService<IComputerControlGate>(),
+    sp.GetRequiredService<IDesktopControlBackend>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, DesktopClickTool>();
 builder.Services.AddSingleton<ITool, DesktopDragTool>();
 builder.Services.AddSingleton<ITool, DesktopTypeTool>();
@@ -377,7 +381,7 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaV
 // Browser tools (BED-136 / BED-182): browser_health / capture_tab / click / type / key / scroll.
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
 // Backend: Tools.BrowserBackend=native (default) → BrowserCaptureBridge :17891 + Chrome extension.
-//          Tools.BrowserBackend=hermes → HermesBrowserBridge (legacy MCP).
+// Hermes browser backend retired (BED-185).
 builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
@@ -392,7 +396,7 @@ builder.Services.AddSingleton<IBrowserBridge>(sp =>
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
     var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
     if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
+        backend = "none";
     if (string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase)
         || string.Equals(backend, "llmod", StringComparison.OrdinalIgnoreCase)
         || string.Equals(backend, "auto", StringComparison.OrdinalIgnoreCase))
@@ -406,15 +410,17 @@ builder.Services.AddSingleton<IBrowserBridge>(sp =>
     return new UnsupportedBrowserBridge(backend);
 });
 builder.Services.AddSingleton<ITool, BrowserHealthTool>();
-builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
+builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
+    sp.GetRequiredService<IBrowserBridge>(),
+    sp.GetRequiredService<IToolsAccessSettings>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, BrowserClickTool>();
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();
 builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 // MT4 trading tools (BED-138): AllowMt4Read / AllowMt4Trade + confirmed=true gate.
-// Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169, shadow housevictoria:8080).
-// Mt4Backend=hermes → HermesMt4Bridge via CallMcpToolAsync (BED-144).
+// Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169). Hermes MT4 bridge retired (BED-185).
 builder.Services.AddHttpClient<LlmodHttpMt4Bridge>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -423,15 +429,14 @@ builder.Services.AddSingleton<IMt4Bridge>(sp =>
 {
     var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
     var backend = (tools.Mt4Backend ?? ToolsOptions.BackendLlmod).Trim();
-
     if (HermesToolRouting.IsHermesBackend(backend))
-        return new HermesMt4Bridge(sp.GetRequiredService<IHermesClient>());
+        backend = ToolsOptions.BackendLlmod;
 
     if (HermesToolRouting.IsLlmodBackend(backend))
         return sp.GetRequiredService<LlmodHttpMt4Bridge>();
 
     return new UnavailableMt4Bridge(
-        $"mt4 backend '{backend}' not supported — use '{ToolsOptions.BackendLlmod}', '{ToolsOptions.BackendNative}', or '{ToolsOptions.BackendHermes}'");
+        $"mt4 backend '{backend}' not supported — use '{ToolsOptions.BackendLlmod}' or '{ToolsOptions.BackendNative}'");
 });
 builder.Services.AddSingleton<ITool, Mt4StatusTool>();
 builder.Services.AddSingleton<ITool, ListSymbolsTool>();
@@ -801,7 +806,8 @@ app.MapGet("/desktop/view", (IDesktopViewHub view) =>
         lastAction = snap.LastAction,
         updatedAt = snap.UpdatedAt,
         softCursorRestore = snap.SoftCursorRestore,
-        note = "Victoria's last desktop screenshot + agent-cursor position. With DesktopBackend=cua, the large blue overlay is drawn by cua-driver on the real desktop (same as LLMOD) — your OS mouse never moves."
+        source = snap.Source,
+        note = "Last image Victoria actually captured (source=desktop|eyes|browser). Cursor overlay applies to desktop captures. Stale frames mean she has not captured again yet."
     });
 });
 

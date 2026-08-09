@@ -316,8 +316,8 @@ public sealed class CuaDriverDesktopBackend : IDesktopControlBackend
         string app, string? args = null, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        // cua-driver does not own process create — launch via allowlisted native Process.Start.
-        var result = DesktopAppLauncher.Launch(app, args);
+        // cua-driver does not own process create — allowlisted launch; prefer no-activate.
+        var result = DesktopAppLauncher.Launch(app, args, backgroundNoActivate: _preferBackground());
         if (result.Success)
             _view?.RecordAction(result.Content);
         return Task.FromResult(result);

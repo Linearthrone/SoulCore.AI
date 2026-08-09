@@ -70,9 +70,11 @@ public static class DesktopAppLauncher
     }
 
     /// <summary>
-    /// Launch via <see cref="Process.Start"/> on Windows. Non-Windows → clear failure.
+    /// Launch on Windows. When <paramref name="backgroundNoActivate"/> is true (default),
+    /// prefer <c>ShellExecuteEx</c> with <c>SW_SHOWNOACTIVATE</c> so Kurt's foreground
+    /// window is less likely to be stolen (BED-181). Apps may still self-activate.
     /// </summary>
-    public static DesktopOpResult Launch(string app, string? args)
+    public static DesktopOpResult Launch(string app, string? args, bool backgroundNoActivate = true)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -87,24 +89,41 @@ public static class DesktopAppLauncher
 
         try
         {
-            var psi = new ProcessStartInfo
+            int? pid = null;
+            var delivery = "foreground";
+            string? bgError = null;
+
+            if (backgroundNoActivate
+                && TryShellExecuteNoActivate(resolved.FileName, resolved.Arguments, out var bgPid, out bgError))
             {
-                FileName = resolved.FileName,
-                Arguments = resolved.Arguments,
-                UseShellExecute = resolved.UseShellExecute,
-            };
-            var proc = Process.Start(psi);
-            if (proc is null)
+                pid = bgPid;
+                delivery = "background";
+            }
+            else
             {
-                return new DesktopOpResult(
-                    false,
-                    $"failed to start '{resolved.Alias}' ({resolved.FileName}) — Process.Start returned null",
-                    new { app = resolved.Alias, path = resolved.FileName, args = resolved.Arguments });
+                var psi = new ProcessStartInfo
+                {
+                    FileName = resolved.FileName,
+                    Arguments = resolved.Arguments,
+                    UseShellExecute = resolved.UseShellExecute,
+                };
+                var proc = Process.Start(psi);
+                if (proc is null)
+                {
+                    var detail = string.IsNullOrWhiteSpace(bgError) ? "" : $" (background launch: {bgError})";
+                    return new DesktopOpResult(
+                        false,
+                        $"failed to start '{resolved.Alias}' ({resolved.FileName}) — Process.Start returned null{detail}",
+                        new { app = resolved.Alias, path = resolved.FileName, args = resolved.Arguments });
+                }
+
+                pid = proc.Id;
+                delivery = "foreground";
             }
 
             var note = string.IsNullOrEmpty(resolved.Arguments)
-                ? $"opened app '{resolved.Alias}' ({resolved.FileName})"
-                : $"opened app '{resolved.Alias}' ({resolved.FileName}) args={resolved.Arguments}";
+                ? $"opened app '{resolved.Alias}' ({resolved.FileName}) [{delivery}]"
+                : $"opened app '{resolved.Alias}' ({resolved.FileName}) args={resolved.Arguments} [{delivery}]";
             return new DesktopOpResult(
                 true,
                 note,
@@ -113,7 +132,8 @@ public static class DesktopAppLauncher
                     app = resolved.Alias,
                     path = resolved.FileName,
                     args = resolved.Arguments,
-                    pid = proc.Id,
+                    pid,
+                    delivery,
                 });
         }
         catch (Exception ex)
@@ -124,6 +144,92 @@ public static class DesktopAppLauncher
                 new { app = resolved.Alias, path = resolved.FileName });
         }
     }
+
+    private static bool TryShellExecuteNoActivate(
+        string fileName, string arguments, out int? pid, out string error)
+    {
+        pid = null;
+        error = "";
+        try
+        {
+            var info = new SHELLEXECUTEINFO
+            {
+                cbSize = Marshal.SizeOf<SHELLEXECUTEINFO>(),
+                fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI,
+                hwnd = IntPtr.Zero,
+                lpVerb = "open",
+                lpFile = fileName,
+                lpParameters = string.IsNullOrEmpty(arguments) ? null : arguments,
+                lpDirectory = null,
+                nShow = SW_SHOWNOACTIVATE,
+            };
+
+            if (!ShellExecuteEx(ref info))
+            {
+                error = $"ShellExecuteEx failed (win32={Marshal.GetLastWin32Error()})";
+                return false;
+            }
+
+            if (info.hProcess != IntPtr.Zero)
+            {
+                try
+                {
+                    var raw = GetProcessId(info.hProcess);
+                    if (raw != 0 && raw <= int.MaxValue)
+                        pid = (int)raw;
+                }
+                catch
+                {
+                    // Process may have exited/daemonized quickly (Chrome often does).
+                    pid = null;
+                }
+                finally
+                {
+                    _ = CloseHandle(info.hProcess);
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"{ex.GetType().Name}: {ex.Message}";
+            return false;
+        }
+    }
+
+    private const uint SEE_MASK_NOCLOSEPROCESS = 0x00000040;
+    private const uint SEE_MASK_FLAG_NO_UI = 0x00000400;
+    private const int SW_SHOWNOACTIVATE = 4;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHELLEXECUTEINFO
+    {
+        public int cbSize;
+        public uint fMask;
+        public IntPtr hwnd;
+        public string? lpVerb;
+        public string lpFile;
+        public string? lpParameters;
+        public string? lpDirectory;
+        public int nShow;
+        public IntPtr hInstApp;
+        public IntPtr lpIDList;
+        public string? lpClass;
+        public IntPtr hkeyClass;
+        public uint dwHotKey;
+        public IntPtr hIconOrMonitor;
+        public IntPtr hProcess;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern uint GetProcessId(IntPtr handle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
 
     public static bool IsAllowlisted(string app)
         => !string.IsNullOrWhiteSpace(app) && TryMapAlias(NormalizeAlias(app), out _, out _);
