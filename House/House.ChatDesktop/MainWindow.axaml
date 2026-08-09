@@ -271,6 +271,8 @@
                   <ToggleButton x:Name="ScreenAlwaysOnTop" Classes="chrome" Content="Pin"
                                 IsCheckedChanged="ScreenAlwaysOnTop_Changed"/>
                   <Button Classes="chrome" Content="Pop out" Click="DesktopViewPopOut_Click"/>
+                  <Button Classes="chrome" Content="Folder" Click="DesktopViewOpenFolder_Click"
+                          ToolTip.Tip="Open the temp screenshot gallery folder"/>
                   <Ellipse Classes="screw"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -290,11 +292,30 @@
                   </Canvas>
                 </Grid>
               </Border>
-              <StackPanel Grid.Row="2" Margin="0,6,0,0">
+              <StackPanel Grid.Row="2" Margin="0,6,0,0" Spacing="4">
                 <TextBlock x:Name="DesktopViewActionText" FontSize="10" Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap" Text="Waiting…"/>
                 <TextBlock x:Name="DesktopViewMetaText" FontSize="10" Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap" Text=""/>
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="ghost" Content="Open file" FontSize="10" Padding="6,2"
+                            Click="DesktopViewOpenFile_Click"
+                            ToolTip.Tip="Open the latest screenshot file"/>
+                    <Button Classes="ghost" Content="Copy path" FontSize="10" Padding="6,2"
+                            Click="DesktopViewCopyPath_Click"/>
+                  </StackPanel>
+                  <TextBlock x:Name="DesktopViewPathText" FontSize="10"
+                             Foreground="{DynamicResource AccentBrush}"
+                             TextWrapping="Wrap" Text=""
+                             ToolTip.Tip="Filesystem path of the latest capture"/>
+                </DockPanel>
+                <TextBlock Text="Temp gallery (click to inspect)" FontSize="10"
+                           Foreground="{DynamicResource MutedBrush}"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              MaxHeight="52">
+                  <StackPanel x:Name="DesktopViewGalleryPanel" Orientation="Horizontal" Spacing="4"/>
+                </ScrollViewer>
               </StackPanel>
             </Grid>
           </Border>

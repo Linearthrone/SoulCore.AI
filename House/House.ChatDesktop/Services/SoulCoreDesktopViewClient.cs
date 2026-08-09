@@ -5,6 +5,19 @@ using System.Text.Json.Serialization;
 
 namespace House.ChatDesktop.Services;
 
+public sealed class DesktopViewGalleryItem
+{
+    public string FileName { get; init; } = "";
+    public string? Path { get; init; }
+    public string? Source { get; init; }
+    public string? Format { get; init; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public DateTimeOffset? CapturedAt { get; init; }
+    public string? Action { get; init; }
+    public string? ImageUrl { get; init; }
+}
+
 public sealed class DesktopViewSnapshot
 {
     public bool HasImage { get; init; }
@@ -18,6 +31,10 @@ public sealed class DesktopViewSnapshot
     public string? Format { get; init; }
     /// <summary>desktop | eyes | browser — which capture path produced the frame.</summary>
     public string? Source { get; init; }
+    /// <summary>Filesystem path of the latest gallery (or source) file on the Host machine.</summary>
+    public string? DiskPath { get; init; }
+    public string? GalleryDir { get; init; }
+    public IReadOnlyList<DesktopViewGalleryItem> Recent { get; init; } = Array.Empty<DesktopViewGalleryItem>();
     public bool Reachable { get; init; }
     public string? Detail { get; init; }
     public byte[]? ImageBytes { get; init; }
@@ -43,6 +60,9 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
 
     public static Uri ImageUri =>
         new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/desktop/view/image");
+
+    public static Uri GalleryImageUri(string fileName) =>
+        new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/desktop/view/gallery/{Uri.EscapeDataString(fileName)}");
 
     public async Task<DesktopViewSnapshot> GetAsync(
         bool includeImage = true,
@@ -81,6 +101,21 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
                         .ConfigureAwait(false);
             }
 
+            var recent = (dto?.Recent ?? Array.Empty<GalleryDto>())
+                .Select(g => new DesktopViewGalleryItem
+                {
+                    FileName = g.FileName ?? "",
+                    Path = g.Path,
+                    Source = g.Source,
+                    Format = g.Format,
+                    Width = g.Width,
+                    Height = g.Height,
+                    CapturedAt = g.CapturedAt,
+                    Action = g.Action,
+                    ImageUrl = g.ImageUrl
+                })
+                .ToArray();
+
             return new DesktopViewSnapshot
             {
                 Reachable = true,
@@ -94,6 +129,9 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
                 SoftCursorRestore = dto?.SoftCursorRestore ?? true,
                 Format = dto?.Format,
                 Source = dto?.Source,
+                DiskPath = dto?.DiskPath,
+                GalleryDir = dto?.GalleryDir,
+                Recent = recent,
                 ImageBytes = imageBytes,
                 Detail = dto?.Note
             };
@@ -101,6 +139,29 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
         {
             return new DesktopViewSnapshot { Reachable = false, Detail = ex.Message };
+        }
+    }
+
+    public async Task<byte[]?> GetGalleryImageAsync(
+        string fileName,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+        if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
+            return null;
+
+        try
+        {
+            using var response = await _http.GetAsync(GalleryImageUri(fileName), cancellationToken)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+            return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        {
+            return null;
         }
     }
 
@@ -138,7 +199,46 @@ public sealed class SoulCoreDesktopViewClient : IDisposable
         [JsonPropertyName("source")]
         public string? Source { get; set; }
 
+        [JsonPropertyName("diskPath")]
+        public string? DiskPath { get; set; }
+
+        [JsonPropertyName("galleryDir")]
+        public string? GalleryDir { get; set; }
+
+        [JsonPropertyName("recent")]
+        public GalleryDto[]? Recent { get; set; }
+
         [JsonPropertyName("note")]
         public string? Note { get; set; }
+    }
+
+    private sealed class GalleryDto
+    {
+        [JsonPropertyName("fileName")]
+        public string? FileName { get; set; }
+
+        [JsonPropertyName("path")]
+        public string? Path { get; set; }
+
+        [JsonPropertyName("source")]
+        public string? Source { get; set; }
+
+        [JsonPropertyName("format")]
+        public string? Format { get; set; }
+
+        [JsonPropertyName("width")]
+        public int Width { get; set; }
+
+        [JsonPropertyName("height")]
+        public int Height { get; set; }
+
+        [JsonPropertyName("capturedAt")]
+        public DateTimeOffset? CapturedAt { get; set; }
+
+        [JsonPropertyName("action")]
+        public string? Action { get; set; }
+
+        [JsonPropertyName("imageUrl")]
+        public string? ImageUrl { get; set; }
     }
 }
