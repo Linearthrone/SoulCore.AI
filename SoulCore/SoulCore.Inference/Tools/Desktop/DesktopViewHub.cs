@@ -20,7 +20,24 @@ public interface IDesktopViewHub
 
     /// <summary>Copy of latest image bytes (null if none).</summary>
     byte[]? TryGetImageBytes();
+
+    /// <summary>Temp gallery root where every capture is written (BED-186).</summary>
+    string GalleryDirectory { get; }
+
+    /// <summary>Load a gallery file by basename only (path traversal rejected).</summary>
+    byte[]? TryGetGalleryImageBytes(string fileName);
 }
+
+/// <summary>One persisted capture in the temp Presence gallery.</summary>
+public sealed record DesktopViewGalleryEntry(
+    string FileName,
+    string Path,
+    string Source,
+    string Format,
+    int Width,
+    int Height,
+    DateTimeOffset CapturedAt,
+    string? Action);
 
 public sealed record DesktopViewSnapshot(
     bool HasImage,
@@ -33,14 +50,21 @@ public sealed record DesktopViewSnapshot(
     string? LastAction,
     DateTimeOffset? UpdatedAt,
     bool SoftCursorRestore,
-    string Source);
+    string Source,
+    string? GalleryDir = null,
+    IReadOnlyList<DesktopViewGalleryEntry>? Recent = null);
 
-/// <summary>In-memory hub — last real capture for <c>GET /desktop/view</c>.</summary>
+/// <summary>
+/// In-memory hub for the latest frame + ring-buffer gallery on disk for Presence.
+/// </summary>
 public sealed class DesktopViewHub : IDesktopViewHub
 {
     public const string SourceDesktop = "desktop";
     public const string SourceEyes = "eyes";
     public const string SourceBrowser = "browser";
+
+    /// <summary>Max files kept under the temp gallery (oldest deleted).</summary>
+    public const int MaxGalleryItems = 48;
 
     private readonly object _gate = new();
     private byte[]? _imageBytes;
@@ -54,11 +78,26 @@ public sealed class DesktopViewHub : IDesktopViewHub
     private DateTimeOffset? _updatedAt;
     private string _source = SourceDesktop;
     private readonly Func<bool> _softCursor;
+    private readonly string _galleryDir;
+    private readonly List<DesktopViewGalleryEntry> _gallery = new();
+    private long _gallerySeq;
 
-    public DesktopViewHub(Func<bool>? softCursor = null)
+    public DesktopViewHub(Func<bool>? softCursor = null, string? galleryDirectory = null)
     {
         _softCursor = softCursor ?? (() => true);
+        _galleryDir = string.IsNullOrWhiteSpace(galleryDirectory)
+            ? DefaultGalleryDirectory()
+            : galleryDirectory.Trim();
     }
+
+    public string GalleryDirectory => _galleryDir;
+
+    public static string DefaultGalleryDirectory() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoulCore",
+            "scratch",
+            "presence-gallery");
 
     public void RecordScreenshot(
         byte[] imageBytes,
@@ -73,19 +112,41 @@ public sealed class DesktopViewHub : IDesktopViewHub
         if (imageBytes.Length == 0)
             return;
 
+        var fmt = string.IsNullOrWhiteSpace(format) ? "bmp" : format.Trim().ToLowerInvariant();
+        var src = NormalizeSource(source);
+        var act = !string.IsNullOrWhiteSpace(action)
+            ? action.Trim()
+            : $"capture ({src})";
+        var capturedAt = DateTimeOffset.UtcNow;
+
+        var galleryPath = TryPersistGallery(imageBytes, fmt, src, capturedAt);
+        var diskPath = galleryPath ?? path;
+
         lock (_gate)
         {
             _imageBytes = imageBytes;
-            _format = string.IsNullOrWhiteSpace(format) ? "bmp" : format.Trim().ToLowerInvariant();
+            _format = fmt;
             _width = width;
             _height = height;
-            _path = path;
-            _source = NormalizeSource(source);
-            _updatedAt = DateTimeOffset.UtcNow;
-            if (!string.IsNullOrWhiteSpace(action))
-                _lastAction = action.Trim();
-            else if (string.IsNullOrWhiteSpace(_lastAction))
-                _lastAction = $"capture ({_source})";
+            _path = diskPath;
+            _source = src;
+            _updatedAt = capturedAt;
+            _lastAction = act;
+
+            if (!string.IsNullOrWhiteSpace(galleryPath))
+            {
+                var entry = new DesktopViewGalleryEntry(
+                    FileName: Path.GetFileName(galleryPath),
+                    Path: galleryPath,
+                    Source: src,
+                    Format: fmt,
+                    Width: width,
+                    Height: height,
+                    CapturedAt: capturedAt,
+                    Action: act);
+                _gallery.Insert(0, entry);
+                PruneGalleryLocked();
+            }
         }
     }
 
@@ -115,7 +176,9 @@ public sealed class DesktopViewHub : IDesktopViewHub
                 LastAction: _lastAction,
                 UpdatedAt: _updatedAt,
                 SoftCursorRestore: _softCursor(),
-                Source: _source);
+                Source: _source,
+                GalleryDir: _galleryDir,
+                Recent: _gallery.ToArray());
         }
     }
 
@@ -138,6 +201,50 @@ public sealed class DesktopViewHub : IDesktopViewHub
                 }
             }
 
+            return null;
+        }
+    }
+
+    public byte[]? TryGetGalleryImageBytes(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+
+        var name = Path.GetFileName(fileName.Trim());
+        if (string.IsNullOrWhiteSpace(name)
+            || name.Contains("..", StringComparison.Ordinal)
+            || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return null;
+
+        string full;
+        lock (_gate)
+        {
+            var hit = _gallery.FirstOrDefault(g =>
+                string.Equals(g.FileName, name, StringComparison.OrdinalIgnoreCase));
+            full = hit?.Path ?? Path.Combine(_galleryDir, name);
+        }
+
+        // Must stay under gallery root.
+        var rootFull = Path.GetFullPath(_galleryDir)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var candidate = Path.GetFullPath(full);
+        if (!candidate.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(
+                Path.GetDirectoryName(candidate),
+                Path.GetFullPath(_galleryDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        if (!File.Exists(candidate))
+            return null;
+
+        try
+        {
+            return File.ReadAllBytes(candidate);
+        }
+        catch
+        {
             return null;
         }
     }
@@ -168,6 +275,52 @@ public sealed class DesktopViewHub : IDesktopViewHub
             source,
             action);
         return true;
+    }
+
+    private string? TryPersistGallery(
+        byte[] bytes,
+        string format,
+        string source,
+        DateTimeOffset capturedAt)
+    {
+        try
+        {
+            Directory.CreateDirectory(_galleryDir);
+            var ext = format switch
+            {
+                "png" => "png",
+                "jpg" or "jpeg" => "jpg",
+                "webp" => "webp",
+                _ => "bmp"
+            };
+            var seq = Interlocked.Increment(ref _gallerySeq);
+            var name = $"{capturedAt.UtcDateTime:yyyyMMdd-HHmmssfff}_{seq:D4}_{source}.{ext}";
+            var full = Path.Combine(_galleryDir, name);
+            File.WriteAllBytes(full, bytes);
+            return full;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void PruneGalleryLocked()
+    {
+        while (_gallery.Count > MaxGalleryItems)
+        {
+            var oldest = _gallery[^1];
+            _gallery.RemoveAt(_gallery.Count - 1);
+            try
+            {
+                if (File.Exists(oldest.Path))
+                    File.Delete(oldest.Path);
+            }
+            catch
+            {
+                // best-effort cleanup
+            }
+        }
     }
 
     private static bool TryExtractImage(

@@ -773,10 +773,26 @@ app.MapGet("/settings/identity", async (
 app.MapGet("/desktop/view", (IDesktopViewHub view) =>
 {
     var snap = view.GetSnapshot();
+    var recent = (snap.Recent ?? Array.Empty<DesktopViewGalleryEntry>())
+        .Select(r => new
+        {
+            fileName = r.FileName,
+            path = r.Path,
+            source = r.Source,
+            format = r.Format,
+            width = r.Width,
+            height = r.Height,
+            capturedAt = r.CapturedAt,
+            action = r.Action,
+            imageUrl = "/desktop/view/gallery/" + Uri.EscapeDataString(r.FileName)
+        })
+        .ToArray();
     return Results.Json(new
     {
         hasImage = snap.HasImage,
         imagePath = "/desktop/view/image",
+        diskPath = snap.ImagePath,
+        galleryDir = snap.GalleryDir ?? view.GalleryDirectory,
         format = snap.Format,
         width = snap.Width,
         height = snap.Height,
@@ -786,7 +802,8 @@ app.MapGet("/desktop/view", (IDesktopViewHub view) =>
         updatedAt = snap.UpdatedAt,
         softCursorRestore = snap.SoftCursorRestore,
         source = snap.Source,
-        note = "Last image Victoria actually captured (source=desktop|eyes|browser). Cursor overlay applies to desktop captures. Stale frames mean she has not captured again yet."
+        recent,
+        note = "Last image Victoria actually captured (source=desktop|eyes|browser). Every capture is also written under galleryDir (temp ring buffer). Open diskPath / recent[].path on this machine."
     });
 });
 
@@ -800,6 +817,24 @@ app.MapGet("/desktop/view/image", (IDesktopViewHub view) =>
     var contentType = string.Equals(snap.Format, "png", StringComparison.OrdinalIgnoreCase)
         ? "image/png"
         : "image/bmp";
+    return Results.File(bytes, contentType);
+});
+
+// BED-186: serve a gallery frame by basename (loopback Presence UI).
+app.MapGet("/desktop/view/gallery/{fileName}", (string fileName, IDesktopViewHub view) =>
+{
+    var bytes = view.TryGetGalleryImageBytes(fileName);
+    if (bytes is null || bytes.Length == 0)
+        return Results.NotFound();
+
+    var ext = Path.GetExtension(fileName).TrimStart('.').ToLowerInvariant();
+    var contentType = ext switch
+    {
+        "png" => "image/png",
+        "jpg" or "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        _ => "image/bmp"
+    };
     return Results.File(bytes, contentType);
 });
 

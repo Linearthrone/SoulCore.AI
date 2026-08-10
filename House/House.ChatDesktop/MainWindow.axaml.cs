@@ -47,6 +47,11 @@ public partial class MainWindow : Window
     private int? _desktopCursorX;
     private int? _desktopCursorY;
     private string? _lastDesktopImageHash;
+    private string? _lastDesktopDiskPath;
+    private string? _lastDesktopGalleryDir;
+    private string? _lastDesktopGallerySignature;
+    private string? _lastNewestGalleryFileName;
+    private string? _pinnedGalleryFileName;
     private Window? _desktopPopOut;
     private Image? _desktopPopOutImage;
     private Canvas? _desktopPopOutCursorLayer;
