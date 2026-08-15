@@ -2,15 +2,35 @@ namespace SoulCore.Config;
 
 /// <summary>
 /// Ollama / local LLM client knobs (non-secret). Base URL defaults to quarry loopback :11434.
+/// For Ollama Cloud chat/tools (BED-187), set <see cref="BaseUrl"/> to <c>https://ollama.com</c>
+/// and provide <c>SOULCORE_OLLAMA_API_KEY</c>; keep embeddings on local Ollama via
+/// <see cref="EmbeddingBaseUrl"/> so VRAM stays free for body/voice.
 /// </summary>
 public sealed class InferenceOptions
 {
     public const string SectionName = "Inference";
 
+    /// <summary>Canonical Ollama Cloud API host (no trailing slash).</summary>
+    public const string CloudBaseUrl = "https://ollama.com";
+
     /// <summary>When false, Host registers <c>NullInferenceClient</c>.</summary>
     public bool Enabled { get; set; } = true;
 
     public string BaseUrl { get; set; } = "http://127.0.0.1:11434";
+
+    /// <summary>
+    /// Optional override for embeddings only. When empty and <see cref="BaseUrl"/> is
+    /// Ollama Cloud, Host defaults embeddings to local <c>http://127.0.0.1:11434</c>
+    /// so <c>nomic-embed-text</c> stays on-box (BED-187).
+    /// </summary>
+    public string EmbeddingBaseUrl { get; set; } = "";
+
+    /// <summary>
+    /// Optional API key for direct Ollama Cloud (<c>https://ollama.com</c>).
+    /// Prefer env <c>SOULCORE_OLLAMA_API_KEY</c> — never commit real values.
+    /// Not required for local <c>:11434</c> (including local proxy of <c>*:cloud</c> models after <c>ollama signin</c>).
+    /// </summary>
+    public string? ApiKey { get; set; }
 
     public string Model { get; set; } = "gemma4:latest";
 
@@ -56,4 +76,41 @@ public sealed class InferenceOptions
     /// to keep latency predictable. Must be ≥ 1.
     /// </summary>
     public int MaxToolIterations { get; set; } = 8;
+
+    /// <summary>True when <see cref="BaseUrl"/> targets ollama.com (direct cloud).</summary>
+    public bool IsCloudEndpoint => IsOllamaCloudUrl(BaseUrl);
+
+    public static bool IsOllamaCloudUrl(string? baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return false;
+        if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var uri))
+            return false;
+        return uri.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("www.ollama.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Env <c>SOULCORE_OLLAMA_API_KEY</c> wins over config <see cref="ApiKey"/>.
+    /// </summary>
+    public string? ResolveApiKey()
+    {
+        var fromEnv = Environment.GetEnvironmentVariable(SecretNames.OllamaApiKey);
+        if (!string.IsNullOrWhiteSpace(fromEnv))
+            return fromEnv.Trim();
+        return string.IsNullOrWhiteSpace(ApiKey) ? null : ApiKey.Trim();
+    }
+
+    /// <summary>
+    /// Base URL for embeddings. Cloud chat defaults embeddings to local loopback
+    /// unless <see cref="EmbeddingBaseUrl"/> is set explicitly.
+    /// </summary>
+    public string ResolveEmbeddingBaseUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(EmbeddingBaseUrl))
+            return EmbeddingBaseUrl.Trim();
+        if (IsCloudEndpoint)
+            return "http://127.0.0.1:11434";
+        return string.IsNullOrWhiteSpace(BaseUrl) ? "http://127.0.0.1:11434" : BaseUrl.Trim();
+    }
 }
