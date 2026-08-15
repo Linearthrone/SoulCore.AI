@@ -126,6 +126,8 @@ SOULCORE_Inference__TimeoutSeconds=180
 
 Create the key at https://ollama.com/settings/keys. Pick a **tools-capable** cloud model from https://ollama.com/search?c=cloud.
 
+**Recommended (tools + fast):** `deepseek-v4-flash:cloud` — keep `ThinkEnabled=false` so it doesn’t burn the reply budget on hidden chain-of-thought.
+
 **Alternative:** `ollama signin` on the Host machine, keep `BaseUrl=http://127.0.0.1:11434`, set `Model` to a `*:cloud` tag — local Ollama proxies; no Bearer on Host.
 
 Tool **execution** (`desktop_*`, Unreal, etc.) always stays on your machines.
