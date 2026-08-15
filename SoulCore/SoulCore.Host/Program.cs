@@ -612,11 +612,21 @@ app.MapGet("/health", async (
         inference = new
         {
             enabled = inferenceOptions.Enabled,
-            provider = inferenceOptions.Enabled ? "ollama" : "null",
+            provider = inferenceOptions.Enabled
+                ? (inferenceOptions.IsCloudEndpoint ? "ollama-cloud" : "ollama")
+                : "null",
             // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
             model = inferenceOptions.Model,
+            cloud = inferenceOptions.IsCloudEndpoint,
+            baseUrl = inferenceOptions.IsCloudEndpoint ? InferenceOptions.CloudBaseUrl : "loopback",
             embeddingsEnabled = embeddingsOn,
-            embeddingModel = inferenceOptions.EmbeddingModel
+            embeddingModel = inferenceOptions.EmbeddingModel,
+            embeddingBaseUrl = embeddingsOn
+                ? (InferenceOptions.IsOllamaCloudUrl(inferenceOptions.ResolveEmbeddingBaseUrl())
+                    ? InferenceOptions.CloudBaseUrl
+                    : "loopback")
+                : null,
+            apiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey())
         },
         hermes = new
         {
