@@ -211,7 +211,7 @@ if (inferenceOptions.Enabled)
     builder.Services.AddHttpClient<OllamaInferenceClient>((sp, client) =>
     {
         var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
-        ConfigureOllamaHttpClient(client, opts.BaseUrl, opts.TimeoutSeconds, opts.ResolveApiKey());
+        ConfigureOllamaHttpClient(client, opts.BaseUrl, opts.TimeoutSeconds, InferenceOptions.IsOllamaCloudUrl(opts.BaseUrl) ? opts.ResolveApiKey() : null);
     });
     // BED-126: expose the typed client as IInferenceClient. The 3-arg ctor
     // (http + options + logger) is what HttpClientFactory builds; the
