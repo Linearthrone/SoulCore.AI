@@ -212,16 +212,6 @@
                     </Grid>
                   </Border>
                   <Border Classes="carbon" Padding="8">
-                    <StackPanel Spacing="2">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Ellipse x:Name="SvcHermesDot" Width="9" Height="9" Fill="{DynamicResource MutedBrush}"/>
-                        <TextBlock Text="Hermes" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="SvcHermesStatus" Text="retired" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
-                      </StackPanel>
-                      <TextBlock x:Name="SvcHermesDetail" Text="BED-185: unused — open Chrome via desktop_open_app" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-                    </StackPanel>
-                  </Border>
-                  <Border Classes="carbon" Padding="8">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -433,9 +423,6 @@
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="SystemInferenceBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="Hermes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemHermesBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Memory path" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="SystemMemoryPathBox" Classes="input" IsReadOnly="True" Text="—"

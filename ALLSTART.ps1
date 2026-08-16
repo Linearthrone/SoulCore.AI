@@ -3,10 +3,10 @@
 .SYNOPSIS
   Start local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
 .DESCRIPTION
-  Starts Host (Ollama tool-loop). Hermes gateway is RETIRED (BED-185) and skipped by default.
-  Use -WithHermes only for legacy experiments. Refuses to attach the GUI to a foreign :7700
-  occupant (e.g. Cursor cloud port-forward to a Linux/ubuntu Host). If 7700 is stolen, starts local Host
-  on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
+  Starts Host (Ollama tool-loop + desktop tools). Opens Chrome/sites via desktop_open_app.
+  Refuses to attach the GUI to a foreign :7700 occupant (e.g. Cursor cloud port-forward to a
+  Linux/ubuntu Host). If 7700 is stolen, starts local Host on -AlternatePort and points the GUI
+  there via HOUSE_SOULCORE_PORT.
 
   OPS-179: child scripts run with timeouts so Tailscale / Voice health probes cannot freeze forever.
 .EXAMPLE
@@ -25,13 +25,8 @@ param(
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
     [switch]$SkipTailscaleServe,
-    # Retired by default (BED-185). Kept for CLI compat; ignored unless -WithHermes.
-    [switch]$SkipHermes,
-    # Opt-in only: start Hermes Agent Gateway (not used for House Victoria chat/tools).
-    [switch]$WithHermes,
     [switch]$SkipVoice,
     [switch]$SkipBrowserBridge,
-    [int]$HermesTimeoutSec = 90,
     [int]$HostStartTimeoutSec = 180,
     [int]$TailscaleTimeoutSec = 30,
     [int]$VoiceTimeoutSec = 45,
@@ -41,7 +36,6 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = $PSScriptRoot
 $StartHost = Join-Path $RepoRoot "SoulCore\scripts\start-soulcore.ps1"
-$StartHermes = Join-Path $RepoRoot "SoulCore\scripts\start-hermes.ps1"
 $StartBrowserBridge = Join-Path $RepoRoot "SoulCore\scripts\start-browser-bridge.ps1"
 $StartGui = Join-Path $RepoRoot "start-desktopgui.ps1"
 $TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
@@ -107,7 +101,16 @@ function Invoke-ScriptWithTimeout {
         } catch { }
         return @{ TimedOut = $true; ExitCode = -1 }
     }
-    return @{ TimedOut = $false; ExitCode = $proc.ExitCode }
+    # Timed WaitForExit can leave ExitCode $null until a final WaitForExit().
+    $proc.Refresh()
+    if (-not $proc.HasExited) {
+        $null = $proc.WaitForExit(5000)
+    } else {
+        $null = $proc.WaitForExit()
+    }
+    $code = $proc.ExitCode
+    if ($null -eq $code) { $code = 0 }
+    return @{ TimedOut = $false; ExitCode = [int]$code }
 }
 
 function Start-LocalSoulCore {
@@ -127,9 +130,18 @@ function Start-LocalSoulCore {
         -WorkingDirectory $RepoRoot `
         -TimeoutSec $HostStartTimeoutSec
     if ($result.TimedOut) {
+        # Host may still have come up before the wrapper timed out.
+        if (Test-LocalVictoriaHealth -Health (Get-HealthObject -LocalPort $LocalPort)) {
+            Write-Warning "start-soulcore.ps1 timed out, but local Victoria is healthy on :$LocalPort - continuing"
+            return
+        }
         throw "start-soulcore.ps1 timed out after ${HostStartTimeoutSec}s on port $LocalPort"
     }
     if ($result.ExitCode -ne 0) {
+        if (Test-LocalVictoriaHealth -Health (Get-HealthObject -LocalPort $LocalPort)) {
+            Write-Warning "start-soulcore.ps1 exit $($result.ExitCode), but local Victoria is healthy on :$LocalPort - continuing"
+            return
+        }
         throw "start-soulcore.ps1 failed on port $LocalPort (exit $($result.ExitCode))"
     }
 }
@@ -262,55 +274,7 @@ if (-not $browserBridgeOk -and -not $SkipBrowserBridge) {
     Write-Warning "Load unpacked extension from BrowserCaptureExtension after bridge is up."
 }
 
-Write-Host "=== ALLSTART: Hermes gateway (retired BED-185) ==="
-$hermesOk = $false
-# Hermes is retired for House Victoria. Do not start unless -WithHermes.
-if (-not $WithHermes) {
-    $SkipHermes = $true
-    Write-Host "Hermes skipped by default (BED-185). Pass -WithHermes only if you intentionally need the gateway."
-}
-if ($SkipHermes) {
-    Write-Host "Hermes skipped - open Chrome/websites via desktop_open_app (Ollama), not the gateway."
-} elseif (-not (Test-Path -LiteralPath $StartHermes)) {
-    Write-Warning "Missing Hermes start script: $StartHermes - skipping"
-} else {
-    try {
-        $hermesArgList = @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", $StartHermes
-        )
-        if ($SkipPreflight) { $hermesArgList += "-SkipPreflight" }
-        $hermesResult = Invoke-ScriptWithTimeout `
-            -Label "start-hermes" `
-            -ArgumentList $hermesArgList `
-            -WorkingDirectory $RepoRoot `
-            -TimeoutSec $HermesTimeoutSec
-        if ($hermesResult.TimedOut) {
-            Write-Warning "start-hermes.ps1 timed out after ${HermesTimeoutSec}s - continuing without waiting for Hermes"
-        } elseif ($hermesResult.ExitCode -ne 0) {
-            Write-Warning "start-hermes.ps1 exited $($hermesResult.ExitCode) - continuing without Hermes gateway"
-        } else {
-            try {
-                $hh = Invoke-WebRequest -Uri "http://127.0.0.1:8642/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
-                if ($hh.StatusCode -eq 200) {
-                    Write-Host "Hermes gateway OK: http://127.0.0.1:8642/health"
-                    $hermesOk = $true
-                }
-            } catch {
-                Write-Warning "Hermes start reported OK but :8642/health not ready yet - $($_.Exception.Message)"
-            }
-        }
-    } catch {
-        Write-Warning "Hermes gateway start failed - $($_.Exception.Message)"
-        Write-Warning "Host will still start (Ollama-only)."
-    }
-}
-if (-not $hermesOk -and $WithHermes) {
-    Write-Warning "Hermes gateway not confirmed on :8642 (soft-fail; Host continues)."
-}
-
-Write-Host "CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools & Access enable it."
+Write-Host "CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools and Access enable it."
 
 Write-Host "=== ALLSTART: locate local Victoria Host ==="
 $chosenPort = $Port

@@ -6,7 +6,6 @@
   Does not kill foreign :7700 occupants (e.g. Cursor cloud port-forward).
   Stops local Host on 7700 and/or 7701 when /health memory path is this machine's Victoria.
   Also stops browser bridge (:17891) and local voice STT/TTS (:8000 / :8881).
-  Does not start or stop Hermes - that stack is retired from Victoria.
 .EXAMPLE
   .\ALLSTOP.ps1
 #>

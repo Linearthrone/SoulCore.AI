@@ -214,3 +214,4 @@ Write-Host "PID: $($proc.Id)"
 Write-Host "PID file: $PidFile"
 Write-Host "Log: $LogFile"
 Write-Host "Health: $HealthUrl"
+exit 0
