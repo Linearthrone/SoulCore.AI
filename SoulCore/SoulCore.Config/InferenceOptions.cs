@@ -86,8 +86,9 @@ public sealed class InferenceOptions
             return false;
         if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var uri))
             return false;
-        return uri.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
-            || uri.Host.Equals("www.ollama.com", StringComparison.OrdinalIgnoreCase);
+        return uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && (uri.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.Equals("www.ollama.com", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
