@@ -88,11 +88,20 @@ public class DesktopToolIntentTests
     public void ComputerUseGuidance_Block_ForbidsInventedToolsForLocalLaunch()
     {
         Assert.Contains("desktop_open_app", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("Do NOT invent terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("Do NOT invent Hermes", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("or terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("process", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ComputerUseGuidance_ScopedBlock_LocksVmTitle()
+    {
+        var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox");
+        Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
+        Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
+        Assert.Equal(once, ComputerUseGuidance.AppendToPreamble(once, "victoria-sandbox"));
     }
 
     // ---------------------------------------------------------------------

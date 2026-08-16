@@ -21,6 +21,12 @@ public interface IToolsAccessSettings
     string BrowserBackend { get; }
     string Mt4Backend { get; }
 
+    /// <summary>
+    /// When non-empty, desktop tools are hard-scoped to matching window titles
+    /// (see <c>Tools:DesktopTargetWindowTitle</c>).
+    /// </summary>
+    string DesktopTargetWindowTitle { get; }
+
     void SetAllowDesktopCapture(bool enabled);
     void SetAllowBrowserCapture(bool enabled);
     void SetAllowComputerControl(bool enabled);

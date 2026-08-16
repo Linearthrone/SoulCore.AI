@@ -481,6 +481,7 @@ public class DesktopToolsTests
         Assert.Equal("cua", opts.DesktopBackend);
         Assert.Equal("native", opts.BrowserBackend);
         Assert.Equal("http://127.0.0.1:17891", opts.BrowserBridgeUrl);
+        Assert.Equal("", opts.DesktopTargetWindowTitle);
     }
 
     private static ITool CreateControlTool(string name, IComputerControlGate gate, IDesktopControlBackend backend)

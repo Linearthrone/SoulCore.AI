@@ -122,7 +122,7 @@ public static class HermesToolRouting
 
         return new ToolResult(
             Success: false,
-            Content: $"unknown backend '{backend}' — use '{ToolsOptions.BackendLlmod}', '{ToolsOptions.BackendBridge}', or '{ToolsOptions.BackendNative}'",
+            Content: $"unknown backend '{backend}' — use '{ToolsOptions.BackendLlmod}' or '{ToolsOptions.BackendNative}'",
             Data: null);
     }
 

@@ -11,6 +11,7 @@ using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host.Ws;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Memory;
 using SoulCore.Protocol;
 
@@ -93,7 +94,9 @@ public class ChatWebSocketHandlerToolLoopTests
         return new ChatWebSocketHandler(
             inference, hermes, emotion, memory, embeddings, charter,
             unreal, soulLoop, toolRegistry, sessionHistory, spendMeter, driftWatcher,
-            hub, chatOpts, infOpts, hermesOpts, logger);
+            hub, chatOpts, infOpts, hermesOpts,
+            toolsAccess: new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true),
+            logger);
     }
 
     private static string ChatSendFrame(string text) =>

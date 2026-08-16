@@ -42,6 +42,7 @@ public sealed class ChatWebSocketHandler
     private readonly PresenceWsHub _hub;
     private readonly ChatWsOptions _chatOptions;
     private readonly InferenceOptions _inferenceOptions;
+    private readonly IToolsAccessSettings _toolsAccess;
     private readonly ILogger<ChatWebSocketHandler> _logger;
 
     /// <summary>Max chars of the combined identity+memory preamble (before emotion).</summary>
@@ -71,6 +72,7 @@ public sealed class ChatWebSocketHandler
         IOptions<ChatWsOptions> chatOptions,
         IOptions<InferenceOptions> inferenceOptions,
         IOptions<HermesOptions> hermesOptions,
+        IToolsAccessSettings toolsAccess,
         ILogger<ChatWebSocketHandler> logger,
         IVoiceSpeakService? voiceSpeak = null)
     {
@@ -91,6 +93,7 @@ public sealed class ChatWebSocketHandler
         _hub = hub;
         _chatOptions = chatOptions.Value;
         _inferenceOptions = inferenceOptions.Value;
+        _toolsAccess = toolsAccess ?? throw new ArgumentNullException(nameof(toolsAccess));
         _logger = logger;
     }
 
@@ -368,7 +371,9 @@ public sealed class ChatWebSocketHandler
         if (_chatOptions.UseToolLoop)
         {
             contextPreamble = ToolAgencyGuidance.AppendToPreamble(contextPreamble);
-            contextPreamble = ComputerUseGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = ComputerUseGuidance.AppendToPreamble(
+                contextPreamble,
+                _toolsAccess.DesktopTargetWindowTitle);
             contextPreamble = HomeBodyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ChiefArchitectGuidance.AppendToPreamble(contextPreamble);
         }
