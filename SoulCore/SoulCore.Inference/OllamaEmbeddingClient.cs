@@ -9,6 +9,8 @@ namespace SoulCore.Inference;
 
 /// <summary>
 /// Ollama embedding client via <c>POST /api/embeddings</c> (<c>{ model, prompt }</c> → <c>embedding</c>).
+/// When Unreal is live and <see cref="InferenceOptions.SkipEmbeddingsWhenUeLive"/> is set,
+/// returns an empty vector so callers fall back to recency recall (VRAM policy).
 /// </summary>
 public sealed class OllamaEmbeddingClient : IEmbeddingClient
 {
@@ -21,32 +23,49 @@ public sealed class OllamaEmbeddingClient : IEmbeddingClient
     private readonly HttpClient _http;
     private readonly InferenceOptions _options;
     private readonly ILogger<OllamaEmbeddingClient> _logger;
+    private readonly IUeLiveSignal _ueLive;
 
     public OllamaEmbeddingClient(
         HttpClient http,
         IOptions<InferenceOptions> options,
-        ILogger<OllamaEmbeddingClient> logger)
+        ILogger<OllamaEmbeddingClient> logger,
+        IUeLiveSignal? ueLive = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _ueLive = ueLive ?? new NullUeLiveSignal();
     }
 
     public bool IsEnabled => true;
 
-    public string Model =>
-        string.IsNullOrWhiteSpace(_options.EmbeddingModel)
-            ? "nomic-embed-text"
-            : _options.EmbeddingModel.Trim();
+    public string Model
+    {
+        get
+        {
+            var ueLive = _ueLive.IsUeLive;
+            if (InferenceModelRouting.ShouldSkipEmbeddings(_options, ueLive))
+                return "(skipped-ue-live)";
+            return InferenceModelRouting.ResolveEmbeddingModel(_options, ueLive);
+        }
+    }
 
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
             throw new ArgumentException("Text to embed must be non-empty.", nameof(text));
 
+        var ueLive = _ueLive.IsUeLive;
+        if (InferenceModelRouting.ShouldSkipEmbeddings(_options, ueLive))
+        {
+            _logger.LogDebug("Skipping embeddings while Unreal is live (SkipEmbeddingsWhenUeLive)");
+            return Array.Empty<float>();
+        }
+
+        var model = InferenceModelRouting.ResolveEmbeddingModel(_options, ueLive);
         var payload = new OllamaEmbeddingsRequest
         {
-            Model = Model,
+            Model = model,
             Prompt = text.Trim()
         };
 

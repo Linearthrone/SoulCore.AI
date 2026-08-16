@@ -12,7 +12,26 @@ public sealed class InferenceOptions
 
     public string BaseUrl { get; set; } = "http://127.0.0.1:11434";
 
+    /// <summary>Chat / soul model (single-shot generate). Default gemma4.</summary>
     public string Model { get; set; } = "gemma4:latest";
+
+    /// <summary>
+    /// Tool-loop model when Unreal is <em>not</em> live. Empty → use <see cref="Model"/>.
+    /// Typical: <c>qwen2.5:14b</c> for reliable tool calling.
+    /// </summary>
+    public string ToolModel { get; set; } = "";
+
+    /// <summary>
+    /// Small tool-loop model while Unreal/PIE is live (shadow VRAM contended).
+    /// Empty → fall back to <see cref="ToolModel"/> then <see cref="Model"/>.
+    /// </summary>
+    public string ToolModelUeLive { get; set; } = "";
+
+    /// <summary>
+    /// Tool-loop <c>num_ctx</c> while UE is live. 0 → use <see cref="NumCtx"/>.
+    /// Keep small so the light tool model + chat model coexist on 16GB.
+    /// </summary>
+    public int ToolNumCtxUeLive { get; set; } = 4096;
 
     public int TimeoutSeconds { get; set; } = 120;
 
@@ -43,8 +62,20 @@ public sealed class InferenceOptions
     /// </summary>
     public bool EmbeddingsEnabled { get; set; } = true;
 
-    /// <summary>Ollama embedding model (e.g. <c>nomic-embed-text</c>).</summary>
+    /// <summary>Ollama embedding model when Unreal is not live (e.g. <c>nomic-embed-text</c>).</summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text";
+
+    /// <summary>
+    /// Embedding model while Unreal is live. Empty → use <see cref="EmbeddingModel"/>.
+    /// Prefer a tiny model, or leave empty and set <see cref="SkipEmbeddingsWhenUeLive"/>.
+    /// </summary>
+    public string EmbeddingModelUeLive { get; set; } = "";
+
+    /// <summary>
+    /// When true and Unreal is live, skip embed calls (recall falls back to recency)
+    /// so VRAM stays free for chat + small tool model.
+    /// </summary>
+    public bool SkipEmbeddingsWhenUeLive { get; set; } = true;
 
     /// <summary>
     /// Maximum number of <c>/api/chat</c> round-trips the agent loop may make

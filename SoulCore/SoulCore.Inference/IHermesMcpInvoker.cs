@@ -23,7 +23,7 @@ public interface IHermesMcpInvoker
     /// is unreachable. Tools with <c>Backend=hermes</c> surface this verbatim
     /// as <c>ToolResult(Success:false, Content:...)</c> — no silent native fallback.
     /// </summary>
-    public const string UnavailableMessage = "hermes gateway unavailable";
+    public const string UnavailableMessage = "tool backend unavailable";
 
     /// <summary>
     /// Force-invoke a Hermes-registered MCP tool and translate the response to

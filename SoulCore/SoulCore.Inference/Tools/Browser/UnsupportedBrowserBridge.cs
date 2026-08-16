@@ -1,8 +1,7 @@
 namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
-/// Returned when <c>Tools:BrowserBackend</c> is not <c>hermes</c>. Native C#
-/// browser automation is out of scope for BED-136.
+/// Returned when <c>Tools:BrowserBackend</c> is not <c>hermes</c>, <c>bridge</c>, or <c>native</c>.
 /// </summary>
 public sealed class UnsupportedBrowserBridge : IBrowserBridge
 {
@@ -35,6 +34,6 @@ public sealed class UnsupportedBrowserBridge : IBrowserBridge
 
     private BrowserBridgeResult Fail() => new(
         Success: false,
-        Content: $"browser backend '{_backend}' is not supported — use Tools.BrowserBackend=hermes (native fallback out of scope for BED-136)",
+        Content: $"browser backend '{_backend}' is not supported — use Tools.BrowserBackend=bridge (or native) for :17891",
         Data: null);
 }

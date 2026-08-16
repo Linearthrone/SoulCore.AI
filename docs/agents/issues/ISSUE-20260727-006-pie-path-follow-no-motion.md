@@ -3,11 +3,13 @@ type: issue
 issue_id: ISSUE-20260727-006
 discovered: 2026-07-27
 severity: P1 (Critical)
-status: Pending Fix
-related: TASK-118, TASK-117, ISSUE-20260727-003
+status: Fixed
+related: TASK-118, TASK-117, ISSUE-20260727-003, TASK-180
 wave: 26
 phase: 1
 ---
+
+[已修复 2026-08-07]
 
 # ISSUE-20260727-006 — PIE path-follow returns ok but Character never translates
 
@@ -70,3 +72,29 @@ Note: BED-117 editor-world verify also saw `traveled=0` and deferred continuous 
 ## Suggested fix direction
 
 BED-01: In PIE Home, log `EPathFollowingRequestResult`, PathFollowing status, and whether `UNavigationSystemV1` can project start/goal; ensure MoveTo drives CMC over time; do not treat API-ok alone as visual Pass.
+
+## Resolution (2026-08-07 — TASK-180 / BOB-01)
+
+**Root cause:** A duplicate WebSocket server inside the `HouseVictoriaBridge`
+plugin. `UHouseVictoriaSocketSubsystem::Initialize` started its own
+`IWebSocketServer` on port `:8888`, racing the authoritative
+`FHouseVictoriaBridgeModule`'s `FHouseVictoriaBridgeServer` (which correctly
+resolves the PIE world via `GetActiveWorld()`). When the subsystem won the
+bind race (e.g. after `hv.stop`/`hv.start`), its stale verb parser
+(`ParseVectorFromArgs` with `StartIndex=1` for `move_avatar_relative`'s 3-arg
+form) failed and returned "avatar not found" — while `get_avatar_transform`
+still worked (masking the movement failure).
+
+**Fix:** Disabled the subsystem's duplicate server by making
+`UHouseVictoriaSocketSubsystem::Initialize` return early (Live Coding
+Rebuild, no editor restart). Also applied a defense-in-depth fix to
+`ParseVectorFromArgs` (`StartIndex` 1→0) in case the subsystem is ever
+re-enabled.
+
+**Live PIE evidence (AC #1-5 Pass):** `move_avatar_relative 250 0 0` produced
+696 cm of continuous path-follow across 9 transform samples (vmax ~2351 cm/s,
+not a teleport snap). `stop` canceled mid-path with no drift. `:8888` status
+JSON healthy (`scene: UEDPIE_0_Home`, `avatar_count: 1`). See
+`docs/agents/reports/TASK-20260806-180-BOB01-to-PM01.md` for full evidence.
+
+**Marked Fixed:** 2026-08-07 by BOB-01. Ready for QA-01 QA-118 retest.

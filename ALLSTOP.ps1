@@ -1,25 +1,26 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop House.ChatDesktop, local SoulCore.Host (Victoria), and Hermes gateway.
+  Stop House.ChatDesktop and local SoulCore.Host (Victoria).
 .DESCRIPTION
   Does not kill foreign :7700 occupants (e.g. Cursor cloud port-forward).
   Stops local Host on 7700 and/or 7701 when /health memory path is this machine's Victoria.
-  Stops Hermes gateway on :8642 (hermes gateway stop + pid/port cleanup).
+  Also stops browser bridge (:17891) and local voice STT/TTS (:8000 / :8881).
+  Does not start or stop Hermes - that stack is retired from Victoria.
 .EXAMPLE
   .\ALLSTOP.ps1
 #>
 [CmdletBinding()]
 param(
-    [int[]]$Ports = @(7700, 7701)
+    [int[]]$Ports = @(7700, 7701),
+    [switch]$KeepVoice,
+    [switch]$KeepBrowserBridge
 )
 
 $ErrorActionPreference = "Continue"
 $RepoRoot = $PSScriptRoot
 $StopHost = Join-Path $RepoRoot "SoulCore\scripts\stop-soulcore.ps1"
 $PidFile = Join-Path $RepoRoot "SoulCore\scripts\.soulcore-host.pid"
-$HermesPidFile = Join-Path $RepoRoot "SoulCore\scripts\.hermes.pid"
-$HermesPort = 8642
 $BindAddress = "127.0.0.1"
 $TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
 
@@ -114,49 +115,47 @@ function Stop-LocalHostOnPort {
     }
 }
 
-function Stop-HermesGateway {
-    Write-Host "=== ALLSTOP: Hermes gateway :$HermesPort ==="
-    try {
-        $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
-        if ($hermesCmd) {
-            & hermes gateway stop 2>$null | Out-Null
-            Write-Host "hermes gateway stop invoked"
-        }
-    } catch {
-        Write-Warning ("hermes gateway stop failed - " + $_.Exception.Message)
+function Stop-ListenersOnPort {
+    param(
+        [Parameter(Mandatory = $true)][int]$LocalPort,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    $conns = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -eq $BindAddress -or $_.LocalAddress -eq "0.0.0.0" }
+    $pids = @($conns | Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($pids.Count -eq 0) {
+        Write-Host "No $Label listener on :${LocalPort}"
+        return
     }
-
-    if (Test-Path -LiteralPath $HermesPidFile) {
-        $outerPid = 0
-        try { $outerPid = [int](Get-Content -LiteralPath $HermesPidFile -ErrorAction SilentlyContinue | Select-Object -First 1) } catch { }
-        if ($outerPid -gt 0) {
-            $p = Get-Process -Id $outerPid -ErrorAction SilentlyContinue
-            if ($p) {
-                Write-Host "Stopping Hermes outer PID $outerPid"
-                Stop-Process -Id $outerPid -Force -ErrorAction SilentlyContinue
-            }
-        }
-        Remove-Item -LiteralPath $HermesPidFile -Force -ErrorAction SilentlyContinue
-    }
-
-    $conns = Get-NetTCPConnection -LocalPort $HermesPort -State Listen -ErrorAction SilentlyContinue |
-        Where-Object { $_.LocalAddress -eq $BindAddress }
-    foreach ($c in @($conns)) {
-        Write-Host "Stopping Hermes listen PID $($c.OwningProcess) on :$HermesPort"
-        Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
-    }
-
-    Start-Sleep -Milliseconds 400
-    try {
-        $null = Invoke-WebRequest -Uri "http://${BindAddress}:${HermesPort}/health" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
-        Write-Warning ":${HermesPort} still answers /health"
-    } catch {
-        Write-Host ":${HermesPort} free (no /health)"
+    foreach ($procId in $pids) {
+        $p = Get-Process -Id $procId -ErrorAction SilentlyContinue
+        $name = if ($p) { $p.ProcessName } else { "?" }
+        Write-Host "Stopping $Label PID $procId ($name) on :${LocalPort}"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
 }
 
 Write-Host "=== ALLSTOP ==="
 Stop-ChatDesktop
+
+if ($KeepBrowserBridge) {
+    Write-Host "=== ALLSTOP: browser bridge kept (-KeepBrowserBridge) ==="
+} else {
+    Write-Host "=== ALLSTOP: browser bridge (:17891) ==="
+    Stop-ListenersOnPort -LocalPort 17891 -Label "browser bridge"
+    $bbPid = Join-Path $RepoRoot "SoulCore\scripts\.browser-bridge.pid"
+    if (Test-Path -LiteralPath $bbPid) {
+        Remove-Item -LiteralPath $bbPid -Force -ErrorAction SilentlyContinue
+    }
+}
+
+if ($KeepVoice) {
+    Write-Host "=== ALLSTOP: voice kept (-KeepVoice) ==="
+} else {
+    Write-Host "=== ALLSTOP: House.Voice (STT :8000 + TTS :8881) ==="
+    Stop-ListenersOnPort -LocalPort 8000 -Label "STT"
+    Stop-ListenersOnPort -LocalPort 8881 -Label "TTS"
+}
 
 # --- Tailscale serve: tear down (soft-fail) ---
 if (-not (Test-Path -LiteralPath $TailscaleServe)) {
@@ -195,8 +194,6 @@ if (Test-Path -LiteralPath $StopHost) {
 if (Test-Path -LiteralPath $PidFile) {
     Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
-
-Stop-HermesGateway
 
 Start-Sleep -Milliseconds 300
 Write-Host "=== ALLSTOP done ==="

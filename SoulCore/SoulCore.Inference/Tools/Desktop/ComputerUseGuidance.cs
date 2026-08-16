@@ -28,7 +28,7 @@ public static class ComputerUseGuidance
         "Type/key need a click target first.\n" +
         "6) After state-changing actions, list or screenshot again to verify.\n" +
         "For local desktop launch/control use SoulCore desktop_* tools only. " +
-        "Do NOT invent Hermes terminal, process, computer_use, or browser_navigate for local launch " +
+        "Do NOT invent terminal, process, computer_use, or browser_navigate tools for local launch " +
         "when DesktopBackend is native/cua — those are wrong for opening Chrome on Kurt's PC.\n" +
         "If a tool says AllowComputerControl is required, tell Kurt to enable it in " +
         "Settings → Tools & Access — do not pretend you clicked.\n" +
@@ -72,7 +72,8 @@ public static class DesktopToolIntent
 
     private static readonly Regex LookAtScreen = new(
         @"\b(?:look\s+at|see|check|show|capture|screenshot|what(?:'s| is)\s+on)\b[\s\S]{0,40}\b(?:screen|desktop|monitor|display)\b|" +
-        @"\b(?:screen|desktop)\s+(?:shot|capture|screenshot)\b",
+        @"\b(?:screen|desktop)\s+(?:shot|capture|screenshot)\b|" +
+        @"\b(?:take\s+(?:a\s+)?screenshot|screenshot\s+(?:please|now)?)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
@@ -130,8 +131,14 @@ public static class DesktopToolIntent
 
         // OpenApp BEFORE LookAtScreen / UseComputer so "open Chrome on my desktop"
         // forces desktop_open_app, not list_desktop_windows.
+        // Compound "open browser and take a screenshot": do NOT exclusive-force
+        // open_app — ForceTool advertises only one tool for the first round, then
+        // gemma4 often returns blank before desktop_screenshot runs.
         if (OpenApp.IsMatch(text))
         {
+            if (LookAtScreen.IsMatch(text))
+                return false;
+
             match = new Match(Kind.OpenApp, "desktop_open_app");
             return true;
         }

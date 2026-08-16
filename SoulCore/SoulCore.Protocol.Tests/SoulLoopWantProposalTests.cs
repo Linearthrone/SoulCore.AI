@@ -37,10 +37,20 @@ public class SoulLoopWantProposalTests
     public void Classify_EpisodicClarify_OverridesEmotion()
     {
         var fields = new EmotionInfluencePrompt.EmotionFields(0.5, 0.3, 0.5, 0.4);
-        var recent = new[] { "correction: that was wrong actually" };
+        var recent = new[] { "correction: that was misunderstood — you meant the other path" };
         var cat = SoulLoopWantProposal.Classify("content", fields, recent);
         Assert.Equal(SoulLoopWantProposal.CategoryClarify, cat);
         Assert.StartsWith("want[clarify]:", SoulLoopWantProposal.Propose("content", fields, recent));
+    }
+
+    [Fact]
+    public void Classify_QuestionMarkAlone_DoesNotForceClarify()
+    {
+        // Ordinary chat questions used to lock every tick into clarify.
+        var fields = new EmotionInfluencePrompt.EmotionFields(0.0, 0.2, 0.4, 0.4);
+        var recent = new[] { "User: can you open Chrome?" };
+        var cat = SoulLoopWantProposal.Classify("calm", fields, recent);
+        Assert.NotEqual(SoulLoopWantProposal.CategoryClarify, cat);
     }
 
     [Fact]

@@ -147,8 +147,11 @@ public static class SoulLoopWantProposal
             if (string.IsNullOrWhiteSpace(row))
                 continue;
 
+            // Avoid bare "?" / "actually" / "meant" — those appear in ordinary chat
+            // and locked SoulLoop into clarify → empty proactive SMS every N ticks.
             if (ContainsAny(row,
-                    "correction", "wrong", "misunderstand", "actually", "?", "clarify", "meant"))
+                    "correction", "misunderstand", "misunderstood",
+                    "you meant", "i meant", "clarify that", "to clarify"))
                 return CategoryClarify;
 
             if (ContainsAny(row,

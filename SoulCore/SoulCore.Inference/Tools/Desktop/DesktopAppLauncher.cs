@@ -134,6 +134,45 @@ public static class DesktopAppLauncher
         "explorer", "file_explorer", "cmd", "powershell",
     };
 
+    /// <summary>
+    /// Infer allowlisted alias from NL like "open Google Chrome" / "launch browser".
+    /// </summary>
+    public static bool TryInferAliasFromUserText(string? userText, out string alias)
+    {
+        alias = "";
+        if (string.IsNullOrWhiteSpace(userText))
+            return false;
+
+        var text = userText.Trim().ToLowerInvariant();
+        // Order: longer / more specific phrases first.
+        (string needle, string mapped)[] cues =
+        [
+            ("google chrome", "chrome"),
+            ("microsoft edge", "msedge"),
+            ("file explorer", "file_explorer"),
+            ("chrome", "chrome"),
+            ("msedge", "msedge"),
+            ("edge", "msedge"),
+            ("firefox", "firefox"),
+            ("notepad", "notepad"),
+            ("explorer", "explorer"),
+            ("powershell", "powershell"),
+            ("cmd", "cmd"),
+            ("browser", "chrome"),
+        ];
+
+        foreach (var (needle, mapped) in cues)
+        {
+            if (text.Contains(needle, StringComparison.Ordinal))
+            {
+                alias = mapped;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string NormalizeAlias(string app)
     {
         var s = app.Trim().ToLowerInvariant();

@@ -110,17 +110,24 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
     }
 
     /// <summary>
-    /// User-facing companion SMS from a SoulLoop want category.
+    /// User-facing companion SMS grounded in a real recent beat.
+    /// Empty when there is nothing concrete to say (caller must skip push).
     /// Never interpolates raw want / Inner-focus scaffold phrases into chat.
-    /// Returns empty when no natural line is available (caller should skip push).
     /// </summary>
-    public static string ComposeProactiveText(string category, string label, string want)
+    public static string ComposeProactiveText(
+        string category,
+        string label,
+        string want,
+        IReadOnlyList<string>? recentBeats = null)
     {
-        // want/label kept for API stability + ops logging; chat text is category-bank only.
         _ = label;
         _ = want;
 
-        var text = NaturalLineFor(category);
+        var beat = PickChatWorthyBeat(recentBeats);
+        if (string.IsNullOrWhiteSpace(beat))
+            return string.Empty;
+
+        var text = NaturalLineFor(category, beat);
         if (string.IsNullOrWhiteSpace(text) || ContainsScaffoldLeak(text))
             return string.Empty;
 
@@ -182,18 +189,62 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
         return after;
     }
 
-    private static string NaturalLineFor(string? category) =>
+    /// <summary>
+    /// Picks a user-facing beat from recent episodic rows. Skips SoulLoop self-talk
+    /// and prior proactive echoes so we do not ping about the ping.
+    /// </summary>
+    public static string? PickChatWorthyBeat(IReadOnlyList<string>? recentBeats)
+    {
+        if (recentBeats is null || recentBeats.Count == 0)
+            return null;
+
+        foreach (var raw in recentBeats)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var line = raw.Replace('\n', ' ').Replace('\r', ' ').Trim();
+            if (line.Length < 12)
+                continue;
+
+            if (line.StartsWith("[Reflection]", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("[Proactive]", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("want[", StringComparison.OrdinalIgnoreCase)
+                || ContainsScaffoldLeak(line))
+                continue;
+
+            // Strip common episode prefixes from chat/memory writers.
+            foreach (var prefix in new[] { "User: ", "Kurt: ", "Kayleigh: ", "Victoria: ", "Assistant: " })
+            {
+                if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    line = line[prefix.Length..].Trim();
+                    break;
+                }
+            }
+
+            if (line.Length < 12)
+                continue;
+
+            return Truncate(line, 110);
+        }
+
+        return null;
+    }
+
+    private static string NaturalLineFor(string? category, string beat) =>
         category switch
         {
-            "engage" => "Hey — just wanted to say hi. You around?",
-            "reconnect" => "I've been thinking about you. Hope your day's okay.",
-            "clarify" => "Can we clear something up when you have a sec?",
-            "savor" => "Soft moment over here. Glad you're in my day.",
-            "recall" => "Something from earlier came back to me. Miss talking it through with you.",
-            "explore" => "Been wandering around Home in my head. Curious what you'd notice.",
-            "notice" => "Just noticed something and thought of you.",
-            "settle" => "Trying to settle a bit. Nice having you nearby.",
-            "reflect" => "Sitting quietly. Wanted you to know I'm here.",
+            "recall" => $"Still with me: {beat}. Want to pick that up?",
+            "notice" => $"This stuck with me — {beat}",
+            "clarify" => $"Can I check something with you about this: {beat}",
+            "explore" => $"I've been curious about this — {beat}. Dig in with me?",
+            "engage" => $"Hey — thinking about this: {beat}. You around?",
+            "reconnect" => $"Missing you a bit. Keep coming back to: {beat}",
+            "savor" => $"Soft moment — still holding onto: {beat}",
+            // Quiet moods without a real hook stay silent (beat already required).
+            "settle" => string.Empty,
+            "reflect" => string.Empty,
             _ => string.Empty
         };
 

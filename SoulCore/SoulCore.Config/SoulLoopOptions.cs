@@ -29,9 +29,9 @@ public sealed class SoulLoopOptions
     public int ReflectionIntervalTicks { get; set; } = 5;
 
     /// <summary>
-    /// When true (default with Enabled), emit an unsolicited <c>chat.done</c> to companion WS
-    /// clients on a throttle (see <see cref="ProactiveChatIntervalTicks"/>) so Victoria can
-    /// message Kurt without a preceding <c>chat.send</c>.
+    /// When true, emit an unsolicited <c>chat.done</c> to companion WS clients on a throttle
+    /// (see <see cref="ProactiveChatIntervalTicks"/>). Pushes are quality-gated: composer
+    /// requires a concrete episodic beat (empty category lines are skipped).
     /// </summary>
     public bool ProactiveChatEnabled { get; set; } = true;
 

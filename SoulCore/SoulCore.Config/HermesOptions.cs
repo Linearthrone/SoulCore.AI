@@ -8,7 +8,7 @@ public sealed class HermesOptions
     public const string SectionName = "Hermes";
 
     /// <summary>When false, Host registers <c>NullHermesClient</c>.</summary>
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
 
     public string BaseUrl { get; set; } = "http://127.0.0.1:8642";
 

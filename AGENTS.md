@@ -30,7 +30,7 @@ Notes below are the non-obvious cloud/Linux caveats.
 - The `SoulCore/scripts/*.ps1` startup/soak/E2E harnesses are PowerShell + Windows paths;
   `pwsh` is not installed here. On Linux, run the Host directly with `dotnet run` instead.
 - Config overrides use env vars with the `SOULCORE_` prefix and `__` for nesting, e.g.
-  `SOULCORE_Inference__Model`, `SOULCORE_Hermes__Enabled` (see `SoulCore/.env.example`).
+  `SOULCORE_Inference__Model`, `SOULCORE_ChatWs__StubWhenModelDown` (see `SoulCore/.env.example`).
   Secrets can also go in `SoulCore/.env` (gitignored).
 
 ### Running the desktop client (Avalonia GUI)
@@ -46,14 +46,14 @@ Notes below are the non-obvious cloud/Linux caveats.
   not practical to pull in CI. To get real replies, run a local Ollama and override the
   model, e.g. start `ollama serve` (no systemd here — run it manually, e.g. in tmux), pull a
   small model like `qwen2.5:0.5b`, then run the Host with
-  `SOULCORE_Inference__Model=qwen2.5:0.5b SOULCORE_Hermes__Enabled=false`.
+  `SOULCORE_Inference__Model=qwen2.5:0.5b`.
 - To exercise chat wiring without any LLM, set `SOULCORE_ChatWs__StubWhenModelDown=true` for
   deterministic stub replies (`provider=stub`).
 - Built-in no-LLM evidence CLIs on the Host: `--emotion-roundtrip`, `--soul-loop-tick
   [--enabled]`, `--secrets-presence`.
 
 ### Optional services
-- Ollama (`:11434`) or Hermes (`:8642`) for real chat; only one is needed. Ollama needs no
-  API key; Hermes chat needs `SOULCORE_HERMES_API_KEY`.
+- Ollama (`:11434`) for real chat (required for Victoria day-to-day).
+- Browser capture bridge (`:17891`) optional for tab screenshots/control.
 - Unreal Engine avatar bridge (`:8888`) is optional; the Host logs a warning and continues
   when it is unreachable (`unreal.connected=false` in `/health`).

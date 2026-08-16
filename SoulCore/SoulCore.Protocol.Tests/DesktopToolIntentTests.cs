@@ -35,12 +35,44 @@ public class DesktopToolIntentTests
     }
 
     [Theory]
+    [InlineData("open chrome", "chrome")]
+    [InlineData("open Google Chrome", "chrome")]
+    [InlineData("launch the browser", "chrome")]
+    [InlineData("start edge", "msedge")]
+    [InlineData("open notepad", "notepad")]
+    public void TryInferAliasFromUserText_MapsCommonPhrases(string text, string expected)
+    {
+        Assert.True(DesktopAppLauncher.TryInferAliasFromUserText(text, out var alias));
+        Assert.Equal(expected, alias);
+    }
+
+    [Theory]
     [InlineData("hello")]
     [InlineData("what's the status of that task?")]
     [InlineData("create a workflow to recall then speak")]
     public void TryMatch_Unrelated_ReturnsFalse(string text)
     {
         Assert.False(DesktopToolIntent.TryMatch(text, out _));
+    }
+
+    [Theory]
+    [InlineData("open the browser and take a screenshot")]
+    [InlineData("open Chrome and take a screenshot")]
+    [InlineData("launch chrome then screenshot please")]
+    public void TryMatch_OpenPlusScreenshot_DoesNotExclusiveForce(string text)
+    {
+        // Compound intents must not ForceTool=desktop_open_app only — that
+        // starves the follow-up screenshot turn on gemma4.
+        Assert.False(DesktopToolIntent.TryMatch(text, out _));
+    }
+
+    [Theory]
+    [InlineData("take a screenshot", "desktop_screenshot")]
+    [InlineData("screenshot please", "desktop_screenshot")]
+    public void TryMatch_BareScreenshot_ForcesScreenshot(string text, string expectedTool)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.Equal(expectedTool, match.ToolName);
     }
 
     [Fact]
@@ -53,12 +85,12 @@ public class DesktopToolIntentTests
     }
 
     [Fact]
-    public void ComputerUseGuidance_Block_ForbidsHermesInventForLocalLaunch()
+    public void ComputerUseGuidance_Block_ForbidsInventedToolsForLocalLaunch()
     {
         Assert.Contains("desktop_open_app", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("Do NOT invent Hermes", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("Do NOT invent terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("process", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }
 }

@@ -14,6 +14,7 @@ using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Inference;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
@@ -133,28 +134,12 @@ var toolsOptions = builder.Configuration
     .GetSection(ToolsOptions.SectionName)
     .Get<ToolsOptions>() ?? new ToolsOptions();
 
-// BED-161 / ISSUE-009: Hermes API key preflight — never read secrets from git.
-// Warn (do not crash) when Hermes is enabled or PreferHermes is set but the key
-// is missing; chat/MCP will fail-fast at call time with a clear message.
+// Hermes client retired from Host; Null only. SoulCore.Hermes remains for tests/stubs.
+if (!string.IsNullOrWhiteSpace(hermesOptions.ApiKey))
 {
-    var hermesKeyPresent = !string.IsNullOrWhiteSpace(
-        Environment.GetEnvironmentVariable(SecretNames.HermesApiKey))
-        || !string.IsNullOrWhiteSpace(hermesOptions.ApiKey);
-    if ((hermesOptions.Enabled || chatWsOptions.PreferHermes) && !hermesKeyPresent)
-    {
-        Console.Error.WriteLine(
-            $"[SoulCore] WARNING: Hermes.Enabled={hermesOptions.Enabled} PreferHermes={chatWsOptions.PreferHermes} " +
-            $"but {SecretNames.HermesApiKey} is not set (env/user-secrets). " +
-            "PreferHermes MCP preflight and hermes-backend MCP tools will fail-fast until the key is provided. " +
-            "Do not put ApiKey values in appsettings.json.");
-    }
-
-    if (!string.IsNullOrWhiteSpace(hermesOptions.ApiKey))
-    {
-        Console.Error.WriteLine(
-            $"[SoulCore] WARNING: Hermes:ApiKey is set in configuration. Prefer env " +
-            $"{SecretNames.HermesApiKey} / user-secrets — never commit API keys.");
-    }
+    Console.Error.WriteLine(
+        $"[SoulCore] WARNING: Hermes:ApiKey is set in configuration but the Host no longer wires a live Hermes client. " +
+        $"Prefer env {SecretNames.HermesApiKey} / user-secrets — never commit API keys.");
 }
 
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
@@ -288,20 +273,8 @@ else
     builder.Services.AddSingleton<IEmbeddingClient, NullEmbeddingClient>();
 }
 
-if (hermesOptions.Enabled)
-{
-    builder.Services.AddHttpClient<HermesHttpClient>((sp, client) =>
-    {
-        var opts = sp.GetRequiredService<IOptions<HermesOptions>>().Value;
-        client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
-    });
-    builder.Services.AddTransient<IHermesClient>(sp => sp.GetRequiredService<HermesHttpClient>());
-}
-else
-{
-    builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
-}
+// Hermes client retired from Host; Null only.
+builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
 
 // BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
 builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
@@ -312,22 +285,19 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 });
 
 // Desktop tools (BED-135): capture + click/type/key with session gates.
-// AllowDesktopCapture / AllowBrowserCapture / AllowComputerControl default true (TASK-177).
-// Backend: Tools:DesktopBackend = "cua" | "native" | "hermes".
-// cua = local cua-driver agent cursor (LLMOD blue overlay; OS mouse untouched).
 // Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
 builder.Services.AddSingleton<ComputerControlGate>();
 builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+// Backend: Tools:DesktopBackend = "cua" | "native" | "auto" (legacy "hermes" → cua/native).
 var desktopBackend = (toolsOptions.DesktopBackend ?? "cua").Trim();
 if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
-{
-    builder.Services.AddSingleton<IDesktopControlBackend, HermesDesktopControlBackend>();
-}
-else if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
-         || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
+    desktopBackend = ToolsOptions.BackendCua;
+
+if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
+     || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
 {
     var cuaExe = CuaDriverCli.TryFindExe();
     if (cuaExe is not null)
@@ -376,26 +346,42 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaV
 
 // Browser tools (BED-136): browser_health / capture_tab / click / type / key / scroll.
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
-// Backend: Tools.BrowserBackend=hermes → HermesBrowserBridge (BED-144 CallMcpToolAsync).
+// Backend: bridge/native → HttpBrowserBridge (:17891). Other values → UnsupportedBrowserBridge.
+builder.Services.AddHttpClient<HttpBrowserBridge>((sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(opts.BrowserBridgeBaseUrl)
+        ? ToolsOptions.DefaultBrowserBridgeBaseUrl
+        : opts.BrowserBridgeBaseUrl.Trim().TrimEnd('/');
+    client.BaseAddress = new Uri(baseUrl + "/");
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
-    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendHermes).Trim();
-    if (!string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        return new UnsupportedBrowserBridge(backend);
+    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendBridge).Trim();
 
-    return new HermesBrowserBridge(sp.GetRequiredService<IHermesClient>());
+    if (string.Equals(backend, ToolsOptions.BackendBridge, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase))
+        return sp.GetRequiredService<HttpBrowserBridge>();
+
+    return new UnsupportedBrowserBridge(backend);
 });
 builder.Services.AddSingleton<ITool, BrowserHealthTool>();
-builder.Services.AddSingleton<ITool, BrowserCaptureTabTool>();
-builder.Services.AddSingleton<ITool, BrowserClickTool>();
+builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
+    sp.GetRequiredService<IBrowserBridge>(),
+    sp.GetRequiredService<IToolsAccessSettings>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
+builder.Services.AddSingleton<ITool>(sp => new BrowserClickTool(
+    sp.GetRequiredService<IBrowserBridge>(),
+    sp.GetRequiredService<IToolsAccessSettings>(),
+    sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();
 builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 // MT4 trading tools (BED-138): AllowMt4Read / AllowMt4Trade + confirmed=true gate.
 // Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169, shadow housevictoria:8080).
-// Mt4Backend=hermes → HermesMt4Bridge via CallMcpToolAsync (BED-144).
 builder.Services.AddHttpClient<LlmodHttpMt4Bridge>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -405,14 +391,11 @@ builder.Services.AddSingleton<IMt4Bridge>(sp =>
     var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
     var backend = (tools.Mt4Backend ?? ToolsOptions.BackendLlmod).Trim();
 
-    if (HermesToolRouting.IsHermesBackend(backend))
-        return new HermesMt4Bridge(sp.GetRequiredService<IHermesClient>());
-
     if (HermesToolRouting.IsLlmodBackend(backend))
         return sp.GetRequiredService<LlmodHttpMt4Bridge>();
 
     return new UnavailableMt4Bridge(
-        $"mt4 backend '{backend}' not supported — use '{ToolsOptions.BackendLlmod}', '{ToolsOptions.BackendNative}', or '{ToolsOptions.BackendHermes}'");
+        $"mt4 backend '{backend}' not supported — use '{ToolsOptions.BackendLlmod}'");
 });
 builder.Services.AddSingleton<ITool, Mt4StatusTool>();
 builder.Services.AddSingleton<ITool, ListSymbolsTool>();
@@ -446,6 +429,10 @@ else
 {
     builder.Services.AddSingleton<IUnrealVerbClient, NullUnrealVerbClient>();
 }
+
+// VRAM policy: tool/embed model selection follows Unreal body connection.
+builder.Services.AddSingleton<IUeLiveSignal>(sp =>
+    new UnrealUeLiveSignal(sp.GetRequiredService<IUnrealVerbClient>()));
 
 // Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).
 builder.Services.AddHttpClient("voice-stt", (sp, client) =>
@@ -603,15 +590,28 @@ app.MapGet("/health", async (
         {
             enabled = inferenceOptions.Enabled,
             provider = inferenceOptions.Enabled ? "ollama" : "null",
-            // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
+            // Chat/soul model; tool/embed switch when unreal.connected (UE-live VRAM policy).
             model = inferenceOptions.Model,
+            chatModel = InferenceModelRouting.ResolveChatModel(inferenceOptions),
+            toolModel = inferenceOptions.ToolModel,
+            toolModelUeLive = inferenceOptions.ToolModelUeLive,
+            activeToolModel = InferenceModelRouting.ResolveToolModel(
+                inferenceOptions, unreal.IsConnected),
             embeddingsEnabled = embeddingsOn,
-            embeddingModel = inferenceOptions.EmbeddingModel
+            embeddingModel = inferenceOptions.EmbeddingModel,
+            embeddingModelUeLive = inferenceOptions.EmbeddingModelUeLive,
+            skipEmbeddingsWhenUeLive = inferenceOptions.SkipEmbeddingsWhenUeLive,
+            activeEmbeddingModel = InferenceModelRouting.ShouldSkipEmbeddings(
+                    inferenceOptions, unreal.IsConnected)
+                ? "(skipped-ue-live)"
+                : InferenceModelRouting.ResolveEmbeddingModel(
+                    inferenceOptions, unreal.IsConnected),
+            ueLive = unreal.IsConnected
         },
         hermes = new
         {
-            enabled = hermesOptions.Enabled,
-            provider = hermesOptions.Enabled ? "http" : "null"
+            enabled = false,
+            provider = "none"
         },
         soulLoop = new
         {
@@ -803,13 +803,12 @@ app.MapGet("/", () => Results.Redirect("/health"));
 
 var logger = app.Logger;
 logger.LogInformation(
-    "SoulCore.Host listening on http://{Address}:{Port} (health: /health, ws: {WsPath}); memory={MemoryPath}; inference={Inference}; hermes={Hermes}; soulLoop={SoulLoop}; unreal={Unreal}",
+    "SoulCore.Host listening on http://{Address}:{Port} (health: /health, ws: {WsPath}); memory={MemoryPath}; inference={Inference}; soulLoop={SoulLoop}; unreal={Unreal}",
     bindOptions.BindAddress,
     bindOptions.Port,
     wsPath,
     app.Services.GetRequiredService<IMemoryStore>().DatabasePath,
     inferenceOptions.Enabled ? "ollama" : "null",
-    hermesOptions.Enabled ? "http" : "null",
     soulLoopOptions.Enabled ? "enabled" : "disabled",
     unrealOptions.Enabled ? unrealOptions.WsUrl : "disabled");
 

@@ -29,6 +29,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
     private readonly ILogger<SoulLoopScaffold> _logger;
     private readonly object _gate = new();
     private string? _lastWant;
+    private string? _lastProactiveFingerprint;
     private int _tickCount;
 
     public SoulLoopScaffold(
@@ -193,8 +194,8 @@ public sealed class SoulLoopScaffold : ISoulLoop
             }
         }
 
-        // Victoria Link: unsolicited chat.done so Kurt gets a phone ding without chat.send.
-        await MaybePushProactiveChatAsync(tick, category, label, want, cancellationToken)
+        // Victoria Link: unsolicited chat.done only when there is a real beat to share.
+        await MaybePushProactiveChatAsync(tick, category, label, want, recent, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -203,6 +204,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
         string category,
         string label,
         string want,
+        IReadOnlyList<string> recent,
         CancellationToken cancellationToken)
     {
         if (_outbound is null || !_options.ProactiveChatEnabled)
@@ -212,20 +214,31 @@ public sealed class SoulLoopScaffold : ISoulLoop
         if (pushEvery <= 0 || tick % pushEvery != 0)
             return;
 
-        // Skip quiet reflection-only ticks unless reconnect/engage-family.
-        if (category is SoulLoopWantProposal.CategoryReflect or SoulLoopWantProposal.CategorySettle
-            && tick % (pushEvery * 2) != 0)
+        // Quiet moods never spam — compose returns empty for settle/reflect anyway.
+        if (category is SoulLoopWantProposal.CategoryReflect or SoulLoopWantProposal.CategorySettle)
             return;
 
-        // Natural SMS only — never push Inner-focus / want scaffold phrases into chat.done.
-        var text = CompanionOutboundMessenger.ComposeProactiveText(category, label, want);
+        // Grounded SMS only — needs a chat-worthy episodic beat, never scaffold wants.
+        var text = CompanionOutboundMessenger.ComposeProactiveText(category, label, want, recent);
         if (string.IsNullOrWhiteSpace(text)
             || CompanionOutboundMessenger.ContainsScaffoldLeak(text))
         {
             _logger.LogDebug(
-                "SoulLoop proactive chat skipped (no natural line) category={Category}",
+                "SoulLoop proactive chat skipped (nothing concrete) category={Category}",
                 category);
             return;
+        }
+
+        var fingerprint = category + "|" + text;
+        lock (_gate)
+        {
+            if (string.Equals(_lastProactiveFingerprint, fingerprint, StringComparison.Ordinal))
+            {
+                _logger.LogDebug(
+                    "SoulLoop proactive chat skipped (same beat as last push) category={Category}",
+                    category);
+                return;
+            }
         }
 
         try
@@ -235,6 +248,8 @@ public sealed class SoulLoopScaffold : ISoulLoop
                 .ConfigureAwait(false);
             if (result.Ok)
             {
+                lock (_gate)
+                    _lastProactiveFingerprint = fingerprint;
                 _logger.LogInformation(
                     "SoulLoop proactive chat pushed frame={FrameId} category={Category}",
                     result.FrameId,

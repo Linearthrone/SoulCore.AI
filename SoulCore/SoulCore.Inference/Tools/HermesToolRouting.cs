@@ -10,7 +10,7 @@ namespace SoulCore.Inference.Tools;
 public static class HermesToolRouting
 {
     public const string NativeNotImplementedMessage =
-        "native backend not implemented for this tool — set Backend=hermes or implement the native path";
+        "native backend not implemented for this tool — set Backend=llmod/bridge or implement the native path";
 
     public const string ComputerControlRequiredMessage =
         "desktop control requires user authorization — ask the user to enable AllowComputerControl";
@@ -122,7 +122,7 @@ public static class HermesToolRouting
 
         return new ToolResult(
             Success: false,
-            Content: $"unknown backend '{backend}' — use '{ToolsOptions.BackendHermes}' or '{ToolsOptions.BackendNative}'",
+            Content: $"unknown backend '{backend}' — use '{ToolsOptions.BackendLlmod}', '{ToolsOptions.BackendBridge}', or '{ToolsOptions.BackendNative}'",
             Data: null);
     }
 

@@ -15,11 +15,21 @@ public sealed class BrowserClickTool : ITool
 
     private readonly IBrowserBridge _bridge;
     private readonly IToolsAccessSettings _access;
+    private readonly IDesktopViewHub? _view;
 
     public BrowserClickTool(IBrowserBridge bridge, IToolsAccessSettings access)
+        : this(bridge, access, view: null)
+    {
+    }
+
+    public BrowserClickTool(
+        IBrowserBridge bridge,
+        IToolsAccessSettings access,
+        IDesktopViewHub? view)
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _access = access ?? throw new ArgumentNullException(nameof(access));
+        _view = view;
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -39,6 +49,12 @@ public sealed class BrowserClickTool : ITool
             return new ToolResult(false, "error: browser_click requires 'x' and 'y' (integers).", null);
 
         var result = await _bridge.ClickAsync(x, y, ct).ConfigureAwait(false);
+        _view?.RecordAction(
+            result.Success
+                ? $"browser click ({x},{y})"
+                : $"browser click failed ({x},{y})",
+            x,
+            y);
         return new ToolResult(result.Success, result.Content, result.Data);
     }
 

@@ -15,10 +15,15 @@ public sealed class ToolsOptions
     public const string BackendNative = "native";
     /// <summary>Local cua-driver (LLMOD-style agent cursor overlay + background clicks).</summary>
     public const string BackendCua = "cua";
+    /// <summary>Direct HTTP to BrowserCaptureBridge (:17891) — no Hermes required.</summary>
+    public const string BackendBridge = "bridge";
 
     /// <summary>Default LLMOD MCP HTTP on shadow (Tailscale MagicDNS).</summary>
     /// <summary>Tailscale MagicDNS for shadow (hyphen). Bare <c>housevictoria</c> does not resolve.</summary>
     public const string DefaultLlmodMcpEndpoint = "http://house-victoria:8080";
+
+    /// <summary>Local HV browser capture bridge (extension ↔ Host).</summary>
+    public const string DefaultBrowserBridgeBaseUrl = "http://127.0.0.1:17891";
 
     public IReadOnlyList<string> FilesystemRoots { get; set; } = Array.Empty<string>();
     public IReadOnlyList<string> FilesystemWriteRoots { get; set; } = Array.Empty<string>();
@@ -43,8 +48,14 @@ public sealed class ToolsOptions
     /// <summary>Desktop backend: <c>cua</c> (default when installed), <c>native</c>, or <c>hermes</c>.</summary>
     public string DesktopBackend { get; set; } = BackendCua;
 
-    /// <summary>Browser backend: <c>hermes</c> (default). Native not implemented.</summary>
-    public string BrowserBackend { get; set; } = BackendHermes;
+    /// <summary>
+    /// Browser backend: <c>bridge</c>/<c>native</c> → local :17891 HTTP bridge (preferred;
+    /// Hermes stays off); <c>hermes</c> → gateway MCP when Hermes.Enabled.
+    /// </summary>
+    public string BrowserBackend { get; set; } = BackendBridge;
+
+    /// <summary>Base URL for <see cref="BackendBridge"/> / native browser HTTP.</summary>
+    public string BrowserBridgeBaseUrl { get; set; } = DefaultBrowserBridgeBaseUrl;
 
     /// <summary>When false (default), all MT4 read tools refuse.</summary>
     public bool AllowMt4Read { get; set; }

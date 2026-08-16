@@ -5,7 +5,7 @@
 | Tree | Owns | Does not own |
 | --- | --- | --- |
 | **Quarry** `C:\Users\kurtw\LLMOD\LLMOD-max-master` | Live Week-1 endpoint + extract patterns until cutover | Must not be the long-term self |
-| **SoulCore/** (`..\SoulCore`) | Continuous self: memory, inference, Hermes, host loop | Thin UX / MCP / voice satellites |
+| **SoulCore/** (`..\SoulCore`) | Continuous self: memory, inference, host loop | Thin UX / MCP / voice satellites |
 | **House/** (this folder) | Thin client apps: chat desktop, later MCP/voice/Unreal bridge | Core memory / LLM orchestration |
 
 ## House.ChatDesktop (Presence + Settings)
@@ -15,7 +15,8 @@ Targets `net8.0` (no Windows-only dependencies), so it builds and runs anywhere 
 
 - **Presence:** chat transcript/input; alive/warm from `presence.status` (HTTP `/health` fallback); emotion strip from `emotion.snapshot`; **Correct…** panel sends `emotion.correct` (SoulCore persists + echoes snapshot); chat via `chat.send` → `chat.delta`/`chat.done`
 - **Settings (day-one tabs):** Identity · Memory · Emotion (points to Presence Correct…; settings store still BED/DBD)
-- **Protocol:** `SoulCoreWsClient` → `ws://127.0.0.1:7700/ws` (BED-021). No Hermes/Ollama calls from UI
+- **Protocol:** `SoulCoreWsClient` → `ws://127.0.0.1:7700/ws` (BED-021). UI talks only to SoulCore Host (no direct Ollama calls)
+- **Local stack:** Ollama + SoulCore Host required for chat; optional browser bridge / ComfyUI / Unreal avatar
 - **Defaults:** localhost loopback only (`127.0.0.1:7700`). Optional env: `HOUSE_SOULCORE_HOST`, `HOUSE_SOULCORE_PORT`
 - **Secrets:** none in this tree — no App.config keys from quarry
 

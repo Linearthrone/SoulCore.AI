@@ -11,7 +11,6 @@ public sealed class SoulCoreHealthSnapshot
     public bool MemoryOpen { get; init; }
     public string? MemoryPath { get; init; }
     public bool InferenceEnabled { get; init; }
-    public bool HermesEnabled { get; init; }
     public int? Phase { get; init; }
     public string? Detail { get; init; }
     public bool? UnrealEnabled { get; init; }
@@ -45,9 +44,6 @@ public sealed class SoulCoreHealthSnapshot
 
     /// <summary>Resolved cua-driver path when available.</summary>
     public string? CuaDriverPath { get; init; }
-
-    /// <summary>Hermes gateway :8642 reachable (probed by desktop, independent of Host Hermes.Enabled).</summary>
-    public bool? HermesGatewayUp { get; init; }
 
     public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
 
@@ -99,8 +95,6 @@ public sealed class SoulCoreHealthClient : IDisposable
             var dto = await response.Content.ReadFromJsonAsync<HealthDto>(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
-            var hermesGatewayUp = await ProbeHermesGatewayAsync(cancellationToken).ConfigureAwait(false);
-
             return new SoulCoreHealthSnapshot
             {
                 Reachable = true,
@@ -108,8 +102,6 @@ public sealed class SoulCoreHealthClient : IDisposable
                 MemoryOpen = dto?.Memory?.Open ?? false,
                 MemoryPath = dto?.Memory?.Path,
                 InferenceEnabled = dto?.Inference?.Enabled ?? false,
-                HermesEnabled = dto?.Hermes?.Enabled ?? false,
-                HermesGatewayUp = hermesGatewayUp,
                 Phase = dto?.Phase,
                 UnrealEnabled = dto?.Unreal?.Enabled,
                 UnrealTarget = dto?.Unreal?.Target,
@@ -147,20 +139,6 @@ public sealed class SoulCoreHealthClient : IDisposable
     }
 
     public void Dispose() => _http.Dispose();
-
-    private async Task<bool> ProbeHermesGatewayAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var response = await _http.GetAsync("http://127.0.0.1:8642/health", cancellationToken)
-                .ConfigureAwait(false);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 
     private sealed class HealthDto
     {

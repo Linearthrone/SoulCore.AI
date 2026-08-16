@@ -1,19 +1,21 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start Hermes gateway, local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
+  Start browser bridge, local SoulCore.Host (Victoria), voice, then House.ChatDesktop.
 .DESCRIPTION
-  Starts Hermes on :8642 (soft-fail if missing), then Host. Refuses to attach the GUI to a foreign :7700
-  occupant (e.g. Cursor cloud port-forward to a Linux/ubuntu Host). If 7700 is stolen, starts local Host
-  on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
-  Does not enable AllowComputerControl (CUA stays yellow until Services / Tools & Access).
+  Starts browser capture bridge on :17891 (hidden), Host on :7700 (Ollama-backed), STT/TTS
+  (hidden pythonw), then ChatDesktop. No Hermes / :8642 - that stack is retired.
+  Refuses to attach the GUI to a foreign :7700 occupant (e.g. Cursor cloud port-forward).
+  If 7700 is stolen, starts local Host on -AlternatePort and points the GUI there via HOUSE_SOULCORE_PORT.
+  Does not enable AllowComputerControl (CUA stays yellow until Services / Tools and Access).
 
-  OPS-179: child scripts run with timeouts so `hermes gateway stop`, Tailscale, or Voice
-  health probes cannot freeze this launcher forever.
+  OPS-179: child scripts run with timeouts so Tailscale or Voice health probes cannot
+  freeze this launcher forever.
 .EXAMPLE
   .\ALLSTART.ps1
   .\ALLSTART.ps1 -SkipPreflight
-  .\ALLSTART.ps1 -SkipHermes -SkipVoice
+  .\ALLSTART.ps1 -SkipVoice
+  .\ALLSTART.ps1 -SkipBrowserBridge
   .\ALLSTART.ps1 -Configuration Debug
 #>
 [CmdletBinding()]
@@ -26,20 +28,20 @@ param(
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
     [switch]$SkipTailscaleServe,
-    [switch]$SkipHermes,
     [switch]$SkipVoice,
-    [int]$HermesTimeoutSec = 90,
+    [switch]$SkipBrowserBridge,
     [int]$HostStartTimeoutSec = 180,
     [int]$TailscaleTimeoutSec = 30,
-    [int]$VoiceTimeoutSec = 45
+    [int]$VoiceTimeoutSec = 45,
+    [int]$BrowserBridgeTimeoutSec = 20
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = $PSScriptRoot
 $StartHost = Join-Path $RepoRoot "SoulCore\scripts\start-soulcore.ps1"
-$StartHermes = Join-Path $RepoRoot "SoulCore\scripts\start-hermes.ps1"
 $StartGui = Join-Path $RepoRoot "start-desktopgui.ps1"
 $TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
+$StartBrowserBridge = Join-Path $RepoRoot "SoulCore\scripts\start-browser-bridge.ps1"
 
 if (-not (Test-Path -LiteralPath $StartHost)) {
     throw "Missing Host start script: $StartHost"
@@ -102,7 +104,11 @@ function Invoke-ScriptWithTimeout {
         } catch { }
         return @{ TimedOut = $true; ExitCode = -1 }
     }
-    return @{ TimedOut = $false; ExitCode = $proc.ExitCode }
+    # WaitForExit can leave ExitCode null briefly; $null -ne 0 is True in PowerShell.
+    $proc.Refresh()
+    $code = 0
+    if ($null -ne $proc.ExitCode) { $code = [int]$proc.ExitCode }
+    return @{ TimedOut = $false; ExitCode = $code }
 }
 
 function Start-LocalSoulCore {
@@ -124,7 +130,13 @@ function Start-LocalSoulCore {
     if ($result.TimedOut) {
         throw "start-soulcore.ps1 timed out after ${HostStartTimeoutSec}s on port $LocalPort"
     }
-    if ($result.ExitCode -ne 0) {
+    if ([int]$result.ExitCode -ne 0) {
+        # Host may already be up even if the child exit code was flaky - trust /health.
+        $already = Get-HealthObject -LocalPort $LocalPort
+        if (Test-LocalVictoriaHealth -Health $already) {
+            Write-Warning "start-soulcore exit $($result.ExitCode) but local Victoria is healthy on :$LocalPort - continuing"
+            return
+        }
         throw "start-soulcore.ps1 failed on port $LocalPort (exit $($result.ExitCode))"
     }
 }
@@ -217,51 +229,7 @@ if ($SkipTailscaleServe) {
     }
 }
 
-Write-Host "=== ALLSTART: Hermes gateway :8642 ==="
-$hermesOk = $false
-if ($SkipHermes) {
-    Write-Host "Hermes skipped (-SkipHermes)."
-} elseif (-not (Test-Path -LiteralPath $StartHermes)) {
-    Write-Warning "Missing Hermes start script: $StartHermes - skipping"
-} else {
-    try {
-        $hermesArgList = @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", $StartHermes
-        )
-        if ($SkipPreflight) { $hermesArgList += "-SkipPreflight" }
-        $hermesResult = Invoke-ScriptWithTimeout `
-            -Label "start-hermes" `
-            -ArgumentList $hermesArgList `
-            -WorkingDirectory $RepoRoot `
-            -TimeoutSec $HermesTimeoutSec
-        if ($hermesResult.TimedOut) {
-            Write-Warning "start-hermes.ps1 timed out after ${HermesTimeoutSec}s - continuing without waiting for Hermes"
-            Write-Warning "If stuck on gateway stop: kill listeners on :8642 or re-run with -SkipHermes"
-        } elseif ($hermesResult.ExitCode -ne 0) {
-            Write-Warning "start-hermes.ps1 exited $($hermesResult.ExitCode) - continuing without Hermes gateway"
-        } else {
-            try {
-                $hh = Invoke-WebRequest -Uri "http://127.0.0.1:8642/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
-                if ($hh.StatusCode -eq 200) {
-                    Write-Host "Hermes gateway OK: http://127.0.0.1:8642/health"
-                    $hermesOk = $true
-                }
-            } catch {
-                Write-Warning "Hermes start reported OK but :8642/health not ready yet - $($_.Exception.Message)"
-            }
-        }
-    } catch {
-        Write-Warning "Hermes gateway start failed - $($_.Exception.Message)"
-        Write-Warning "Host will still start (Ollama-only). Restore hermes.exe if MCP/PreferHermes needed."
-    }
-}
-if (-not $hermesOk -and -not $SkipHermes) {
-    Write-Warning "Hermes gateway not confirmed on :8642 (soft-fail; Host continues)."
-}
-
-Write-Host "CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools & Access enable it."
+Write-Host "CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools and Access enable it."
 
 Write-Host "=== ALLSTART: locate local Victoria Host ==="
 $chosenPort = $Port
@@ -335,6 +303,29 @@ if ($SkipTailscaleServe) {
     } catch {
         Write-Warning "Tailscale serve enable failed - $($_.Exception.Message)"
         Write-Warning "Local desktop still works; phone companion will not reach Host over Tailscale."
+    }
+}
+
+Write-Host "=== ALLSTART: Browser capture bridge (:17891) ==="
+if ($SkipBrowserBridge) {
+    Write-Host "Browser bridge skipped (-SkipBrowserBridge)."
+} elseif (-not (Test-Path -LiteralPath $StartBrowserBridge)) {
+    Write-Warning "Missing $StartBrowserBridge - browser tools will fail until bridge is started"
+} else {
+    try {
+        $bbArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$StartBrowserBridge)
+        $bbResult = Invoke-ScriptWithTimeout `
+            -Label "start-browser-bridge" `
+            -ArgumentList $bbArgs `
+            -WorkingDirectory $RepoRoot `
+            -TimeoutSec $BrowserBridgeTimeoutSec
+        if ($bbResult.TimedOut) {
+            Write-Warning "Browser bridge start timed out after ${BrowserBridgeTimeoutSec}s - continuing"
+        } elseif ($bbResult.ExitCode -ne 0) {
+            Write-Warning "Browser bridge start exited $($bbResult.ExitCode) - continuing"
+        }
+    } catch {
+        Write-Warning "Browser bridge start: $_"
     }
 }
 

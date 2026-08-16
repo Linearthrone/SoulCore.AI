@@ -90,7 +90,6 @@ public partial class MainWindow
 
         var snap = health ?? _lastHealth;
         var ollamaUp = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
-        var hermesUp = snap.HermesGatewayUp ?? await _stack.ProbeHermesAsync().ConfigureAwait(true);
         var comfyUp = await _stack.ProbeComfyAsync().ConfigureAwait(true);
 
         SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
@@ -104,14 +103,6 @@ public partial class MainWindow
         SvcOllamaDetail.Text = ollamaUp
             ? (snap.InferenceEnabled ? "tags OK · inference on" : "tags OK · inference off")
             : "unreachable :11434";
-
-        SvcHermesDot.Fill = hermesUp
-            ? _okBrush
-            : (snap.HermesEnabled ? _warnBrush : _mutedBrush);
-        SvcHermesStatus.Text = hermesUp ? "gateway up" : "gateway down";
-        SvcHermesDetail.Text = hermesUp
-            ? (snap.HermesEnabled ? "gateway + Host client" : "gateway up · Host client off")
-            : "start Hermes gateway :8642";
 
         var backend = snap.DesktopBackend ?? "cua";
         var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
@@ -202,15 +193,6 @@ public partial class MainWindow
                     break;
                 case "host-restart":
                     result = await _stack.RestartHostAsync().ConfigureAwait(true);
-                    break;
-                case "hermes-start":
-                    result = await _stack.StartHermesAsync().ConfigureAwait(true);
-                    break;
-                case "hermes-stop":
-                    result = await _stack.StopHermesAsync().ConfigureAwait(true);
-                    break;
-                case "hermes-restart":
-                    result = await _stack.RestartHermesAsync().ConfigureAwait(true);
                     break;
                 case "ollama-start":
                     result = await _stack.StartOllamaAsync().ConfigureAwait(true);
@@ -508,7 +490,7 @@ public partial class MainWindow
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
     {
         if (SystemEndpointBox is null || SystemBindBox is null || SystemPortBox is null
-            || SystemInferenceBox is null || SystemHermesBox is null
+            || SystemInferenceBox is null
             || SystemMemoryPathBox is null || SystemMemoryOpenBox is null
             || SystemSoulLoopBox is null)
         {
@@ -522,23 +504,16 @@ public partial class MainWindow
         if (!snap.Reachable)
         {
             SystemInferenceBox.Text = "unreachable";
-            SystemHermesBox.Text = "unreachable";
             SystemMemoryPathBox.Text = snap.Detail ?? "unreachable";
             SystemMemoryOpenBox.Text = "unreachable";
             SystemSoulLoopBox.Text = "unreachable";
             SystemInferenceBox.Foreground = _badBrush;
-            SystemHermesBox.Foreground = _badBrush;
             SystemMemoryOpenBox.Foreground = _badBrush;
             return;
         }
 
         SystemInferenceBox.Text = snap.InferenceEnabled ? "enabled (Ollama)" : "disabled";
         SystemInferenceBox.Foreground = snap.InferenceEnabled ? _okBrush : _warnBrush;
-
-        SystemHermesBox.Text = snap.HermesEnabled
-            ? (snap.HermesGatewayUp == true ? "enabled · gateway up" : "enabled · gateway down")
-            : (snap.HermesGatewayUp == true ? "Host client off · gateway up" : "disabled");
-        SystemHermesBox.Foreground = snap.HermesGatewayUp == true || snap.HermesEnabled ? _okBrush : _warnBrush;
 
         SystemMemoryPathBox.Text = string.IsNullOrWhiteSpace(snap.MemoryPath)
             ? "(missing memory.path)"

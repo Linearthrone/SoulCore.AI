@@ -731,7 +731,7 @@ public class OllamaToolLoopTests
         var opts = Options.Create(MakeOptions());
         var logger = new LoggerFactory().CreateLogger<OllamaInferenceClient>();
         Assert.Throws<ArgumentNullException>(() =>
-            new OllamaInferenceClient(null!, opts, logger));
+            new OllamaInferenceClient(null!, opts, logger, toolRegistry: null));
     }
 
     [Fact]
@@ -740,7 +740,7 @@ public class OllamaToolLoopTests
         var http = new HttpClient(new ScriptedHandler(Array.Empty<string>()));
         var logger = new LoggerFactory().CreateLogger<OllamaInferenceClient>();
         Assert.Throws<ArgumentNullException>(() =>
-            new OllamaInferenceClient(http, null!, logger));
+            new OllamaInferenceClient(http, null!, logger, toolRegistry: null));
     }
 
     [Fact]

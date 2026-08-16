@@ -303,12 +303,12 @@ public class BrowserToolsTests
     [Fact]
     public async Task UnsupportedBrowserBridge_ReturnsClearError()
     {
-        var bridge = new UnsupportedBrowserBridge("native");
+        var bridge = new UnsupportedBrowserBridge("bogus");
         var result = await bridge.HealthAsync();
 
         Assert.False(result.Success);
-        Assert.Contains("native", result.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("hermes", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bridge", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("hermes", result.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     // ─────────────────────────────────────────────────────────────────────

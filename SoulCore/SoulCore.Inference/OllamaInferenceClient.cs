@@ -54,6 +54,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     private readonly InferenceOptions _options;
     private readonly ILogger<OllamaInferenceClient> _logger;
     private readonly IToolRegistry? _toolRegistry;
+    private readonly IUeLiveSignal _ueLive;
 
     /// <summary>
     /// DI-friendly constructor (the one <c>AddHttpClient&lt;OllamaInferenceClient&gt;</c>
@@ -68,8 +69,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
     public OllamaInferenceClient(
         HttpClient http,
         IOptions<InferenceOptions> options,
-        ILogger<OllamaInferenceClient> logger)
-        : this(http, options, logger, toolRegistry: null)
+        ILogger<OllamaInferenceClient> logger,
+        IUeLiveSignal ueLive)
+        : this(http, options, logger, toolRegistry: null, ueLive)
     {
     }
 
@@ -84,12 +86,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
         HttpClient http,
         IOptions<InferenceOptions> options,
         ILogger<OllamaInferenceClient> logger,
-        IToolRegistry? toolRegistry)
+        IToolRegistry? toolRegistry,
+        IUeLiveSignal? ueLive = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _toolRegistry = toolRegistry;
+        _ueLive = ueLive ?? new NullUeLiveSignal();
     }
 
     public async Task<string> CompleteAsync(
@@ -107,9 +111,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (_options.NumCtx > 0)
             options.NumCtx = _options.NumCtx;
 
+        var chatModel = InferenceModelRouting.ResolveChatModel(_options);
         var payload = new OllamaGenerateRequest
         {
-            Model = _options.Model,
+            Model = chatModel,
             Prompt = prompt,
             System = string.IsNullOrWhiteSpace(systemPreamble) ? null : systemPreamble.Trim(),
             Stream = false,
@@ -196,19 +201,25 @@ public sealed class OllamaInferenceClient : IInferenceClient
         var forceConsumed = false;
         var forceNudgeUsed = false;
 
-        _logger.LogDebug(
-            "Ollama agent loop start: model={Model} messages={Count} tools={ToolCount} forceTool={Force} maxIter={Cap}",
-            _options.Model,
+        var ueLive = _ueLive.IsUeLive;
+        var toolModel = InferenceModelRouting.ResolveToolModel(_options, ueLive);
+        var toolNumCtx = InferenceModelRouting.ResolveToolNumCtx(_options, ueLive);
+
+        _logger.LogInformation(
+            "Ollama agent loop start: model={Model} ueLive={UeLive} messages={Count} tools={ToolCount} forceTool={Force} maxIter={Cap} numCtx={NumCtx}",
+            toolModel,
+            ueLive,
             ollamaMessages.Count,
             ollamaTools.Count,
             forceToolName ?? "(none)",
-            cap);
+            cap,
+            toolNumCtx);
 
         for (var iteration = 0; iteration < cap; iteration++)
         {
             var chatOptions = new OllamaChatOptions { NumPredict = _options.MaxTokens };
-            if (_options.NumCtx > 0)
-                chatOptions.NumCtx = _options.NumCtx;
+            if (toolNumCtx > 0)
+                chatOptions.NumCtx = toolNumCtx;
 
             // BED-165/168: while ForceToolName is pending, advertise ONLY that
             // tool (exclusive tools[]) so the model cannot pick a sibling
@@ -237,7 +248,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 //   .messages.tool_calls.function.arguments of type string
                 var openAiPayload = new OpenAiChatRequest
                 {
-                    Model = _options.Model,
+                    Model = toolModel,
                     Messages = ToOpenAiWireMessages(ollamaMessages),
                     Tools = wireTools.Count == 0 ? null : wireTools,
                     ToolChoice = wireToolChoice,
@@ -279,7 +290,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
             {
                 var payload = new OllamaChatRequest
                 {
-                    Model = _options.Model,
+                    Model = toolModel,
                     Messages = ollamaMessages,
                     Tools = wireTools.Count == 0 ? null : wireTools,
                     Stream = false,
@@ -388,7 +399,11 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     _logger.LogDebug(
                         "Ollama agent loop end at iteration {Iter}: text reply (no tool_calls, recovered={Recovered}, forceActive={Force}).",
                         iteration, recovered, forceActive);
-                    return assistantText;
+                    // Prefer any earlier non-empty assistant text when the final
+                    // post-tool turn is blank (gemma4 habit after desktop_open_app).
+                    return !string.IsNullOrWhiteSpace(assistantText)
+                        ? assistantText
+                        : lastAssistantText;
                 }
             }
 

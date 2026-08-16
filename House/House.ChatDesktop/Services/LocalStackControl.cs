@@ -4,12 +4,11 @@ using System.Net.Http;
 namespace House.ChatDesktop.Services;
 
 /// <summary>
-/// Loopback-only local stack control: Host / Hermes scripts + Ollama / Comfy probes.
+/// Loopback-only local stack control: Host scripts + Ollama / Comfy probes.
 /// Never targets non-127.0.0.1.
 /// </summary>
 public sealed class LocalStackControl : IDisposable
 {
-    public const string HermesHealthUrl = "http://127.0.0.1:8642/health";
     public const string OllamaTagsUrl = "http://127.0.0.1:11434/api/tags";
     public const string ComfyUiUrl = "http://127.0.0.1:8188/system_stats";
 
@@ -29,9 +28,6 @@ public sealed class LocalStackControl : IDisposable
             return false;
         }
     }
-
-    public Task<bool> ProbeHermesAsync(CancellationToken ct = default) =>
-        ProbeUrlAsync(HermesHealthUrl, ct);
 
     public Task<bool> ProbeOllamaAsync(CancellationToken ct = default) =>
         ProbeUrlAsync(OllamaTagsUrl, ct);
@@ -54,35 +50,8 @@ public sealed class LocalStackControl : IDisposable
             $"stop: {stop.Detail}; start: {start.Detail}");
     }
 
-    public Task<LocalStackActionResult> StartHermesAsync(CancellationToken ct = default) =>
-        RunScriptAsync("SoulCore\\scripts\\start-hermes.ps1", Array.Empty<string>(), ct);
-
-    public Task<LocalStackActionResult> StopHermesAsync(CancellationToken ct = default) =>
-        RunPowerShellInlineAsync(
-            @"
-$ErrorActionPreference='Continue'
-try { hermes gateway stop 2>$null | Out-Null } catch {}
-$pidFile = Join-Path (Get-Location) 'SoulCore\scripts\.hermes.pid'
-if (Test-Path $pidFile) {
-  $p = 0; try { $p = [int](Get-Content $pidFile | Select-Object -First 1) } catch {}
-  if ($p -gt 0) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }
-  Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-}
-Get-NetTCPConnection -LocalPort 8642 -State Listen -ErrorAction SilentlyContinue |
-  Where-Object { $_.LocalAddress -eq '127.0.0.1' } |
-  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
-'Hermes stop attempted'
-",
-            ct);
-
-    public async Task<LocalStackActionResult> RestartHermesAsync(CancellationToken ct = default)
-    {
-        var stop = await StopHermesAsync(ct).ConfigureAwait(false);
-        var start = await StartHermesAsync(ct).ConfigureAwait(false);
-        return new LocalStackActionResult(
-            start.Ok,
-            $"stop: {stop.Detail}; start: {start.Detail}");
-    }
+    public Task<LocalStackActionResult> StartAllAsync(CancellationToken ct = default) =>
+        RunScriptAsync("ALLSTART.ps1", ["-SkipHermes"], ct);
 
     public Task<LocalStackActionResult> StartOllamaAsync(CancellationToken ct = default) =>
         RunPowerShellInlineAsync(

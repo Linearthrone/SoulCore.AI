@@ -39,7 +39,7 @@ public sealed class DesktopOpenAppTool : ITool
         Name: "desktop_open_app",
         Description:
             "Launch an allowlisted local desktop app (chrome, edge, firefox, notepad, explorer, cmd, powershell). " +
-            "Use this to open Google Chrome / Edge / Notepad — do not invent Hermes terminal or browser_navigate. " +
+            "Use this to open Google Chrome / Edge / Notepad — do not invent terminal or browser_navigate tools. " +
             "Optional args: a URL for browsers (e.g. https://google.com). Requires AllowComputerControl.",
         Parameters: ParametersSchema);
 
