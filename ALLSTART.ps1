@@ -270,7 +270,7 @@ if (-not $WithHermes) {
     Write-Host "Hermes skipped by default (BED-185). Pass -WithHermes only if you intentionally need the gateway."
 }
 if ($SkipHermes) {
-    Write-Host "Hermes skipped — open Chrome/websites via desktop_open_app (Ollama), not the gateway."
+    Write-Host "Hermes skipped - open Chrome/websites via desktop_open_app (Ollama), not the gateway."
 } elseif (-not (Test-Path -LiteralPath $StartHermes)) {
     Write-Warning "Missing Hermes start script: $StartHermes - skipping"
 } else {
