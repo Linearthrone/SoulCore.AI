@@ -44,10 +44,13 @@ public sealed class ToolsOptions
     public string DesktopBackend { get; set; } = BackendCua;
 
     /// <summary>
-    /// Browser backend. Hermes retired (BED-185) — default <c>none</c>.
-    /// Open websites with <c>desktop_open_app</c> (chrome + URL), not browser_* MCP.
+    /// Browser backend: <c>native</c> (default, BED-182 — <c>BrowserCaptureBridge</c> :17891
+    /// + unpacked <c>BrowserCaptureExtension</c>). Hermes retired (BED-185).
     /// </summary>
-    public string BrowserBackend { get; set; } = "none";
+    public string BrowserBackend { get; set; } = BackendNative;
+
+    /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>
+    public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17891";
 
     /// <summary>When false (default), all MT4 read tools refuse.</summary>
     public bool AllowMt4Read { get; set; }

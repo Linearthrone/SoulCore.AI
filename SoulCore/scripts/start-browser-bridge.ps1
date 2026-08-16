@@ -1,116 +1,112 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start House Victoria browser capture bridge on 127.0.0.1:17891 (hidden, no console).
+  Start House Victoria BrowserCaptureBridge on loopback :17891 (BED-182).
 .DESCRIPTION
-  Runs BrowserCaptureBridge\bridge_server.py via pythonw so no terminal window appears.
-  Prefers LLMOD MCPServer venv (fastapi/uvicorn), then V:\Python311\pythonw.exe.
+  Runs repo-root BrowserCaptureBridge/bridge_server.py. Soft-fail friendly for ALLSTART.
+  Pair with unpacked BrowserCaptureExtension (chrome://extensions → Load unpacked).
 #>
 [CmdletBinding()]
 param(
     [int]$Port = 17891,
-    [string]$BindAddress = "127.0.0.1",
-    [string]$PythonwExe = "",
     [switch]$ForceRestart
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptsDir = $PSScriptRoot
-$SoulCoreRoot = Split-Path -Parent $ScriptsDir
-$RepoRoot = Split-Path -Parent $SoulCoreRoot
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $ScriptsDir)
 $BridgePy = Join-Path $RepoRoot "BrowserCaptureBridge\bridge_server.py"
-if (-not (Test-Path -LiteralPath $BridgePy)) {
-    throw "bridge_server.py not found: $BridgePy"
-}
-
+$ReqFile = Join-Path $RepoRoot "BrowserCaptureBridge\requirements.txt"
 $PidFile = Join-Path $ScriptsDir ".browser-bridge.pid"
-$HealthUrl = "http://${BindAddress}:${Port}/health"
+$LogFile = Join-Path $ScriptsDir ".browser-bridge.log"
+$HealthUrl = "http://127.0.0.1:${Port}/health"
 
-function Resolve-BridgePythonw {
-    param([string]$Preferred)
-    if ($Preferred -and (Test-Path -LiteralPath $Preferred)) { return $Preferred }
-    foreach ($c in @(
-        "C:\Users\kurtw\LLMOD\LLMOD-max-master\MCPServer\.venv\Scripts\pythonw.exe",
-        "V:\Python311\pythonw.exe",
-        "$env:LOCALAPPDATA\Python\pythoncore-3.12-64\pythonw.exe",
-        "C:\Users\kurtw\LLMOD\LLMOD-max-master\MCPServer\.venv\Scripts\python.exe",
-        "V:\Python311\python.exe"
-    )) {
-        if (Test-Path -LiteralPath $c) { return $c }
-    }
-    return "pythonw"
+if (-not (Test-Path -LiteralPath $BridgePy)) {
+    throw "Missing bridge: $BridgePy"
 }
 
-function Test-BridgeHealth {
+function Test-BridgeHealthy {
     try {
-        $null = Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 2 -ErrorAction Stop
-        return $true
-    } catch {
-        return $false
-    }
+        $r = Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 2 -ErrorAction Stop
+        return ($null -ne $r -and $r.ok -eq $true)
+    } catch { return $false }
 }
 
-function Stop-BridgeOnPort {
-    $conns = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
-        Where-Object { $_.LocalAddress -eq $BindAddress -or $_.LocalAddress -eq "0.0.0.0" }
-    foreach ($c in @($conns)) {
-        Write-Host "Stopping browser bridge PID $($c.OwningProcess) on :$Port"
-        Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
-    }
-    if (Test-Path -LiteralPath $PidFile) {
-        Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
-    }
-}
-
-if (-not $ForceRestart -and (Test-BridgeHealth)) {
-    Write-Host "Browser bridge already up: $HealthUrl"
+if ((-not $ForceRestart) -and (Test-BridgeHealthy)) {
+    Write-Host "[start-browser-bridge] Already healthy at $HealthUrl"
     exit 0
 }
 
-if ($ForceRestart) {
-    Stop-BridgeOnPort
-    Start-Sleep -Milliseconds 400
+if ($ForceRestart -and (Test-Path -LiteralPath $PidFile)) {
+    try {
+        $old = [int](Get-Content -LiteralPath $PidFile -Raw).Trim()
+        if ($old -gt 0) {
+            Stop-Process -Id $old -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
 }
 
-$PythonwExe = Resolve-BridgePythonw $PythonwExe
-$workDir = Split-Path -Parent $BridgePy
-$usePythonw = $PythonwExe -match '(?i)pythonw\.exe$'
-
-Write-Host "Starting browser bridge on $HealthUrl with $PythonwExe (hidden) ..."
-
-# pythonw has no console handles - do not RedirectStandard* (fails with invalid handle).
-# python.exe: Hidden + redirects keeps a console from appearing.
-$startArgs = @{
-    FilePath         = $PythonwExe
-    ArgumentList     = @($BridgePy)
-    WorkingDirectory = $workDir
-    WindowStyle      = "Hidden"
-    PassThru         = $true
-}
-if (-not $usePythonw) {
-    $log = Join-Path $ScriptsDir ".browser-bridge.log"
-    $err = Join-Path $ScriptsDir ".browser-bridge.err.log"
-    $startArgs.RedirectStandardOutput = $log
-    $startArgs.RedirectStandardError = $err
-}
-
-$proc = Start-Process @startArgs
-if (-not $proc) {
-    throw "Failed to start browser bridge process"
-}
-Set-Content -LiteralPath $PidFile -Value $proc.Id -Encoding ascii
-
-$deadline = [DateTime]::UtcNow.AddSeconds(12)
-while ([DateTime]::UtcNow -lt $deadline) {
-    if (Test-BridgeHealth) {
-        Write-Host "Browser bridge healthy: $HealthUrl (PID $($proc.Id))"
-        exit 0
+function Resolve-Python {
+    foreach ($c in @(
+        "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\python.exe",
+        "$env:LOCALAPPDATA\hermes\hermes-agent\.venv\Scripts\python.exe",
+        "V:\Python311\python.exe",
+        "$env:LOCALAPPDATA\Python\pythoncore-3.12-64\python.exe"
+    )) {
+        if ($c -and (Test-Path -LiteralPath $c)) { return $c }
     }
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source) { return $cmd.Source }
+    try {
+        $py = & py -3 -c "import sys; print(sys.executable)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $py) { return $py.Trim() }
+    } catch { }
+    return $null
+}
+
+$python = Resolve-Python
+if (-not $python) {
+    throw "python.exe not found — install Python 3.11+ or ensure it is on PATH"
+}
+Write-Host "[start-browser-bridge] python: $python"
+
+# Best-effort deps (idempotent).
+try {
+    & $python -m pip install -q -r $ReqFile 2>$null | Out-Null
+} catch {
+    Write-Warning "pip install bridge deps failed — if /health fails, run: $python -m pip install -r $ReqFile"
+}
+
+if (Test-Path -LiteralPath $LogFile) {
+    Clear-Content -LiteralPath $LogFile -ErrorAction SilentlyContinue
+}
+
+Write-Host "[start-browser-bridge] Starting $BridgePy on :$Port ..."
+$proc = Start-Process -FilePath $python `
+    -ArgumentList @($BridgePy) `
+    -WorkingDirectory (Split-Path -Parent $BridgePy) `
+    -WindowStyle Hidden `
+    -RedirectStandardOutput $LogFile `
+    -RedirectStandardError $LogFile `
+    -PassThru
+
+$proc.Id | Set-Content -LiteralPath $PidFile -Encoding ascii
+
+$ready = $false
+for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Milliseconds 250
     if ($proc.HasExited) {
-        throw "Browser bridge exited early (code $($proc.ExitCode)). Check fastapi/uvicorn in that Python."
+        throw "browser bridge exited early (code $($proc.ExitCode)). See $LogFile"
     }
-    Start-Sleep -Milliseconds 400
+    if (Test-BridgeHealthy) {
+        $ready = $true
+        break
+    }
 }
 
-Write-Warning "Browser bridge started (PID $($proc.Id)) but $HealthUrl not ready yet"
-exit 0
+if ($ready) {
+    Write-Host "[start-browser-bridge] Healthy: $HealthUrl"
+    Write-Host "[start-browser-bridge] Extension: chrome://extensions → Load unpacked → $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
+} else {
+    Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Log: $LogFile"
+}

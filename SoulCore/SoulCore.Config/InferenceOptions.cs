@@ -2,36 +2,37 @@ namespace SoulCore.Config;
 
 /// <summary>
 /// Ollama / local LLM client knobs (non-secret). Base URL defaults to quarry loopback :11434.
+/// For Ollama Cloud chat/tools (BED-187), set <see cref="BaseUrl"/> to <c>https://ollama.com</c>
+/// and provide <c>SOULCORE_OLLAMA_API_KEY</c>; keep embeddings on local Ollama via
+/// <see cref="EmbeddingBaseUrl"/> so VRAM stays free for body/voice.
 /// </summary>
 public sealed class InferenceOptions
 {
     public const string SectionName = "Inference";
+
+    /// <summary>Canonical Ollama Cloud API host (no trailing slash).</summary>
+    public const string CloudBaseUrl = "https://ollama.com";
 
     /// <summary>When false, Host registers <c>NullInferenceClient</c>.</summary>
     public bool Enabled { get; set; } = true;
 
     public string BaseUrl { get; set; } = "http://127.0.0.1:11434";
 
-    /// <summary>Chat / soul model (single-shot generate). Default gemma4.</summary>
+    /// <summary>
+    /// Optional override for embeddings only. When empty and <see cref="BaseUrl"/> is
+    /// Ollama Cloud, Host defaults embeddings to local <c>http://127.0.0.1:11434</c>
+    /// so <c>nomic-embed-text</c> stays on-box (BED-187).
+    /// </summary>
+    public string EmbeddingBaseUrl { get; set; } = "";
+
+    /// <summary>
+    /// Optional API key for direct Ollama Cloud (<c>https://ollama.com</c>).
+    /// Prefer env <c>SOULCORE_OLLAMA_API_KEY</c> — never commit real values.
+    /// Not required for local <c>:11434</c> (including local proxy of <c>*:cloud</c> models after <c>ollama signin</c>).
+    /// </summary>
+    public string? ApiKey { get; set; }
+
     public string Model { get; set; } = "gemma4:latest";
-
-    /// <summary>
-    /// Tool-loop model when Unreal is <em>not</em> live. Empty → use <see cref="Model"/>.
-    /// Typical: <c>qwen2.5:14b</c> for reliable tool calling.
-    /// </summary>
-    public string ToolModel { get; set; } = "";
-
-    /// <summary>
-    /// Small tool-loop model while Unreal/PIE is live (shadow VRAM contended).
-    /// Empty → fall back to <see cref="ToolModel"/> then <see cref="Model"/>.
-    /// </summary>
-    public string ToolModelUeLive { get; set; } = "";
-
-    /// <summary>
-    /// Tool-loop <c>num_ctx</c> while UE is live. 0 → use <see cref="NumCtx"/>.
-    /// Keep small so the light tool model + chat model coexist on 16GB.
-    /// </summary>
-    public int ToolNumCtxUeLive { get; set; } = 4096;
 
     public int TimeoutSeconds { get; set; } = 120;
 
@@ -62,20 +63,8 @@ public sealed class InferenceOptions
     /// </summary>
     public bool EmbeddingsEnabled { get; set; } = true;
 
-    /// <summary>Ollama embedding model when Unreal is not live (e.g. <c>nomic-embed-text</c>).</summary>
+    /// <summary>Ollama embedding model (e.g. <c>nomic-embed-text</c>).</summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text";
-
-    /// <summary>
-    /// Embedding model while Unreal is live. Empty → use <see cref="EmbeddingModel"/>.
-    /// Prefer a tiny model, or leave empty and set <see cref="SkipEmbeddingsWhenUeLive"/>.
-    /// </summary>
-    public string EmbeddingModelUeLive { get; set; } = "";
-
-    /// <summary>
-    /// When true and Unreal is live, skip embed calls (recall falls back to recency)
-    /// so VRAM stays free for chat + small tool model.
-    /// </summary>
-    public bool SkipEmbeddingsWhenUeLive { get; set; } = true;
 
     /// <summary>
     /// Maximum number of <c>/api/chat</c> round-trips the agent loop may make
@@ -87,4 +76,42 @@ public sealed class InferenceOptions
     /// to keep latency predictable. Must be ≥ 1.
     /// </summary>
     public int MaxToolIterations { get; set; } = 8;
+
+    /// <summary>True when <see cref="BaseUrl"/> targets ollama.com (direct cloud).</summary>
+    public bool IsCloudEndpoint => IsOllamaCloudUrl(BaseUrl);
+
+    public static bool IsOllamaCloudUrl(string? baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return false;
+        if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var uri))
+            return false;
+        return uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && (uri.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.Equals("www.ollama.com", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Env <c>SOULCORE_OLLAMA_API_KEY</c> wins over config <see cref="ApiKey"/>.
+    /// </summary>
+    public string? ResolveApiKey()
+    {
+        var fromEnv = Environment.GetEnvironmentVariable(SecretNames.OllamaApiKey);
+        if (!string.IsNullOrWhiteSpace(fromEnv))
+            return fromEnv.Trim();
+        return string.IsNullOrWhiteSpace(ApiKey) ? null : ApiKey.Trim();
+    }
+
+    /// <summary>
+    /// Base URL for embeddings. Cloud chat defaults embeddings to local loopback
+    /// unless <see cref="EmbeddingBaseUrl"/> is set explicitly.
+    /// </summary>
+    public string ResolveEmbeddingBaseUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(EmbeddingBaseUrl))
+            return EmbeddingBaseUrl.Trim();
+        if (IsCloudEndpoint)
+            return "http://127.0.0.1:11434";
+        return string.IsNullOrWhiteSpace(BaseUrl) ? "http://127.0.0.1:11434" : BaseUrl.Trim();
+    }
 }
