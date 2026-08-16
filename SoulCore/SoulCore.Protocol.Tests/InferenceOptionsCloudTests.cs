@@ -41,16 +41,19 @@ public class InferenceOptionsCloudTests
     [Fact]
     public void ResolveApiKey_EnvWinsOverConfig()
     {
-        var previous = Environment.GetEnvironmentVariable(SecretNames.OllamaApiKey);
-        try
+        lock (typeof(InferenceOptionsCloudTests))
         {
-            Environment.SetEnvironmentVariable(SecretNames.OllamaApiKey, "env-key-value");
-            var opts = new InferenceOptions { ApiKey = "config-key" };
-            Assert.Equal("env-key-value", opts.ResolveApiKey());
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(SecretNames.OllamaApiKey, previous);
+            var previous = Environment.GetEnvironmentVariable(SecretNames.OllamaApiKey);
+            try
+            {
+                Environment.SetEnvironmentVariable(SecretNames.OllamaApiKey, "env-key-value");
+                var opts = new InferenceOptions { ApiKey = "config-key" };
+                Assert.Equal("env-key-value", opts.ResolveApiKey());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(SecretNames.OllamaApiKey, previous);
+            }
         }
     }
 
