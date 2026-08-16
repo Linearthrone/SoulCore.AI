@@ -90,6 +90,7 @@ public partial class MainWindow
 
         var snap = health ?? _lastHealth;
         var ollamaUp = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
+        var hermesUp = snap.HermesGatewayUp ?? await _stack.ProbeHermesAsync().ConfigureAwait(true);
         var comfyUp = await _stack.ProbeComfyAsync().ConfigureAwait(true);
 
         SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
@@ -103,6 +104,14 @@ public partial class MainWindow
         SvcOllamaDetail.Text = ollamaUp
             ? (snap.InferenceEnabled ? "tags OK · inference on" : "tags OK · inference off")
             : "unreachable :11434";
+
+        SvcHermesDot.Fill = hermesUp
+            ? _okBrush
+            : (snap.HermesEnabled ? _warnBrush : _mutedBrush);
+        SvcHermesStatus.Text = "retired";
+        SvcHermesDetail.Text = "BED-185: unused — open Chrome via desktop_open_app (Ollama)";
+        SvcHermesDot.Fill = _mutedBrush;
+        _ = hermesUp; // legacy probe retained; UI no longer steers Kurt to start Hermes
 
         var backend = snap.DesktopBackend ?? "cua";
         var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
@@ -193,6 +202,13 @@ public partial class MainWindow
                     break;
                 case "host-restart":
                     result = await _stack.RestartHostAsync().ConfigureAwait(true);
+                    break;
+                case "hermes-start":
+                case "hermes-stop":
+                case "hermes-restart":
+                    result = new LocalStackActionResult(
+                        false,
+                        "Hermes retired (BED-185) — not started. Open Chrome via desktop_open_app.");
                     break;
                 case "ollama-start":
                     result = await _stack.StartOllamaAsync().ConfigureAwait(true);
@@ -490,7 +506,7 @@ public partial class MainWindow
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
     {
         if (SystemEndpointBox is null || SystemBindBox is null || SystemPortBox is null
-            || SystemInferenceBox is null
+            || SystemInferenceBox is null || SystemHermesBox is null
             || SystemMemoryPathBox is null || SystemMemoryOpenBox is null
             || SystemSoulLoopBox is null)
         {
@@ -504,16 +520,21 @@ public partial class MainWindow
         if (!snap.Reachable)
         {
             SystemInferenceBox.Text = "unreachable";
+            SystemHermesBox.Text = "unreachable";
             SystemMemoryPathBox.Text = snap.Detail ?? "unreachable";
             SystemMemoryOpenBox.Text = "unreachable";
             SystemSoulLoopBox.Text = "unreachable";
             SystemInferenceBox.Foreground = _badBrush;
+            SystemHermesBox.Foreground = _badBrush;
             SystemMemoryOpenBox.Foreground = _badBrush;
             return;
         }
 
         SystemInferenceBox.Text = snap.InferenceEnabled ? "enabled (Ollama)" : "disabled";
         SystemInferenceBox.Foreground = snap.InferenceEnabled ? _okBrush : _warnBrush;
+
+        SystemHermesBox.Text = "retired (BED-185)";
+        SystemHermesBox.Foreground = _mutedBrush;
 
         SystemMemoryPathBox.Text = string.IsNullOrWhiteSpace(snap.MemoryPath)
             ? "(missing memory.path)"
@@ -808,6 +829,22 @@ public partial class MainWindow
         var text = ReadPayloadString(frame, "text");
         var hasMedia = ReadPayloadBool(frame, "hasMedia") == true;
         var mediaId = ReadPayloadString(frame, "mediaId");
+        var proactive = ReadPayloadBool(frame, "proactive") == true;
+        var provider = ReadPayloadString(frame, "provider");
+
+        // SoulLoop phrase-bank / automated pings — not Victoria speaking.
+        if (proactive
+            && string.Equals(provider, "soul-loop", StringComparison.OrdinalIgnoreCase)
+            && IsAutomatedProactiveLine(text))
+        {
+            if (finalize)
+            {
+                _streamingAssistant = null;
+                SetTyping(false);
+            }
+
+            return;
+        }
 
         if (string.IsNullOrEmpty(text) && finalize && !hasMedia && string.IsNullOrWhiteSpace(mediaId))
         {
@@ -928,6 +965,25 @@ public partial class MainWindow
         if (payload.ValueKind != JsonValueKind.Object) return null;
         if (!payload.TryGetProperty(name, out var prop)) return null;
         return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
+    }
+
+    /// <summary>SoulLoop category phrase-bank lines that must not appear as chat bubbles.</summary>
+    internal static bool IsAutomatedProactiveLine(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var t = text.Trim();
+        return t is
+            "Hey — just wanted to say hi. You around?"
+            or "I've been thinking about you. Hope your day's okay."
+            or "Can we clear something up when you have a sec?"
+            or "Soft moment over here. Glad you're in my day."
+            or "Something from earlier came back to me. Miss talking it through with you."
+            or "Been wandering around Home in my head. Curious what you'd notice."
+            or "Just noticed something and thought of you."
+            or "Trying to settle a bit. Nice having you nearby."
+            or "Sitting quietly. Wanted you to know I'm here.";
     }
 
     private static bool? ReadPayloadBool(SoulCoreFrame frame, string name)

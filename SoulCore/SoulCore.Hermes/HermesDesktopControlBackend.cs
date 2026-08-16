@@ -18,16 +18,31 @@ public sealed class HermesDesktopControlBackend : IDesktopControlBackend
         "desktop_open_app is not available via Hermes DesktopBackend — set Tools:DesktopBackend=native or cua";
 
     private readonly IHermesClient _hermes;
+    private readonly IDesktopViewHub? _view;
 
-    public HermesDesktopControlBackend(IHermesClient hermes)
+    public HermesDesktopControlBackend(IHermesClient hermes, IDesktopViewHub? view = null)
     {
         _hermes = hermes ?? throw new ArgumentNullException(nameof(hermes));
+        _view = view;
     }
 
-    public Task<DesktopOpResult> ScreenshotAsync(int monitor, CancellationToken ct = default) =>
-        CallAsync("computer_use", HermesToolRouting.MergeObject(
+    public async Task<DesktopOpResult> ScreenshotAsync(int monitor, CancellationToken ct = default)
+    {
+        var result = await CallAsync("computer_use", HermesToolRouting.MergeObject(
             HermesToolRouting.EmptyArgs(),
-            new Dictionary<string, object?> { ["action"] = "screenshot", ["monitor"] = monitor }), ct);
+            new Dictionary<string, object?> { ["action"] = "screenshot", ["monitor"] = monitor }), ct)
+            .ConfigureAwait(false);
+        if (result.Success)
+        {
+            DesktopViewHub.TryRecordFromToolData(
+                _view,
+                result.Data,
+                DesktopViewHub.SourceDesktop,
+                "desktop_screenshot (hermes)");
+        }
+
+        return result;
+    }
 
     public Task<DesktopOpResult> ClickAsync(
         int x, int y, string button, int clicks = 1, CancellationToken ct = default) =>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,6 +22,7 @@ public partial class MainWindow
         {
             var snap = await _desktopView.GetAsync(includeImage: true).ConfigureAwait(true);
             ApplyDesktopView(snap);
+            await RefreshDesktopGalleryAsync(snap).ConfigureAwait(true);
         }
         finally
         {
@@ -35,7 +37,20 @@ public partial class MainWindow
         if (!snap.Reachable)
         {
             DesktopViewActionText.Text = snap.Detail ?? "Host unreachable";
-            DesktopViewMetaText.Text = "Start SoulCore.Host to see her screen.";
+            DesktopViewMetaText.Text = "Start SoulCore.Host to see her last capture.";
+            if (DesktopViewPathText is not null)
+                DesktopViewPathText.Text = "";
+            if (DesktopViewImage is not null)
+            {
+                DesktopViewImage.Source = null;
+                DesktopViewImage.IsVisible = false;
+            }
+
+            if (DesktopViewEmptyText is not null)
+                DesktopViewEmptyText.IsVisible = true;
+            _lastDesktopImageHash = null;
+            _lastDesktopDiskPath = null;
+            _lastDesktopGalleryDir = null;
             return;
         }
 
@@ -45,14 +60,42 @@ public partial class MainWindow
             return;
         }
 
-        _desktopImageWidth = snap.Width;
-        _desktopImageHeight = snap.Height;
-        _desktopCursorX = snap.CursorX;
-        _desktopCursorY = snap.CursorY;
+        _lastDesktopDiskPath = snap.DiskPath;
+        _lastDesktopGalleryDir = snap.GalleryDir;
+
+        // A brand-new capture at the gallery head unpins inspection so Presence stays live.
+        var newest = snap.Recent.Count > 0 ? snap.Recent[0].FileName : null;
+        if (!string.IsNullOrWhiteSpace(_pinnedGalleryFileName)
+            && !string.IsNullOrWhiteSpace(newest)
+            && !string.IsNullOrWhiteSpace(_lastNewestGalleryFileName)
+            && !string.Equals(newest, _lastNewestGalleryFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            _pinnedGalleryFileName = null;
+        }
+
+        _lastNewestGalleryFileName = newest;
+
+        // When Kurt pinned an older gallery frame, keep meta/path but do not overwrite the image.
+        var showLiveImage = string.IsNullOrWhiteSpace(_pinnedGalleryFileName);
+
+        if (showLiveImage)
+        {
+            _desktopImageWidth = snap.Width;
+            _desktopImageHeight = snap.Height;
+            _desktopCursorX = snap.CursorX;
+            _desktopCursorY = snap.CursorY;
+        }
+
+        var sourceLabel = (snap.Source ?? "desktop").Trim().ToLowerInvariant() switch
+        {
+            "eyes" or "eye" => "Her eyes",
+            "browser" => "Browser tab",
+            _ => "Desktop"
+        };
 
         DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
-            ? "Waiting for desktop activity…"
-            : snap.LastAction;
+            ? "Waiting for a real capture (eyes / desktop / browser)…"
+            : $"{sourceLabel}: {snap.LastAction}";
 
         if (!string.IsNullOrWhiteSpace(snap.LastAction)
             && !snap.LastAction.Contains("Waiting", StringComparison.OrdinalIgnoreCase))
@@ -61,47 +104,40 @@ public partial class MainWindow
             if (string.IsNullOrWhiteSpace(_lastActivityPhrase)
                 || _lastActivityPhrase.Equals("Idle", StringComparison.OrdinalIgnoreCase))
             {
-                _lastActivityPhrase = "Using the desktop";
+                _lastActivityPhrase = sourceLabel switch
+                {
+                    "Her eyes" => "Looking through her eyes",
+                    "Browser tab" => "Looking at a browser tab",
+                    _ => "Using the desktop"
+                };
             }
 
             UpdateEngagementState();
         }
 
-        var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "—";
+        var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "-";
         var soft = snap.SoftCursorRestore ? "agent/background" : "foreground ok";
         DesktopViewMetaText.Text = snap.HasImage
-            ? $"{snap.Width}×{snap.Height} · {soft} · {when}"
+            ? $"{sourceLabel} · {snap.Width}×{snap.Height} · {soft} · {when}"
             : $"No capture yet · {soft}";
 
-        if (snap.ImageBytes is { Length: > 0 })
+        if (DesktopViewPathText is not null)
+        {
+            DesktopViewPathText.Text = string.IsNullOrWhiteSpace(snap.DiskPath)
+                ? (string.IsNullOrWhiteSpace(snap.GalleryDir) ? "" : $"Gallery: {snap.GalleryDir}")
+                : snap.DiskPath;
+        }
+
+        if (showLiveImage && snap.ImageBytes is { Length: > 0 })
         {
             var hash = $"{snap.ImageBytes.Length}:{snap.UpdatedAt:O}:{snap.Width}x{snap.Height}";
             if (!string.Equals(hash, _lastDesktopImageHash, StringComparison.Ordinal))
             {
                 _lastDesktopImageHash = hash;
-                try
-                {
-                    using var ms = new MemoryStream(snap.ImageBytes);
-                    var bmp = new Bitmap(ms);
-                    if (DesktopViewImage is not null)
-                    {
-                        DesktopViewImage.Source = bmp;
-                        DesktopViewImage.IsVisible = true;
-                    }
-
-                    if (DesktopViewEmptyText is not null)
-                        DesktopViewEmptyText.IsVisible = false;
-
-                    if (_desktopPopOutImage is not null)
-                        _desktopPopOutImage.Source = bmp;
-                }
-                catch (Exception ex)
-                {
-                    DesktopViewActionText.Text = $"Image decode failed: {ex.Message}";
-                }
+                ShowDesktopBitmap(snap.ImageBytes);
             }
         }
-        else if (DesktopViewEmptyText is not null && DesktopViewImage is not null)
+        else if (showLiveImage && DesktopViewEmptyText is not null && DesktopViewImage is not null)
         {
             DesktopViewEmptyText.IsVisible = true;
             DesktopViewImage.IsVisible = false;
@@ -109,6 +145,186 @@ public partial class MainWindow
 
         PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
         PositionDesktopCursor(_desktopPopOutImage?.Parent as Control, _desktopPopOutCursorLayer, _desktopPopOutCursor);
+    }
+
+    private void ShowDesktopBitmap(byte[] imageBytes)
+    {
+        try
+        {
+            using var ms = new MemoryStream(imageBytes);
+            var bmp = new Bitmap(ms);
+            if (DesktopViewImage is not null)
+            {
+                DesktopViewImage.Source = bmp;
+                DesktopViewImage.IsVisible = true;
+            }
+
+            if (DesktopViewEmptyText is not null)
+                DesktopViewEmptyText.IsVisible = false;
+
+            if (_desktopPopOutImage is not null)
+                _desktopPopOutImage.Source = bmp;
+        }
+        catch (Exception ex)
+        {
+            if (DesktopViewActionText is not null)
+                DesktopViewActionText.Text = $"Image decode failed: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshDesktopGalleryAsync(DesktopViewSnapshot snap)
+    {
+        if (DesktopViewGalleryPanel is null) return;
+
+        var signature = string.Join("|", snap.Recent.Select(r => r.FileName));
+        if (string.Equals(signature, _lastDesktopGallerySignature, StringComparison.Ordinal)
+            && DesktopViewGalleryPanel.Children.Count == snap.Recent.Count)
+            return;
+
+        _lastDesktopGallerySignature = signature;
+        DesktopViewGalleryPanel.Children.Clear();
+
+        foreach (var item in snap.Recent.Take(24))
+        {
+            if (string.IsNullOrWhiteSpace(item.FileName))
+                continue;
+
+            var label = (item.CapturedAt?.ToLocalTime().ToString("h:mm:ss") ?? "?")
+                + " "
+                + ShortSource(item.Source);
+            var btn = new Button
+            {
+                Classes = { "chrome" },
+                Content = label,
+                FontSize = 10,
+                Padding = new Thickness(6, 2),
+                Tag = item
+            };
+            ToolTip.SetTip(btn, item.Path ?? item.FileName);
+            btn.Click += DesktopViewGalleryItem_Click;
+            DesktopViewGalleryPanel.Children.Add(btn);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private static string ShortSource(string? source) =>
+        (source ?? "desktop").Trim().ToLowerInvariant() switch
+        {
+            "eyes" or "eye" => "eyes",
+            "browser" => "tab",
+            _ => "desk"
+        };
+
+    private async void DesktopViewGalleryItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: DesktopViewGalleryItem item })
+            return;
+        if (string.IsNullOrWhiteSpace(item.FileName))
+            return;
+
+        _pinnedGalleryFileName = item.FileName;
+        _lastDesktopDiskPath = item.Path ?? _lastDesktopDiskPath;
+        if (DesktopViewPathText is not null)
+            DesktopViewPathText.Text = item.Path ?? item.FileName;
+        if (DesktopViewActionText is not null)
+            DesktopViewActionText.Text =
+                $"Gallery: {ShortSource(item.Source)} · {item.Action ?? item.FileName} (pinned — click Folder live / wait for new capture to unpin)";
+
+        var bytes = await _desktopView.GetGalleryImageAsync(item.FileName).ConfigureAwait(true);
+        if (bytes is { Length: > 0 })
+        {
+            _desktopImageWidth = item.Width > 0 ? item.Width : _desktopImageWidth;
+            _desktopImageHeight = item.Height > 0 ? item.Height : _desktopImageHeight;
+            _desktopCursorX = null;
+            _desktopCursorY = null;
+            _lastDesktopImageHash = $"gallery:{item.FileName}:{bytes.Length}";
+            ShowDesktopBitmap(bytes);
+            PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
+        }
+    }
+
+    private void DesktopViewOpenFile_Click(object? sender, RoutedEventArgs e)
+    {
+        var path = _lastDesktopDiskPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            if (DesktopViewActionText is not null)
+                DesktopViewActionText.Text = "No screenshot file on disk yet.";
+            return;
+        }
+
+        TryShellOpen(path);
+    }
+
+    private void DesktopViewOpenFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        // Unpin gallery preview so live captures resume.
+        _pinnedGalleryFileName = null;
+
+        var dir = _lastDesktopGalleryDir;
+        if (string.IsNullOrWhiteSpace(dir) && !string.IsNullOrWhiteSpace(_lastDesktopDiskPath))
+            dir = System.IO.Path.GetDirectoryName(_lastDesktopDiskPath);
+
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SoulCore",
+                "scratch",
+                "presence-gallery");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(dir);
+        }
+        catch
+        {
+            // open attempt still useful if it exists
+        }
+
+        if (!Directory.Exists(dir))
+        {
+            if (DesktopViewActionText is not null)
+                DesktopViewActionText.Text = "Gallery folder not found yet (no captures).";
+            return;
+        }
+
+        TryShellOpen(dir);
+    }
+
+    private async void DesktopViewCopyPath_Click(object? sender, RoutedEventArgs e)
+    {
+        var path = _lastDesktopDiskPath;
+        if (string.IsNullOrWhiteSpace(path))
+            path = _lastDesktopGalleryDir;
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+            return;
+
+        await clipboard.SetTextAsync(path).ConfigureAwait(true);
+        if (DesktopViewActionText is not null)
+            DesktopViewActionText.Text = "Path copied.";
+    }
+
+    private static void TryShellOpen(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // ignore — UI already shows path text
+        }
     }
 
     private void DesktopViewSurface_SizeChanged(object? sender, SizeChangedEventArgs e) =>

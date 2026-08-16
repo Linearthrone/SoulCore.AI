@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-08-06 (TINA: OPS-179 ALLSTART hang timeouts)
+updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 ---
 
 # Product Root Declaration
@@ -43,7 +43,8 @@ updated: 2026-08-06 (TINA: OPS-179 ALLSTART hang timeouts)
 8. **Soak #2** — authorize when you want a long soak with SoulLoop + embeddings + safety live
 9. **Wave 26/27 embodiment decisions** — TT-01 / PROP-EMBODIMENT-01:
    - **Locomotion source**: Game Animation Sample (motion matching) vs Manny/Quinn blendspace — **provisional default in BED-115 = Manny/Quinn**; confirm or override
-   - **Player embodiment**: grounded Kayleigh body vs keep free-fly `ADefaultPawn` — deferred to Wave 29 / Phase 4
+   - **Player embodiment**: grounded Kayleigh (`BP_MHC_Kayleigh`) vs free-fly `ADefaultPawn` — **TASK-180 → BOB** (on-machine live fix; PR #35 helpers)
+
    - **Avatar MetaHuman (user 2026-07-30):** use new MH **`VictoriaBody`**. → **TASK-171 Partial** (rewire scripts + bridge avatar_count fix; asset missing on main — sync from shadow then run Python rewire). Note: live Character mesh had drifted to Fab Performance Runner, not MHC_Victoria.
    - ~~**Scope**: Phase 1 only vs Phase 1+2~~ — **CLEARED 2026-07-26**: user **"yes move phase 2 asap"** → Wave 27 Phase 2 (gestures + verb correctness + head gaze) **in flight now**, parallel with Phase 1; do **not** wait for QA-118
 10. **Wave 27 Phase 3 agent-loop decisions** — TT-01 / PROP-AGENT-LOOP-01:
@@ -58,7 +59,10 @@ updated: 2026-08-06 (TINA: OPS-179 ALLSTART hang timeouts)
 
 ## In flight (PM)
 
+- **2026-08-05 TASK-180 → BOB (UE LiveCoding Agent, ACTIVE):** PIE must possess **`BP_MHC_Kayleigh`**, not flying DefaultPawn. Pull `cursor/bed-184-eyes-view-and-pie-avatar-169c`, run `tools/ue_nav/run_set_pie_player_pawn.ps1` with UE `/Game/Home`, Live Code if Actor-only. Seat: `Agents/BOB.md`. Ticket: `docs/agents/tasks/TASK-20260805-180-PM01-to-BOB.md`.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
+- **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
+- **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Merged #31.
 - **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. On main; ForceRestart after rewrite was the ALLSTART hang trigger (OPS-179).
 - **2026-08-06 TINA Wave 29 complete:** **BED-175** + **BED-177** + **FED-176 Pass archived**. Merge order: #26 (proactive) · #27 (tools/identity) · fed-176 SMS UI · Host recycle + relaunch ChatDesktop. Optional follow-up: Host MMS outbound on chat.send. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.

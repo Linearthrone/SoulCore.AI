@@ -30,8 +30,8 @@ Notes below are the non-obvious cloud/Linux caveats.
 - The `SoulCore/scripts/*.ps1` startup/soak/E2E harnesses are PowerShell + Windows paths;
   `pwsh` is not installed here. On Linux, run the Host directly with `dotnet run` instead.
 - Config overrides use env vars with the `SOULCORE_` prefix and `__` for nesting, e.g.
-  `SOULCORE_Inference__Model`, `SOULCORE_ChatWs__StubWhenModelDown` (see `SoulCore/.env.example`).
-  Secrets can also go in `SoulCore/.env` (gitignored).
+  `SOULCORE_Inference__Model` (see `SoulCore/.env.example`). Secrets can also go in
+  `SoulCore/.env` (gitignored). Hermes env knobs are retired (BED-185) — Host forces them off.
 
 ### Running the desktop client (Avalonia GUI)
 - Run: `dotnet run --project House/House.ChatDesktop -c Release`. It needs a graphical

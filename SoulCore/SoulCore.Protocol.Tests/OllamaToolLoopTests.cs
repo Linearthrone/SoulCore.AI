@@ -119,6 +119,13 @@ public class OllamaToolLoopTests
         Description: "Execute a workflow.",
         Parameters: JsonDocument.Parse("""{"type":"object","properties":{"id":{"type":"integer"}}}""").RootElement.Clone());
 
+    private static ToolDefinition DesktopOpenAppToolDef() => new(
+        Name: "desktop_open_app",
+        Description: "Open an allowlisted local app.",
+        Parameters: JsonDocument.Parse(
+                """{"type":"object","properties":{"app":{"type":"string"},"args":{"type":"string"}}}""")
+            .RootElement.Clone());
+
     private static ToolDefinition TaskListToolDef() => new(
         Name: "task_list",
         Description: "List tasks.",
@@ -353,6 +360,125 @@ public class OllamaToolLoopTests
         Assert.Equal(2, handler.CallCount);
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
         Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+    }
+
+    // ---------------------------------------------------------------------
+    // BED-180: ForceTool desktop_open_app pre-dispatches without LLM wait.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task ForceToolName_OpenApp_PreDispatchesWithoutLlm_WhenPureOpen()
+    {
+        var handler = new ScriptedHandler(Array.Empty<string>());
+        JsonElement? seenArgs = null;
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", args =>
+            {
+                seenArgs = args.Clone();
+                return new ToolResult(true, "opened app 'chrome'", null);
+            }));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open Google Chrome" }
+            },
+            new[] { DesktopOpenAppToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "desktop_open_app" });
+
+        Assert.Equal("Opened Chrome.", result);
+        Assert.Single(registry.Calls);
+        Assert.Equal("desktop_open_app", registry.Calls[0].Name);
+        Assert.NotNull(seenArgs);
+        Assert.Equal("chrome", seenArgs!.Value.GetProperty("app").GetString());
+        // Pure open must not hit Ollama at all.
+        Assert.Equal(0, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task ForceToolName_OpenApp_PreDispatchesWithUrl_WhenPresent()
+    {
+        var handler = new ScriptedHandler(Array.Empty<string>());
+        JsonElement? seenArgs = null;
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", args =>
+            {
+                seenArgs = args.Clone();
+                return new ToolResult(true, "opened", null);
+            }));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open chrome to https://example.com" }
+            },
+            new[] { DesktopOpenAppToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "desktop_open_app" });
+
+        Assert.Equal("Opened Chrome to https://example.com.", result);
+        Assert.Equal(0, handler.CallCount);
+        Assert.NotNull(seenArgs);
+        Assert.Equal("chrome", seenArgs!.Value.GetProperty("app").GetString());
+        Assert.Equal("https://example.com", seenArgs.Value.GetProperty("args").GetString());
+    }
+
+    [Fact]
+    public async Task ForceToolName_OpenApp_ContinuesLoop_WhenFollowOnActionsPresent()
+    {
+        // "open … and click" still needs the model after Process.Start.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "Clicked the first link.", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", _ => new ToolResult(true, "opened app 'chrome'", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open chrome and click the first link" }
+            },
+            new[] { DesktopOpenAppToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "desktop_open_app" });
+
+        Assert.Equal("Clicked the first link.", result);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_open_app");
+        Assert.Equal(1, handler.CallCount);
+        Assert.Contains("api/chat", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForceToolName_OpenApp_ContinuesLoop_WhenSearchFollowOnPresent()
+    {
+        // BED-181: "open … and search …" must not early-exit after launch.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "Searched for cats.", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", _ => new ToolResult(true, "opened app 'chrome' [background]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open chrome and search for cats" }
+            },
+            new[] { DesktopOpenAppToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "desktop_open_app" });
+
+        Assert.Equal("Searched for cats.", result);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_open_app");
+        Assert.Equal(1, handler.CallCount);
     }
 
     [Fact]

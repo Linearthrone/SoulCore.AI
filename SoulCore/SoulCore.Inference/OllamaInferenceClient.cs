@@ -198,6 +198,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
         // (dispatch or refuse). Text-only on a force round must not end the
         // loop — soft-dispatch workflow_execute when a session id is known,
         // otherwise one forced retry nudge, then give up.
+        // BED-180: desktop_open_app pure-open turns Process.Start immediately
+        // (no LLM wait) and return a short confirm.
         var forceConsumed = false;
         var forceNudgeUsed = false;
 
@@ -214,6 +216,70 @@ public sealed class OllamaInferenceClient : IInferenceClient
             forceToolName ?? "(none)",
             cap,
             toolNumCtx);
+
+        if (!string.IsNullOrEmpty(forceToolName)
+            && TrySoftDispatchForcedOpenApp(forceToolName, ollamaMessages, out var preOpenCalls)
+            && preOpenCalls is { Count: > 0 })
+        {
+            var lastUser = GetLastUserContent(ollamaMessages);
+            var pureOpen = DesktopToolIntent.IsPureOpenPrompt(lastUser);
+            DesktopToolIntent.TryResolveOpenAppLaunch(lastUser, out var openApp, out var openArgs);
+
+            ollamaMessages.Add(new OllamaChatMessage
+            {
+                Role = "assistant",
+                Content = string.Empty,
+                ToolCalls = preOpenCalls
+            });
+
+            var openOk = true;
+            foreach (var tc in preOpenCalls)
+            {
+                var name = tc.Function?.Name ?? string.Empty;
+                var args = ParseArguments(tc.Function?.Arguments);
+                _logger.LogInformation(
+                    "Ollama ForceTool pre-dispatch: tool={Tool} (desktop open — no LLM wait).",
+                    name);
+                var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
+                    .ConfigureAwait(false);
+                openOk = openOk && result.Success;
+                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
+                ollamaMessages.Add(new OllamaChatMessage
+                {
+                    Role = "tool",
+                    Name = name,
+                    Content = result.Content ?? string.Empty,
+                    Images = images
+                });
+            }
+
+            forceConsumed = true;
+
+            if (pureOpen)
+            {
+                if (openOk)
+                {
+                    var reply = DesktopToolIntent.BuildOpenedReply(
+                        string.IsNullOrEmpty(openApp) ? "chrome" : openApp,
+                        openArgs);
+                    _logger.LogInformation(
+                        "Ollama ForceTool desktop_open_app early-exit (pure open): {Reply}",
+                        reply);
+                    return reply;
+                }
+
+                // Launch failed — surface the tool error without more LLM rounds.
+                var err = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
+                return string.IsNullOrWhiteSpace(err)
+                    ? "I couldn't open that app."
+                    : err!;
+            }
+
+            // Non-pure open (e.g. "open Chrome and click…") — continue loop with
+            // full tools so the model can finish the rest.
+            _logger.LogInformation(
+                "Ollama ForceTool desktop_open_app pre-dispatched; continuing tool-loop for follow-on actions.");
+        }
 
         for (var iteration = 0; iteration < cap; iteration++)
         {
@@ -360,10 +426,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
             if (toolCalls is null || toolCalls.Count == 0)
             {
                 if (forceActive
-                    && TrySoftDispatchForcedWorkflowExecute(
-                        forceToolName!,
-                        ollamaMessages,
-                        out var softCalls)
+                    && (TrySoftDispatchForcedWorkflowExecute(
+                            forceToolName!,
+                            ollamaMessages,
+                            out var softCalls)
+                        || TrySoftDispatchForcedOpenApp(
+                            forceToolName!,
+                            ollamaMessages,
+                            out softCalls))
                     && softCalls is { Count: > 0 })
                 {
                     toolCalls = softCalls;
@@ -373,7 +443,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     lastAssistantText = string.Empty;
                     assistantText = string.Empty;
                     _logger.LogInformation(
-                        "Ollama ForceTool soft-dispatch: tool={Tool} iter={Iter} (session workflow id known).",
+                        "Ollama ForceTool soft-dispatch: tool={Tool} iter={Iter}.",
                         forceToolName, iteration);
                 }
                 else if (forceActive && !forceNudgeUsed)
@@ -714,6 +784,54 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
+    /// BED-180: when ForceTool requires <c>desktop_open_app</c>, synthesize
+    /// args from the latest user open/launch phrase (no LLM required).
+    /// </summary>
+    private static bool TrySoftDispatchForcedOpenApp(
+        string forceToolName,
+        IReadOnlyList<OllamaChatMessage> messages,
+        out List<OllamaToolCallDto>? softCalls)
+    {
+        softCalls = null;
+        if (!string.Equals(forceToolName, "desktop_open_app", StringComparison.Ordinal))
+            return false;
+
+        var lastUser = GetLastUserContent(messages);
+        if (!DesktopToolIntent.TryResolveOpenAppLaunch(lastUser, out var app, out var launchArgs))
+            return false;
+
+        var argsJson = launchArgs is null
+            ? $"{{\"app\":{JsonSerializer.Serialize(app)}}}"
+            : $"{{\"app\":{JsonSerializer.Serialize(app)},\"args\":{JsonSerializer.Serialize(launchArgs)}}}";
+        softCalls = new List<OllamaToolCallDto>(1)
+        {
+            new OllamaToolCallDto
+            {
+                Function = new OllamaFunctionCallDto
+                {
+                    Name = "desktop_open_app",
+                    Arguments = JsonDocument.Parse(argsJson).RootElement.Clone()
+                }
+            }
+        };
+        return true;
+    }
+
+    private static string? GetLastUserContent(IReadOnlyList<OllamaChatMessage> messages)
+    {
+        for (var i = messages.Count - 1; i >= 0; i--)
+        {
+            var m = messages[i];
+            if (m is null) continue;
+            if (!string.Equals(m.Role, "user", StringComparison.OrdinalIgnoreCase))
+                continue;
+            return m.Content;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// BED-168: user nudge appended after a ForceTool text-only clarification
     /// so the next forced round still requires a real tool call.
     /// </summary>
@@ -731,6 +849,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
             return
                 "You must call workflow_create now with a name and steps. " +
                 "Do not describe the plan in prose — emit the tool call only.";
+        }
+
+        if (string.Equals(forceToolName, "desktop_open_app", StringComparison.Ordinal))
+        {
+            return
+                "You must call desktop_open_app now with an allowlisted app alias " +
+                "(chrome, edge, firefox, notepad, explorer). Optional args: a URL. " +
+                "Do not list windows or screenshot — emit the tool call only.";
         }
 
         return

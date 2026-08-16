@@ -212,6 +212,16 @@
                     </Grid>
                   </Border>
                   <Border Classes="carbon" Padding="8">
+                    <StackPanel Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse x:Name="SvcHermesDot" Width="9" Height="9" Fill="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="Hermes" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="SvcHermesStatus" Text="retired" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                      </StackPanel>
+                      <TextBlock x:Name="SvcHermesDetail" Text="BED-185: unused — open Chrome via desktop_open_app" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="carbon" Padding="8">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -261,16 +271,18 @@
                   <ToggleButton x:Name="ScreenAlwaysOnTop" Classes="chrome" Content="Pin"
                                 IsCheckedChanged="ScreenAlwaysOnTop_Changed"/>
                   <Button Classes="chrome" Content="Pop out" Click="DesktopViewPopOut_Click"/>
+                  <Button Classes="chrome" Content="Folder" Click="DesktopViewOpenFolder_Click"
+                          ToolTip.Tip="Open the temp screenshot gallery folder"/>
                   <Ellipse Classes="screw"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Ellipse Classes="screw"/>
-                  <TextBlock Text="Her screen" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <TextBlock Text="What she saw" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
               </DockPanel>
               <Border Grid.Row="1" Classes="carbon" ClipToBounds="True" MinHeight="100">
                 <Grid x:Name="DesktopViewSurface" SizeChanged="DesktopViewSurface_SizeChanged">
-                  <TextBlock x:Name="DesktopViewEmptyText" Text="No capture yet"
+                  <TextBlock x:Name="DesktopViewEmptyText" Text="No capture yet — she must call eyes/desktop/browser tools"
                              Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
                              Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                   <Image x:Name="DesktopViewImage" Stretch="Uniform" IsVisible="False"/>
@@ -280,11 +292,30 @@
                   </Canvas>
                 </Grid>
               </Border>
-              <StackPanel Grid.Row="2" Margin="0,6,0,0">
+              <StackPanel Grid.Row="2" Margin="0,6,0,0" Spacing="4">
                 <TextBlock x:Name="DesktopViewActionText" FontSize="10" Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap" Text="Waiting…"/>
                 <TextBlock x:Name="DesktopViewMetaText" FontSize="10" Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap" Text=""/>
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="ghost" Content="Open file" FontSize="10" Padding="6,2"
+                            Click="DesktopViewOpenFile_Click"
+                            ToolTip.Tip="Open the latest screenshot file"/>
+                    <Button Classes="ghost" Content="Copy path" FontSize="10" Padding="6,2"
+                            Click="DesktopViewCopyPath_Click"/>
+                  </StackPanel>
+                  <TextBlock x:Name="DesktopViewPathText" FontSize="10"
+                             Foreground="{DynamicResource AccentBrush}"
+                             TextWrapping="Wrap" Text=""
+                             ToolTip.Tip="Filesystem path of the latest capture"/>
+                </DockPanel>
+                <TextBlock Text="Temp gallery (click to inspect)" FontSize="10"
+                           Foreground="{DynamicResource MutedBrush}"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              MaxHeight="52">
+                  <StackPanel x:Name="DesktopViewGalleryPanel" Orientation="Horizontal" Spacing="4"/>
+                </ScrollViewer>
               </StackPanel>
             </Grid>
           </Border>
@@ -402,6 +433,9 @@
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="SystemInferenceBox" Classes="input" IsReadOnly="True" Text="—"
+                         Padding="8" Margin="0,0,0,10"/>
+                <TextBlock Text="Hermes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="SystemHermesBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Memory path" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="SystemMemoryPathBox" Classes="input" IsReadOnly="True" Text="—"

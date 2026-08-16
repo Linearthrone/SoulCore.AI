@@ -35,7 +35,7 @@ Envelope (Presence chat on `:7700/ws` — not the Unreal `:8888` wire shape):
 | --- | --- | --- |
 | `chat.send` | client → Host | `{ "text", "sessionId?" }` |
 | `chat.delta` | Host → client | `{ "text", "stub?", "provider?" }` — **post-hoc cumulative prefixes** after full generate (not a live token stream) |
-| `chat.done` | Host → client | `{ "text", "stub?", "provider?" }` (`provider`: `ollama` / `stub`) |
+| `chat.done` | Host → client | `{ "text", "stub?", "provider?" }` (`provider`: `ollama` / `hermes` / `stub`) |
 | `emotion.correct` | client → Host | `{ "valence" (-1..1), "arousal" (0..1), "dominance" (0..1), "focus" (0..1), "note?" }` — persist via `IEmotionState.SetAsync`; optional note → episodic `source=correction` tagged `[emotion_correction]`; echo `emotion.snapshot` |
 | `emotion.snapshot` | Host → client | `{ "valence", "arousal", "dominance", "focus", "label", "note?", "revision" }` |
 | `presence.status` | Host → client | `{ "alive", "warm", "phase" }` |
@@ -45,7 +45,7 @@ Envelope (Presence chat on `:7700/ws` — not the Unreal `:8888` wire shape):
 | `ping` / `pong` | either | `{}` |
 
 On connect, Host sends `presence.status` + `emotion.snapshot` (handshake).
-`chat.send` **reads** `IEmotionState` and injects a deterministic emotion system/context preamble into Ollama (`system`) before the user text (read-influence only; no post-turn emotion write-back in this ticket). Happy path waits for a **full non-streaming generate**, then emits post-hoc cumulative `chat.delta` slices (for bubble UX) followed by `chat.done` with real model text (not stub). This is **not** true token streaming; wiring Ollama stream mode is a later ticket. After success, Host writes first-person episodic memory (`source=chat`) without blocking the reply on memory failure. If LLM is unreachable and `ChatWs:StubWhenModelDown=false` (default), Host sends an `error` frame (`chat.model_down`) instead of a silent stub success.
+`chat.send` **reads** `IEmotionState` and injects a deterministic emotion system/context preamble into Ollama (`system`) / Hermes (`role=system`) before the user text (read-influence only; no post-turn emotion write-back in this ticket). Primary order via `ChatWs:PreferHermes`. Happy path waits for a **full non-streaming generate**, then emits post-hoc cumulative `chat.delta` slices (for bubble UX) followed by `chat.done` with real model text (not stub). This is **not** true token streaming; wiring Ollama/Hermes stream mode is a later ticket. After success, Host writes first-person episodic memory (`source=chat`) without blocking the reply on memory failure. If LLM is unreachable and `ChatWs:StubWhenModelDown=false` (default), Host sends an `error` frame (`chat.model_down`) instead of a silent stub success.
 
 Types live in `SoulCore.Protocol` (`SoulCoreFrame` / `SoulCoreFrameTypes`). Payload JSON uses camelCase; House and Host both reference this project.
 
@@ -106,7 +106,10 @@ dotnet run --project SoulCore.Host -- --soul-loop-tick --enabled
 | --- | --- | --- |
 | Ollama (`OllamaInferenceClient`) | `http://127.0.0.1:11434` | `Inference:Enabled` |
 
-When `Inference:Enabled=false`, Host registers a null stub (no chat). Victoria day-to-day is Ollama-only. Browser tools use local bridge `:17891` (`Tools:BrowserBackend=bridge`). MT4 uses LLMOD MCP (`Tools:Mt4Backend=llmod`).
+When `Inference:Enabled=false`, Host registers a null stub. **Hermes is retired (BED-185)** —
+Host always registers `NullHermesClient`, forces `Hermes:Enabled=false` / `PreferHermes=false`,
+and remaps `BrowserBackend=hermes` → `none`. Open Chrome/websites with `desktop_open_app`
+(chrome + URL). `ALLSTART.ps1` skips the gateway unless `-WithHermes`.
 
 ## Build
 
@@ -131,7 +134,7 @@ Do not enable non-loopback binds. Full 24h soak requires an explicit product gat
 Never commit tokens. Use:
 
 - Local file: `SoulCore/.env` (gitignored; copy from `.env.example`) — Host loads `SOULCORE_*` keys into process env before config bind; existing shell env wins
-- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`
+- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`
 - Or: `dotnet user-secrets` on `SoulCore.Host` in Development
 
 `SOULCORE_COMPANION_API_TOKEN` (optional, ≥ 32 random chars recommended): when **set**, Host fail-closes `/ws` upgrades unless the client sends `Authorization: Bearer <token>` or `X-Api-Key: <token>`. When **unset**, local loopback desktop keeps the historical no-header trust model. Set this whenever Tailscale serve is used for phone companion. Never log the raw token; `/health` stays unauthenticated on loopback and must not expose secrets.
@@ -145,6 +148,7 @@ See `appsettings.Example.json` and `.env.example` (placeholders only). Do not co
 | SoulCore.Host | Entry + health + `/ws` chat handlers + DI |
 | SoulCore.Core | Loop / emotion / charter abstractions |
 | SoulCore.Memory | `SqliteMemoryStore` + DBD schema embeds |
-| SoulCore.Inference | Ollama HTTP client + tools |
+| SoulCore.Inference | Ollama HTTP client |
+| SoulCore.Hermes | Hermes OpenAI-compatible client |
 | SoulCore.Adapters.Ws | WS frame schema + Presence hub + Unreal verb client |
-| SoulCore.Config | Bind / Memory / Inference / ChatWs / UnrealBridge / Tools options |
+| SoulCore.Config | Bind / Memory / Inference / Hermes / ChatWs / UnrealBridge options |

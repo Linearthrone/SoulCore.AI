@@ -22,6 +22,7 @@ public sealed class ChatWsOptions
     /// before the Ollama loop (no silent PreferHermes bypass).
     /// </para>
     /// </summary>
+    /// <summary>Retired (BED-185). Host forces <c>false</c>; Hermes gateway is not used.</summary>
     public bool PreferHermes { get; set; } = false;
 
     /// <summary>

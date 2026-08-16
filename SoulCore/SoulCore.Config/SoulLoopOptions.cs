@@ -30,14 +30,15 @@ public sealed class SoulLoopOptions
 
     /// <summary>
     /// When true, emit an unsolicited <c>chat.done</c> to companion WS clients on a throttle
-    /// (see <see cref="ProactiveChatIntervalTicks"/>). Pushes are quality-gated: composer
-    /// requires a concrete episodic beat (empty category lines are skipped).
+    /// (see <see cref="ProactiveChatIntervalTicks"/>). Defaults <c>false</c>: phrase-bank
+    /// pings are not real model speech and spam the transcript / phone. Re-enable only when
+    /// proactive text is model-authored, not scaffold category lines.
     /// </summary>
-    public bool ProactiveChatEnabled { get; set; } = true;
+    public bool ProactiveChatEnabled { get; set; } = false;
 
     /// <summary>
     /// Push a proactive chat message every Nth tick when <see cref="ProactiveChatEnabled"/>.
-    /// Default 5 (~5 min at 60s ticks). Set 0 to disable proactive chat even if Enabled.
+    /// Default 0 (off). Historical scaffold used 5 (~5 min at 60s ticks).
     /// </summary>
-    public int ProactiveChatIntervalTicks { get; set; } = 5;
+    public int ProactiveChatIntervalTicks { get; set; } = 0;
 }

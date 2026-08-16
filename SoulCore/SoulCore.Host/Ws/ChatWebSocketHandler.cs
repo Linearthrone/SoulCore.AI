@@ -9,7 +9,9 @@ using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
+using SoulCore.Hermes;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.ChiefArchitect;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Trading;
@@ -19,8 +21,9 @@ using SoulCore.Memory;
 namespace SoulCore.Host.Ws;
 
 /// <summary>
-/// Presence chat WebSocket session: chat.send → Ollama inference → emotion.snapshot + chat.delta/done,
+/// Presence chat WebSocket session: chat.send → Ollama (tool-loop) → emotion.snapshot + chat.delta/done,
 /// optional episodic write + Unreal speak/set_emotion side-effects.
+/// Hermes retired (BED-185); <see cref="IHermesClient"/> is retained only for DI signature compat.
 /// </summary>
 public sealed class ChatWebSocketHandler
 {
@@ -53,6 +56,7 @@ public sealed class ChatWebSocketHandler
 
     public ChatWebSocketHandler(
         IInferenceClient inference,
+        IHermesClient hermes,
         IEmotionState emotion,
         IMemoryStore memory,
         IEmbeddingClient embeddings,
@@ -66,10 +70,13 @@ public sealed class ChatWebSocketHandler
         PresenceWsHub hub,
         IOptions<ChatWsOptions> chatOptions,
         IOptions<InferenceOptions> inferenceOptions,
+        IOptions<HermesOptions> hermesOptions,
         ILogger<ChatWebSocketHandler> logger,
         IVoiceSpeakService? voiceSpeak = null)
     {
         _inference = inference;
+        _ = hermes; // BED-185: unused — NullHermesClient only
+        _ = hermesOptions;
         _emotion = emotion;
         _memory = memory;
         _embeddings = embeddings;
@@ -362,6 +369,7 @@ public sealed class ChatWebSocketHandler
         {
             contextPreamble = ToolAgencyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ComputerUseGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = HomeBodyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ChiefArchitectGuidance.AppendToPreamble(contextPreamble);
         }
 
@@ -436,7 +444,7 @@ public sealed class ChatWebSocketHandler
                         {
                             code = "chat.model_down",
                             message = string.IsNullOrWhiteSpace(ex.Message)
-                                ? "LLM unreachable (Ollama)."
+                                ? "LLM unreachable (Hermes/Ollama)."
                                 : ex.Message
                         },
                         id: frame.Id),
@@ -695,8 +703,9 @@ public sealed class ChatWebSocketHandler
         try
         {
             string? authored = null;
-            var authorProvider = "ollama";
+            var authorProvider = chatProvider;
 
+            // BED-185: memory authoring uses Ollama only (Hermes retired).
             if (_inferenceOptions.Enabled)
             {
                 authored = await _inference
@@ -706,6 +715,7 @@ public sealed class ChatWebSocketHandler
                         cancellationToken,
                         EpisodicMemoryPrompt.AuthorMaxTokens)
                     .ConfigureAwait(false);
+                authorProvider = "ollama";
             }
 
             if (string.IsNullOrWhiteSpace(authored))
@@ -737,13 +747,15 @@ public sealed class ChatWebSocketHandler
         if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled). Refusing stub-as-success.");
+                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
         }
 
+        Exception? lastError = null;
+
+        // BED-185: Hermes chat path retired — Ollama only.
         if (_chatOptions.PreferHermes)
         {
-            _logger.LogDebug(
-                "ChatWs:PreferHermes is set but ignored — legacy chat preference disabled.");
+            _logger.LogWarning("PreferHermes ignored (BED-185 Hermes retired) — Ollama only");
         }
 
         try
@@ -759,12 +771,12 @@ public sealed class ChatWebSocketHandler
         }
         catch (Exception ex)
         {
+            lastError = ex;
             _logger.LogDebug(ex, "Ollama inference failed");
-            throw;
         }
 
-        throw new InvalidOperationException(
-            "LLM returned empty reply from enabled Ollama client.");
+        throw lastError ?? new InvalidOperationException(
+            "LLM returned empty reply from Ollama (Hermes retired — BED-185).");
     }
 
     /// <summary>
@@ -1304,13 +1316,7 @@ public sealed class ChatWebSocketHandler
         if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled). Refusing stub-as-success.");
-        }
-
-        if (_chatOptions.PreferHermes)
-        {
-            _logger.LogDebug(
-                "ChatWs:PreferHermes is set but ignored — legacy chat preference disabled.");
+                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
         }
 
         // Build the agent-loop messages[]: system preamble + prior turns + user.
@@ -1337,29 +1343,14 @@ public sealed class ChatWebSocketHandler
         // result Content for session history (BED-158). Call-scoped.
         var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames, toolTrace);
 
-        // High-confidence desktop macros: open app / screenshot without waiting
-        // on a cold tool-model load (qwen14b was timing out at 180s before any
-        // tool_calls landed — Chrome never launched).
-        if (DesktopToolIntent.TryMatch(text, out var desktopMacro)
-            && desktopMacro.Intent is DesktopToolIntent.Kind.OpenApp
-                or DesktopToolIntent.Kind.Screenshot)
-        {
-            var macroReply = await TryExecuteDesktopMacroAsync(
-                    text, desktopMacro, trackingRegistry, cancellationToken)
-                .ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(macroReply))
-            {
-                _logger.LogInformation(
-                    "Desktop macro executed: intent={Intent} tool={Tool} (skipped LLM tool-loop)",
-                    desktopMacro.Intent, desktopMacro.ToolName);
-                AppendToolLoopTurn(historySessionId, text, toolTrace, macroReply);
-                RecordSpend("desktop-macro", text, contextPreamble, macroReply);
-                return new ChatCompletionResult(macroReply, "desktop-macro");
-            }
-        }
+        Exception? lastError = null;
+        string? replyText = null;
+        string? provider = null;
 
-        // BED-162 / BED-167: force tool_choice on high-confidence NL intents (Ollama tool-loop).
-        // MT4 status wins over workflow when both somehow match (ISSUE-003).
+        // BED-162 / BED-167: force tool_choice on high-confidence NL intents
+        // (Ollama path — including PreferHermes Avenue B which also uses Ollama).
+        // MT4 status wins over workflow when both somehow match (ISSUE-003:
+        // models escape "status" phrasing to task_create/task_get).
         ToolLoopOptions? ollamaLoopOptions = null;
         if (Mt4ToolIntent.TryMatch(text, out var mt4Intent))
         {
@@ -1382,6 +1373,13 @@ public sealed class ChatWebSocketHandler
                 "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
                 desktopIntent.Intent, desktopIntent.ToolName);
         }
+        else if (HomeBodyToolIntent.TryMatch(text, out var homeIntent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = homeIntent.ToolName };
+            _logger.LogInformation(
+                "HomeBody NL intent matched: intent={Intent} forceTool={Tool}",
+                homeIntent.Intent, homeIntent.ToolName);
+        }
         else if (WorkflowToolIntent.TryMatch(text, out var intent))
         {
             ollamaLoopOptions = new ToolLoopOptions { ForceToolName = intent.ToolName };
@@ -1390,130 +1388,44 @@ public sealed class ChatWebSocketHandler
                 intent.Intent, intent.ToolName);
         }
 
-        Exception? lastError = null;
-        string? replyText = null;
-
-        try
+        // BED-185: Hermes / PreferHermes MCP preflight retired — Ollama tool-loop only.
+        if (_chatOptions.PreferHermes)
         {
-            var reply = await _inference
-                .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken, ollamaLoopOptions)
-                .ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(reply))
-            {
-                replyText = reply.Trim();
-                RecordSpend("ollama", text, contextPreamble, replyText);
-            }
-        }
-        catch (Exception ex)
-        {
-            lastError = ex;
-            _logger.LogDebug(ex, "Ollama tool-loop failed");
+            _logger.LogWarning(
+                "PreferHermes ignored (BED-185 Hermes retired) — Ollama tool-loop only");
         }
 
-        if (replyText is null)
+        if (replyText is null && _inferenceOptions.Enabled)
         {
-            // gemma4 often empties the post-tool turn after a forced desktop_open_app
-            // (~80s+ of /api/chat → ""). Tools already ran — don't model_down the user.
-            if (toolTrace.Count > 0)
+            try
             {
-                replyText = BuildToolOnlyFallbackReply(toolTrace);
-                _logger.LogWarning(
-                    "Ollama returned empty final text after {Count} tool(s); using tool-result fallback.",
-                    toolTrace.Count);
-                RecordSpend("ollama", text, contextPreamble, replyText);
+                var reply = await _inference
+                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken, ollamaLoopOptions)
+                    .ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(reply))
+                {
+                    replyText = reply.Trim();
+                    provider = "ollama";
+                    RecordSpend("ollama", text, contextPreamble, replyText);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                throw lastError ?? new InvalidOperationException(
-                    "LLM tool-loop returned empty reply from enabled Ollama client.");
+                lastError = ex;
+                _logger.LogDebug(ex, "Ollama tool-loop failed");
             }
+        }
+
+        if (replyText is null || provider is null)
+        {
+            throw lastError ?? new InvalidOperationException(
+                "LLM tool-loop returned empty reply from Ollama (Hermes retired — BED-185).");
         }
 
         // Persist this turn (user + tool trace + final assistant) for the next send.
         AppendToolLoopTurn(historySessionId, text, toolTrace, replyText);
 
-        return new ChatCompletionResult(replyText, "ollama");
-    }
-
-    /// <summary>
-    /// Deterministic open-app / screenshot path — no LLM round-trip.
-    /// </summary>
-    private async Task<string?> TryExecuteDesktopMacroAsync(
-        string userText,
-        DesktopToolIntent.Match intent,
-        IToolRegistry registry,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (intent.Intent == DesktopToolIntent.Kind.OpenApp)
-            {
-                if (!DesktopAppLauncher.TryInferAliasFromUserText(userText, out var alias))
-                    alias = "chrome";
-
-                using var doc = JsonDocument.Parse(
-                    $"{{\"app\":{JsonSerializer.Serialize(alias)}}}");
-                var result = await registry
-                    .ExecuteAsync("desktop_open_app", doc.RootElement, cancellationToken)
-                    .ConfigureAwait(false);
-                var detail = string.IsNullOrWhiteSpace(result.Content)
-                    ? alias
-                    : result.Content.Trim();
-                return result.Success
-                    ? $"Opened {alias}. {detail}"
-                    : $"Couldn't open {alias}: {detail}";
-            }
-
-            if (intent.Intent == DesktopToolIntent.Kind.Screenshot)
-            {
-                using var doc = JsonDocument.Parse("{}");
-                var result = await registry
-                    .ExecuteAsync("desktop_screenshot", doc.RootElement, cancellationToken)
-                    .ConfigureAwait(false);
-                var detail = string.IsNullOrWhiteSpace(result.Content)
-                    ? "desktop_screenshot"
-                    : result.Content.Trim();
-                return result.Success
-                    ? $"Screenshot taken. {detail}"
-                    : $"Couldn't capture the screen: {detail}";
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Desktop macro failed for {Tool}", intent.ToolName);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// When the model runs tools then returns blank content, still give Kayleigh
-    /// a concrete status instead of <c>chat.model_down</c>.
-    /// </summary>
-    private static string BuildToolOnlyFallbackReply(IReadOnlyList<ToolTraceEntry> toolTrace)
-    {
-        var parts = new List<string>(toolTrace.Count);
-        foreach (var t in toolTrace)
-        {
-            if (string.IsNullOrWhiteSpace(t.Name))
-                continue;
-            var snippet = string.IsNullOrWhiteSpace(t.Content)
-                ? t.Name
-                : t.Name + ": " + TruncateForFallback(t.Content.Trim(), 140);
-            parts.Add(snippet);
-        }
-
-        if (parts.Count == 0)
-            return "I ran the tools, but the model returned no final text.";
-
-        return "Done — " + string.Join("; ", parts) + ".";
-    }
-
-    private static string TruncateForFallback(string text, int max)
-    {
-        if (string.IsNullOrEmpty(text) || text.Length <= max)
-            return text;
-        return text[..max] + "…";
+        return new ChatCompletionResult(replyText, provider);
     }
 
     /// <summary>
