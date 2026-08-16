@@ -51,7 +51,7 @@ public sealed class LocalStackControl : IDisposable
     }
 
     public Task<LocalStackActionResult> StartAllAsync(CancellationToken ct = default) =>
-        RunScriptAsync("ALLSTART.ps1", ["-SkipHermes"], ct);
+        RunScriptAsync("ALLSTART.ps1", Array.Empty<string>(), ct);
 
     public Task<LocalStackActionResult> StartOllamaAsync(CancellationToken ct = default) =>
         RunPowerShellInlineAsync(
