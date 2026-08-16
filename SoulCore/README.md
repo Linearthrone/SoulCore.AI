@@ -100,6 +100,18 @@ dotnet run --project SoulCore.Host -- --soul-loop-tick
 dotnet run --project SoulCore.Host -- --soul-loop-tick --enabled
 ```
 
+## Browser capture (native — no Hermes)
+
+| Piece | Path / URL |
+| --- | --- |
+| Bridge | `BrowserCaptureBridge/bridge_server.py` → `http://127.0.0.1:17891/health` |
+| Extension | `BrowserCaptureExtension/` — Chrome/Edge **Load unpacked** |
+| Host backend | `Tools:BrowserBackend=native` (default) → `NativeBrowserBridge` |
+| Start | `SoulCore/scripts/start-browser-bridge.ps1` (also via `ALLSTART.ps1`) |
+
+Load unpacked once: `chrome://extensions` → Developer mode → Load unpacked → select repo `BrowserCaptureExtension`. Popup should show bridge connected. SoulCore tools: `browser_health`, `browser_capture_tab`, `browser_click`, `browser_type`, `browser_key`, `browser_scroll`.
+
+## Inference / Hermes (quarry loopback)
 ## Inference (Ollama)
 
 | Client | Default base | Feature flag |

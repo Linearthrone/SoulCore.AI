@@ -385,14 +385,42 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaN
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaWorldHintTool>();
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaVerifyChecklistTool>();
 
-// Browser tools (BED-136). Hermes retired (BED-185) — never HermesBrowserBridge.
-// Open websites with desktop_open_app; browser_* returns UnsupportedBrowserBridge.
+// Browser tools (BED-136 / BED-182): browser_health / capture_tab / click / type / key / scroll.
+// Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
+// Backend: Tools.BrowserBackend=native (default) → BrowserCaptureBridge :17891 + Chrome extension.
+// Hermes browser backend retired (BED-185).
+builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var configured = (opts.BrowserBridgeUrl ?? "").Trim();
+    var baseUrl = string.IsNullOrWhiteSpace(configured)
+        ? NativeBrowserBridge.DefaultBaseUrl
+        : configured.TrimEnd('/');
+
+    if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || !uri.IsLoopback)
+        uri = new Uri(NativeBrowserBridge.DefaultBaseUrl + "/");
+    else
+        uri = new Uri(uri.AbsoluteUri.TrimEnd('/') + "/");
+
+    client.BaseAddress = uri;
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
-    var backend = (opts.BrowserBackend ?? "none").Trim();
+    var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
     if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
         backend = "none";
+    if (string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, "llmod", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, "auto", StringComparison.OrdinalIgnoreCase))
+    {
+        var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("browser-bridge");
+        return new NativeBrowserBridge(
+            http,
+            sp.GetRequiredService<IOptions<ToolsOptions>>(),
+            sp.GetService<ILogger<NativeBrowserBridge>>());
+    }
     return new UnsupportedBrowserBridge(backend);
 });
 builder.Services.AddSingleton<ITool, BrowserHealthTool>();
