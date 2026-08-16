@@ -8,6 +8,7 @@ public class InferenceOptionsCloudTests
     [InlineData("https://ollama.com", true)]
     [InlineData("https://ollama.com/", true)]
     [InlineData("https://www.ollama.com/api", true)]
+    [InlineData("http://ollama.com", false)]
     [InlineData("http://127.0.0.1:11434", false)]
     [InlineData("http://localhost:11434", false)]
     public void IsOllamaCloudUrl_DetectsHost(string url, bool expected)
