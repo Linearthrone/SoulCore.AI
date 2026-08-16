@@ -31,11 +31,12 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
             ? ToolsOptions.BackendCua
             : opts.DesktopBackend.Trim();
         BrowserBackend = string.IsNullOrWhiteSpace(opts.BrowserBackend)
-            ? ToolsOptions.BackendBridge
+            ? ToolsOptions.BackendNative
             : opts.BrowserBackend.Trim();
         Mt4Backend = string.IsNullOrWhiteSpace(opts.Mt4Backend)
             ? ToolsOptions.BackendLlmod
             : opts.Mt4Backend.Trim();
+        DesktopTargetWindowTitle = (opts.DesktopTargetWindowTitle ?? string.Empty).Trim();
     }
 
     /// <summary>Test ctor — bypasses options binding.</summary>
@@ -57,9 +58,10 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         bool allowMt4Read,
         bool allowMt4Trade,
         string desktopBackend = ToolsOptions.BackendNative,
-        string browserBackend = ToolsOptions.BackendBridge,
+        string browserBackend = ToolsOptions.BackendNative,
         string mt4Backend = ToolsOptions.BackendLlmod,
-        bool softCursorRestore = true)
+        bool softCursorRestore = true,
+        string desktopTargetWindowTitle = "")
     {
         _allowDesktopCapture = allowDesktopCapture ? 1 : 0;
         _allowBrowserCapture = allowBrowserCapture ? 1 : 0;
@@ -70,6 +72,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         DesktopBackend = desktopBackend;
         BrowserBackend = browserBackend;
         Mt4Backend = mt4Backend;
+        DesktopTargetWindowTitle = (desktopTargetWindowTitle ?? string.Empty).Trim();
     }
 
     public bool AllowDesktopCapture => Read(ref _allowDesktopCapture);
@@ -82,6 +85,9 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public string DesktopBackend { get; }
     public string BrowserBackend { get; }
     public string Mt4Backend { get; }
+
+    /// <summary>Substring match for VM/window scope; empty = unrestricted.</summary>
+    public string DesktopTargetWindowTitle { get; }
 
     public void SetAllowDesktopCapture(bool enabled) => Write(ref _allowDesktopCapture, enabled);
     public void SetAllowBrowserCapture(bool enabled) => Write(ref _allowBrowserCapture, enabled);

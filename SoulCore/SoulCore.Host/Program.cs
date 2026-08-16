@@ -325,43 +325,49 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 // AllowDesktopCapture / AllowBrowserCapture / AllowComputerControl default true (TASK-177).
 // Backend: Tools:DesktopBackend = "cua" | "native" | "hermes".
 // cua = local cua-driver agent cursor (LLMOD blue overlay; OS mouse untouched).
+// Optional Tools:DesktopTargetWindowTitle hard-scopes clicks to that window (BED-188).
 // Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
 builder.Services.AddSingleton<ComputerControlGate>();
 builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
-var desktopBackend = (toolsOptions.DesktopBackend ?? "cua").Trim();
-if (string.Equals(desktopBackend, "hermes", StringComparison.OrdinalIgnoreCase))
-    desktopBackend = "cua"; // BED-185: Hermes desktop backend retired
-if (string.Equals(desktopBackend, "cua", StringComparison.OrdinalIgnoreCase)
-         || string.Equals(desktopBackend, "auto", StringComparison.OrdinalIgnoreCase))
+builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
 {
-    var cuaExe = CuaDriverCli.TryFindExe();
-    if (cuaExe is not null)
+    IDesktopControlBackend inner;
+    var backendName = (sp.GetRequiredService<IToolsAccessSettings>().DesktopBackend ?? "cua").Trim();
+    if (string.Equals(backendName, "hermes", StringComparison.OrdinalIgnoreCase))
+        backendName = "cua";
+    if (string.Equals(backendName, "cua", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backendName, "auto", StringComparison.OrdinalIgnoreCase))
     {
-        builder.Services.AddSingleton(_ => new CuaDriverCli(cuaExe));
-        builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
-            new CuaDriverDesktopBackend(
-                sp.GetRequiredService<CuaDriverCli>(),
+        var cuaExe = CuaDriverCli.TryFindExe();
+        if (cuaExe is not null)
+        {
+            inner = new CuaDriverDesktopBackend(
+                new CuaDriverCli(cuaExe),
                 sp.GetRequiredService<IDesktopViewHub>(),
-                sp.GetRequiredService<IToolsAccessSettings>()));
+                sp.GetRequiredService<IToolsAccessSettings>());
+        }
+        else
+        {
+            inner = new NativeDesktopControlBackend(
+                sp.GetRequiredService<IDesktopViewHub>(),
+                sp.GetRequiredService<IToolsAccessSettings>());
+        }
     }
     else
     {
-        builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
-            new NativeDesktopControlBackend(
-                sp.GetRequiredService<IDesktopViewHub>(),
-                sp.GetRequiredService<IToolsAccessSettings>()));
-    }
-}
-else
-{
-    builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
-        new NativeDesktopControlBackend(
+        inner = new NativeDesktopControlBackend(
             sp.GetRequiredService<IDesktopViewHub>(),
-            sp.GetRequiredService<IToolsAccessSettings>()));
-}
+            sp.GetRequiredService<IToolsAccessSettings>());
+    }
+
+    var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
+    if (string.IsNullOrWhiteSpace(scopeTitle))
+        return inner;
+    return new ScopedDesktopControlBackend(inner, scopeTitle);
+});
 builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
     sp.GetRequiredService<IComputerControlGate>(),
     sp.GetRequiredService<IDesktopControlBackend>(),
@@ -720,10 +726,11 @@ static object ToolsSettingsDto(IToolsAccessSettings access)
         desktopBackend = access.DesktopBackend,
         browserBackend = access.BrowserBackend,
         mt4Backend = access.Mt4Backend,
+        desktopTargetWindowTitle = access.DesktopTargetWindowTitle,
         cuaDriverAvailable = cuaPath is not null,
         cuaDriverPath = cuaPath,
         scope = "session",
-        note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put)."
+        note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put). Non-empty DesktopTargetWindowTitle hard-scopes desktop_* to that VM/window title substring."
     };
 }
 

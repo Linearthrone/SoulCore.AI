@@ -34,6 +34,21 @@ public sealed class InferenceOptions
 
     public string Model { get; set; } = "gemma4:latest";
 
+    /// <summary>Optional dedicated tool-loop model when Unreal is idle. Empty → <see cref="Model"/>.</summary>
+    public string ToolModel { get; set; } = "";
+
+    /// <summary>Smaller tool-loop model when Unreal is live (VRAM). Empty → <see cref="ToolModel"/> / chat.</summary>
+    public string ToolModelUeLive { get; set; } = "";
+
+    /// <summary>Optional embedding model override when Unreal is live.</summary>
+    public string EmbeddingModelUeLive { get; set; } = "";
+
+    /// <summary>Tool-loop <c>num_ctx</c> when Unreal is live; 0 → use <see cref="NumCtx"/>.</summary>
+    public int ToolNumCtxUeLive { get; set; }
+
+    /// <summary>When true, skip embedding calls while Unreal is live.</summary>
+    public bool SkipEmbeddingsWhenUeLive { get; set; }
+
     public int TimeoutSeconds { get; set; } = 120;
 
     /// <summary>
