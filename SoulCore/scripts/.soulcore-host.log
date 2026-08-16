@@ -16,9 +16,121 @@ info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Production
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[101]
+      Received HTTP response headers after 4.8225ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[101]
+      End processing HTTP request after 11.7459ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.Default.ClientHandler[101]
+      Received HTTP response headers after 1.6247ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[101]
+      End processing HTTP request after 1.6741ms - 200
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 8af29a7e-4e8f-4bcb-b992-c4a90c4a1eb6 accepted
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop start: model=hf.co/mradermacher/Qwen3.5-4B-NSFW-Literotica-GGUF:Q4_K_M ueLive=True messages=2 tools=52 forceTool=(none) maxIter=8 numCtx=4096
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 28456.5342ms - 400
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 28456.6367ms - 400
+warn: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama /api/chat failed at iteration 0: 400 {"error":"{\"error\":{\"code\":400,\"message\":\"request (7631 tokens) exceeds the available context size (4096 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":7631,\"n_ctx\":4096}}"}
+warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Chat model path failed; stub=False useToolLoop=True
+      System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+         at SoulCore.Host.Ws.ChatWebSocketHandler.CompleteChatWithToolsAsync(String text, String contextPreamble, String historySessionId, HashSet`1 dispatchedToolNames, List`1 toolTrace, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 1427
+         at SoulCore.Host.Ws.ChatWebSocketHandler.HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, Guid connectionSessionId, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 406
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop episodic reflection written: [Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec...
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop journal notes written (feeling + category=recall)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama agent loop start: model=hf.co/mradermacher/Qwen3.5-4B-NSFW-Literotica-GGUF:Q4_K_M ueLive=True messages=2 tools=52 forceTool=(none) maxIter=8 numCtx=4096
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[100]
+      Start processing HTTP request POST http://127.0.0.1:11434/api/chat
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[100]
+      Sending HTTP request POST http://127.0.0.1:11434/api/chat
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: System.Net.Http.HttpClient.OllamaInferenceClient.ClientHandler[101]
+      Received HTTP response headers after 65533.2413ms - 400
+info: System.Net.Http.HttpClient.OllamaInferenceClient.LogicalHandler[101]
+      End processing HTTP request after 65533.3543ms - 400
+warn: SoulCore.Inference.OllamaInferenceClient[0]
+      Ollama /api/chat failed at iteration 0: 400 {"error":"{\"error\":{\"code\":400,\"message\":\"request (7618 tokens) exceeds the available context size (4096 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":7618,\"n_ctx\":4096}}"}
+warn: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      Chat model path failed; stub=False useToolLoop=True
+      System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+         at SoulCore.Host.Ws.ChatWebSocketHandler.CompleteChatWithToolsAsync(String text, String contextPreamble, String historySessionId, HashSet`1 dispatchedToolNames, List`1 toolTrace, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 1427
+         at SoulCore.Host.Ws.ChatWebSocketHandler.HandleChatSendAsync(WebSocket socket, SoulCoreFrame frame, Guid connectionSessionId, CancellationToken cancellationToken) in C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\Ws\ChatWebSocketHandler.cs:line 406
+info: SoulCore.Host.Loop.SoulLoopScaffold[0]
+      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
+      WS session 8af29a7e-4e8f-4bcb-b992-c4a90c4a1eb6 closed
