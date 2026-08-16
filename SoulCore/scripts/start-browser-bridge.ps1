@@ -47,26 +47,36 @@ if ($ForceRestart -and (Test-Path -LiteralPath $PidFile)) {
 }
 
 function Resolve-Python {
-    foreach ($c in @(
-        "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\python.exe",
-        "$env:LOCALAPPDATA\hermes\hermes-agent\.venv\Scripts\python.exe",
+    # Prefer a normal Python install — never the old Hermes agent venv.
+    $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
+        "$env:LOCALAPPDATA\Python\pythoncore-3.12-64\python.exe",
+        "$env:LOCALAPPDATA\Python\pythoncore-3.11-64\python.exe",
         "V:\Python311\python.exe",
-        "$env:LOCALAPPDATA\Python\pythoncore-3.12-64\python.exe"
-    )) {
+        "C:\Python312\python.exe",
+        "C:\Python311\python.exe"
+    )
+    foreach ($c in $candidates) {
         if ($c -and (Test-Path -LiteralPath $c)) { return $c }
     }
     $cmd = Get-Command python -ErrorAction SilentlyContinue
-    if ($cmd -and $cmd.Source) { return $cmd.Source }
+    if ($cmd -and $cmd.Source -and ($cmd.Source -notmatch '[\\/]hermes[\\/]')) {
+        return $cmd.Source
+    }
     try {
         $py = & py -3 -c "import sys; print(sys.executable)" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $py) { return $py.Trim() }
+        if ($LASTEXITCODE -eq 0 -and $py) {
+            $path = $py.Trim()
+            if ($path -notmatch '[\\/]hermes[\\/]') { return $path }
+        }
     } catch { }
     return $null
 }
 
 $python = Resolve-Python
 if (-not $python) {
-    throw "python.exe not found - install Python 3.11+ or ensure it is on PATH"
+    throw "python.exe not found - install Python 3.11+ or ensure it is on PATH (not the Hermes venv)"
 }
 Write-Host "[start-browser-bridge] python: $python"
 
@@ -77,17 +87,23 @@ try {
     Write-Warning "pip install bridge deps failed - if /health fails, run: $python -m pip install -r $ReqFile"
 }
 
-if (Test-Path -LiteralPath $LogFile) {
-    Clear-Content -LiteralPath $LogFile -ErrorAction SilentlyContinue
+$LogOut = Join-Path $ScriptsDir ".browser-bridge.out.log"
+$LogErr = Join-Path $ScriptsDir ".browser-bridge.err.log"
+foreach ($f in @($LogFile, $LogOut, $LogErr)) {
+    if (Test-Path -LiteralPath $f) {
+        Clear-Content -LiteralPath $f -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "[start-browser-bridge] Starting $BridgePy on :$Port ..."
+# Windows Start-Process forbids RedirectStandardOutput and RedirectStandardError
+# pointing at the same path — use separate files (same pattern as start-soulcore).
 $proc = Start-Process -FilePath $python `
     -ArgumentList @($BridgePy) `
     -WorkingDirectory (Split-Path -Parent $BridgePy) `
     -WindowStyle Hidden `
-    -RedirectStandardOutput $LogFile `
-    -RedirectStandardError $LogFile `
+    -RedirectStandardOutput $LogOut `
+    -RedirectStandardError $LogErr `
     -PassThru
 
 $proc.Id | Set-Content -LiteralPath $PidFile -Encoding ascii
@@ -96,7 +112,8 @@ $ready = $false
 for ($i = 0; $i -lt 40; $i++) {
     Start-Sleep -Milliseconds 250
     if ($proc.HasExited) {
-        throw "browser bridge exited early (code $($proc.ExitCode)). See $LogFile"
+        $err = if (Test-Path -LiteralPath $LogErr) { Get-Content -LiteralPath $LogErr -Raw } else { "" }
+        throw "browser bridge exited early (code $($proc.ExitCode)). See $LogErr / $LogOut`n$err"
     }
     if (Test-BridgeHealthy) {
         $ready = $true
@@ -108,5 +125,5 @@ if ($ready) {
     Write-Host "[start-browser-bridge] Healthy: $HealthUrl"
     Write-Host "[start-browser-bridge] Extension: chrome://extensions -> Load unpacked -> $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
 } else {
-    Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Log: $LogFile"
+    Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Logs: $LogOut $LogErr"
 }

@@ -101,7 +101,16 @@ function Invoke-ScriptWithTimeout {
         } catch { }
         return @{ TimedOut = $true; ExitCode = -1 }
     }
-    return @{ TimedOut = $false; ExitCode = $proc.ExitCode }
+    # Timed WaitForExit can leave ExitCode $null until a final WaitForExit().
+    $proc.Refresh()
+    if (-not $proc.HasExited) {
+        $null = $proc.WaitForExit(5000)
+    } else {
+        $null = $proc.WaitForExit()
+    }
+    $code = $proc.ExitCode
+    if ($null -eq $code) { $code = 0 }
+    return @{ TimedOut = $false; ExitCode = [int]$code }
 }
 
 function Start-LocalSoulCore {
@@ -121,9 +130,18 @@ function Start-LocalSoulCore {
         -WorkingDirectory $RepoRoot `
         -TimeoutSec $HostStartTimeoutSec
     if ($result.TimedOut) {
+        # Host may still have come up before the wrapper timed out.
+        if (Test-LocalVictoriaHealth -Health (Get-HealthObject -LocalPort $LocalPort)) {
+            Write-Warning "start-soulcore.ps1 timed out, but local Victoria is healthy on :$LocalPort - continuing"
+            return
+        }
         throw "start-soulcore.ps1 timed out after ${HostStartTimeoutSec}s on port $LocalPort"
     }
     if ($result.ExitCode -ne 0) {
+        if (Test-LocalVictoriaHealth -Health (Get-HealthObject -LocalPort $LocalPort)) {
+            Write-Warning "start-soulcore.ps1 exit $($result.ExitCode), but local Victoria is healthy on :$LocalPort - continuing"
+            return
+        }
         throw "start-soulcore.ps1 failed on port $LocalPort (exit $($result.ExitCode))"
     }
 }
