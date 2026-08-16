@@ -111,6 +111,27 @@ Host always registers `NullHermesClient`, forces `Hermes:Enabled=false` / `Prefe
 and remaps `BrowserBackend=hermes` → `none`. Open Chrome/websites with `desktop_open_app`
 (chrome + URL). `ALLSTART.ps1` skips the gateway unless `-WithHermes`.
 
+### Ollama Cloud (BED-187) — chat/tools off-box, VRAM free
+
+Point chat at Ollama Cloud so local GPUs stay free for Unreal / voice / desktop:
+
+```powershell
+# SoulCore/.env (never commit the key)
+SOULCORE_OLLAMA_API_KEY=ollama_...
+SOULCORE_Inference__BaseUrl=https://ollama.com
+SOULCORE_Inference__Model=gpt-oss:120b
+SOULCORE_Inference__TimeoutSeconds=180
+# embeddings default to local :11434 when BaseUrl is cloud
+```
+
+Create the key at https://ollama.com/settings/keys. Pick a **tools-capable** cloud model from https://ollama.com/search?c=cloud.
+
+**Recommended (tools + fast):** `deepseek-v4-flash:cloud` — keep `ThinkEnabled=false` so it doesn’t burn the reply budget on hidden chain-of-thought.
+
+**Alternative:** `ollama signin` on the Host machine, keep `BaseUrl=http://127.0.0.1:11434`, set `Model` to a `*:cloud` tag — local Ollama proxies; no Bearer on Host.
+
+Tool **execution** (`desktop_*`, Unreal, etc.) always stays on your machines.
+
 ## Build
 
 ```powershell

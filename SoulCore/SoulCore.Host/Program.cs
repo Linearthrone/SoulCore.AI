@@ -202,11 +202,16 @@ builder.Services.AddSingleton<SpendMeter>(_ => new SpendMeter(
 
 if (inferenceOptions.Enabled)
 {
+    if (inferenceOptions.IsCloudEndpoint && string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey()))
+    {
+        Console.WriteLine(
+            "[SoulCore] BED-187: Inference BaseUrl is Ollama Cloud but SOULCORE_OLLAMA_API_KEY is missing — chat will 401 until set.");
+    }
+
     builder.Services.AddHttpClient<OllamaInferenceClient>((sp, client) =>
     {
         var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
-        client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+        ConfigureOllamaHttpClient(client, opts.BaseUrl, opts.TimeoutSeconds, InferenceOptions.IsOllamaCloudUrl(opts.BaseUrl) ? opts.ResolveApiKey() : null);
     });
     // BED-126: expose the typed client as IInferenceClient. The 3-arg ctor
     // (http + options + logger) is what HttpClientFactory builds; the
@@ -293,8 +298,10 @@ if (embeddingsOn)
     builder.Services.AddHttpClient<OllamaEmbeddingClient>((sp, client) =>
     {
         var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
-        client.BaseAddress = NormalizeBaseUri(opts.BaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, opts.TimeoutSeconds));
+        // BED-187: embeddings stay local by default when chat is on Ollama Cloud.
+        var embedBase = opts.ResolveEmbeddingBaseUrl();
+        var embedKey = InferenceOptions.IsOllamaCloudUrl(embedBase) ? opts.ResolveApiKey() : null;
+        ConfigureOllamaHttpClient(client, embedBase, opts.TimeoutSeconds, embedKey);
     });
     builder.Services.AddTransient<IEmbeddingClient>(sp => sp.GetRequiredService<OllamaEmbeddingClient>());
 }
@@ -605,11 +612,21 @@ app.MapGet("/health", async (
         inference = new
         {
             enabled = inferenceOptions.Enabled,
-            provider = inferenceOptions.Enabled ? "ollama" : "null",
+            provider = inferenceOptions.Enabled
+                ? (inferenceOptions.IsCloudEndpoint ? "ollama-cloud" : "ollama")
+                : "null",
             // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
             model = inferenceOptions.Model,
+            cloud = inferenceOptions.IsCloudEndpoint,
+            baseUrl = inferenceOptions.IsCloudEndpoint ? InferenceOptions.CloudBaseUrl : "loopback",
             embeddingsEnabled = embeddingsOn,
-            embeddingModel = inferenceOptions.EmbeddingModel
+            embeddingModel = inferenceOptions.EmbeddingModel,
+            embeddingBaseUrl = embeddingsOn
+                ? (InferenceOptions.IsOllamaCloudUrl(inferenceOptions.ResolveEmbeddingBaseUrl())
+                    ? InferenceOptions.CloudBaseUrl
+                    : "loopback")
+                : null,
+            apiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey())
         },
         hermes = new
         {
@@ -881,7 +898,8 @@ static int ReportSecretsPresence()
         SecretNames.A2eApiToken,
         SecretNames.HermesApiKey,
         SecretNames.HuggingFaceToken,
-        SecretNames.CompanionApiToken
+        SecretNames.CompanionApiToken,
+        SecretNames.OllamaApiKey
     };
 
     var envPath = DotEnvLoader.ResolveEnvFilePath();
@@ -910,6 +928,20 @@ static Uri NormalizeBaseUri(string baseUrl)
 {
     var trimmed = (baseUrl ?? string.Empty).Trim().TrimEnd('/') + "/";
     return new Uri(trimmed, UriKind.Absolute);
+}
+
+static void ConfigureOllamaHttpClient(
+    HttpClient client,
+    string baseUrl,
+    int timeoutSeconds,
+    string? apiKey)
+{
+    client.BaseAddress = NormalizeBaseUri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, timeoutSeconds));
+    client.DefaultRequestHeaders.Remove("Authorization");
+    if (!string.IsNullOrWhiteSpace(apiKey))
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey.Trim());
 }
 
 static string NormalizePath(string path)
