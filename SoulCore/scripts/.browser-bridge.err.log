@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\kurtw\Soul_Core\BrowserCaptureBridge\bridge_server.py", line 17, in <module>
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-ModuleNotFoundError: No module named 'fastapi'
