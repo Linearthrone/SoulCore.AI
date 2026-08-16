@@ -385,10 +385,17 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaV
 builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
-    var baseUrl = string.IsNullOrWhiteSpace(opts.BrowserBridgeUrl)
+    var configured = (opts.BrowserBridgeUrl ?? "").Trim();
+    var baseUrl = string.IsNullOrWhiteSpace(configured)
         ? NativeBrowserBridge.DefaultBaseUrl
-        : opts.BrowserBridgeUrl.Trim().TrimEnd('/');
-    client.BaseAddress = new Uri(baseUrl + "/");
+        : configured.TrimEnd('/');
+
+    if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || !uri.IsLoopback)
+        uri = new Uri(NativeBrowserBridge.DefaultBaseUrl + "/");
+    else
+        uri = new Uri(uri.AbsoluteUri.TrimEnd('/') + "/");
+
+    client.BaseAddress = uri;
     client.Timeout = TimeSpan.FromSeconds(45);
 });
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
