@@ -4,7 +4,7 @@
   Start House Victoria BrowserCaptureBridge on loopback :17891 (BED-182).
 .DESCRIPTION
   Runs repo-root BrowserCaptureBridge/bridge_server.py. Soft-fail friendly for ALLSTART.
-  Pair with unpacked BrowserCaptureExtension (chrome://extensions → Load unpacked).
+  Pair with unpacked BrowserCaptureExtension (chrome://extensions -> Load unpacked).
 #>
 [CmdletBinding()]
 param(
@@ -66,7 +66,7 @@ function Resolve-Python {
 
 $python = Resolve-Python
 if (-not $python) {
-    throw "python.exe not found — install Python 3.11+ or ensure it is on PATH"
+    throw "python.exe not found - install Python 3.11+ or ensure it is on PATH"
 }
 Write-Host "[start-browser-bridge] python: $python"
 
@@ -74,7 +74,7 @@ Write-Host "[start-browser-bridge] python: $python"
 try {
     & $python -m pip install -q -r $ReqFile 2>$null | Out-Null
 } catch {
-    Write-Warning "pip install bridge deps failed — if /health fails, run: $python -m pip install -r $ReqFile"
+    Write-Warning "pip install bridge deps failed - if /health fails, run: $python -m pip install -r $ReqFile"
 }
 
 if (Test-Path -LiteralPath $LogFile) {
@@ -106,7 +106,7 @@ for ($i = 0; $i -lt 40; $i++) {
 
 if ($ready) {
     Write-Host "[start-browser-bridge] Healthy: $HealthUrl"
-    Write-Host "[start-browser-bridge] Extension: chrome://extensions → Load unpacked → $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
+    Write-Host "[start-browser-bridge] Extension: chrome://extensions -> Load unpacked -> $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
 } else {
     Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Log: $LogFile"
 }
