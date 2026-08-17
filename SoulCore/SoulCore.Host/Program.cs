@@ -473,6 +473,7 @@ builder.Services.AddSingleton<ITool, RunBacktestTool>();
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
 builder.Services.AddSingleton<ICompanionOutboundMessenger, CompanionOutboundMessenger>();
+builder.Services.AddSingleton<CompanionCallSessionStore>();
 builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
 builder.Services.AddSingleton<ComfyUiClient>();
 builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
@@ -485,10 +486,14 @@ if (unrealOptions.Enabled)
 {
     builder.Services.AddSingleton<UnrealVerbClientStub>();
     builder.Services.AddSingleton<IUnrealVerbClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealCallCameraClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
 }
 else
 {
     builder.Services.AddSingleton<IUnrealVerbClient, NullUnrealVerbClient>();
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient, NullUnrealCaptureClient>();
+    builder.Services.AddSingleton<IUnrealCallCameraClient, NullUnrealCaptureClient>();
 }
 
 // Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).

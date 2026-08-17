@@ -135,8 +135,16 @@ role: UE LiveCoding Agent
 
 ## 8. Active work now
 
-**TASK-191 is assigned — start immediately.**
+**Two P0 tickets — run in parallel:**
 
-Ticket: `docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md`  
-Branch: `cursor/rex01-kayleigh-pie-possess-169c`  
-Goal: PIE possesses **`BP_KayleighCharacter` (Kayleigh)**, never Victoria, never flying ghost.
+| Ticket | Goal |
+| --- | --- |
+| **TASK-191** | PIE possesses **`BP_KayleighCharacter`** (Kayleigh), never Victoria |
+| **TASK-192** | Victoria **waist-up phone-call** SceneCapture + `call_capture` → `call_frame` |
+
+TASK-192 ticket: `docs/agents/tasks/TASK-20260817-192-PM01-to-REX01.md`  
+Branch: `cursor/fed-192-videocall-waistup-169c`  
+Helper: `tools/ue_nav/setup_victoria_call_camera.py`  
+Mobile Call tab already polls Host; your camera unblocks live frames.
+
+Do **not** attach the call camera to the player Kayleigh pawn.

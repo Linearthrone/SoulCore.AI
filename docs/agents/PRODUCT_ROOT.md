@@ -59,7 +59,8 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 
 ## In flight (PM)
 
-- **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **`BP_KayleighCharacter` (Kayleigh)**, never Victoria, never flying DefaultPawn. BOB/BOB-01 **retired**. Seat: `Agents/REX-01.md`. Run: `tools/ue_nav/run_rex_pie_possess_kayleigh.ps1`. Ticket: `docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md`. Branch: `cursor/rex01-kayleigh-pie-possess-169c`.
+- **2026-08-17 TASK-192 → REX-01 + FED-192:** Mobile **Call** tab + Host `/api/companion/v1/call/*` (frame poll MVP). REX builds Victoria waist-up `call_capture` camera. WebRTC duplex deferred. Branch `cursor/fed-192-videocall-waistup-169c`.
+- **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **`BP_KayleighCharacter` (Kayleigh)**, never Victoria, never flying DefaultPawn. BOB/BOB-01 **retired**. Seat: `Agents/REX-01.md`. Run: `tools/ue_nav/run_rex_pie_possess_kayleigh.ps1`. Ticket: `docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md`.
 - **2026-08-05 TASK-180 → BOB (SUPERSEDED):** retired after wrong Victoria possess attempts — see TASK-191 / REX-01.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
 - **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
