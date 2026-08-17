@@ -43,3 +43,11 @@ Desktop.ini
 Logs/
 tmpcode/
 .codebuddy
+
+# Host / bridge launcher runtime (ALLSTART)
+SoulCore/scripts/.soulcore-host.pid
+SoulCore/scripts/.soulcore-host.log
+SoulCore/scripts/.soulcore-host.log.*
+SoulCore/scripts/.browser-bridge.pid
+SoulCore/scripts/.browser-bridge*.log
+SoulCore/scripts/.browser-bridge.pip.log

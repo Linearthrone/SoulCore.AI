@@ -80,11 +80,24 @@ if (-not $python) {
 }
 Write-Host "[start-browser-bridge] python: $python"
 
-# Best-effort deps (idempotent).
-try {
-    & $python -m pip install -q -r $ReqFile 2>$null | Out-Null
-} catch {
-    Write-Warning "pip install bridge deps failed - if /health fails, run: $python -m pip install -r $ReqFile"
+# Install bridge deps; do not swallow pip output (BED-189: silent fail left fastapi missing).
+Write-Host "[start-browser-bridge] ensuring pip deps from $ReqFile ..."
+$pipLog = Join-Path $ScriptsDir ".browser-bridge.pip.log"
+& $python -m pip install -r $ReqFile *>&1 | Tee-Object -FilePath $pipLog | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "pip install bridge deps failed (exit $LASTEXITCODE). See $pipLog"
+    Write-Warning "Manual: `"$python`" -m pip install -r `"$ReqFile`""
+}
+
+# Verify import before Start-Process so ALLSTART gets a clear error, not a dead PID.
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& $python -c "import fastapi, uvicorn" 2>$null | Out-Null
+$importOk = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = $prevEap
+if (-not $importOk) {
+    Write-Warning "Python missing fastapi/uvicorn after pip — bridge will not start. See $pipLog"
+    exit 1
 }
 
 $LogOut = Join-Path $ScriptsDir ".browser-bridge.out.log"
@@ -113,7 +126,9 @@ for ($i = 0; $i -lt 40; $i++) {
     Start-Sleep -Milliseconds 250
     if ($proc.HasExited) {
         $err = if (Test-Path -LiteralPath $LogErr) { Get-Content -LiteralPath $LogErr -Raw } else { "" }
-        throw "browser bridge exited early (code $($proc.ExitCode)). See $LogErr / $LogOut`n$err"
+        Write-Warning "browser bridge exited early (code $($proc.ExitCode)). See $LogErr / $LogOut"
+        if ($err) { Write-Warning $err.Trim() }
+        exit 1
     }
     if (Test-BridgeHealthy) {
         $ready = $true
@@ -124,6 +139,8 @@ for ($i = 0; $i -lt 40; $i++) {
 if ($ready) {
     Write-Host "[start-browser-bridge] Healthy: $HealthUrl"
     Write-Host "[start-browser-bridge] Extension: chrome://extensions -> Load unpacked -> $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
-} else {
-    Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Logs: $LogOut $LogErr"
+    exit 0
 }
+
+Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Logs: $LogOut $LogErr"
+exit 0
