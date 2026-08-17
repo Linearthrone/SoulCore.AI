@@ -257,11 +257,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
 
             if (pureOpen)
             {
+                var toolContent = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
                 if (openOk)
                 {
                     var reply = DesktopToolIntent.BuildOpenedReply(
                         string.IsNullOrEmpty(openApp) ? "chrome" : openApp,
-                        openArgs);
+                        openArgs,
+                        toolContent);
                     _logger.LogInformation(
                         "Ollama ForceTool desktop_open_app early-exit (pure open): {Reply}",
                         reply);
@@ -269,10 +271,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 }
 
                 // Launch failed — surface the tool error without more LLM rounds.
-                var err = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
-                return string.IsNullOrWhiteSpace(err)
+                return string.IsNullOrWhiteSpace(toolContent)
                     ? "I couldn't open that app."
-                    : err!;
+                    : toolContent!;
             }
 
             // Non-pure open (e.g. "open Chrome and click…") — continue loop with

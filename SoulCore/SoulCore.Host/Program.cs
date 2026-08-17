@@ -14,6 +14,7 @@ using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Inference;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
@@ -366,7 +367,13 @@ builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
     var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
     if (string.IsNullOrWhiteSpace(scopeTitle))
         return inner;
-    return new ScopedDesktopControlBackend(inner, scopeTitle);
+    // Guest Additions guestcontrol — Ubuntu coords; VirtualBox window can stay minimized.
+    // Requires SOULCORE_VBOX_GUEST_PASS in SoulCore/.env (never commit).
+    return new ScopedDesktopControlBackend(
+        inner,
+        scopeTitle,
+        new VirtualBoxGuestAppLauncher(scopeTitle),
+        new NativeDesktopControlBackend());
 });
 builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
     sp.GetRequiredService<IComputerControlGate>(),
@@ -495,6 +502,10 @@ else
     builder.Services.AddSingleton<IUnrealEyeCaptureClient, NullUnrealCaptureClient>();
     builder.Services.AddSingleton<IUnrealCallCameraClient, NullUnrealCaptureClient>();
 }
+
+// OllamaInferenceClient's DI ctor requires IUeLiveSignal. Without this, every
+// chat/WS turn throws and Victoria appears "dead" while /health still 200s.
+builder.Services.AddSingleton<IUeLiveSignal, UnrealUeLiveSignal>();
 
 // Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).
 builder.Services.AddHttpClient("voice-stt", (sp, client) =>
@@ -939,7 +950,8 @@ static int ReportSecretsPresence()
         SecretNames.HermesApiKey,
         SecretNames.HuggingFaceToken,
         SecretNames.CompanionApiToken,
-        SecretNames.OllamaApiKey
+        SecretNames.OllamaApiKey,
+        SecretNames.VboxGuestPass
     };
 
     var envPath = DotEnvLoader.ResolveEnvFilePath();

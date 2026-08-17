@@ -5,9 +5,11 @@ using System.Text.RegularExpressions;
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
-/// Hard-scopes desktop ops to windows whose title contains a configured substring
-/// (e.g. <c>victoria-sandbox</c> for Oracle VirtualBox). Pass-through when the
-/// substring is empty.
+/// Hard-scopes desktop ops to a VirtualBox Ubuntu guest (title substring e.g.
+/// <c>victoria-sandbox</c>). When an <see cref="IVmGuestDesktop"/> is wired,
+/// clicks/keys/screenshots use <b>guest framebuffer coordinates</b> via Guest
+/// Additions — the host VirtualBox window does not need to be visible.
+/// Pass-through when the substring is empty.
 /// </summary>
 public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
 {
@@ -15,7 +17,7 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         @"^\[(\d+)\]\s+(.*?)\s+bounds=\((-?\d+),(-?\d+)\s+(\d+)x(\d+)\)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private static readonly HashSet<string> BlockedKeys = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> BlockedHostKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "Alt+Tab", "Alt+Escape", "Alt+F4",
         "LWin", "RWin", "Win", "Meta", "Super",
@@ -25,23 +27,42 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
 
     private readonly IDesktopControlBackend _inner;
     private readonly string _titleContains;
+    private readonly IVmGuestAppLauncher? _guestApps;
+    private readonly IVmGuestDesktop? _guestDesktop;
+    private readonly IDesktopControlBackend? _win32Windows;
 
-    public ScopedDesktopControlBackend(IDesktopControlBackend inner, string titleContains)
+    public ScopedDesktopControlBackend(
+        IDesktopControlBackend inner,
+        string titleContains,
+        IVmGuestAppLauncher? guestApps = null,
+        IDesktopControlBackend? win32Windows = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _titleContains = (titleContains ?? string.Empty).Trim();
+        _guestApps = guestApps;
+        _guestDesktop = guestApps as IVmGuestDesktop;
+        _win32Windows = win32Windows;
     }
 
     public bool IsActive => _titleContains.Length > 0;
 
     public Task<DesktopOpResult> ScreenshotAsync(int monitor, CancellationToken ct = default)
-        => IsActive ? ScreenshotScopedAsync(monitor, ct) : _inner.ScreenshotAsync(monitor, ct);
+    {
+        if (!IsActive)
+            return _inner.ScreenshotAsync(monitor, ct);
+        if (_guestDesktop is not null)
+            return _guestDesktop.ScreenshotAsync(ct);
+        return ScreenshotScopedAsync(monitor, ct);
+    }
 
     public async Task<DesktopOpResult> ClickAsync(
         int x, int y, string button, int clicks = 1, CancellationToken ct = default)
     {
         if (!IsActive)
             return await _inner.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
+
+        if (_guestDesktop is not null)
+            return await _guestDesktop.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
 
         var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
         if (win is null)
@@ -59,6 +80,9 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         if (!IsActive)
             return await _inner.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
 
+        if (_guestDesktop is not null)
+            return await _guestDesktop.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
+
         var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
         if (win is null)
             return MissingTarget();
@@ -74,6 +98,9 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         if (!IsActive)
             return await _inner.TypeAsync(text, ct).ConfigureAwait(false);
 
+        if (_guestDesktop is not null)
+            return await _guestDesktop.TypeAsync(text, ct).ConfigureAwait(false);
+
         var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
         if (win is null)
             return MissingTarget();
@@ -88,7 +115,22 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.KeyAsync(key, ct).ConfigureAwait(false);
 
         var normalized = (key ?? string.Empty).Trim();
-        if (IsBlockedKey(normalized))
+
+        if (_guestDesktop is not null)
+        {
+            // Guest keys stay inside Ubuntu — Alt+Tab / Super are valid there.
+            if (IsHostOnlyDangerKey(normalized))
+            {
+                return new DesktopOpResult(
+                    false,
+                    $"desktop scope '{_titleContains}': key '{normalized}' refused even in guest.",
+                    null);
+            }
+
+            return await _guestDesktop.KeyAsync(normalized, ct).ConfigureAwait(false);
+        }
+
+        if (IsBlockedHostKey(normalized))
         {
             return new DesktopOpResult(
                 false,
@@ -111,6 +153,9 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         if (!IsActive)
             return await _inner.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
 
+        if (_guestDesktop is not null)
+            return await _guestDesktop.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
+
         var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
         if (win is null)
             return MissingTarget();
@@ -121,18 +166,24 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         return await _inner.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
     }
 
-    public Task<DesktopOpResult> OpenAppAsync(
+    public async Task<DesktopOpResult> OpenAppAsync(
         string app, string? args = null, CancellationToken ct = default)
     {
         if (!IsActive)
-            return _inner.OpenAppAsync(app, args, ct);
+            return await _inner.OpenAppAsync(app, args, ct).ConfigureAwait(false);
 
-        return Task.FromResult(new DesktopOpResult(
-            false,
-            $"desktop scope '{_titleContains}': desktop_open_app on the Windows host is blocked. " +
-            "Drive apps inside the VM (focus that window, then click/type/key). " +
-            "Do not launch Chrome/Notepad/etc. on Kurt's real desktop.",
-            null));
+        if (_guestApps is null)
+        {
+            return new DesktopOpResult(
+                false,
+                $"desktop scope '{_titleContains}': desktop_open_app on the Windows host is BLOCKED. " +
+                "Drive apps inside the VM via Guest Additions (set SOULCORE_VBOX_GUEST_PASS). " +
+                "Do not launch Chrome/Notepad/etc. on Kurt's real desktop.",
+                null);
+        }
+
+        // guestcontrol does not need the VirtualBox window focused or visible.
+        return await _guestApps.OpenAppAsync(app, args, ct).ConfigureAwait(false);
     }
 
     public async Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)
@@ -140,13 +191,13 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         if (!IsActive)
             return await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
 
-        var listed = await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
-        if (!listed.Success)
-            return listed;
+        if (_guestDesktop is not null)
+            return await _guestDesktop.ListWindowsAsync(ct).ConfigureAwait(false);
 
-        var matches = ParseWindows(listed.Content)
-            .Where(w => w.Title.Contains(_titleContains, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var listed = await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
+        var matches = MatchScope(listed).ToList();
+        if (matches.Count == 0)
+            matches = MatchScope(await ListWin32Async(ct).ConfigureAwait(false)).ToList();
 
         if (matches.Count == 0)
         {
@@ -189,6 +240,9 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         if (!IsActive)
             return await _inner.FocusWindowAsync(title, ct).ConfigureAwait(false);
 
+        if (_guestDesktop is not null)
+            return await _guestDesktop.FocusWindowAsync(title, ct).ConfigureAwait(false);
+
         var ask = (title ?? string.Empty).Trim();
         if (ask.Length > 0
             && !ask.Contains(_titleContains, StringComparison.OrdinalIgnoreCase)
@@ -222,19 +276,32 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             $"DESKTOP SCOPE active: only window '{win.Title}' " +
             $"bounds=({win.X},{win.Y} {win.Width}x{win.Height}). " +
             "Clicks/drags/scrolls outside those bounds are refused. " +
-            "desktop_open_app on the host is blocked — work inside the VM.\n"
+            "Prefer Guest Additions (SOULCORE_VBOX_GUEST_PASS) so the VM window can stay minimized.\n"
             + shot.Content;
         return new DesktopOpResult(true, note, shot.Data);
     }
 
     private async Task<WindowHit?> ResolveTargetAsync(CancellationToken ct)
     {
-        var listed = await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
-        if (!listed.Success)
-            return null;
+        var hit = MatchScope(await _inner.ListWindowsAsync(ct).ConfigureAwait(false)).FirstOrDefault();
+        if (hit is not null)
+            return hit;
+        return MatchScope(await ListWin32Async(ct).ConfigureAwait(false)).FirstOrDefault();
+    }
 
+    private async Task<DesktopOpResult> ListWin32Async(CancellationToken ct)
+    {
+        if (_win32Windows is null)
+            return new DesktopOpResult(true, "no win32 window list", Array.Empty<object>());
+        return await _win32Windows.ListWindowsAsync(ct).ConfigureAwait(false);
+    }
+
+    private IEnumerable<WindowHit> MatchScope(DesktopOpResult listed)
+    {
+        if (!listed.Success)
+            return Array.Empty<WindowHit>();
         return ParseWindows(listed.Content)
-            .FirstOrDefault(w => w.Title.Contains(_titleContains, StringComparison.OrdinalIgnoreCase));
+            .Where(w => w.Title.Contains(_titleContains, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task EnsureFocusedAsync(WindowHit win, CancellationToken ct)
@@ -247,13 +314,23 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         {
             // Best-effort; click path may still work via background delivery.
         }
+
+        if (_win32Windows is null)
+            return;
+        try
+        {
+            await _win32Windows.FocusWindowAsync(win.Title, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Native SetForegroundWindow is best-effort.
+        }
     }
 
     private DesktopOpResult MissingTarget() => new(
         false,
         $"desktop scope '{_titleContains}': target window not found. " +
-        "Start/show the VM so its title contains that substring " +
-        "(e.g. 'victoria-sandbox [Running] - Oracle VirtualBox').",
+        "Start the VM (window can stay minimized if Guest Additions + SOULCORE_VBOX_GUEST_PASS are set).",
         null);
 
     private static DesktopOpResult Outside(WindowHit win, int x, int y, string op) => new(
@@ -265,15 +342,23 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
     private static bool ContainsPoint(WindowHit win, int x, int y) =>
         x >= win.X && y >= win.Y && x < win.X + win.Width && y < win.Y + win.Height;
 
-    private static bool IsBlockedKey(string key)
+    private static bool IsBlockedHostKey(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
             return false;
-        if (BlockedKeys.Contains(key))
+        if (BlockedHostKeys.Contains(key))
             return true;
-        // Normalize "alt + tab" style
         var compact = key.Replace(" ", "", StringComparison.Ordinal);
-        return BlockedKeys.Contains(compact);
+        return BlockedHostKeys.Contains(compact);
+    }
+
+    private static bool IsHostOnlyDangerKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+        var compact = key.Replace(" ", "", StringComparison.Ordinal);
+        return compact.Equals("Ctrl+Alt+Delete", StringComparison.OrdinalIgnoreCase)
+               || compact.Equals("Ctrl+Shift+Esc", StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<WindowHit> ParseWindows(string? content)
@@ -299,5 +384,5 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
         return list;
     }
 
-        public sealed record WindowHit(string Title, int X, int Y, int Width, int Height);
+    public sealed record WindowHit(string Title, int X, int Y, int Width, int Height);
 }

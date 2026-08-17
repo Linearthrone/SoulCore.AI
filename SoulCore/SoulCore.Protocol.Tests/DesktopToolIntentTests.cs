@@ -62,8 +62,8 @@ public class DesktopToolIntentTests
     public void TryMatch_OpenPlusScreenshot_StillForcesOpenApp(string text)
     {
         // ForceTool=open_app; IsPureOpenPrompt=false so the tool-loop continues
-        // for the screenshot follow-on (BED-180). Under VM scope the Host remaps
-        // ForceTool to desktop_screenshot (BED-190).
+        // for the screenshot follow-on (BED-180). Under VM scope the backend
+        // injects into the guest instead of Process.Start on Windows.
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));
         Assert.Equal("desktop_open_app", match.ToolName);
         Assert.False(DesktopToolIntent.IsPureOpenPrompt(text));
@@ -110,7 +110,7 @@ public class DesktopToolIntentTests
         Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
         Assert.Contains("desktop_screenshot", once, StringComparison.Ordinal);
         Assert.Contains("BLOCKED", once, StringComparison.Ordinal);
-        Assert.Contains("do NOT call it", once, StringComparison.Ordinal);
+        Assert.Contains("never Process.Start", once, StringComparison.Ordinal);
         // Full playbook stays; scoped text is appended after it.
         Assert.True(
             once.IndexOf(ComputerUseGuidance.Block, StringComparison.Ordinal)
@@ -171,5 +171,22 @@ public class DesktopToolIntentTests
         Assert.Equal(
             "Opened Chrome to https://example.com.",
             DesktopToolIntent.BuildOpenedReply("chrome", "https://example.com"));
+    }
+
+    [Fact]
+    public void BuildOpenedReply_GuestControl_SaysFirefoxInVm()
+    {
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                null,
+                "Opened firefox in the Ubuntu VM via guestcontrol (host VirtualBox window can stay minimized)."));
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM to https://example.com.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                "https://example.com",
+                "Opened firefox in the Ubuntu VM via guestcontrol"));
     }
 }
