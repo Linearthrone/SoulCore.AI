@@ -135,16 +135,25 @@ role: UE LiveCoding Agent
 
 ## 8. Active work now
 
-**Two P0 tickets — run in parallel:**
+**GO order (serial). Do not wait for more direction.**
 
-| Ticket | Goal |
-| --- | --- |
-| **TASK-191** | PIE possesses **`BP_KayleighCharacter`** (Kayleigh), never Victoria |
-| **TASK-192** | Victoria **waist-up phone-call** SceneCapture + `call_capture` → `call_frame` |
+Handoff: `docs/agents/log/TASK-20260817-GO-PM01-to-REX01.md`
 
-TASK-192 ticket: `docs/agents/tasks/TASK-20260817-192-PM01-to-REX01.md`  
-Branch: `cursor/fed-192-videocall-waistup-169c`  
-Helper: `tools/ue_nav/setup_victoria_call_camera.py`  
-Mobile Call tab already polls Host; your camera unblocks live frames.
+| Order | Ticket | Goal | Branch |
+| --- | --- | --- | --- |
+| **1 — START NOW** | **TASK-191** | PIE = **`BP_KayleighCharacter`** (not ghost, not Victoria) | `cursor/fed-192-videocall-waistup-169c` |
+| **2 — after 191 Pass** | **TASK-192** | Victoria waist-up **`call_capture`** → `call_frame` | same branch |
+
+### TASK-191 first command
+
+```powershell
+cd C:\Users\kurtw\Soul_Core
+git fetch origin
+git checkout cursor/fed-192-videocall-waistup-169c
+git pull
+.\tools\ue_nav\run_rex_pie_possess_kayleigh.ps1
+```
+
+Then Play → report possessed class. Only then start TASK-192.
 
 Do **not** attach the call camera to the player Kayleigh pawn.
