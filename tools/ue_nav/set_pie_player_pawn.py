@@ -1,24 +1,13 @@
 """
-BED-184 — PIE starts as Kurt's grounded avatar (BP_MHC_Kayleigh), not the flying ghost.
+BED-184 — legacy helper. Prefer REX-01 pipeline (TASK-191):
 
-Run inside UE 5.8 Editor (Output Log → Python, or File → Execute Python Script)
-with /Game/Home open.
+  tools/ue_nav/run_rex_pie_possess_kayleigh.ps1
+  → kayleigh_player/rex_pie_possess_kayleigh.py
+  → BP_KayleighCharacter + GM DefaultPawnClass (never Victoria)
 
-What it does:
-1) Finds BP_MHC_Kayleigh in the level (class / label / tag) — Kurt's body on the floor.
-2) Ensures a PlayerStart near that body.
-3) Creates/updates /Game/Blueprints/BP_HouseGameMode with DefaultPawnClass =
-   Kayleigh's class when it is a Pawn/Character (so PIE possesses her).
-4) Sets the current world's GameMode Override to BP_HouseGameMode.
-
-It does NOT possess Victoria (VictoriaAvatar / BP_VictoriaCharacter) — she stays AI-controlled.
-
-If BP_MHC_Kayleigh is still a bare MetaHuman Actor (not a Pawn/Character), PIE cannot
-possess it directly — the script will say so and point at World Settings / a Character wrapper.
-
-Manual fallback:
-  World Settings → GameMode Override → Default Pawn Class = BP_MHC_Kayleigh
-  (must be a Pawn/Character subclass)
+This script still tries to point DefaultPawn at a Kayleigh Pawn/Character in-level.
+If BP_MHC_Kayleigh is a bare MetaHuman Actor, it cannot possess it — use the REX
+Character wrapper instead. It never selects Victoria as the player pawn.
 """
 from __future__ import annotations
 
@@ -270,10 +259,28 @@ def main():
         pawn_class = try_load_kayleigh_class_asset()
         if pawn_class is None:
             log(
-                "FAIL: load the Kayleigh Character BP (or reparent BP_MHC_Kayleigh under "
-                "ACharacter), set World Settings → Default Pawn Class manually, then Play."
+                "FAIL: BP_MHC_Kayleigh is Actor-only. Do NOT reparent MHC and do NOT use Victoria. "
+                "Run REX-01 pipeline instead: tools/ue_nav/run_rex_pie_possess_kayleigh.ps1 "
+                "(creates /Game/Characters/BP_KayleighCharacter)."
             )
             return
+
+    # Hard refuse Victoria as player DefaultPawn (BOB failure mode).
+    pawn_name = str(pawn_class.get_name()) if pawn_class is not None else ""
+    if is_victoria(chosen) or any(
+        m.lower() in pawn_name.lower()
+        for m in ("Victoria", "VictoriaAvatar", "BP_VictoriaCharacter")
+    ):
+        log(
+            f"FAIL HARD: refused player pawn class '{pawn_name}'. "
+            "Victoria is AI-only. Use BP_KayleighCharacter via REX pipeline."
+        )
+        return
+    if "kayleigh" not in pawn_name.lower():
+        log(
+            f"FAIL HARD: player pawn class '{pawn_name}' does not contain Kayleigh. Aborting."
+        )
+        return
 
     gm = load_or_create_game_mode(pawn_class)
     set_world_game_mode(gm)

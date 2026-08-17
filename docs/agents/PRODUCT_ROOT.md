@@ -43,7 +43,7 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 8. **Soak #2** — authorize when you want a long soak with SoulLoop + embeddings + safety live
 9. **Wave 26/27 embodiment decisions** — TT-01 / PROP-EMBODIMENT-01:
    - **Locomotion source**: Game Animation Sample (motion matching) vs Manny/Quinn blendspace — **provisional default in BED-115 = Manny/Quinn**; confirm or override
-   - **Player embodiment**: grounded Kayleigh (`BP_MHC_Kayleigh`) vs free-fly `ADefaultPawn` — **TASK-180 → BOB** (on-machine live fix; PR #35 helpers)
+   - **Player embodiment**: grounded Kayleigh (`BP_KayleighCharacter` / `BP_MHC_Kayleigh`) vs free-fly `ADefaultPawn` — **TASK-191 → REX-01** (BOB retired; never possess Victoria as player)
 
    - **Avatar MetaHuman (user 2026-07-30):** use new MH **`VictoriaBody`**. → **TASK-171 Partial** (rewire scripts + bridge avatar_count fix; asset missing on main — sync from shadow then run Python rewire). Note: live Character mesh had drifted to Fab Performance Runner, not MHC_Victoria.
    - ~~**Scope**: Phase 1 only vs Phase 1+2~~ — **CLEARED 2026-07-26**: user **"yes move phase 2 asap"** → Wave 27 Phase 2 (gestures + verb correctness + head gaze) **in flight now**, parallel with Phase 1; do **not** wait for QA-118
@@ -59,7 +59,8 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 
 ## In flight (PM)
 
-- **2026-08-05 TASK-180 → BOB (UE LiveCoding Agent, ACTIVE):** PIE must possess **`BP_MHC_Kayleigh`**, not flying DefaultPawn. Pull `cursor/bed-184-eyes-view-and-pie-avatar-169c`, run `tools/ue_nav/run_set_pie_player_pawn.ps1` with UE `/Game/Home`, Live Code if Actor-only. Seat: `Agents/BOB.md`. Ticket: `docs/agents/tasks/TASK-20260805-180-PM01-to-BOB.md`.
+- **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **`BP_KayleighCharacter` (Kayleigh)**, never Victoria, never flying DefaultPawn. BOB/BOB-01 **retired**. Seat: `Agents/REX-01.md`. Run: `tools/ue_nav/run_rex_pie_possess_kayleigh.ps1`. Ticket: `docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md`. Branch: `cursor/rex01-kayleigh-pie-possess-169c`.
+- **2026-08-05 TASK-180 → BOB (SUPERSEDED):** retired after wrong Victoria possess attempts — see TASK-191 / REX-01.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
 - **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Merged #31.
