@@ -1373,10 +1373,23 @@ public sealed class ChatWebSocketHandler
         }
         else if (DesktopToolIntent.TryMatch(text, out var desktopIntent))
         {
-            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = desktopIntent.ToolName };
+            var forceTool = desktopIntent.ToolName;
+            // BED-190: host desktop_open_app is blocked under VM scope — kick off vision
+            // inside the guest instead of a guaranteed refuse.
+if (!string.IsNullOrWhiteSpace(_toolsAccess.DesktopTargetWindowTitle)
+    && string.Equals(forceTool, "desktop_open_app", StringComparison.OrdinalIgnoreCase))
+{
+    var scope = _toolsAccess.DesktopTargetWindowTitle.Replace('\r', ' ').Replace('\n', ' ');
+    _logger.LogInformation(
+        "Desktop open_app remapped to desktop_screenshot (scope={Scope})",
+        scope);
+    forceTool = "desktop_screenshot";
+}
+
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = forceTool };
             _logger.LogInformation(
                 "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
-                desktopIntent.Intent, desktopIntent.ToolName);
+                desktopIntent.Intent, forceTool);
         }
         else if (HomeBodyToolIntent.TryMatch(text, out var homeIntent))
         {

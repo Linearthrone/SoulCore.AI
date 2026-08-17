@@ -59,11 +59,14 @@ public class DesktopToolIntentTests
     [InlineData("open the browser and take a screenshot")]
     [InlineData("open Chrome and take a screenshot")]
     [InlineData("launch chrome then screenshot please")]
-    public void TryMatch_OpenPlusScreenshot_DoesNotExclusiveForce(string text)
+    public void TryMatch_OpenPlusScreenshot_StillForcesOpenApp(string text)
     {
-        // Compound intents must not ForceTool=desktop_open_app only — that
-        // starves the follow-up screenshot turn on gemma4.
-        Assert.False(DesktopToolIntent.TryMatch(text, out _));
+        // ForceTool=open_app; IsPureOpenPrompt=false so the tool-loop continues
+        // for the screenshot follow-on (BED-180). Under VM scope the Host remaps
+        // ForceTool to desktop_screenshot (BED-190).
+        Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.Equal("desktop_open_app", match.ToolName);
+        Assert.False(DesktopToolIntent.IsPureOpenPrompt(text));
     }
 
     [Theory]
@@ -99,9 +102,32 @@ public class DesktopToolIntentTests
     public void ComputerUseGuidance_ScopedBlock_LocksVmTitle()
     {
         var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox");
+        Assert.Contains(ComputerUseGuidance.Marker, once, StringComparison.Ordinal);
+        Assert.Contains(ComputerUseGuidance.Block, once, StringComparison.Ordinal);
+        Assert.Contains(ComputerUseGuidance.ScopedBlock("victoria-sandbox"), once, StringComparison.Ordinal);
+        Assert.Contains("Preferred workflow", once, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
+        Assert.Contains("desktop_screenshot", once, StringComparison.Ordinal);
+        Assert.Contains("BLOCKED", once, StringComparison.Ordinal);
+        Assert.Contains("do NOT call it", once, StringComparison.Ordinal);
+        // Full playbook stays; scoped text is appended after it.
+        Assert.True(
+            once.IndexOf(ComputerUseGuidance.Block, StringComparison.Ordinal)
+            < once.IndexOf("DESKTOP SCOPE", StringComparison.Ordinal));
         Assert.Equal(once, ComputerUseGuidance.AppendToPreamble(once, "victoria-sandbox"));
+    }
+
+    [Theory]
+    [InlineData("use the vm")]
+    [InlineData("look inside the sandbox")]
+    [InlineData("drive victoria-sandbox")]
+    public void TryMatch_VmPhrases_ForcesDesktopTool(string text)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.True(
+            match.ToolName is "list_desktop_windows" or "desktop_screenshot",
+            match.ToolName);
     }
 
     // ---------------------------------------------------------------------
