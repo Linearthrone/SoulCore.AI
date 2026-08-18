@@ -35,8 +35,11 @@ object CompanionCallClient {
             CompanionAuthHeaders.applyBearer(builder, token)
             http.newCall(builder.build()).execute().use { resp ->
                 val body = resp.body?.string().orEmpty()
+                if (!resp.isSuccessful) {
+                    error("HTTP ${resp.code}")
+                }
                 val json = JSONObject(body)
-                if (!resp.isSuccessful || !json.optBoolean("ok", false)) {
+                if (!json.optBoolean("ok", false)) {
                     error(json.optString("error", "HTTP ${resp.code}"))
                 }
                 val webrtc = json.optJSONObject("webrtc")
