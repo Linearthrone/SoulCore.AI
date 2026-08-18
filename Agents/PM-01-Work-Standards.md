@@ -210,7 +210,7 @@ PM failed the handoff.
 
 When PM-01 writes `TASK-{id}-PM01-to-{role}.md`:
 
-1. **Hand off immediately** to FED-01 / BED-01 / DBD-01 / SEC-01 / OPS-01 / QA-01 / SLOP-01 / TT-01 â€” in the same response, before telling the
+1. **Hand off immediately** to FED-01 / BED-01 / DBD-01 / SEC-01 / OPS-01 / QA-01 / SLOP-01 / TT-01 / REX-01 / VBOX-01 â€” in the same response, before telling the
    user "waiting on {role}".
 2. **How to hand off:** launch a role subagent (`Task` tool) with that role's playbook
    (`Agents/{FED|BED|DBD|SEC|OPS|QA|SLOP|TT}-01.md` or `-EN.md`) and the task file path. The subagent
@@ -343,8 +343,9 @@ Choose the **narrowest correct owner** before writing the ticket.
 | Test / regression / issue evidence | **QA-01** | `QA01` |
 | Post-QA slop / duplicate / alias audit (read-only) | **SLOP-01** | `SLOP01` |
 | Stuck ticket / no viable path â€” evaluate avenues & solutions | **TT-01** | `TT01` |
+| VirtualBox / Ubuntu guest / VBoxManage | **VBOX-01** | `VBOX01` |
 | Truly inseparable FE+BE (rare; justify in ticket) | DEV-01 | `DEV01` |
 
 **Quick tree:** OPS (deploy?) â†’ QA (test-only?) â†’ after QA Pass on code â†’ **SLOP-01** â†’ stuck/no path? â†’ **TT-01** â†’ SEC (security risk?) â†’ DBD (schema/SQL?) â†’ FED (UI?) â†’ BED (API?) â†’ else **split** into sequenced tickets.
 
-**Playbooks:** `Agents/FED-01.md`, `Agents/BED-01.md`, `Agents/DBD-01.md`, `Agents/SEC-01.md`, `Agents/SLOP-01.md`, `Agents/TT-01.md`, plus OPS/QA docs.
+**Playbooks:** `Agents/FED-01.md`, `Agents/BED-01.md`, `Agents/DBD-01.md`, `Agents/SEC-01.md`, `Agents/SLOP-01.md`, `Agents/TT-01.md`, `Agents/REX-01.md`, `Agents/VBOX-01.md`, plus OPS/QA docs.

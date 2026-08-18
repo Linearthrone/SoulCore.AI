@@ -23,6 +23,28 @@ public interface IBrowserBridge
     Task<BrowserBridgeResult> KeyAsync(string key, CancellationToken ct = default);
 
     Task<BrowserBridgeResult> ScrollAsync(int dx, int dy, CancellationToken ct = default);
+
+    /// <summary>Open a URL in the scoped browser (guest Firefox when VM-scoped).</summary>
+    Task<BrowserBridgeResult> NavigateAsync(string url, CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_navigate is not supported on this backend", null));
+
+    /// <summary>List labeled controls (AT-SPI / page map) in the current page.</summary>
+    Task<BrowserBridgeResult> SnapshotAsync(string? query = null, CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_snapshot is not supported on this backend", null));
+
+    /// <summary>Click the nth visible control whose name/label contains <paramref name="text"/>.</summary>
+    Task<BrowserBridgeResult> ClickTextAsync(string text, int nth = 1, CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_click_text is not supported on this backend", null));
+
+    /// <summary>Click a named field and type <paramref name="value"/>.</summary>
+    Task<BrowserBridgeResult> FillAsync(string field, string value, CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_fill is not supported on this backend", null));
+
+    Task<BrowserBridgeResult> BackAsync(CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_back is not supported on this backend", null));
+
+    Task<BrowserBridgeResult> TabsAsync(CancellationToken ct = default) =>
+        Task.FromResult(new BrowserBridgeResult(false, "browser_tabs is not supported on this backend", null));
 }
 
 /// <summary>

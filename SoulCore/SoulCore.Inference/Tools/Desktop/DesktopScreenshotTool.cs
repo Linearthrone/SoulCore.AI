@@ -39,10 +39,11 @@ public sealed class DesktopScreenshotTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_screenshot",
         Description:
-            "Capture the full desktop (PNG). Returns size plus a window list with screen bounds. " +
-            "REQUIRED before claiming you looked at Kurt's screen. " +
+            "Capture the Ubuntu guest framebuffer (PNG). Returns size plus a window list. " +
+            "REQUIRED before claiming you looked at the VM screen or before desktop_click on in-page UI. " +
             "list_desktop_windows alone is titles/bounds — not vision. " +
-            "Use with desktop_click (screen x,y). Your blue agent cursor will show where you act; Kurt's mouse stays put.",
+            "For Login/buttons on websites prefer browser_snapshot / browser_click_text after this. " +
+            "Use with desktop_click (guest x,y). Your blue agent cursor will show where you act.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Workflow;
+using SoulCore.Inference.Tools;
 
 namespace SoulCore.Inference;
 
@@ -243,25 +244,20 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
                     .ConfigureAwait(false);
                 openOk = openOk && result.Success;
-                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
-                ollamaMessages.Add(new OllamaChatMessage
-                {
-                    Role = "tool",
-                    Name = name,
-                    Content = result.Content ?? string.Empty,
-                    Images = images
-                });
+                AppendToolFeedback(ollamaMessages, name, result);
             }
 
             forceConsumed = true;
 
             if (pureOpen)
             {
+                var toolContent = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
                 if (openOk)
                 {
                     var reply = DesktopToolIntent.BuildOpenedReply(
                         string.IsNullOrEmpty(openApp) ? "chrome" : openApp,
-                        openArgs);
+                        openArgs,
+                        toolContent);
                     _logger.LogInformation(
                         "Ollama ForceTool desktop_open_app early-exit (pure open): {Reply}",
                         reply);
@@ -269,10 +265,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 }
 
                 // Launch failed — surface the tool error without more LLM rounds.
-                var err = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
-                return string.IsNullOrWhiteSpace(err)
+                return string.IsNullOrWhiteSpace(toolContent)
                     ? "I couldn't open that app."
-                    : err!;
+                    : toolContent!;
             }
 
             // Non-pure open (e.g. "open Chrome and click…") — continue loop with
@@ -433,6 +428,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
                         || TrySoftDispatchForcedOpenApp(
                             forceToolName!,
                             ollamaMessages,
+                            out softCalls)
+                        || TrySoftDispatchForcedTool(
+                            forceToolName!,
+                            ollamaMessages,
                             out softCalls))
                     && softCalls is { Count: > 0 })
                 {
@@ -508,13 +507,24 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 if (forceActive
                     && !string.Equals(name, forceToolName, StringComparison.Ordinal))
                 {
-                    _logger.LogWarning(
-                        "Ollama forced-tool exclusivity: refused non-forced tool '{Name}' (required={Required}) iter={Iter}",
-                        name, forceToolName, iteration);
-                    result = new ToolResult(
-                        Success: false,
-                        Content: $"error: forced tool '{forceToolName}' required; refused '{name}'.",
-                        Data: null);
+                    // Some forced screenshot/snapshot flows need an initial
+                    // bootstrap step (open/navigate) even if the model
+                    // incorrectly tries to call it while ForceToolName is
+                    // still pending.
+                    if (!IsForceBootstrapTool(forceToolName, name))
+                    {
+                        _logger.LogWarning(
+                            "Ollama forced-tool exclusivity: refused non-forced tool '{Name}' (required={Required}) iter={Iter}",
+                            name, forceToolName, iteration);
+                        result = new ToolResult(
+                            Success: false,
+                            Content: $"error: forced tool '{forceToolName}' required; refused '{name}'.",
+                            Data: null);
+                    }
+                    else
+                    {
+                        result = await toolRegistry.ExecuteAsync(name, args, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 else
                 {
@@ -525,26 +535,38 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     "Ollama tool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
                     iteration, i, name, result.Success, result.Content?.Length ?? 0);
 
-                // BED-125 contract: forward ToolResult.Content as the role:"tool"
-                // message string. ToolResult.Data is host-side only — never
-                // serialized as JSON to the model. Screenshot bytes may attach
-                // as Ollama images[] so vision models can see the desktop.
-                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
-                ollamaMessages.Add(new OllamaChatMessage
-                {
-                    Role = "tool",
-                    Name = name,
-                    Content = result.Content ?? string.Empty,
-                    Images = images
-                });
+                // BED-125: tool Content is the string the model reads. Screenshot
+                // bytes attach as images[] (never JSON Data). Gemma4 also gets a
+                // synthetic user turn with the PNG — Ollama vision attends to
+                // user-role images, not tool-role.
+                AppendToolFeedback(ollamaMessages, name, result);
             }
 
-            // BED-168: any tool_calls round under ForceTool consumes the force
-            // (exclusivity applies only until the first tool_calls response is
-            // handled — including hard refuse). Later iterations restore full
-            // tools (BED-165 AC3).
+            // BED-168: preserve ForceTool for known bootstrap tool calls
+            // (open/navigate before snapshot/screenshot) so the forced
+            // snapshot step isn't "lost", but consume force for wrong tool
+            // calls (so we can return the model's assistant text instead of
+            // spinning in the forced loop).
             if (forceActive)
-                forceConsumed = true;
+            {
+                var hasForcedTool = pendingCalls.Any(tc => string.Equals(
+                    tc.Function?.Name ?? string.Empty,
+                    forceToolName,
+                    StringComparison.Ordinal));
+
+                // If the model tried to run some other non-forced tool that
+                // isn't a known bootstrap step, we should treat the ForceTool
+                // round as handled (consume force) to avoid repeated nudge
+                // loops.
+                var hasWrongNonBootstrapTool = pendingCalls.Any(tc =>
+                {
+                    var name = tc.Function?.Name ?? string.Empty;
+                    return !string.Equals(name, forceToolName, StringComparison.Ordinal)
+                           && !IsForceBootstrapTool(forceToolName, name);
+                });
+
+                forceConsumed = hasForcedTool || hasWrongNonBootstrapTool;
+            }
         }
 
         _logger.LogWarning(
@@ -599,26 +621,111 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
+    /// Attach a tool result to the in-loop conversation. Screenshot bytes go on
+    /// <c>images[]</c> (BED-125). Vision models (Gemma 4) get a follow-up
+    /// <c>user</c> message with the same PNG — Ollama's docs and Gemma renderer
+    /// attend to user-role images, not <c>role:tool</c>.
+    /// </summary>
+    private void AppendToolFeedback(
+        List<OllamaChatMessage> ollamaMessages,
+        string name,
+        ToolResult result)
+    {
+        var images = ToolImagePayload.TryExtractBase64Images(result.Data);
+        ollamaMessages.Add(new OllamaChatMessage
+        {
+            Role = "tool",
+            Name = name,
+            Content = result.Content ?? string.Empty,
+            Images = images
+        });
+
+        if (images is { Count: > 0 })
+        {
+            _logger.LogInformation(
+                "Ollama vision attach: tool={Tool} images={Count}",
+                name,
+                images.Count);
+            ollamaMessages.Add(new OllamaChatMessage
+            {
+                Role = "user",
+                Content = BuildVisionUserFollowUp(name, result.Content),
+                Images = images
+            });
+            return;
+        }
+
+        if (IsVisionTool(name))
+        {
+            _logger.LogWarning(
+                "Ollama vision: tool={Tool} returned no attachable PNG (missing bytes or over 4MB)",
+                name);
+        }
+    }
+
+    private static bool IsVisionTool(string name) =>
+        string.Equals(name, "desktop_screenshot", StringComparison.Ordinal)
+        || string.Equals(name, "browser_capture_tab", StringComparison.Ordinal);
+
+    private static string BuildVisionUserFollowUp(string tool, string? content)
+    {
+        var hint =
+            "[Vision] A PNG from " + tool + " of the Ubuntu VM framebuffer is attached. " +
+            "Coordinates are guest pixels (origin 0,0) — not Windows monitors and not the VirtualBox window. " +
+            "Look at the image before clicking. For labeled controls (Login, Sign in, links, inputs) " +
+            "prefer browser_snapshot / browser_click_text / browser_fill. " +
+            "desktop_click x,y only with coordinates you read from THIS image — never a window center for in-page UI.";
+        if (string.IsNullOrWhiteSpace(content))
+            return hint;
+        return hint + "\n" + content.Trim();
+    }
+
+    /// <summary>
     /// BED-166: clone conversation messages for OpenAI-compat <c>/v1</c> so
     /// every <c>tool_calls[].function.arguments</c> is a JSON <b>string</b> on
-    /// the wire (not an object). Leaves the in-memory loop messages unchanged
-    /// so native <c>/api/chat</c> rounds can keep object-form args.
+    /// the wire (not an object). Preserves <c>images[]</c> and, when present,
+    /// also emits OpenAI <c>image_url</c> content parts so vision survives
+    /// ForceTool rounds. Leaves in-memory loop messages unchanged.
     /// </summary>
-    private static List<OllamaChatMessage> ToOpenAiWireMessages(IReadOnlyList<OllamaChatMessage> messages)
+    private static List<OpenAiChatMessage> ToOpenAiWireMessages(IReadOnlyList<OllamaChatMessage> messages)
     {
-        var list = new List<OllamaChatMessage>(messages.Count);
+        var list = new List<OpenAiChatMessage>(messages.Count);
         foreach (var m in messages)
         {
             if (m is null) continue;
-            list.Add(new OllamaChatMessage
+            list.Add(new OpenAiChatMessage
             {
                 Role = m.Role,
-                Content = m.Content,
+                Content = ToOpenAiContent(m),
                 Name = m.Name,
-                ToolCalls = ToOpenAiWireToolCalls(m.ToolCalls)
+                ToolCalls = ToOpenAiWireToolCalls(m.ToolCalls),
+                Images = m.Images is { Count: > 0 } ? m.Images : null
             });
         }
         return list;
+    }
+
+    private static object? ToOpenAiContent(OllamaChatMessage m)
+    {
+        if (m.Images is not { Count: > 0 })
+            return m.Content;
+
+        var parts = new List<object>(1 + m.Images.Count)
+        {
+            new { type = "text", text = m.Content ?? string.Empty }
+        };
+        foreach (var img in m.Images)
+        {
+            if (string.IsNullOrWhiteSpace(img))
+                continue;
+            parts.Add(new
+            {
+                type = "image_url",
+                imageUrl = new { url = "data:image/png;base64," + img }
+            });
+        }
+
+        return parts;
     }
 
     private static List<OllamaToolCallDto>? ToOpenAiWireToolCalls(IReadOnlyList<OllamaToolCallDto>? calls)
@@ -817,6 +924,58 @@ public sealed class OllamaInferenceClient : IInferenceClient
         return true;
     }
 
+    /// <summary>
+    /// When ForceTool is set and gemma4 emits prose/tags instead of tool_calls,
+    /// synthesize the forced call from NL context (no LLM wait).
+    /// </summary>
+    private static bool TrySoftDispatchForcedTool(
+        string forceToolName,
+        IReadOnlyList<OllamaChatMessage> messages,
+        out List<OllamaToolCallDto>? softCalls)
+    {
+        softCalls = null;
+        var lastUser = GetLastUserContent(messages);
+        string argsJson;
+
+        switch (forceToolName)
+        {
+            case "list_desktop_windows":
+            case "desktop_screenshot":
+            case "browser_back":
+            case "browser_tabs":
+                argsJson = "{}";
+                break;
+            case "browser_navigate":
+                if (!DesktopToolIntent.TryExtractNavigateUrl(lastUser, out var url))
+                    return false;
+                argsJson = $"{{\"url\":{JsonSerializer.Serialize(url)}}}";
+                break;
+            case "browser_snapshot":
+            {
+                var query = DesktopToolIntent.TryExtractBrowserSnapshotQuery(lastUser);
+                argsJson = query is null
+                    ? "{}"
+                    : $"{{\"query\":{JsonSerializer.Serialize(query)}}}";
+                break;
+            }
+            default:
+                return false;
+        }
+
+        softCalls = new List<OllamaToolCallDto>(1)
+        {
+            new()
+            {
+                Function = new OllamaFunctionCallDto
+                {
+                    Name = forceToolName,
+                    Arguments = JsonDocument.Parse(argsJson).RootElement.Clone()
+                }
+            }
+        };
+        return true;
+    }
+
     private static string? GetLastUserContent(IReadOnlyList<OllamaChatMessage> messages)
     {
         for (var i = messages.Count - 1; i >= 0; i--)
@@ -859,10 +1018,44 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 "Do not list windows or screenshot — emit the tool call only.";
         }
 
+        if (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal))
+        {
+            return
+                "You must call desktop_screenshot now. Do not reply with prose — emit the tool call only. " +
+                "After the PNG arrives, use browser_snapshot / browser_click_text or desktop_click with coords from the image.";
+        }
+
+        if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
+        {
+            return
+                "You must call browser_snapshot now (optional query for Login/Sign in). " +
+                "Do not reply with prose — emit the tool call only.";
+        }
+
+        if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal))
+        {
+            return
+                "You must call browser_navigate now with a full http(s) url. " +
+                "Do not reply with prose — emit the tool call only.";
+        }
+
         return
             $"You must call the {forceToolName} tool now. " +
             "Do not ask for clarification or reply with prose — emit the tool call only.";
     }
+
+    /// <summary>
+    /// Allowlist of "bootstrap" tools that are safe to run while a
+    /// ForceToolName is pending (e.g. opening/navigating before snapshotting)
+    /// without consuming the force.
+    /// </summary>
+    private static bool IsForceBootstrapTool(string? forceToolName, string toolName) =>
+        !string.IsNullOrWhiteSpace(forceToolName)
+        && ((string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
+         && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
+             || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)))
+        || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
+            && string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)));
 
     /// <summary>
     /// Parse OpenAI-compatible <c>/v1/chat/completions</c> into the same
@@ -952,6 +1145,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// <c>message.content</c> (qwen2.5 family flakiness — ollama #13968,
     /// #12174), attempt to recover it. Accept either:
     /// <list>
+    /// <item>Gemma4 <c>&lt;execute_tool&gt; name{args} &lt;/execute_tool&gt;</c> tags.</item>
+    /// <item>Gemma4 <c>&lt;|tool_call&gt;call:name{args}&lt;tool_call|&gt;</c> tokens.</item>
     /// <item>A pure JSON object <c>{"name":"...","arguments":{...}}</c> (whole content).</item>
     /// <item>A JSON object embedded in text (extracted via brace matching).</item>
     /// </list>
@@ -965,75 +1160,32 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (string.IsNullOrWhiteSpace(content) || toolNames.Count == 0)
             return null;
 
-        // Fast path: the whole content is the JSON object.
-        if (TryParseRecoveryObject(content, toolNames, out var direct))
-            return direct;
-
-        // Slow path: extract a JSON object embedded in text via brace matching.
-        var json = ExtractFirstJsonObject(content);
-        if (json is not null && TryParseRecoveryObject(json, toolNames, out var embedded))
-            return embedded;
-
-        return null;
-    }
-
-    private bool TryParseRecoveryObject(string json, HashSet<string> toolNames, out List<OllamaToolCallDto>? calls)
-    {
-        calls = null;
-        try
+        if (!ToolCallTextRecovery.TryRecover(content, toolNames, out var recovered)
+            || recovered.Count == 0)
         {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-                return false;
-            if (!root.TryGetProperty("name", out var nameEl))
-                return false;
-            var name = nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() ?? "" : "";
-            if (string.IsNullOrWhiteSpace(name) || !toolNames.Contains(name))
-                return false;
+            return null;
+        }
 
-            // arguments is optional; default to an empty object element.
-            JsonElement? argsEl = null;
-            if (root.TryGetProperty("arguments", out var rawArgs))
+        var calls = new List<OllamaToolCallDto>(recovered.Count);
+        foreach (var item in recovered)
+        {
+            calls.Add(new OllamaToolCallDto
             {
-                // Clone the element — root is backed by a `using var doc`
-                // that disposes at the end of this method, so the element
-                // must be standalone to survive past the return.
-                argsEl = rawArgs.ValueKind switch
+                Function = new OllamaFunctionCallDto
                 {
-                    JsonValueKind.Object or JsonValueKind.Array or JsonValueKind.Number
-                        or JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null
-                        => rawArgs.Clone(),
-                    // arguments as a JSON string — parse it defensively.
-                    JsonValueKind.String => ParseStringArguments(rawArgs.GetString()),
-                    _ => null
-                };
-            }
-
-            calls = new List<OllamaToolCallDto>(1)
-            {
-                new OllamaToolCallDto
-                {
-                    Function = new OllamaFunctionCallDto
-                    {
-                        Name = name,
-                        Arguments = argsEl
-                    }
+                    Name = item.Name,
+                    Arguments = item.Arguments
                 }
-            };
-            return true;
+            });
         }
-        catch (JsonException)
-        {
-            return false;
-        }
+
+        return calls;
     }
 
-    /// <summary>
-    /// Parse a JSON-string-form <c>arguments</c> value (qwen2.5 sometimes
-    /// leaks <c>"arguments": "{\"query\":\"...\"}"</c>) into a JsonElement
-    /// object form. Returns null on empty/unparseable input.
-    /// </summary>
+    private bool ContainsRecoverableToolCall(string? content, HashSet<string> toolNames)
+        => ToolCallTextRecovery.LooksLikeToolLeak(content, toolNames)
+           || TryRecoverToolCallsFromContent(content ?? "", toolNames) is { Count: > 0 };
+
     private static JsonElement? ParseStringArguments(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -1048,43 +1200,6 @@ public sealed class OllamaInferenceClient : IInferenceClient
             return null;
         }
     }
-
-    /// <summary>
-    /// Cheap brace-matching extraction of the first <c>{...}</c> object in
-    /// <paramref name="text"/>. Returns null when no balanced object is found.
-    /// </summary>
-    private static string? ExtractFirstJsonObject(string text)
-    {
-        var start = text.IndexOf('{');
-        if (start < 0)
-            return null;
-        var depth = 0;
-        var inString = false;
-        var escape = false;
-        for (var i = start; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (inString)
-            {
-                if (escape) { escape = false; continue; }
-                if (ch == '\\') { escape = true; continue; }
-                if (ch == '"') { inString = false; }
-                continue;
-            }
-            if (ch == '"') { inString = true; continue; }
-            if (ch == '{') depth++;
-            else if (ch == '}')
-            {
-                depth--;
-                if (depth == 0)
-                    return text.Substring(start, i - start + 1);
-            }
-        }
-        return null;
-    }
-
-    private bool ContainsRecoverableToolCall(string? content, HashSet<string> toolNames)
-        => TryRecoverToolCallsFromContent(content ?? "", toolNames) is { Count: > 0 };
 
     /// <summary>
     /// Ollama has shipped <c>arguments</c> as both a JSON object and a JSON
@@ -1174,7 +1289,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     private sealed class OpenAiChatRequest
     {
         public string Model { get; set; } = string.Empty;
-        public List<OllamaChatMessage> Messages { get; set; } = new();
+        public List<OpenAiChatMessage> Messages { get; set; } = new();
         public List<OllamaToolDto>? Tools { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -1200,6 +1315,27 @@ public sealed class OllamaInferenceClient : IInferenceClient
         public List<OllamaToolCallDto>? ToolCalls { get; set; }
 
         /// <summary>Base64 image payloads (no data-URI prefix) for vision models.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Images { get; set; }
+    }
+
+    /// <summary>
+    /// /v1 clone of <see cref="OllamaChatMessage"/> whose <c>Content</c> may be
+    /// a string or OpenAI multimodal parts (text + image_url).
+    /// </summary>
+    private sealed class OpenAiChatMessage
+    {
+        public string Role { get; set; } = "user";
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public object? Content { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Name { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<OllamaToolCallDto>? ToolCalls { get; set; }
+
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<string>? Images { get; set; }
     }

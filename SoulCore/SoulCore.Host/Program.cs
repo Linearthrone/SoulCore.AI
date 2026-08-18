@@ -14,6 +14,7 @@ using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Inference;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
@@ -332,6 +333,7 @@ builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+builder.Services.AddSingleton<GuestVmBrowserBridgeHolder>();
 builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
 {
     IDesktopControlBackend inner;
@@ -366,7 +368,13 @@ builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
     var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
     if (string.IsNullOrWhiteSpace(scopeTitle))
         return inner;
-    return new ScopedDesktopControlBackend(inner, scopeTitle);
+    var guest = new VirtualBoxGuestAppLauncher(scopeTitle);
+    sp.GetRequiredService<GuestVmBrowserBridgeHolder>().Set(guest, guest);
+    return new ScopedDesktopControlBackend(
+        inner,
+        scopeTitle,
+        guest,
+        new NativeDesktopControlBackend());
 });
 builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
     sp.GetRequiredService<IComputerControlGate>(),
@@ -414,6 +422,14 @@ builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var scopeTitle = (opts.DesktopTargetWindowTitle ?? "").Trim();
+    if (!string.IsNullOrWhiteSpace(scopeTitle))
+    {
+        var holder = sp.GetRequiredService<GuestVmBrowserBridgeHolder>();
+        if (holder.TryGet(out var bridge))
+            return bridge;
+    }
+
     var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
     if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
         backend = "none";
@@ -434,6 +450,12 @@ builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
     sp.GetRequiredService<IBrowserBridge>(),
     sp.GetRequiredService<IToolsAccessSettings>(),
     sp.GetRequiredService<IDesktopViewHub>()));
+builder.Services.AddSingleton<ITool, BrowserNavigateTool>();
+builder.Services.AddSingleton<ITool, BrowserSnapshotTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTextTool>();
+builder.Services.AddSingleton<ITool, BrowserFillTool>();
+builder.Services.AddSingleton<ITool, BrowserBackTool>();
+builder.Services.AddSingleton<ITool, BrowserTabsTool>();
 builder.Services.AddSingleton<ITool, BrowserClickTool>();
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();
@@ -473,6 +495,7 @@ builder.Services.AddSingleton<ITool, RunBacktestTool>();
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
 builder.Services.AddSingleton<ICompanionOutboundMessenger, CompanionOutboundMessenger>();
+builder.Services.AddSingleton<CompanionCallSessionStore>();
 builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
 builder.Services.AddSingleton<ComfyUiClient>();
 builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
@@ -485,11 +508,19 @@ if (unrealOptions.Enabled)
 {
     builder.Services.AddSingleton<UnrealVerbClientStub>();
     builder.Services.AddSingleton<IUnrealVerbClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealCallCameraClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
 }
 else
 {
     builder.Services.AddSingleton<IUnrealVerbClient, NullUnrealVerbClient>();
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient, NullUnrealCaptureClient>();
+    builder.Services.AddSingleton<IUnrealCallCameraClient, NullUnrealCaptureClient>();
 }
+
+// OllamaInferenceClient's DI ctor requires IUeLiveSignal. Without this, every
+// chat/WS turn throws and Victoria appears "dead" while /health still 200s.
+builder.Services.AddSingleton<IUeLiveSignal, UnrealUeLiveSignal>();
 
 // Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).
 builder.Services.AddHttpClient("voice-stt", (sp, client) =>
@@ -934,7 +965,8 @@ static int ReportSecretsPresence()
         SecretNames.HermesApiKey,
         SecretNames.HuggingFaceToken,
         SecretNames.CompanionApiToken,
-        SecretNames.OllamaApiKey
+        SecretNames.OllamaApiKey,
+        SecretNames.VboxGuestPass
     };
 
     var envPath = DotEnvLoader.ResolveEnvFilePath();

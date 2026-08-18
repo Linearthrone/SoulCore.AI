@@ -18,14 +18,13 @@ Port of LLMOD Victoria Link UX onto SoulCore.Host — **not** HouseVictoria.App 
 
 | targetSdk / compileSdk | 34 |
 
-| UI | Jetpack Compose — Home · MediaGen · Gallery · Settings |
+| UI | Jetpack Compose — Home · **Call** · MediaGen · Gallery · Settings |
 
 | Chat | `ws://127.0.0.1:7700/ws` |
 
 | Media HTTP | `http://127.0.0.1:7700/api/companion/v1/*` |
 
-| Contact stub | `contactId=victoria` (multi-persona reserved for a future external service) |
-
+| Video call | **Call** tab — polls waist-up `call/frame` (Unreal `call_capture`); WebRTC duplex later |
 
 
 ## What this is
@@ -33,6 +32,8 @@ Port of LLMOD Victoria Link UX onto SoulCore.Host — **not** HouseVictoria.App 
 
 
 - **Home** — single-Victoria chat (WS streaming + proactive Host pushes)
+
+- **Call** — video call UI (MVP: polled Victoria waist-up frames from Host/Unreal)
 
 - **MediaGen** — ComfyUI generate via Host (`POST /api/companion/v1/media/generate`)
 
@@ -66,6 +67,12 @@ Port of LLMOD Victoria Link UX onto SoulCore.Host — **not** HouseVictoria.App 
 
 | GET | `/api/companion/v1/media/{id}/file` | Download PNG |
 
+| POST | `/api/companion/v1/call/session` | Start video-call session (`mode=frames`) |
+
+| GET | `/api/companion/v1/call/frame` | Waist-up PNG/JPEG from Unreal `call_capture` |
+
+| DELETE | `/api/companion/v1/call/session/{id}` | End session |
+
 
 
 Config: `Companion:*` and `SoulLoop:ProactiveChatEnabled` in Host `appsettings.json`.
@@ -80,7 +87,7 @@ Config: `Companion:*` and `SoulLoop:ProactiveChatEnabled` in Host `appsettings.j
 
 - No multi-persona inbox / ContactBook UI (framework stub only)
 
-- No voice / STT / TTS
+- No full WebRTC duplex yet (`webrtc.available=false` until BED follow-up + REX call camera)
 
 - No dependency on LLMOD WPF overlay or `:17890`
 

@@ -109,6 +109,21 @@ Note: Victoria walk may still return API-ok with travel=0 in PIE (ISSUE-006 /
 path-follow). Eyes (`victoria_eye_capture`) and Presence “What she saw” are
 independent of that motion bug.
 
+### Phone-call waist-up camera (mobile Call tab) — TASK-192
+
+Companion Android **Call** polls Host `GET /api/companion/v1/call/frame`, which
+sends Unreal command **`call_capture`** and expects:
+
+```json
+{"type":"call_frame","bytes_b64":"…","format":"png","width":720,"height":1280}
+```
+
+This is a **front-facing SceneCapture on Victoria** (waist-up / selfie phone
+framing) — not `eye_capture` (outward). REX-01 owns the UE camera + bridge wire
+(`docs/agents/tasks/TASK-20260817-192-PM01-to-REX01.md`). Helper:
+`tools/ue_nav/setup_victoria_call_camera.py`. Do **not** attach this to the
+Kayleigh player pawn.
+
 ### Launch so `:8888` listens
 
 1. Open `MyProject.uproject` with **UE 5.8**  

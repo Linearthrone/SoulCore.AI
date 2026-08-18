@@ -245,11 +245,11 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
-    // BED-190: VM scope blocks host desktop_open_app — remap ForceTool to screenshot.
+    // VM scope: ForceTool stays desktop_open_app (guest inject, not host Process.Start).
     [Fact]
-    public async Task DesktopNlOpenChrome_VmScoped_RemapsToScreenshot()
+    public async Task DesktopNlOpenChrome_VmScoped_StillForcesOpenApp()
     {
-        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Looking at the VM." };
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Firefox in the VM." };
         var hermes = new NullHermesClient();
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
@@ -267,7 +267,7 @@ public class ChatWebSocketHandlerToolLoopTests
         await RunOneChatTurnAsync(handler, "open Google Chrome");
 
         Assert.True(inference.CompleteWithToolsCalled);
-        Assert.Equal("desktop_screenshot", inference.LastLoopOptions?.ForceToolName);
+        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
         Assert.Contains("DESKTOP SCOPE", inference.LastSystemContent ?? "", StringComparison.Ordinal);
         Assert.Contains("Preferred workflow", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }

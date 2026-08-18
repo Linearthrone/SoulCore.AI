@@ -18,7 +18,9 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $ScriptsDir)
 $BridgePy = Join-Path $RepoRoot "BrowserCaptureBridge\bridge_server.py"
 $ReqFile = Join-Path $RepoRoot "BrowserCaptureBridge\requirements.txt"
 $PidFile = Join-Path $ScriptsDir ".browser-bridge.pid"
-$LogFile = Join-Path $ScriptsDir ".browser-bridge.log"
+$LogOut = Join-Path $ScriptsDir ".browser-bridge.out.log"
+$LogErr = Join-Path $ScriptsDir ".browser-bridge.err.log"
+$PipLog = Join-Path $ScriptsDir ".browser-bridge.pip.log"
 $HealthUrl = "http://127.0.0.1:${Port}/health"
 
 if (-not (Test-Path -LiteralPath $BridgePy)) {
@@ -29,25 +31,12 @@ function Test-BridgeHealthy {
     try {
         $r = Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 2 -ErrorAction Stop
         return ($null -ne $r -and $r.ok -eq $true)
-    } catch { return $false }
-}
-
-if ((-not $ForceRestart) -and (Test-BridgeHealthy)) {
-    Write-Host "[start-browser-bridge] Already healthy at $HealthUrl"
-    exit 0
-}
-
-if ($ForceRestart -and (Test-Path -LiteralPath $PidFile)) {
-    try {
-        $old = [int](Get-Content -LiteralPath $PidFile -Raw).Trim()
-        if ($old -gt 0) {
-            Stop-Process -Id $old -Force -ErrorAction SilentlyContinue
-        }
-    } catch { }
+    } catch {
+        return $false
+    }
 }
 
 function Resolve-Python {
-    # Prefer a normal Python install — never the old Hermes agent venv.
     $candidates = @(
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
@@ -60,10 +49,12 @@ function Resolve-Python {
     foreach ($c in $candidates) {
         if ($c -and (Test-Path -LiteralPath $c)) { return $c }
     }
+
     $cmd = Get-Command python -ErrorAction SilentlyContinue
     if ($cmd -and $cmd.Source -and ($cmd.Source -notmatch '[\\/]hermes[\\/]')) {
         return $cmd.Source
     }
+
     try {
         $py = & py -3 -c "import sys; print(sys.executable)" 2>$null
         if ($LASTEXITCODE -eq 0 -and $py) {
@@ -71,46 +62,66 @@ function Resolve-Python {
             if ($path -notmatch '[\\/]hermes[\\/]') { return $path }
         }
     } catch { }
+
     return $null
+}
+
+if ((-not $ForceRestart) -and (Test-BridgeHealthy)) {
+    Write-Host "[start-browser-bridge] Already healthy at $HealthUrl"
+    exit 0
+}
+
+if (Test-Path -LiteralPath $PidFile) {
+    try {
+        $old = [int](Get-Content -LiteralPath $PidFile -Raw).Trim()
+        if ($old -gt 0) {
+            if ($ForceRestart -or -not (Test-BridgeHealthy)) {
+                Stop-Process -Id $old -Force -ErrorAction SilentlyContinue
+            }
+        }
+    } catch { }
 }
 
 $python = Resolve-Python
 if (-not $python) {
-    throw "python.exe not found - install Python 3.11+ or ensure it is on PATH (not the Hermes venv)"
+    throw "python.exe not found - install Python 3.11+ or ensure it is on PATH (not Hermes venv)"
 }
+
 Write-Host "[start-browser-bridge] python: $python"
-
-# Install bridge deps; do not swallow pip output (BED-189: silent fail left fastapi missing).
 Write-Host "[start-browser-bridge] ensuring pip deps from $ReqFile ..."
-$pipLog = Join-Path $ScriptsDir ".browser-bridge.pip.log"
-& $python -m pip install -r $ReqFile *>&1 | Tee-Object -FilePath $pipLog | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "pip install bridge deps failed (exit $LASTEXITCODE). See $pipLog"
-    Write-Warning "Manual: `"$python`" -m pip install -r `"$ReqFile`""
+$PipErr = "$PipLog.err"
+if (Test-Path -LiteralPath $PipLog) { Remove-Item -LiteralPath $PipLog -Force -ErrorAction SilentlyContinue }
+if (Test-Path -LiteralPath $PipErr) { Remove-Item -LiteralPath $PipErr -Force -ErrorAction SilentlyContinue }
+$pipProc = Start-Process -FilePath $python `
+    -ArgumentList @("-m", "pip", "install", "-r", $ReqFile) `
+    -NoNewWindow `
+    -Wait `
+    -PassThru `
+    -RedirectStandardOutput $PipLog `
+    -RedirectStandardError $PipErr
+$pipExit = $pipProc.ExitCode
+if (Test-Path -LiteralPath $PipErr) {
+    Get-Content -LiteralPath $PipErr -Encoding utf8 -ErrorAction SilentlyContinue |
+        Add-Content -LiteralPath $PipLog -Encoding utf8
+}
+if ($pipExit -ne 0) {
+    Write-Warning "pip install bridge deps failed (exit $pipExit). See $PipLog"
+    Write-Warning ('Manual: "{0}" -m pip install -r "{1}"' -f $python, $ReqFile)
 }
 
-# Verify import before Start-Process so ALLSTART gets a clear error, not a dead PID.
-$prevEap = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
 & $python -c "import fastapi, uvicorn" 2>$null | Out-Null
-$importOk = ($LASTEXITCODE -eq 0)
-$ErrorActionPreference = $prevEap
-if (-not $importOk) {
-    Write-Warning "Python missing fastapi/uvicorn after pip — bridge will not start. See $pipLog"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning ("Python missing fastapi/uvicorn after pip - bridge will not start. See {0}" -f $PipLog)
     exit 1
 }
 
-$LogOut = Join-Path $ScriptsDir ".browser-bridge.out.log"
-$LogErr = Join-Path $ScriptsDir ".browser-bridge.err.log"
-foreach ($f in @($LogFile, $LogOut, $LogErr)) {
+foreach ($f in @($LogOut, $LogErr)) {
     if (Test-Path -LiteralPath $f) {
         Clear-Content -LiteralPath $f -ErrorAction SilentlyContinue
     }
 }
 
 Write-Host "[start-browser-bridge] Starting $BridgePy on :$Port ..."
-# Windows Start-Process forbids RedirectStandardOutput and RedirectStandardError
-# pointing at the same path — use separate files (same pattern as start-soulcore).
 $proc = Start-Process -FilePath $python `
     -ArgumentList @($BridgePy) `
     -WorkingDirectory (Split-Path -Parent $BridgePy) `
@@ -138,9 +149,10 @@ for ($i = 0; $i -lt 40; $i++) {
 
 if ($ready) {
     Write-Host "[start-browser-bridge] Healthy: $HealthUrl"
-    Write-Host "[start-browser-bridge] Extension: chrome://extensions -> Load unpacked -> $(Join-Path $RepoRoot 'BrowserCaptureExtension')"
+    $extPath = Join-Path $RepoRoot "BrowserCaptureExtension"
+    Write-Host ("[start-browser-bridge] Extension: chrome://extensions -> Load unpacked -> {0}" -f $extPath)
     exit 0
 }
 
-Write-Warning "Bridge process started (PID $($proc.Id)) but /health not confirmed yet. Logs: $LogOut $LogErr"
+Write-Warning ("Bridge process started (PID {0}) but /health not confirmed yet. Logs: {1} {2}" -f $proc.Id, $LogOut, $LogErr)
 exit 0

@@ -13,9 +13,10 @@ namespace SoulCore.Adapters.Ws;
 /// Serializes SoulCore verbs to UE wire frames: plain <c>speak</c> / <c>move_avatar_relative</c> (PlainArgs),
 /// and <c>{type:command,payload:{name,args}}</c> for play_animation / look / set_emotion.
 /// Connection failures are logged; Host must keep running.
-/// Also implements <see cref="IUnrealEyeCaptureClient"/> (request/response <c>eye_capture</c>).
+/// Also implements <see cref="IUnrealEyeCaptureClient"/> (request/response <c>eye_capture</c>)
+/// and <see cref="IUnrealCallCameraClient"/> (waist-up <c>call_capture</c>).
 /// </summary>
-public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureClient, IAsyncDisposable
+public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureClient, IUnrealCallCameraClient, IAsyncDisposable
 {
     private readonly UnrealBridgeOptions _options;
     private readonly ILogger<UnrealVerbClientStub> _logger;
@@ -105,7 +106,23 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
         SendVerbAsync(UnrealVerbTypes.Look, lookPayload, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<EyeFrame?> CaptureEyeAsync(CancellationToken cancellationToken = default)
+    public Task<EyeFrame?> CaptureEyeAsync(CancellationToken cancellationToken = default) =>
+        CaptureSceneFrameAsync(
+            commandName: "eye_capture",
+            acceptedTypes: new[] { "eye_frame" },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<EyeFrame?> CaptureCallFrameAsync(CancellationToken cancellationToken = default) =>
+        CaptureSceneFrameAsync(
+            commandName: "call_capture",
+            acceptedTypes: new[] { "call_frame", "avatar_call_frame" },
+            cancellationToken);
+
+    private async Task<EyeFrame?> CaptureSceneFrameAsync(
+        string commandName,
+        string[] acceptedTypes,
+        CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
             return null;
@@ -120,7 +137,7 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
             if (!IsConnected || _socket is null)
                 return null;
 
-            var wire = """{"type":"command","payload":{"name":"eye_capture","args":{}}}""";
+            var wire = "{\"type\":\"command\",\"payload\":{\"name\":\"" + commandName + "\",\"args\":{}}}";
             var bytes = Encoding.UTF8.GetBytes(wire);
             await _socket.SendAsync(bytes, WebSocketMessageType.Text, endOfMessage: true, cancellationToken)
                 .ConfigureAwait(false);
@@ -142,13 +159,13 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
                 } while (!result.EndOfMessage);
 
                 var json = Encoding.UTF8.GetString(ms.ToArray());
-                if (TryParseEyeFrame(json, out var frame))
+                if (TryParseCaptureFrame(json, acceptedTypes, out var frame))
                     return frame;
             }
         }
         catch (Exception ex) when (ex is WebSocketException or OperationCanceledException or InvalidOperationException)
         {
-            _logger.LogWarning(ex, "eye_capture failed");
+            _logger.LogWarning(ex, "{Command} failed", commandName);
         }
         finally
         {
@@ -158,7 +175,7 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
         return null;
     }
 
-    private static bool TryParseEyeFrame(string json, out EyeFrame? frame)
+    private static bool TryParseCaptureFrame(string json, string[] acceptedTypes, out EyeFrame? frame)
     {
         frame = null;
         try
@@ -166,7 +183,8 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
             var type = root.TryGetProperty("type", out var t) ? t.GetString() : null;
-            if (!string.Equals(type, "eye_frame", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(type)
+                || !Array.Exists(acceptedTypes, a => string.Equals(a, type, StringComparison.OrdinalIgnoreCase)))
                 return false;
 
             var b64 = root.TryGetProperty("bytes_b64", out var b) ? b.GetString()

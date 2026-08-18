@@ -7,9 +7,10 @@ public class DesktopToolIntentTests
     [Theory]
     [InlineData("look at my screen", "desktop_screenshot")]
     [InlineData("what's on my desktop?", "desktop_screenshot")]
-    [InlineData("use the computer and draw a line", "list_desktop_windows")]
-    [InlineData("click on the Chrome window", "list_desktop_windows")]
-    [InlineData("what windows are open?", "list_desktop_windows")]
+    [InlineData("use the computer and draw a line", "desktop_screenshot")]
+    [InlineData("click on the Chrome window", "desktop_screenshot")]
+    [InlineData("click the login button", "browser_snapshot")]
+    [InlineData("what windows are open?", "desktop_screenshot")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]
     [InlineData("open Google Chrome", "desktop_open_app")]
@@ -62,8 +63,8 @@ public class DesktopToolIntentTests
     public void TryMatch_OpenPlusScreenshot_StillForcesOpenApp(string text)
     {
         // ForceTool=open_app; IsPureOpenPrompt=false so the tool-loop continues
-        // for the screenshot follow-on (BED-180). Under VM scope the Host remaps
-        // ForceTool to desktop_screenshot (BED-190).
+        // for the screenshot follow-on (BED-180). Under VM scope the backend
+        // injects into the guest instead of Process.Start on Windows.
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));
         Assert.Equal("desktop_open_app", match.ToolName);
         Assert.False(DesktopToolIntent.IsPureOpenPrompt(text));
@@ -88,12 +89,13 @@ public class DesktopToolIntentTests
     }
 
     [Fact]
-    public void ComputerUseGuidance_Block_ForbidsInventedToolsForLocalLaunch()
+    public void ComputerUseGuidance_Block_ForbidsInventedHermesTools()
     {
         Assert.Contains("desktop_open_app", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("Do NOT invent Hermes", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("or terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }
@@ -108,9 +110,9 @@ public class DesktopToolIntentTests
         Assert.Contains("Preferred workflow", once, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
-        Assert.Contains("desktop_screenshot", once, StringComparison.Ordinal);
-        Assert.Contains("BLOCKED", once, StringComparison.Ordinal);
-        Assert.Contains("do NOT call it", once, StringComparison.Ordinal);
+        Assert.Contains("browser_navigate", once, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", once, StringComparison.Ordinal);
+        Assert.Contains("never Process.Start", once, StringComparison.Ordinal);
         // Full playbook stays; scoped text is appended after it.
         Assert.True(
             once.IndexOf(ComputerUseGuidance.Block, StringComparison.Ordinal)
@@ -171,5 +173,22 @@ public class DesktopToolIntentTests
         Assert.Equal(
             "Opened Chrome to https://example.com.",
             DesktopToolIntent.BuildOpenedReply("chrome", "https://example.com"));
+    }
+
+    [Fact]
+    public void BuildOpenedReply_GuestControl_SaysFirefoxInVm()
+    {
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                null,
+                "Opened firefox in the Ubuntu VM via guestcontrol (host VirtualBox window can stay minimized)."));
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM to https://example.com.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                "https://example.com",
+                "Opened firefox in the Ubuntu VM via guestcontrol"));
     }
 }

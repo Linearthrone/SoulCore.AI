@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,6 +25,7 @@ private data class LinkDest(val route: String, val label: String, val icon: andr
 
 private val destinations = listOf(
     LinkDest("home", "Home", Icons.Default.Chat),
+    LinkDest("call", "Call", Icons.Default.Videocam),
     LinkDest("mediagen", "MediaGen", Icons.Default.AutoAwesome),
     LinkDest("gallery", "Gallery", Icons.Default.PhotoLibrary),
     LinkDest("settings", "Settings", Icons.Default.Settings)
@@ -61,6 +63,7 @@ fun VictoriaLinkShell() {
             modifier = Modifier.padding(padding)
         ) {
             composable("home") { ChatScreen(onOpenSettings = { nav.navigate("settings") }) }
+            composable("call") { VideoCallScreen() }
             composable("mediagen") { MediaGenScreen() }
             composable("gallery") { GalleryScreen() }
             composable("settings") {
