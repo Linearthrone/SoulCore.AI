@@ -211,12 +211,6 @@ public static class DesktopToolIntent
             return true;
         }
 
-        if (NavigateUrl.IsMatch(text))
-        {
-            match = new Match(Kind.BrowserNavigate, "browser_navigate");
-            return true;
-        }
-
         if (BrowserPage.IsMatch(text))
         {
             match = new Match(Kind.BrowserSnapshot, "browser_snapshot");
@@ -230,6 +224,14 @@ public static class DesktopToolIntent
         if (OpenApp.IsMatch(text))
         {
             match = new Match(Kind.OpenApp, "desktop_open_app");
+            return true;
+        }
+
+        // Only treat standalone URL detection as browser navigation when the
+        // prompt isn't already an app-launch (e.g. "open chrome to https://…").
+        if (NavigateUrl.IsMatch(text))
+        {
+            match = new Match(Kind.BrowserNavigate, "browser_navigate");
             return true;
         }
 

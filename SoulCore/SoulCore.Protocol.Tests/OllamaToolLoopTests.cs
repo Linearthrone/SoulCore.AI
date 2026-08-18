@@ -481,6 +481,75 @@ public class OllamaToolLoopTests
         Assert.Equal(1, handler.CallCount);
     }
 
+    // ---------------------------------------------------------------------
+    // BED-185: Forced browser_snapshot must allow bootstrap open before
+    // snapshotting (otherwise "waiting on screen data" occurs).
+    // ---------------------------------------------------------------------
+
+    private static ToolDefinition BrowserSnapshotToolDef() => new(
+        "browser_snapshot",
+        "Snapshot the current VM page (optionally focus query for Login/Sign in).",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{"query":{"type":"string"}},"additionalProperties":true}""")
+        .RootElement.Clone());
+
+    [Fact]
+    public async Task ForceToolName_BrowserSnapshot_AllowsBootstrapDesktopOpenApp()
+    {
+        // Under ForceToolName=browser_snapshot the model may emit a bootstrap
+        // call first (desktop_open_app). The loop must execute the bootstrap
+        // tool but still keep ForceToolName active until browser_snapshot runs.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "desktop_open_app", arguments = new { app = "chrome", args = "" } }
+                        }
+                    }),
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "browser_snapshot", arguments = new { query = "Login" } }
+                        }
+                    }),
+                ChatResponseJson(content: "done", toolCalls: null)
+            });
+
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", _ => new ToolResult(true, "opened chrome", null)),
+            ("browser_snapshot", _ => new ToolResult(true, "snapshot ok", null)));
+
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open the VM browser and snapshot login" }
+            },
+            new[] { DesktopOpenAppToolDef(), BrowserSnapshotToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "browser_snapshot" });
+
+        Assert.Equal("done", result);
+        Assert.Equal(3, handler.CallCount);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_open_app");
+        Assert.Contains(registry.Calls, c => c.Name == "browser_snapshot");
+
+        // Both iteration 0 and 1 should be forced /v1 until the forced tool
+        // is actually executed.
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+        Assert.Contains("api/chat", handler.CapturedRequests[2].Path, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ForceToolName_TextOnly_RetryNudge_ThenDispatches()
     {

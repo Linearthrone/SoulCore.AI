@@ -507,13 +507,24 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 if (forceActive
                     && !string.Equals(name, forceToolName, StringComparison.Ordinal))
                 {
-                    _logger.LogWarning(
-                        "Ollama forced-tool exclusivity: refused non-forced tool '{Name}' (required={Required}) iter={Iter}",
-                        name, forceToolName, iteration);
-                    result = new ToolResult(
-                        Success: false,
-                        Content: $"error: forced tool '{forceToolName}' required; refused '{name}'.",
-                        Data: null);
+                    // Some forced screenshot/snapshot flows need an initial
+                    // bootstrap step (open/navigate) even if the model
+                    // incorrectly tries to call it while ForceToolName is
+                    // still pending.
+                    if (!IsForceBootstrapTool(forceToolName, name))
+                    {
+                        _logger.LogWarning(
+                            "Ollama forced-tool exclusivity: refused non-forced tool '{Name}' (required={Required}) iter={Iter}",
+                            name, forceToolName, iteration);
+                        result = new ToolResult(
+                            Success: false,
+                            Content: $"error: forced tool '{forceToolName}' required; refused '{name}'.",
+                            Data: null);
+                    }
+                    else
+                    {
+                        result = await toolRegistry.ExecuteAsync(name, args, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 else
                 {
@@ -531,12 +542,31 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 AppendToolFeedback(ollamaMessages, name, result);
             }
 
-            // BED-168: any tool_calls round under ForceTool consumes the force
-            // (exclusivity applies only until the first tool_calls response is
-            // handled — including hard refuse). Later iterations restore full
-            // tools (BED-165 AC3).
+            // BED-168: preserve ForceTool for known bootstrap tool calls
+            // (open/navigate before snapshot/screenshot) so the forced
+            // snapshot step isn't "lost", but consume force for wrong tool
+            // calls (so we can return the model's assistant text instead of
+            // spinning in the forced loop).
             if (forceActive)
-                forceConsumed = true;
+            {
+                var hasForcedTool = pendingCalls.Any(tc => string.Equals(
+                    tc.Function?.Name ?? string.Empty,
+                    forceToolName,
+                    StringComparison.Ordinal));
+
+                // If the model tried to run some other non-forced tool that
+                // isn't a known bootstrap step, we should treat the ForceTool
+                // round as handled (consume force) to avoid repeated nudge
+                // loops.
+                var hasWrongNonBootstrapTool = pendingCalls.Any(tc =>
+                {
+                    var name = tc.Function?.Name ?? string.Empty;
+                    return !string.Equals(name, forceToolName, StringComparison.Ordinal)
+                           && !IsForceBootstrapTool(forceToolName, name);
+                });
+
+                forceConsumed = hasForcedTool || hasWrongNonBootstrapTool;
+            }
         }
 
         _logger.LogWarning(
@@ -1013,6 +1043,19 @@ public sealed class OllamaInferenceClient : IInferenceClient
             $"You must call the {forceToolName} tool now. " +
             "Do not ask for clarification or reply with prose — emit the tool call only.";
     }
+
+    /// <summary>
+    /// Allowlist of "bootstrap" tools that are safe to run while a
+    /// ForceToolName is pending (e.g. opening/navigating before snapshotting)
+    /// without consuming the force.
+    /// </summary>
+    private static bool IsForceBootstrapTool(string? forceToolName, string toolName) =>
+        !string.IsNullOrWhiteSpace(forceToolName)
+        && ((string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
+         && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
+             || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)))
+        || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
+            && string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)));
 
     /// <summary>
     /// Parse OpenAI-compatible <c>/v1/chat/completions</c> into the same
