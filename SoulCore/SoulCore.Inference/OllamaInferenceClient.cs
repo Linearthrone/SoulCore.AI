@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Workflow;
+using SoulCore.Inference.Tools;
 
 namespace SoulCore.Inference;
 
@@ -425,6 +426,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
                             ollamaMessages,
                             out var softCalls)
                         || TrySoftDispatchForcedOpenApp(
+                            forceToolName!,
+                            ollamaMessages,
+                            out softCalls)
+                        || TrySoftDispatchForcedTool(
                             forceToolName!,
                             ollamaMessages,
                             out softCalls))
@@ -889,6 +894,58 @@ public sealed class OllamaInferenceClient : IInferenceClient
         return true;
     }
 
+    /// <summary>
+    /// When ForceTool is set and gemma4 emits prose/tags instead of tool_calls,
+    /// synthesize the forced call from NL context (no LLM wait).
+    /// </summary>
+    private static bool TrySoftDispatchForcedTool(
+        string forceToolName,
+        IReadOnlyList<OllamaChatMessage> messages,
+        out List<OllamaToolCallDto>? softCalls)
+    {
+        softCalls = null;
+        var lastUser = GetLastUserContent(messages);
+        string argsJson;
+
+        switch (forceToolName)
+        {
+            case "list_desktop_windows":
+            case "desktop_screenshot":
+            case "browser_back":
+            case "browser_tabs":
+                argsJson = "{}";
+                break;
+            case "browser_navigate":
+                if (!DesktopToolIntent.TryExtractNavigateUrl(lastUser, out var url))
+                    return false;
+                argsJson = $"{{\"url\":{JsonSerializer.Serialize(url)}}}";
+                break;
+            case "browser_snapshot":
+            {
+                var query = DesktopToolIntent.TryExtractBrowserSnapshotQuery(lastUser);
+                argsJson = query is null
+                    ? "{}"
+                    : $"{{\"query\":{JsonSerializer.Serialize(query)}}}";
+                break;
+            }
+            default:
+                return false;
+        }
+
+        softCalls = new List<OllamaToolCallDto>(1)
+        {
+            new()
+            {
+                Function = new OllamaFunctionCallDto
+                {
+                    Name = forceToolName,
+                    Arguments = JsonDocument.Parse(argsJson).RootElement.Clone()
+                }
+            }
+        };
+        return true;
+    }
+
     private static string? GetLastUserContent(IReadOnlyList<OllamaChatMessage> messages)
     {
         for (var i = messages.Count - 1; i >= 0; i--)
@@ -1045,6 +1102,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// <c>message.content</c> (qwen2.5 family flakiness — ollama #13968,
     /// #12174), attempt to recover it. Accept either:
     /// <list>
+    /// <item>Gemma4 <c>&lt;execute_tool&gt; name{args} &lt;/execute_tool&gt;</c> tags.</item>
+    /// <item>Gemma4 <c>&lt;|tool_call&gt;call:name{args}&lt;tool_call|&gt;</c> tokens.</item>
     /// <item>A pure JSON object <c>{"name":"...","arguments":{...}}</c> (whole content).</item>
     /// <item>A JSON object embedded in text (extracted via brace matching).</item>
     /// </list>
@@ -1058,75 +1117,32 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (string.IsNullOrWhiteSpace(content) || toolNames.Count == 0)
             return null;
 
-        // Fast path: the whole content is the JSON object.
-        if (TryParseRecoveryObject(content, toolNames, out var direct))
-            return direct;
-
-        // Slow path: extract a JSON object embedded in text via brace matching.
-        var json = ExtractFirstJsonObject(content);
-        if (json is not null && TryParseRecoveryObject(json, toolNames, out var embedded))
-            return embedded;
-
-        return null;
-    }
-
-    private bool TryParseRecoveryObject(string json, HashSet<string> toolNames, out List<OllamaToolCallDto>? calls)
-    {
-        calls = null;
-        try
+        if (!ToolCallTextRecovery.TryRecover(content, toolNames, out var recovered)
+            || recovered.Count == 0)
         {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-                return false;
-            if (!root.TryGetProperty("name", out var nameEl))
-                return false;
-            var name = nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() ?? "" : "";
-            if (string.IsNullOrWhiteSpace(name) || !toolNames.Contains(name))
-                return false;
+            return null;
+        }
 
-            // arguments is optional; default to an empty object element.
-            JsonElement? argsEl = null;
-            if (root.TryGetProperty("arguments", out var rawArgs))
+        var calls = new List<OllamaToolCallDto>(recovered.Count);
+        foreach (var item in recovered)
+        {
+            calls.Add(new OllamaToolCallDto
             {
-                // Clone the element — root is backed by a `using var doc`
-                // that disposes at the end of this method, so the element
-                // must be standalone to survive past the return.
-                argsEl = rawArgs.ValueKind switch
+                Function = new OllamaFunctionCallDto
                 {
-                    JsonValueKind.Object or JsonValueKind.Array or JsonValueKind.Number
-                        or JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null
-                        => rawArgs.Clone(),
-                    // arguments as a JSON string — parse it defensively.
-                    JsonValueKind.String => ParseStringArguments(rawArgs.GetString()),
-                    _ => null
-                };
-            }
-
-            calls = new List<OllamaToolCallDto>(1)
-            {
-                new OllamaToolCallDto
-                {
-                    Function = new OllamaFunctionCallDto
-                    {
-                        Name = name,
-                        Arguments = argsEl
-                    }
+                    Name = item.Name,
+                    Arguments = item.Arguments
                 }
-            };
-            return true;
+            });
         }
-        catch (JsonException)
-        {
-            return false;
-        }
+
+        return calls;
     }
 
-    /// <summary>
-    /// Parse a JSON-string-form <c>arguments</c> value (qwen2.5 sometimes
-    /// leaks <c>"arguments": "{\"query\":\"...\"}"</c>) into a JsonElement
-    /// object form. Returns null on empty/unparseable input.
-    /// </summary>
+    private bool ContainsRecoverableToolCall(string? content, HashSet<string> toolNames)
+        => ToolCallTextRecovery.LooksLikeToolLeak(content, toolNames)
+           || TryRecoverToolCallsFromContent(content ?? "", toolNames) is { Count: > 0 };
+
     private static JsonElement? ParseStringArguments(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -1141,43 +1157,6 @@ public sealed class OllamaInferenceClient : IInferenceClient
             return null;
         }
     }
-
-    /// <summary>
-    /// Cheap brace-matching extraction of the first <c>{...}</c> object in
-    /// <paramref name="text"/>. Returns null when no balanced object is found.
-    /// </summary>
-    private static string? ExtractFirstJsonObject(string text)
-    {
-        var start = text.IndexOf('{');
-        if (start < 0)
-            return null;
-        var depth = 0;
-        var inString = false;
-        var escape = false;
-        for (var i = start; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (inString)
-            {
-                if (escape) { escape = false; continue; }
-                if (ch == '\\') { escape = true; continue; }
-                if (ch == '"') { inString = false; }
-                continue;
-            }
-            if (ch == '"') { inString = true; continue; }
-            if (ch == '{') depth++;
-            else if (ch == '}')
-            {
-                depth--;
-                if (depth == 0)
-                    return text.Substring(start, i - start + 1);
-            }
-        }
-        return null;
-    }
-
-    private bool ContainsRecoverableToolCall(string? content, HashSet<string> toolNames)
-        => TryRecoverToolCallsFromContent(content ?? "", toolNames) is { Count: > 0 };
 
     /// <summary>
     /// Ollama has shipped <c>arguments</c> as both a JSON object and a JSON

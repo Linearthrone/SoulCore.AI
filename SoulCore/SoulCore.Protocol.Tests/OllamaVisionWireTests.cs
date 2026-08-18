@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference;
+using SoulCore.Inference.Tools;
+using SoulCore.Protocol;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -129,4 +131,25 @@ public class OllamaVisionWireTests
 
     private sealed record CapturedVisionMessage(string Role, string? Content, List<string>? Images);
     private sealed record CapturedVisionRequest(string Path, IReadOnlyList<CapturedVisionMessage> Messages);
+
+    private sealed class ScriptedRegistry : IToolRegistry
+    {
+        private readonly Dictionary<string, Func<JsonElement, ToolResult>> _handlers;
+
+        public ScriptedRegistry(params (string Name, Func<JsonElement, ToolResult>)[] handlers)
+        {
+            _handlers = new Dictionary<string, Func<JsonElement, ToolResult>>(StringComparer.Ordinal);
+            foreach (var (name, fn) in handlers)
+                _handlers[name] = fn;
+        }
+
+        public IReadOnlyList<ToolDefinition> GetDefinitions() => Array.Empty<ToolDefinition>();
+
+        public Task<ToolResult> ExecuteAsync(string name, JsonElement args, CancellationToken ct = default)
+        {
+            if (_handlers.TryGetValue(name, out var fn))
+                return Task.FromResult(fn(args));
+            return Task.FromResult(new ToolResult(false, $"Unknown tool '{name}'.", null));
+        }
+    }
 }

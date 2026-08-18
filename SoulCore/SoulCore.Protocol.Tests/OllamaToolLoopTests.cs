@@ -987,6 +987,66 @@ public class OllamaToolLoopTests
     }
 
     [Fact]
+    public async Task FallbackParser_ExecuteToolTag_DispatchesTool_WhenToolCallsNull()
+    {
+        // gemma4 leak: tool call in <execute_tool> tags with tool_calls: null.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(
+                    content: "<execute_tool> list_desktop_windows{} </execute_tool>",
+                    toolCalls: null),
+                ChatResponseJson(content: "windows listed", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("list_desktop_windows", _ => new ToolResult(true, "[]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "what windows are open?" } },
+            new[] { ListDesktopWindowsToolDef() },
+            registry);
+
+        Assert.Equal("windows listed", result);
+        Assert.Equal(2, handler.CallCount);
+        Assert.Single(registry.Calls);
+        Assert.Equal("list_desktop_windows", registry.Calls[0].Name);
+    }
+
+    [Fact]
+    public async Task ForceTool_ListDesktopWindows_SoftDispatches_WhenModelReturnsTagOnly()
+    {
+        // ForceTool uses /v1/chat/completions — responses must be OpenAI-shaped.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    "<execute_tool> list_desktop_windows{} </execute_tool>",
+                    toolCalls: null),
+                ChatResponseJson(content: "done", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("list_desktop_windows", _ => new ToolResult(true, "[{\"title\":\"Firefox\"}]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "use the vm" } },
+            new[] { ListDesktopWindowsToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "list_desktop_windows" });
+
+        Assert.Equal("done", result);
+        Assert.DoesNotContain("execute_tool", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(registry.Calls);
+        Assert.Equal("list_desktop_windows", registry.Calls[0].Name);
+    }
+
+    private static ToolDefinition ListDesktopWindowsToolDef() => new(
+        "list_desktop_windows",
+        "List visible desktop windows.",
+        JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement.Clone());
+
+    [Fact]
     public async Task FallbackParser_NameNotRegistered_TreatedAsTextReply()
     {
         // The leaked JSON has a name that is NOT a registered tool → treat as

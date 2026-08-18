@@ -241,13 +241,29 @@ public static class DesktopToolIntent
 
         if (UseComputer.IsMatch(text))
         {
+            var lower = text.ToLowerInvariant();
             if (BrowserPage.IsMatch(text))
             {
                 match = new Match(Kind.BrowserSnapshot, "browser_snapshot");
                 return true;
             }
 
-            match = new Match(Kind.ListWindows, "list_desktop_windows");
+            if (TryExtractNavigateUrl(text, out _))
+            {
+                match = new Match(Kind.BrowserNavigate, "browser_navigate");
+                return true;
+            }
+
+            if (OpenApp.IsMatch(text) || lower.Contains("browser", StringComparison.Ordinal)
+                                      || lower.Contains("firefox", StringComparison.Ordinal)
+                                      || lower.Contains("website", StringComparison.Ordinal)
+                                      || lower.Contains("web site", StringComparison.Ordinal))
+            {
+                match = new Match(Kind.OpenApp, "desktop_open_app");
+                return true;
+            }
+
+            match = new Match(Kind.Screenshot, "desktop_screenshot");
             return true;
         }
 
@@ -321,6 +337,46 @@ public static class DesktopToolIntent
             return false;
         return toolContent.Contains(VirtualBoxGuestAppLauncher.GuestOpenedMarker, StringComparison.OrdinalIgnoreCase)
                || toolContent.Contains("guestcontrol", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Extract http(s) URL from user text for browser_navigate soft-dispatch.</summary>
+    public static bool TryExtractNavigateUrl(string? userText, out string url)
+    {
+        url = "";
+        if (string.IsNullOrWhiteSpace(userText))
+            return false;
+        var m = NavigateUrl.Match(userText.Trim());
+        if (!m.Success)
+            return false;
+        var raw = m.Groups.Count > 1 && m.Groups[1].Success && !string.IsNullOrWhiteSpace(m.Groups[1].Value)
+            ? m.Groups[1].Value
+            : m.Value;
+        raw = raw.Trim().TrimEnd('.', ',', ';', ')', ']');
+        if (raw.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            raw = "https://" + raw;
+        if (!raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            && !raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        url = raw;
+        return true;
+    }
+
+    /// <summary>Optional AT-SPI filter for browser_snapshot (Login, Email, …).</summary>
+    public static string? TryExtractBrowserSnapshotQuery(string? userText)
+    {
+        if (string.IsNullOrWhiteSpace(userText))
+            return null;
+        var lower = userText.ToLowerInvariant();
+        foreach (var term in new[] { "login", "log in", "sign in", "sign up", "password", "email", "submit", "register" })
+        {
+            if (lower.Contains(term, StringComparison.Ordinal))
+                return term;
+        }
+
+        return null;
     }
 
     private static string ResolveOpenAppAlias(string text)
