@@ -143,7 +143,7 @@ fun VideoCallScreen() {
             .fillMaxSize()
             .background(Color(0xFF0B0A0F))
     ) {
-        val bmp = frameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        val bmp = remember(frameBytes) { frameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) } }
         if (bmp != null) {
             Image(
                 bitmap = bmp.asImageBitmap(),
