@@ -84,7 +84,7 @@ fun VideoCallScreen() {
         scope.launch {
             status = "Calling…"
             errorHint = null
-            val cfg = CompanionPrefs.load(context)
+            val cfg = withContext(Dispatchers.IO) { CompanionPrefs.load(context) }
             val started = withContext(Dispatchers.IO) {
                 CompanionCallClient.startSession(cfg.resolvedHttpBase(), cfg.token)
             }
