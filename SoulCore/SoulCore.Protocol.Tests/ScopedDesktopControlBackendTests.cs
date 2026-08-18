@@ -270,6 +270,27 @@ public class ScopedDesktopControlBackendTests
     }
 
     [Fact]
+    public void GuestControlArgs_DoNotRepeatExeAfterDashDash()
+    {
+        var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
+            "victoria-sandbox",
+            "run",
+            "victoria",
+            @"C:\temp\pass.txt",
+            "/usr/bin/id",
+            Array.Empty<string>(),
+            new[] { "-un" },
+            waitOutput: true);
+        Assert.Contains("--exe", argv);
+        Assert.Contains("/usr/bin/id", argv);
+        var dash = argv.IndexOf("--");
+        Assert.True(dash >= 0);
+        var after = argv.Skip(dash + 1).ToList();
+        Assert.Equal(new[] { "-un" }, after);
+        Assert.DoesNotContain(after, a => a.Contains("/usr/bin/id", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void GuestControlArgs_UsePasswordFileNotInlinePassword()
     {
         var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
@@ -285,6 +306,45 @@ public class ScopedDesktopControlBackendTests
         Assert.DoesNotContain(argv, a => a.Contains("secret", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("--profile", argv);
         Assert.Contains("/usr/bin/firefox", argv);
+    }
+
+    [Fact]
+    public async Task Click_GuestDesktop_Fails_FallsBackToHostWindow()
+    {
+        var inner = new RecordingBackend();
+        inner.ListWindowsResult = new DesktopOpResult(
+            true,
+            ListContent((VmTitle, 100, 50, 1280, 800)),
+            null);
+        var guest = new RecordingGuestDesktop { FailClick = true };
+        var scoped = new ScopedDesktopControlBackend(inner, Scope, guest);
+
+        // Guest coords (40,120) → host (140,170) inside the VM window.
+        var result = await scoped.ClickAsync(40, 120, "left");
+
+        Assert.True(result.Success);
+        Assert.Single(guest.ClickCalls);
+        Assert.Single(inner.ClickCalls);
+        Assert.Equal((140, 170, "left", 1), inner.ClickCalls[0]);
+        Assert.Contains("fallback", result.Content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Screenshot_GuestDesktop_Fails_FallsBackToHostWindow()
+    {
+        var inner = new RecordingBackend();
+        inner.ListWindowsResult = new DesktopOpResult(
+            true,
+            ListContent((VmTitle, 100, 50, 1280, 800)),
+            null);
+        var guest = new RecordingGuestDesktop { FailScreenshot = true };
+        var scoped = new ScopedDesktopControlBackend(inner, Scope, guest);
+
+        var result = await scoped.ScreenshotAsync(0);
+
+        Assert.True(result.Success);
+        Assert.Contains("fallback", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("shot 0", result.Content, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -400,6 +460,8 @@ public class ScopedDesktopControlBackendTests
     {
         public List<(string app, string? args)> OpenCalls { get; } = new();
         public List<(int x, int y, string button, int clicks)> ClickCalls { get; } = new();
+        public bool FailClick { get; set; }
+        public bool FailScreenshot { get; set; }
 
         public Task<DesktopOpResult> OpenAppAsync(string app, string? args = null, CancellationToken ct = default)
         {
@@ -411,13 +473,17 @@ public class ScopedDesktopControlBackendTests
         }
 
         public Task<DesktopOpResult> ScreenshotAsync(CancellationToken ct = default)
-            => Task.FromResult(new DesktopOpResult(true, "guest shot", null));
+            => Task.FromResult(FailScreenshot
+                ? new DesktopOpResult(false, "guest shot failed", null)
+                : new DesktopOpResult(true, "guest shot", null));
 
         public Task<DesktopOpResult> ClickAsync(
             int x, int y, string button, int clicks = 1, CancellationToken ct = default)
         {
             ClickCalls.Add((x, y, button, clicks));
-            return Task.FromResult(new DesktopOpResult(true, $"guest click ({x},{y})", null));
+            return Task.FromResult(FailClick
+                ? new DesktopOpResult(false, "guest click failed", null)
+                : new DesktopOpResult(true, $"guest click ({x},{y})", null));
         }
 
         public Task<DesktopOpResult> DragAsync(

@@ -290,7 +290,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 ? FilterToolsByName(ollamaTools, forceToolName!)
                 : ollamaTools;
             var wireToolNames = forceActive
-                ? new HashSet<string>(StringComparer.Ordinal) { forceToolName! }
+                ? BuildForceToolNameSet(forceToolName!)
                 : toolNames;
 
             var wireToolChoice = BuildWireToolChoice(forceActive ? forceToolName : null, wireTools.Count);
@@ -565,7 +565,12 @@ public sealed class OllamaInferenceClient : IInferenceClient
                            && !IsForceBootstrapTool(forceToolName, name);
                 });
 
-                forceConsumed = hasForcedTool || hasWrongNonBootstrapTool;
+                // browser_snapshot force is satisfied by desktop_screenshot —
+                // AT-SPI may be down; a PNG unsticks the Login/UI loop.
+                var hasSatisfyingAlternate = pendingCalls.Any(tc =>
+                    IsForceSatisfyingAlternate(forceToolName, tc.Function?.Name ?? string.Empty));
+
+                forceConsumed = hasForcedTool || hasWrongNonBootstrapTool || hasSatisfyingAlternate;
             }
         }
 
@@ -805,11 +810,12 @@ public sealed class OllamaInferenceClient : IInferenceClient
         string forceToolName)
     {
         if (tools is null || tools.Count == 0) return new List<OllamaToolDto>(0);
-        var list = new List<OllamaToolDto>(1);
+        var allowed = BuildForceToolNameSet(forceToolName);
+        var list = new List<OllamaToolDto>(allowed.Count);
         foreach (var t in tools)
         {
             if (t?.Function is null) continue;
-            if (string.Equals(t.Function.Name, forceToolName, StringComparison.Ordinal))
+            if (allowed.Contains(t.Function.Name))
                 list.Add(t);
         }
         return list;
@@ -1028,7 +1034,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
         {
             return
-                "You must call browser_snapshot now (optional query for Login/Sign in). " +
+                "You must call browser_snapshot now (optional query for Login/Sign in), " +
+                "OR desktop_screenshot if AT-SPI/snapshot is unavailable. " +
                 "Do not reply with prose — emit the tool call only.";
         }
 
@@ -1045,17 +1052,50 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
-    /// Allowlist of "bootstrap" tools that are safe to run while a
-    /// ForceToolName is pending (e.g. opening/navigating before snapshotting)
-    /// without consuming the force.
+    /// Allowlist of "bootstrap" / escape-hatch tools that are safe to run while a
+    /// ForceToolName is pending (e.g. opening/navigating before snapshotting,
+    /// or desktop_screenshot when AT-SPI browser_snapshot is down) without
+    /// treating the call as a hard refuse.
     /// </summary>
     private static bool IsForceBootstrapTool(string? forceToolName, string toolName) =>
         !string.IsNullOrWhiteSpace(forceToolName)
         && ((string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
-         && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
-             || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)))
-        || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
-            && string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)));
+             && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
+                 || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
+                 || string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal)))
+            || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
+                && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
+                    || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal))));
+
+    /// <summary>
+    /// Alternates that fulfill the forced intent (consume ForceTool).
+    /// </summary>
+    private static bool IsForceSatisfyingAlternate(string? forceToolName, string toolName) =>
+        string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
+        && string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal);
+
+    private static HashSet<string> BuildForceToolNameSet(string forceToolName)
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal) { forceToolName };
+        foreach (var companion in ForceToolCompanions(forceToolName))
+            set.Add(companion);
+        return set;
+    }
+
+    private static IEnumerable<string> ForceToolCompanions(string forceToolName)
+    {
+        if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
+        {
+            yield return "desktop_screenshot";
+            yield return "desktop_open_app";
+            yield return "browser_navigate";
+        }
+        else if (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal))
+        {
+            yield return "desktop_open_app";
+            yield return "browser_navigate";
+        }
+    }
 
     /// <summary>
     /// Parse OpenAI-compatible <c>/v1/chat/completions</c> into the same

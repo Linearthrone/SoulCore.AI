@@ -9,7 +9,7 @@ public class DesktopToolIntentTests
     [InlineData("what's on my desktop?", "desktop_screenshot")]
     [InlineData("use the computer and draw a line", "desktop_screenshot")]
     [InlineData("click on the Chrome window", "desktop_screenshot")]
-    [InlineData("click the login button", "browser_snapshot")]
+    [InlineData("click the login button", "desktop_screenshot")]
     [InlineData("what windows are open?", "desktop_screenshot")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]

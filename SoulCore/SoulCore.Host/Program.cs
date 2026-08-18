@@ -40,6 +40,12 @@ if (args.Any(a => string.Equals(a, "--secrets-presence", StringComparison.Ordina
     return ReportSecretsPresence();
 }
 
+// Evidence mode: VirtualBox guestcontrol logon probe (SOULCORE_VBOX_GUEST_*).
+if (args.Any(a => string.Equals(a, "--guestcontrol-probe", StringComparison.OrdinalIgnoreCase)))
+{
+    return await GuestControlProbe.RunAsync(args);
+}
+
 // Evidence mode: write emotion → dispose → reopen → verify (no web host).
 if (args.Any(a => string.Equals(a, "--emotion-roundtrip", StringComparison.OrdinalIgnoreCase)))
 {

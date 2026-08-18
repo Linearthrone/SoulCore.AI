@@ -7,8 +7,9 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// <summary>
 /// Hard-scopes desktop ops to a VirtualBox Ubuntu guest (title substring e.g.
 /// <c>victoria-sandbox</c>). When an <see cref="IVmGuestDesktop"/> is wired,
-/// clicks/keys/screenshots use <b>guest framebuffer coordinates</b> via Guest
-/// Additions — the host VirtualBox window does not need to be visible.
+/// clicks/keys/screenshots prefer <b>guest framebuffer coordinates</b> via Guest
+/// Additions. On guest failure, falls back to the host-scoped VirtualBox window
+/// soft path so screenshots/clicks still work (pre-guestcontrol path).
 /// Pass-through when the substring is empty.
 /// </summary>
 public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
@@ -46,13 +47,31 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
 
     public bool IsActive => _titleContains.Length > 0;
 
-    public Task<DesktopOpResult> ScreenshotAsync(int monitor, CancellationToken ct = default)
+    public async Task<DesktopOpResult> ScreenshotAsync(int monitor, CancellationToken ct = default)
     {
         if (!IsActive)
-            return _inner.ScreenshotAsync(monitor, ct);
+            return await _inner.ScreenshotAsync(monitor, ct).ConfigureAwait(false);
+
         if (_guestDesktop is not null)
-            return _guestDesktop.ScreenshotAsync(ct);
-        return ScreenshotScopedAsync(monitor, ct);
+        {
+            var guest = await _guestDesktop.ScreenshotAsync(ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
+
+            var host = await ScreenshotScopedAsync(monitor, ct).ConfigureAwait(false);
+            if (host.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    host.Content + "\n(guest screenshot failed — used host VirtualBox window fallback: "
+                    + guest.Content + ")",
+                    host.Data);
+            }
+
+            return guest;
+        }
+
+        return await ScreenshotScopedAsync(monitor, ct).ConfigureAwait(false);
     }
 
     public async Task<DesktopOpResult> ClickAsync(
@@ -62,16 +81,26 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
 
-        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
-        if (win is null)
-            return MissingTarget();
-        if (!ContainsPoint(win, x, y))
-            return Outside(win, x, y, "click");
+            var host = await ClickHostScopedAsync(x, y, button, clicks, mapGuestOrigin: true, ct)
+                .ConfigureAwait(false);
+            if (host.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    host.Content + " (guest click failed — host window fallback: " + guest.Content + ")",
+                    host.Data);
+            }
 
-        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
-        return await _inner.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);
+            return guest;
+        }
+
+        return await ClickHostScopedAsync(x, y, button, clicks, mapGuestOrigin: false, ct)
+            .ConfigureAwait(false);
     }
 
     public async Task<DesktopOpResult> DragAsync(
@@ -81,16 +110,26 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
 
-        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
-        if (win is null)
-            return MissingTarget();
-        if (!ContainsPoint(win, x1, y1) || !ContainsPoint(win, x2, y2))
-            return Outside(win, x1, y1, "drag");
+            var host = await DragHostScopedAsync(x1, y1, x2, y2, button, mapGuestOrigin: true, ct)
+                .ConfigureAwait(false);
+            if (host.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    host.Content + " (guest drag failed — host window fallback: " + guest.Content + ")",
+                    host.Data);
+            }
 
-        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
-        return await _inner.DragAsync(x1, y1, x2, y2, button, ct).ConfigureAwait(false);
+            return guest;
+        }
+
+        return await DragHostScopedAsync(x1, y1, x2, y2, button, mapGuestOrigin: false, ct)
+            .ConfigureAwait(false);
     }
 
     public async Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default)
@@ -99,13 +138,29 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.TypeAsync(text, ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.TypeAsync(text, ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.TypeAsync(text, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
 
-        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
-        if (win is null)
-            return MissingTarget();
+            var host = await TypeHostScopedAsync(ct).ConfigureAwait(false);
+            if (!host.Success)
+                return guest;
+            var typed = await _inner.TypeAsync(text, ct).ConfigureAwait(false);
+            if (typed.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    typed.Content + " (guest type failed — host window fallback: " + guest.Content + ")",
+                    typed.Data);
+            }
 
-        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+            return guest;
+        }
+
+        var focus = await TypeHostScopedAsync(ct).ConfigureAwait(false);
+        if (!focus.Success)
+            return focus;
         return await _inner.TypeAsync(text, ct).ConfigureAwait(false);
     }
 
@@ -127,7 +182,26 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
                     null);
             }
 
-            return await _guestDesktop.KeyAsync(normalized, ct).ConfigureAwait(false);
+            var guest = await _guestDesktop.KeyAsync(normalized, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
+
+            if (IsBlockedHostKey(normalized))
+                return guest;
+
+            var host = await TypeHostScopedAsync(ct).ConfigureAwait(false);
+            if (!host.Success)
+                return guest;
+            var keyed = await _inner.KeyAsync(normalized, ct).ConfigureAwait(false);
+            if (keyed.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    keyed.Content + " (guest key failed — host window fallback: " + guest.Content + ")",
+                    keyed.Data);
+            }
+
+            return guest;
         }
 
         if (IsBlockedHostKey(normalized))
@@ -139,11 +213,9 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
                 null);
         }
 
-        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
-        if (win is null)
-            return MissingTarget();
-
-        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+        var winFocus = await TypeHostScopedAsync(ct).ConfigureAwait(false);
+        if (!winFocus.Success)
+            return winFocus;
         return await _inner.KeyAsync(normalized, ct).ConfigureAwait(false);
     }
 
@@ -154,16 +226,26 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
 
-        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
-        if (win is null)
-            return MissingTarget();
-        if (!ContainsPoint(win, x, y))
-            return Outside(win, x, y, "scroll");
+            var host = await ScrollHostScopedAsync(x, y, deltaY, deltaX, mapGuestOrigin: true, ct)
+                .ConfigureAwait(false);
+            if (host.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    host.Content + " (guest scroll failed — host window fallback: " + guest.Content + ")",
+                    host.Data);
+            }
 
-        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
-        return await _inner.ScrollAsync(x, y, deltaY, deltaX, ct).ConfigureAwait(false);
+            return guest;
+        }
+
+        return await ScrollHostScopedAsync(x, y, deltaY, deltaX, mapGuestOrigin: false, ct)
+            .ConfigureAwait(false);
     }
 
     public async Task<DesktopOpResult> OpenAppAsync(
@@ -192,7 +274,11 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.ListWindowsAsync(ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.ListWindowsAsync(ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
+        }
 
         var listed = await _inner.ListWindowsAsync(ct).ConfigureAwait(false);
         var matches = MatchScope(listed).ToList();
@@ -241,7 +327,11 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return await _inner.FocusWindowAsync(title, ct).ConfigureAwait(false);
 
         if (_guestDesktop is not null)
-            return await _guestDesktop.FocusWindowAsync(title, ct).ConfigureAwait(false);
+        {
+            var guest = await _guestDesktop.FocusWindowAsync(title, ct).ConfigureAwait(false);
+            if (guest.Success)
+                return guest;
+        }
 
         var ask = (title ?? string.Empty).Trim();
         if (ask.Length > 0
@@ -279,6 +369,66 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             "Prefer Guest Additions (SOULCORE_VBOX_GUEST_PASS) so the VM window can stay minimized.\n"
             + shot.Content;
         return new DesktopOpResult(true, note, shot.Data);
+    }
+
+    private async Task<DesktopOpResult> ClickHostScopedAsync(
+        int x, int y, string button, int clicks, bool mapGuestOrigin, CancellationToken ct)
+    {
+        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
+        if (win is null)
+            return MissingTarget();
+
+        var hx = mapGuestOrigin ? win.X + x : x;
+        var hy = mapGuestOrigin ? win.Y + y : y;
+        if (!ContainsPoint(win, hx, hy))
+            return Outside(win, hx, hy, "click");
+
+        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+        return await _inner.ClickAsync(hx, hy, button, clicks, ct).ConfigureAwait(false);
+    }
+
+    private async Task<DesktopOpResult> DragHostScopedAsync(
+        int x1, int y1, int x2, int y2, string button, bool mapGuestOrigin, CancellationToken ct)
+    {
+        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
+        if (win is null)
+            return MissingTarget();
+
+        var hx1 = mapGuestOrigin ? win.X + x1 : x1;
+        var hy1 = mapGuestOrigin ? win.Y + y1 : y1;
+        var hx2 = mapGuestOrigin ? win.X + x2 : x2;
+        var hy2 = mapGuestOrigin ? win.Y + y2 : y2;
+        if (!ContainsPoint(win, hx1, hy1) || !ContainsPoint(win, hx2, hy2))
+            return Outside(win, hx1, hy1, "drag");
+
+        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+        return await _inner.DragAsync(hx1, hy1, hx2, hy2, button, ct).ConfigureAwait(false);
+    }
+
+    private async Task<DesktopOpResult> ScrollHostScopedAsync(
+        int x, int y, int deltaY, int deltaX, bool mapGuestOrigin, CancellationToken ct)
+    {
+        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
+        if (win is null)
+            return MissingTarget();
+
+        var hx = mapGuestOrigin ? win.X + x : x;
+        var hy = mapGuestOrigin ? win.Y + y : y;
+        if (!ContainsPoint(win, hx, hy))
+            return Outside(win, hx, hy, "scroll");
+
+        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+        return await _inner.ScrollAsync(hx, hy, deltaY, deltaX, ct).ConfigureAwait(false);
+    }
+
+    private async Task<DesktopOpResult> TypeHostScopedAsync(CancellationToken ct)
+    {
+        var win = await ResolveTargetAsync(ct).ConfigureAwait(false);
+        if (win is null)
+            return MissingTarget();
+
+        await EnsureFocusedAsync(win, ct).ConfigureAwait(false);
+        return new DesktopOpResult(true, "focused", null);
     }
 
     private async Task<WindowHit?> ResolveTargetAsync(CancellationToken ct)
