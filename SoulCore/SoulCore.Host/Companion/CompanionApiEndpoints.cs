@@ -190,20 +190,20 @@ public static class CompanionApiEndpoints
 
             var frame = await callCam.CaptureCallFrameAsync(ct).ConfigureAwait(false);
             var source = "call_capture";
+            var safeSessionIdForLog = string.IsNullOrEmpty(sessionId)
+                ? "(none)"
+                : sessionId.Replace("\r", string.Empty).Replace("\n", string.Empty);
             if (frame is null && fallbackEyes == true)
-                var safeSessionIdForLog = string.IsNullOrEmpty(sessionId)
-                    ? "(none)"
-                    : sessionId.Replace("\r", string.Empty).Replace("\n", string.Empty);
             {
                 frame = await eyes.CaptureEyeAsync(ct).ConfigureAwait(false);
-                    safeSessionIdForLog);
+                source = "eyes_fallback";
             }
 
             if (frame is null || frame.Bytes.Length == 0)
             {
                 log.LogDebug(
                     "call/frame empty (session={Session}) — UE call_capture not ready?",
-                    sessionId ?? "(none)");
+                    safeSessionIdForLog);
                 return Results.Json(
                     new
                     {
