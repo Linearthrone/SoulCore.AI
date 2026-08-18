@@ -626,10 +626,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
-    /// Attach a tool result to the in-loop conversation. Screenshot bytes go on
-    /// <c>images[]</c> (BED-125). Vision models (Gemma 4) get a follow-up
-    /// <c>user</c> message with the same PNG — Ollama's docs and Gemma renderer
-    /// attend to user-role images, not <c>role:tool</c>.
+    /// Attach a tool result to the in-loop conversation. Screenshot bytes go on a
+    /// follow-up <c>user</c> message only (BED-125) — Ollama/Gemma attend to
+    /// user-role images. Prior loop images are stripped so multi-step computer
+    /// use does not accumulate multi‑MB vision context.
     /// </summary>
     private void AppendToolFeedback(
         List<OllamaChatMessage> ollamaMessages,
@@ -637,20 +637,24 @@ public sealed class OllamaInferenceClient : IInferenceClient
         ToolResult result)
     {
         var images = ToolImagePayload.TryExtractBase64Images(result.Data);
+
+        // Text-only tool role — do not double-attach the PNG here.
         ollamaMessages.Add(new OllamaChatMessage
         {
             Role = "tool",
             Name = name,
             Content = result.Content ?? string.Empty,
-            Images = images
+            Images = null
         });
 
         if (images is { Count: > 0 })
         {
+            StripPriorVisionImages(ollamaMessages);
             _logger.LogInformation(
-                "Ollama vision attach: tool={Tool} images={Count}",
+                "Ollama vision attach: tool={Tool} images={Count} b64Chars={Chars}",
                 name,
-                images.Count);
+                images.Count,
+                images[0].Length);
             ollamaMessages.Add(new OllamaChatMessage
             {
                 Role = "user",
@@ -663,8 +667,27 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (IsVisionTool(name))
         {
             _logger.LogWarning(
-                "Ollama vision: tool={Tool} returned no attachable PNG (missing bytes or over 4MB)",
+                "Ollama vision: tool={Tool} returned no attachable image (missing bytes or over size cap after compress)",
                 name);
+        }
+    }
+
+    /// <summary>Drop Images from earlier messages so only the latest frame is sent.</summary>
+    private static void StripPriorVisionImages(List<OllamaChatMessage> messages)
+    {
+        for (var i = 0; i < messages.Count; i++)
+        {
+            var m = messages[i];
+            if (m?.Images is not { Count: > 0 })
+                continue;
+            messages[i] = new OllamaChatMessage
+            {
+                Role = m.Role,
+                Content = m.Content,
+                Name = m.Name,
+                ToolCalls = m.ToolCalls,
+                Images = null
+            };
         }
     }
 
@@ -726,7 +749,11 @@ public sealed class OllamaInferenceClient : IInferenceClient
             parts.Add(new
             {
                 type = "image_url",
-                imageUrl = new { url = "data:image/png;base64," + img }
+                imageUrl = new
+                {
+                    url = (ToolImagePayload.LooksLikeJpegBase64(img) ? "data:image/jpeg;base64," : "data:image/png;base64,")
+                          + img
+                }
             });
         }
 

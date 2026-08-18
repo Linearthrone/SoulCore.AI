@@ -38,7 +38,8 @@ public static class ComputerUseGuidance
         "5) Draw / drag with desktop_drag; scroll with desktop_scroll (x,y,deltaY).\n" +
         "6) Then desktop_type / desktop_key (chords OK: Ctrl+L, Alt+Tab, Ctrl+T, Enter). " +
         "Type/key need a click target first.\n" +
-        "7) After multi-step state-changing actions (not bare open/launch), desktop_screenshot again to verify.\n" +
+        "7) After multi-step state-changing actions, screenshot again only if you need to see the result — " +
+        "do not screenshot after every click.\n" +
         "For local desktop launch/control use SoulCore desktop_* tools. " +
         "Do NOT invent Hermes MCP/gateway tool calls, computer_use, or terminal.\n" +
         "If a tool says AllowComputerControl is required, tell Kurt to enable it in " +
