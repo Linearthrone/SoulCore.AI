@@ -145,11 +145,18 @@ public static class CompanionApiEndpoints
             string? contactId = null;
             if (request.ContentLength is > 0)
             {
-                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
-                    .ConfigureAwait(false);
-                contactId = doc.RootElement.TryGetProperty("contactId", out var c)
-                    ? c.GetString()
-                    : null;
+                try
+                {
+                    using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                        .ConfigureAwait(false);
+                    contactId = doc.RootElement.TryGetProperty("contactId", out var c)
+                        ? c.GetString()
+                        : null;
+                }
+                catch (JsonException)
+                {
+                    return Results.BadRequest(new { error = "invalid JSON body" });
+                }
             }
 
             var session = sessions.Start(contactId);
