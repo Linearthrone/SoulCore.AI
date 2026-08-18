@@ -81,7 +81,27 @@ public sealed class GuestVmBrowserBridge : IBrowserBridge
     public async Task<BrowserBridgeResult> SnapshotAsync(string? query = null, CancellationToken ct = default)
     {
         var result = await _browser.BrowserSnapshotAsync(query, ct).ConfigureAwait(false);
-        return ToBridge(result);
+        if (result.Success)
+            return ToBridge(result);
+
+        // AT-SPI often breaks after guestcontrol/session churn. Fall back to a
+        // framebuffer PNG so the model can still see Login and desktop_click.
+        var shot = await _desktop.ScreenshotAsync(ct).ConfigureAwait(false);
+        if (shot.Success)
+        {
+            return new BrowserBridgeResult(
+                true,
+                "browser_snapshot (AT-SPI) failed — fell back to desktop_screenshot. " +
+                "Use desktop_click with coords from the PNG (not window-center). " +
+                "AT-SPI error: " + result.Content + "\n\n" + shot.Content,
+                shot.Data);
+        }
+
+        return new BrowserBridgeResult(
+            false,
+            result.Content + " | desktop_screenshot also failed: " + shot.Content
+            + ". Set SOULCORE_VBOX_GUEST_PASS / ensure VM is running, then retry desktop_screenshot.",
+            null);
     }
 
     public async Task<BrowserBridgeResult> ClickTextAsync(string text, int nth = 1, CancellationToken ct = default)
