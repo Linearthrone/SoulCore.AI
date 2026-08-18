@@ -106,6 +106,15 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             new { app = resolved.Alias, vm = _vmName, search, exe, url, hostLaunch = false, method = "guestcontrol" });
     }
 
+    public async Task<DesktopOpResult> ProbeWhoamiAsync(CancellationToken ct = default)
+    {
+        // Args after "--" must NOT repeat the exe path. VBoxManage already uses
+        // --exe as argv[0]; repeating it makes commands like `id` treat the path
+        // as a username ("no such user") after a successful guest logon.
+        return await GuestRunAsync("/usr/bin/whoami", Array.Empty<string>(), wait: true, ct)
+            .ConfigureAwait(false);
+    }
+
     public async Task<DesktopOpResult> ScreenshotAsync(CancellationToken ct = default)
     {
         // Without a guest password, skip guestcontrol and go straight to
@@ -808,6 +817,8 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         }
 
         argv.Add("--");
+        // Guest argv after "--": do NOT prepend <exe>. VBoxManage supplies argv[0]
+        // from --exe; duplicating the path breaks tools that parse USER args (id).
         argv.AddRange(exeArgs);
         return argv;
     }

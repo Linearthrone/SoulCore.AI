@@ -270,6 +270,27 @@ public class ScopedDesktopControlBackendTests
     }
 
     [Fact]
+    public void GuestControlArgs_DoNotRepeatExeAfterDashDash()
+    {
+        var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
+            "victoria-sandbox",
+            "run",
+            "victoria",
+            @"C:\temp\pass.txt",
+            "/usr/bin/id",
+            Array.Empty<string>(),
+            new[] { "-un" },
+            waitOutput: true);
+        Assert.Contains("--exe", argv);
+        Assert.Contains("/usr/bin/id", argv);
+        var dash = argv.IndexOf("--");
+        Assert.True(dash >= 0);
+        var after = argv.Skip(dash + 1).ToList();
+        Assert.Equal(new[] { "-un" }, after);
+        Assert.DoesNotContain(after, a => a.Contains("/usr/bin/id", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void GuestControlArgs_UsePasswordFileNotInlinePassword()
     {
         var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
