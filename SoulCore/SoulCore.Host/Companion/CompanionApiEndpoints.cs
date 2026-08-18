@@ -191,9 +191,12 @@ public static class CompanionApiEndpoints
             var frame = await callCam.CaptureCallFrameAsync(ct).ConfigureAwait(false);
             var source = "call_capture";
             if (frame is null && fallbackEyes == true)
+                var safeSessionIdForLog = string.IsNullOrEmpty(sessionId)
+                    ? "(none)"
+                    : sessionId.Replace("\r", string.Empty).Replace("\n", string.Empty);
             {
                 frame = await eyes.CaptureEyeAsync(ct).ConfigureAwait(false);
-                source = "eye_capture_fallback";
+                    safeSessionIdForLog);
             }
 
             if (frame is null || frame.Bytes.Length == 0)
