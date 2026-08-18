@@ -33,3 +33,21 @@ public interface IVmGuestDesktop : IVmGuestAppLauncher
 
     Task<DesktopOpResult> FocusWindowAsync(string title, CancellationToken ct = default);
 }
+
+/// <summary>
+/// Guest Firefox / AT-SPI helpers. All actions stay inside the Ubuntu VM.
+/// </summary>
+public interface IVmGuestBrowser
+{
+    Task<DesktopOpResult> BrowserNavigateAsync(string url, CancellationToken ct = default);
+
+    Task<DesktopOpResult> BrowserSnapshotAsync(string? query = null, CancellationToken ct = default);
+
+    Task<DesktopOpResult> BrowserClickTextAsync(string text, int nth = 1, CancellationToken ct = default);
+
+    Task<DesktopOpResult> BrowserFillAsync(string field, string value, CancellationToken ct = default);
+
+    Task<DesktopOpResult> BrowserBackAsync(CancellationToken ct = default);
+
+    Task<DesktopOpResult> BrowserTabsAsync(CancellationToken ct = default);
+}

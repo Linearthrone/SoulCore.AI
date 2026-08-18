@@ -8,7 +8,8 @@ public class DesktopToolIntentTests
     [InlineData("look at my screen", "desktop_screenshot")]
     [InlineData("what's on my desktop?", "desktop_screenshot")]
     [InlineData("use the computer and draw a line", "list_desktop_windows")]
-    [InlineData("click on the Chrome window", "list_desktop_windows")]
+    [InlineData("click on the Chrome window", "desktop_screenshot")]
+    [InlineData("click the login button", "browser_snapshot")]
     [InlineData("what windows are open?", "list_desktop_windows")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]
@@ -88,12 +89,13 @@ public class DesktopToolIntentTests
     }
 
     [Fact]
-    public void ComputerUseGuidance_Block_ForbidsInventedToolsForLocalLaunch()
+    public void ComputerUseGuidance_Block_ForbidsInventedHermesTools()
     {
         Assert.Contains("desktop_open_app", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("Do NOT invent Hermes", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("or terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }
@@ -108,8 +110,8 @@ public class DesktopToolIntentTests
         Assert.Contains("Preferred workflow", once, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
-        Assert.Contains("desktop_screenshot", once, StringComparison.Ordinal);
-        Assert.Contains("BLOCKED", once, StringComparison.Ordinal);
+        Assert.Contains("browser_navigate", once, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", once, StringComparison.Ordinal);
         Assert.Contains("never Process.Start", once, StringComparison.Ordinal);
         // Full playbook stays; scoped text is appended after it.
         Assert.True(

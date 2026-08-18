@@ -42,10 +42,11 @@ public sealed class DesktopClickTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_click",
         Description:
-            "Click at absolute screen coordinates (pixels, top-left origin). " +
+            "Click at guest framebuffer coordinates (Ubuntu VM pixels, origin 0,0). " +
             "Optional clicks:2 for double-click. " +
-            "Get coords from list_desktop_windows bounds (click center: x+width/2, y+height/2) or from a screenshot. " +
-            "Moves your blue agent cursor overlay only — does not steal Kurt's mouse. " +
+            "REQUIRED: call desktop_screenshot first and read x,y from the attached image — " +
+            "never guess window-center for in-page buttons. " +
+            "Prefer browser_click_text for labeled controls (Login, Sign in). " +
             "Requires AllowComputerControl.",
         Parameters: ParametersSchema);
 

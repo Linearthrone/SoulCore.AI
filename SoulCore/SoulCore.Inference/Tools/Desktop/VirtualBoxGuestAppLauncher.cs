@@ -11,7 +11,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// Coordinates are the guest framebuffer (origin 0,0) — the host VirtualBox
 /// window can stay minimized. Never <c>Process.Start</c> on the Windows host.
 /// </summary>
-public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
+public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGuestBrowser
 {
     public const string DefaultVBoxManage =
         @"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe";
@@ -542,7 +542,8 @@ public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
     }
 
     private async Task<DesktopOpResult> GuestRunAsync(
-        string exe, IReadOnlyList<string> exeArgs, bool wait, CancellationToken ct)
+        string exe, IReadOnlyList<string> exeArgs, bool wait, CancellationToken ct,
+        int timeoutMs = 20000)
     {
         var auth = RequirePassword();
         if (auth.Error is not null)
@@ -558,7 +559,8 @@ public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
             exe,
             putenv,
             exeArgs,
-            waitOutput: wait);
+            waitOutput: wait,
+            timeoutMs: timeoutMs);
         var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
@@ -680,7 +682,10 @@ public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
             $"LOGNAME={user}",
             $"XDG_RUNTIME_DIR=/run/user/{uid}",
             $"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{uid}/bus",
-            $"XAUTHORITY={xauth}"
+            $"XAUTHORITY={xauth}",
+            "GNOME_ACCESSIBILITY=1",
+            "GTK_MODULES=gail:atk-bridge",
+            "NO_AT_BRIDGE=0"
         };
     }
 
@@ -759,7 +764,8 @@ public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
         string exe,
         IReadOnlyList<string> putenv,
         IReadOnlyList<string> exeArgs,
-        bool waitOutput)
+        bool waitOutput,
+        int timeoutMs = 20000)
     {
         var argv = new List<string>
         {
@@ -781,7 +787,7 @@ public sealed class VirtualBoxGuestAppLauncher : IVmGuestDesktop
             argv.Add("--wait-stdout");
             argv.Add("--wait-stderr");
             argv.Add("--timeout");
-            argv.Add("20000");
+            argv.Add(Math.Max(1000, timeoutMs).ToString(CultureInfo.InvariantCulture));
         }
 
         argv.Add("--");

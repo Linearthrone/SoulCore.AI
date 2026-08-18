@@ -333,6 +333,7 @@ builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+builder.Services.AddSingleton<GuestVmBrowserBridgeHolder>();
 builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
 {
     IDesktopControlBackend inner;
@@ -367,12 +368,12 @@ builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
     var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
     if (string.IsNullOrWhiteSpace(scopeTitle))
         return inner;
-    // Guest Additions guestcontrol — Ubuntu coords; VirtualBox window can stay minimized.
-    // Requires SOULCORE_VBOX_GUEST_PASS in SoulCore/.env (never commit).
+    var guest = new VirtualBoxGuestAppLauncher(scopeTitle);
+    sp.GetRequiredService<GuestVmBrowserBridgeHolder>().Set(guest, guest);
     return new ScopedDesktopControlBackend(
         inner,
         scopeTitle,
-        new VirtualBoxGuestAppLauncher(scopeTitle),
+        guest,
         new NativeDesktopControlBackend());
 });
 builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
@@ -421,6 +422,14 @@ builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
+    var scopeTitle = (opts.DesktopTargetWindowTitle ?? "").Trim();
+    if (!string.IsNullOrWhiteSpace(scopeTitle))
+    {
+        var holder = sp.GetRequiredService<GuestVmBrowserBridgeHolder>();
+        if (holder.TryGet(out var bridge))
+            return bridge;
+    }
+
     var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
     if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
         backend = "none";
@@ -441,6 +450,12 @@ builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
     sp.GetRequiredService<IBrowserBridge>(),
     sp.GetRequiredService<IToolsAccessSettings>(),
     sp.GetRequiredService<IDesktopViewHub>()));
+builder.Services.AddSingleton<ITool, BrowserNavigateTool>();
+builder.Services.AddSingleton<ITool, BrowserSnapshotTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTextTool>();
+builder.Services.AddSingleton<ITool, BrowserFillTool>();
+builder.Services.AddSingleton<ITool, BrowserBackTool>();
+builder.Services.AddSingleton<ITool, BrowserTabsTool>();
 builder.Services.AddSingleton<ITool, BrowserClickTool>();
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();

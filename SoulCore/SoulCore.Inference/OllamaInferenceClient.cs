@@ -243,14 +243,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
                     .ConfigureAwait(false);
                 openOk = openOk && result.Success;
-                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
-                ollamaMessages.Add(new OllamaChatMessage
-                {
-                    Role = "tool",
-                    Name = name,
-                    Content = result.Content ?? string.Empty,
-                    Images = images
-                });
+                AppendToolFeedback(ollamaMessages, name, result);
             }
 
             forceConsumed = true;
@@ -526,18 +519,11 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     "Ollama tool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
                     iteration, i, name, result.Success, result.Content?.Length ?? 0);
 
-                // BED-125 contract: forward ToolResult.Content as the role:"tool"
-                // message string. ToolResult.Data is host-side only — never
-                // serialized as JSON to the model. Screenshot bytes may attach
-                // as Ollama images[] so vision models can see the desktop.
-                var images = ToolImagePayload.TryExtractBase64Images(result.Data);
-                ollamaMessages.Add(new OllamaChatMessage
-                {
-                    Role = "tool",
-                    Name = name,
-                    Content = result.Content ?? string.Empty,
-                    Images = images
-                });
+                // BED-125: tool Content is the string the model reads. Screenshot
+                // bytes attach as images[] (never JSON Data). Gemma4 also gets a
+                // synthetic user turn with the PNG — Ollama vision attends to
+                // user-role images, not tool-role.
+                AppendToolFeedback(ollamaMessages, name, result);
             }
 
             // BED-168: any tool_calls round under ForceTool consumes the force
@@ -600,26 +586,111 @@ public sealed class OllamaInferenceClient : IInferenceClient
     }
 
     /// <summary>
+    /// Attach a tool result to the in-loop conversation. Screenshot bytes go on
+    /// <c>images[]</c> (BED-125). Vision models (Gemma 4) get a follow-up
+    /// <c>user</c> message with the same PNG — Ollama's docs and Gemma renderer
+    /// attend to user-role images, not <c>role:tool</c>.
+    /// </summary>
+    private void AppendToolFeedback(
+        List<OllamaChatMessage> ollamaMessages,
+        string name,
+        ToolResult result)
+    {
+        var images = ToolImagePayload.TryExtractBase64Images(result.Data);
+        ollamaMessages.Add(new OllamaChatMessage
+        {
+            Role = "tool",
+            Name = name,
+            Content = result.Content ?? string.Empty,
+            Images = images
+        });
+
+        if (images is { Count: > 0 })
+        {
+            _logger.LogInformation(
+                "Ollama vision attach: tool={Tool} images={Count}",
+                name,
+                images.Count);
+            ollamaMessages.Add(new OllamaChatMessage
+            {
+                Role = "user",
+                Content = BuildVisionUserFollowUp(name, result.Content),
+                Images = images
+            });
+            return;
+        }
+
+        if (IsVisionTool(name))
+        {
+            _logger.LogWarning(
+                "Ollama vision: tool={Tool} returned no attachable PNG (missing bytes or over 4MB)",
+                name);
+        }
+    }
+
+    private static bool IsVisionTool(string name) =>
+        string.Equals(name, "desktop_screenshot", StringComparison.Ordinal)
+        || string.Equals(name, "browser_capture_tab", StringComparison.Ordinal);
+
+    private static string BuildVisionUserFollowUp(string tool, string? content)
+    {
+        var hint =
+            "[Vision] A PNG from " + tool + " of the Ubuntu VM framebuffer is attached. " +
+            "Coordinates are guest pixels (origin 0,0) — not Windows monitors and not the VirtualBox window. " +
+            "Look at the image before clicking. For labeled controls (Login, Sign in, links, inputs) " +
+            "prefer browser_snapshot / browser_click_text / browser_fill. " +
+            "desktop_click x,y only with coordinates you read from THIS image — never a window center for in-page UI.";
+        if (string.IsNullOrWhiteSpace(content))
+            return hint;
+        return hint + "\n" + content.Trim();
+    }
+
+    /// <summary>
     /// BED-166: clone conversation messages for OpenAI-compat <c>/v1</c> so
     /// every <c>tool_calls[].function.arguments</c> is a JSON <b>string</b> on
-    /// the wire (not an object). Leaves the in-memory loop messages unchanged
-    /// so native <c>/api/chat</c> rounds can keep object-form args.
+    /// the wire (not an object). Preserves <c>images[]</c> and, when present,
+    /// also emits OpenAI <c>image_url</c> content parts so vision survives
+    /// ForceTool rounds. Leaves in-memory loop messages unchanged.
     /// </summary>
-    private static List<OllamaChatMessage> ToOpenAiWireMessages(IReadOnlyList<OllamaChatMessage> messages)
+    private static List<OpenAiChatMessage> ToOpenAiWireMessages(IReadOnlyList<OllamaChatMessage> messages)
     {
-        var list = new List<OllamaChatMessage>(messages.Count);
+        var list = new List<OpenAiChatMessage>(messages.Count);
         foreach (var m in messages)
         {
             if (m is null) continue;
-            list.Add(new OllamaChatMessage
+            list.Add(new OpenAiChatMessage
             {
                 Role = m.Role,
-                Content = m.Content,
+                Content = ToOpenAiContent(m),
                 Name = m.Name,
-                ToolCalls = ToOpenAiWireToolCalls(m.ToolCalls)
+                ToolCalls = ToOpenAiWireToolCalls(m.ToolCalls),
+                Images = m.Images is { Count: > 0 } ? m.Images : null
             });
         }
         return list;
+    }
+
+    private static object? ToOpenAiContent(OllamaChatMessage m)
+    {
+        if (m.Images is not { Count: > 0 })
+            return m.Content;
+
+        var parts = new List<object>(1 + m.Images.Count)
+        {
+            new { type = "text", text = m.Content ?? string.Empty }
+        };
+        foreach (var img in m.Images)
+        {
+            if (string.IsNullOrWhiteSpace(img))
+                continue;
+            parts.Add(new
+            {
+                type = "image_url",
+                imageUrl = new { url = "data:image/png;base64," + img }
+            });
+        }
+
+        return parts;
     }
 
     private static List<OllamaToolCallDto>? ToOpenAiWireToolCalls(IReadOnlyList<OllamaToolCallDto>? calls)
@@ -858,6 +929,27 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 "You must call desktop_open_app now with an allowlisted app alias " +
                 "(chrome, edge, firefox, notepad, explorer). Optional args: a URL. " +
                 "Do not list windows or screenshot — emit the tool call only.";
+        }
+
+        if (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal))
+        {
+            return
+                "You must call desktop_screenshot now. Do not reply with prose — emit the tool call only. " +
+                "After the PNG arrives, use browser_snapshot / browser_click_text or desktop_click with coords from the image.";
+        }
+
+        if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
+        {
+            return
+                "You must call browser_snapshot now (optional query for Login/Sign in). " +
+                "Do not reply with prose — emit the tool call only.";
+        }
+
+        if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal))
+        {
+            return
+                "You must call browser_navigate now with a full http(s) url. " +
+                "Do not reply with prose — emit the tool call only.";
         }
 
         return
@@ -1175,7 +1267,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     private sealed class OpenAiChatRequest
     {
         public string Model { get; set; } = string.Empty;
-        public List<OllamaChatMessage> Messages { get; set; } = new();
+        public List<OpenAiChatMessage> Messages { get; set; } = new();
         public List<OllamaToolDto>? Tools { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -1201,6 +1293,27 @@ public sealed class OllamaInferenceClient : IInferenceClient
         public List<OllamaToolCallDto>? ToolCalls { get; set; }
 
         /// <summary>Base64 image payloads (no data-URI prefix) for vision models.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Images { get; set; }
+    }
+
+    /// <summary>
+    /// /v1 clone of <see cref="OllamaChatMessage"/> whose <c>Content</c> may be
+    /// a string or OpenAI multimodal parts (text + image_url).
+    /// </summary>
+    private sealed class OpenAiChatMessage
+    {
+        public string Role { get; set; } = "user";
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public object? Content { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Name { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<OllamaToolCallDto>? ToolCalls { get; set; }
+
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<string>? Images { get; set; }
     }
