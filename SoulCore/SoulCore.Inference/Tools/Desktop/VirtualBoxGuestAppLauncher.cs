@@ -108,6 +108,23 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
 
     public async Task<DesktopOpResult> ScreenshotAsync(CancellationToken ct = default)
     {
+        // Without a guest password, skip guestcontrol and go straight to
+        // VBoxManage screenshotpng so Login/UI ForceTool loops still see a PNG.
+        var auth = RequirePassword();
+        if (auth.Error is not null)
+        {
+            var pngOnly = await HostScreenshotPngAsync(ct).ConfigureAwait(false);
+            if (pngOnly.Success)
+            {
+                return new DesktopOpResult(
+                    true,
+                    pngOnly.Content + " (guestcontrol skipped: SOULCORE_VBOX_GUEST_PASS not set)",
+                    pngOnly.Data);
+            }
+
+            return auth.Error;
+        }
+
         var guestFile = "/tmp/hv-desktop.png";
         var shot = await GuestRunAsync(
                 "/usr/bin/gnome-screenshot",

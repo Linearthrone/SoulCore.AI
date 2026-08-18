@@ -493,6 +493,13 @@ public class OllamaToolLoopTests
             """{"type":"object","properties":{"query":{"type":"string"}},"additionalProperties":true}""")
         .RootElement.Clone());
 
+    private static ToolDefinition DesktopScreenshotToolDef() => new(
+        "desktop_screenshot",
+        "Capture the desktop / VM framebuffer as a PNG.",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{"monitor":{"type":"integer"}},"additionalProperties":true}""")
+        .RootElement.Clone());
+
     [Fact]
     public async Task ForceToolName_BrowserSnapshot_AllowsBootstrapDesktopOpenApp()
     {
@@ -548,6 +555,49 @@ public class OllamaToolLoopTests
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
         Assert.Contains("api/chat", handler.CapturedRequests[2].Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForceToolName_BrowserSnapshot_DesktopScreenshotSatisfiesForce()
+    {
+        // When AT-SPI is down, exclusive ForceTool=browser_snapshot must still
+        // allow desktop_screenshot and treat it as satisfying the force so the
+        // Login/UI loop is not stuck refusing every tool.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "desktop_screenshot", arguments = new { monitor = 0 } }
+                        }
+                    }),
+                ChatResponseJson(content: "I see the Login button", toolCalls: null)
+            });
+
+        var registry = new ScriptedRegistry(
+            ("desktop_screenshot", _ => new ToolResult(true, "png ok", null)),
+            ("browser_snapshot", _ => new ToolResult(false, "at-spi down", null)));
+
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "click the login button" }
+            },
+            new[] { DesktopScreenshotToolDef(), BrowserSnapshotToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "browser_snapshot" });
+
+        Assert.Equal("I see the Login button", result);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_screenshot");
+        Assert.DoesNotContain(registry.Calls, c => c.Name == "browser_snapshot");
+        Assert.Equal(2, handler.CallCount);
+        Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
     }
 
     [Fact]
