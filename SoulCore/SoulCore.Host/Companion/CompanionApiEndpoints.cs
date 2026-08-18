@@ -191,7 +191,7 @@ public static class CompanionApiEndpoints
 
             if (frame is null || frame.Bytes.Length == 0)
             {
-                log.LogInformation(
+                log.LogDebug(
                     "call/frame empty (session={Session}) — UE call_capture not ready?",
                     sessionId ?? "(none)");
                 return Results.Json(
