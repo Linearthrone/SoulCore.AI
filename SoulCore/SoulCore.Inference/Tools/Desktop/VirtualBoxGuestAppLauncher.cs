@@ -117,29 +117,39 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
 
     public async Task<DesktopOpResult> ScreenshotAsync(CancellationToken ct = default)
     {
-        // Without a guest password, skip guestcontrol and go straight to
-        // VBoxManage screenshotpng so Login/UI ForceTool loops still see a PNG.
-        var auth = RequirePassword();
-        if (auth.Error is not null)
+        // Prefer VBoxManage controlvm screenshotpng: one process, typically <1s.
+        // Previously we tried gnome-screenshot via guestcontrol first whenever a
+        // password was set; GuestRun waits up to 20s (then import another 20s)
+        // when the guest agent stalls — that made every "look" feel stuck before
+        // the model even saw the image.
+        var sw = Stopwatch.StartNew();
+        var png = await HostScreenshotPngAsync(ct).ConfigureAwait(false);
+        if (png.Success)
         {
-            var pngOnly = await HostScreenshotPngAsync(ct).ConfigureAwait(false);
-            if (pngOnly.Success)
-            {
-                return new DesktopOpResult(
-                    true,
-                    pngOnly.Content + " (guestcontrol skipped: SOULCORE_VBOX_GUEST_PASS not set)",
-                    pngOnly.Data);
-            }
-
-            return auth.Error;
+            TimingLog($"screenshot path=screenshotpng ms={sw.ElapsedMilliseconds}");
+            var note = string.IsNullOrWhiteSpace(RequirePassword().Password)
+                ? " (guestcontrol skipped: SOULCORE_VBOX_GUEST_PASS not set)"
+                : $" (fast path; {sw.ElapsedMilliseconds}ms)";
+            return new DesktopOpResult(true, png.Content + note, png.Data);
         }
 
+        TimingLog(
+            $"screenshot path=screenshotpng failed after {sw.ElapsedMilliseconds}ms: {png.Content}");
+
+        var auth = RequirePassword();
+        if (auth.Error is not null)
+            return auth.Error;
+
+        // Short guestcontrol fallback — fail fast if the agent is wedged.
+        const int guestShotTimeoutMs = 8_000;
         var guestFile = "/tmp/hv-desktop.png";
+        var guestSw = Stopwatch.StartNew();
         var shot = await GuestRunAsync(
                 "/usr/bin/gnome-screenshot",
                 new[] { "-f", guestFile },
                 wait: true,
-                ct)
+                ct,
+                timeoutMs: guestShotTimeoutMs)
             .ConfigureAwait(false);
         if (!shot.Success)
         {
@@ -147,7 +157,8 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                     "/usr/bin/import",
                     new[] { "-window", "root", guestFile },
                     wait: true,
-                    ct)
+                    ct,
+                    timeoutMs: guestShotTimeoutMs)
                 .ConfigureAwait(false);
         }
 
@@ -155,21 +166,35 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         {
             var copied = await GuestCopyFromAsync(guestFile, ct).ConfigureAwait(false);
             if (copied.Success)
-                return copied;
+            {
+                TimingLog($"screenshot path=guest_capture ms={guestSw.ElapsedMilliseconds}");
+                return new DesktopOpResult(
+                    true,
+                    copied.Content + $" (guestcontrol; {guestSw.ElapsedMilliseconds}ms)",
+                    copied.Data);
+            }
+
             shot = copied;
+            TimingLog(
+                $"screenshot path=guest_copy_failed ms={guestSw.ElapsedMilliseconds}: {copied.Content}");
         }
-
-        var fallback = await HostScreenshotPngAsync(ct).ConfigureAwait(false);
-        if (fallback.Success)
+        else
         {
-            return new DesktopOpResult(
-                true,
-                fallback.Content + " (guestcontrol screenshot failed: " + shot.Content + ")",
-                fallback.Data);
+            TimingLog(
+                $"screenshot path=guest_run_failed ms={guestSw.ElapsedMilliseconds}: {shot.Content}");
         }
 
-        return shot;
+        // Last resort: return the original screenshotpng failure (or guest error).
+        return png.Success
+            ? png
+            : new DesktopOpResult(
+                false,
+                $"screenshot failed: screenshotpng={png.Content}; guest={shot.Content}",
+                null);
     }
+
+    private static void TimingLog(string message)
+        => Console.WriteLine($"[timing] {message}");
 
     public async Task<DesktopOpResult> ClickAsync(
         int x, int y, string button, int clicks = 1, CancellationToken ct = default)
