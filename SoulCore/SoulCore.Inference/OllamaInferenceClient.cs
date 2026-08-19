@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -276,6 +277,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 "Ollama ForceTool desktop_open_app pre-dispatched; continuing tool-loop for follow-on actions.");
         }
 
+        var loopSw = Stopwatch.StartNew();
         for (var iteration = 0; iteration < cap; iteration++)
         {
             var chatOptions = new OllamaChatOptions { NumPredict = _options.MaxTokens };
@@ -296,6 +298,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
             var wireToolChoice = BuildWireToolChoice(forceActive ? forceToolName : null, wireTools.Count);
             OllamaChatResponseMessage? msg;
             string body;
+            var modelSw = Stopwatch.StartNew();
+            var endpoint = wireToolChoice.HasValue ? "v1/chat/completions" : "api/chat";
 
             // BED-162: native /api/chat ignores tool_choice on current Ollama;
             // OpenAI-compat /v1/chat/completions honors object-form force.
@@ -327,8 +331,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 if (!openAiResponse.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "Ollama /v1/chat/completions failed at iteration {Iter}: {Status} {Body}",
+                        "[timing] ollama.chat FAILED iter={Iter} ms={Ms} endpoint={Endpoint} status={Status} body={Body}",
                         iteration,
+                        modelSw.ElapsedMilliseconds,
+                        endpoint,
                         (int)openAiResponse.StatusCode,
                         TextUtil.Truncate(body, 400));
                     openAiResponse.EnsureSuccessStatusCode();
@@ -338,8 +344,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 if (msg is null)
                 {
                     _logger.LogWarning(
-                        "Ollama /v1/chat/completions returned no message at iteration {Iter}: {Body}",
-                        iteration, TextUtil.Truncate(body, 400));
+                        "[timing] ollama.chat empty iter={Iter} ms={Ms} endpoint={Endpoint} body={Body}",
+                        iteration, modelSw.ElapsedMilliseconds, endpoint, TextUtil.Truncate(body, 400));
                     return lastAssistantText;
                 }
 
@@ -369,8 +375,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "Ollama /api/chat failed at iteration {Iter}: {Status} {Body}",
+                        "[timing] ollama.chat FAILED iter={Iter} ms={Ms} endpoint={Endpoint} status={Status} body={Body}",
                         iteration,
+                        modelSw.ElapsedMilliseconds,
+                        endpoint,
                         (int)response.StatusCode,
                         TextUtil.Truncate(body, 400));
                     response.EnsureSuccessStatusCode();
@@ -380,10 +388,21 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 msg = parsed?.Message;
                 if (msg is null)
                 {
-                    _logger.LogWarning("Ollama /api/chat returned no message at iteration {Iter}: {Body}", iteration, TextUtil.Truncate(body, 400));
+                    _logger.LogWarning(
+                        "[timing] ollama.chat empty iter={Iter} ms={Ms} endpoint={Endpoint} body={Body}",
+                        iteration, modelSw.ElapsedMilliseconds, endpoint, TextUtil.Truncate(body, 400));
                     return lastAssistantText;
                 }
             }
+
+            _logger.LogInformation(
+                "[timing] ollama.chat iter={Iter} ms={Ms} endpoint={Endpoint} model={Model} toolsOffered={Tools} forceActive={Force}",
+                iteration,
+                modelSw.ElapsedMilliseconds,
+                endpoint,
+                toolModel,
+                wireTools.Count,
+                forceActive);
 
             var assistantText = msg.Content ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(assistantText))
@@ -468,6 +487,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     _logger.LogDebug(
                         "Ollama agent loop end at iteration {Iter}: text reply (no tool_calls, recovered={Recovered}, forceActive={Force}).",
                         iteration, recovered, forceActive);
+                    _logger.LogInformation(
+                        "[timing] ollama.loop end iter={Iter} totalMs={Ms} reason=text",
+                        iteration,
+                        loopSw.ElapsedMilliseconds);
                     // Prefer any earlier non-empty assistant text when the final
                     // post-tool turn is blank (gemma4 habit after desktop_open_app).
                     return !string.IsNullOrWhiteSpace(assistantText)
@@ -501,6 +524,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     iteration, i, name, recovered);
 
                 ToolResult result;
+                var toolSw = Stopwatch.StartNew();
                 // BED-165: hard refuse non-forced names while ForceToolName is
                 // active — never execute the escape-hatch tool even if the model
                 // invents a call (or content-recovery somehow leaked one).
@@ -532,8 +556,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 }
 
                 _logger.LogInformation(
-                    "Ollama tool result: iter={Iter} tool#{Index} name={Name} success={Success} contentLen={Len}",
-                    iteration, i, name, result.Success, result.Content?.Length ?? 0);
+                    "[timing] tool.exec iter={Iter} tool#{Index} name={Name} ok={Ok} ms={Ms} contentLen={Len}",
+                    iteration, i, name, result.Success, toolSw.ElapsedMilliseconds, result.Content?.Length ?? 0);
 
                 // BED-125: tool Content is the string the model reads. Screenshot
                 // bytes attach as images[] (never JSON Data). Gemma4 also gets a
@@ -575,8 +599,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
         }
 
         _logger.LogWarning(
-            "Ollama agent loop hit MaxToolIterations cap ({Cap}) — returning last assistant text or cap marker.",
-            cap);
+            "[timing] ollama.loop CAP iter={Cap} totalMs={Ms} — returning last assistant text or cap marker.",
+            cap,
+            loopSw.ElapsedMilliseconds);
         return string.IsNullOrEmpty(lastAssistantText)
             ? IterationCapMarker
             : lastAssistantText;

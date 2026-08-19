@@ -309,6 +309,52 @@ public class ScopedDesktopControlBackendTests
     }
 
     [Fact]
+    public async Task ScreenshotAsync_PrefersScreenshotPngBeforeGuestControl_WhenPasswordSet()
+    {
+        // Minimal valid PNG header + IHDR dims (1x1) so TryReadPngSize succeeds.
+        var png = new byte[]
+        {
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+            0xDE, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+        };
+        var calls = new List<string>();
+        Task<(int Exit, string Stdout, string Stderr)> Run(
+            string exe, IReadOnlyList<string> argv, CancellationToken ct)
+        {
+            var joined = string.Join(' ', argv);
+            calls.Add(joined);
+            if (argv.Contains("screenshotpng"))
+            {
+                var path = argv[^1];
+                File.WriteAllBytes(path, png);
+                return Task.FromResult((0, "", ""));
+            }
+
+            return Task.FromResult((1, "", "guestcontrol should not run when screenshotpng works"));
+        }
+
+        var launcher = new VirtualBoxGuestAppLauncher(
+            "victoria-sandbox",
+            "VBoxManage",
+            Run,
+            password: () => "guest-pass",
+            username: () => "victoria");
+
+        var result = await launcher.ScreenshotAsync();
+
+        Assert.True(result.Success);
+        Assert.Contains("screenshotpng", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fast path", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(calls);
+        Assert.Contains("screenshotpng", calls[0], StringComparison.Ordinal);
+        Assert.DoesNotContain(calls, c => c.Contains("guestcontrol", StringComparison.Ordinal));
+        Assert.DoesNotContain(calls, c => c.Contains("gnome-screenshot", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Click_GuestDesktop_Fails_FallsBackToHostWindow()
     {
         var inner = new RecordingBackend();
