@@ -6,11 +6,12 @@ created: 2026-08-19
 updated: 2026-08-19
 title: Victoria Link — Messenger-class product (not a Host reskin)
 need: Phone app that keeps chat, syncs with the computer, looks professional with depth/themes, and can actually talk/video — decide SoulCore vs House
+related_fork: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 sent_at:
 pm_intake:
 ---
 
-# Victoria Link — Messenger-class product
+> **2026-08-19:** Daily phone chat **forked** to DIGITS SMS/MMS (`victoria-digits-sms-channel.md`). This Messenger-class Link rewrite is **deprioritized** unless the T-Mobile gateway kill-test fails.
 
 ## 1. Need / Want
 
