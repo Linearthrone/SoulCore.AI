@@ -184,7 +184,7 @@ public sealed class UnrealVerbClientStub : IUnrealVerbClient, IUnrealEyeCaptureC
             var root = doc.RootElement;
             var type = root.TryGetProperty("type", out var t) ? t.GetString() : null;
             if (string.IsNullOrEmpty(type)
-                || !acceptedTypes.Any(a => string.Equals(a, type, StringComparison.OrdinalIgnoreCase)))
+                || !Array.Exists(acceptedTypes, a => string.Equals(a, type, StringComparison.OrdinalIgnoreCase)))
                 return false;
 
             var b64 = root.TryGetProperty("bytes_b64", out var b) ? b.GetString()

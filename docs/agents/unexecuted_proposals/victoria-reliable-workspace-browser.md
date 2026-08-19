@@ -1,14 +1,15 @@
 ---
 type: proposal
-status: sent-to-pm
+status: accepted-by-pm
 tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-19
 title: "[TINA-main] Victoria dedicated Playwright browser + live stream"
 need: Reliable background computer/browser so Victoria can log in and work in seconds; Kurt sees a stream of her browser; web first then VS IDE
 sent_at: 2026-08-19
-prop_id: PROP-1
-pm_intake: docs/agents/tasks/PROP-1-TT01-to-PM01.md
+pm_intake: docs/agents/tasks/TASK-20260819-193-TT01-to-PM01.md
+pm_decision: docs/agents/reports/TASK-20260819-193-PM01-to-TT01.md
+pm_accepted: 2026-08-19 TINA-main — Avenue A1; tickets 194–199
 environment: TINA-main
 ---
 

@@ -1,16 +1,18 @@
 ---
 type: proposal
-status: sent-to-pm
+prop_id: PROP-2-ue-reliable-embodiment
+status: accepted-pm-ticketed
 tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-19
 title: "[TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still"
 need: Reliable Unreal output — MetaHuman animations, Victoria sight and movement, possess Kayleigh when Kurt is in the world
 sent_at: 2026-08-19
-prop_id: PROP-3
-pm_intake: docs/agents/tasks/PROP-3-TT01-to-PM01.md
+pm_intake: docs/agents/tasks/TASK-20260819-195-TT01-to-PM01.md
 environment: TINA-main
 related: docs/agents/unexecuted_proposals/victoria-embodiment-walk-and-interact.md
+pm_tickets: PROP-2.1..2.4
+pm_owner: WonderWoman (PM-01)
 ---
 
 # UE reliability — Kayleigh possess, Victoria walk/anims, eyes

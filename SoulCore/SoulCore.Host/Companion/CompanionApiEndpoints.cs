@@ -145,11 +145,18 @@ public static class CompanionApiEndpoints
             string? contactId = null;
             if (request.ContentLength is > 0)
             {
-                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
-                    .ConfigureAwait(false);
-                contactId = doc.RootElement.TryGetProperty("contactId", out var c)
-                    ? c.GetString()
-                    : null;
+                try
+                {
+                    using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                        .ConfigureAwait(false);
+                    contactId = doc.RootElement.TryGetProperty("contactId", out var c)
+                        ? c.GetString()
+                        : null;
+                }
+                catch (JsonException)
+                {
+                    return Results.BadRequest(new { error = "invalid JSON body" });
+                }
             }
 
             var session = sessions.Start(contactId);
@@ -183,17 +190,20 @@ public static class CompanionApiEndpoints
 
             var frame = await callCam.CaptureCallFrameAsync(ct).ConfigureAwait(false);
             var source = "call_capture";
+            var safeSessionIdForLog = string.IsNullOrEmpty(sessionId)
+                ? "(none)"
+                : sessionId.Replace("\r", string.Empty).Replace("\n", string.Empty);
             if (frame is null && fallbackEyes == true)
             {
                 frame = await eyes.CaptureEyeAsync(ct).ConfigureAwait(false);
-                source = "eye_capture_fallback";
+                source = "eyes_fallback";
             }
 
             if (frame is null || frame.Bytes.Length == 0)
             {
-                log.LogInformation(
+                log.LogDebug(
                     "call/frame empty (session={Session}) — UE call_capture not ready?",
-                    sessionId ?? "(none)");
+                    safeSessionIdForLog);
                 return Results.Json(
                     new
                     {

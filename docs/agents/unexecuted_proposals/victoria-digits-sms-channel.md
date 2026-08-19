@@ -1,16 +1,18 @@
 ---
 type: proposal
-status: sent-to-pm
+prop_id: PROP-1-digits-sms-channel
+status: accepted-pm-ticketed
 tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-19
 title: "[TINA-main] Victoria DIGITS SMS/MMS on T-Mobile + MMS screenshots"
 need: Give Victoria Kurt’s unused T-Mobile DIGITS line (stay on T-Mobile); SMS/MMS first; she can MMS a screenshot of her work; Link shrinks to status + ComfyUI
 sent_at: 2026-08-19
-prop_id: PROP-2
-pm_intake: docs/agents/tasks/PROP-2-TT01-to-PM01.md
+pm_intake: docs/agents/tasks/TASK-20260819-194-TT01-to-PM01.md
 environment: TINA-main
 forks: docs/agents/unexecuted_proposals/victoria-link-messenger-product.md
+pm_tickets: PROP-1.1..1.6
+pm_owner: WonderWoman (PM-01)
 ---
 
 # Victoria DIGITS number — SMS channel into One Thread

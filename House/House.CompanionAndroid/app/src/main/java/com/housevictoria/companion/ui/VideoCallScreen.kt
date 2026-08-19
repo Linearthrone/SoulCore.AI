@@ -84,7 +84,7 @@ fun VideoCallScreen() {
         scope.launch {
             status = "Calling…"
             errorHint = null
-            val cfg = CompanionPrefs.load(context)
+            val cfg = withContext(Dispatchers.IO) { CompanionPrefs.load(context) }
             val started = withContext(Dispatchers.IO) {
                 CompanionCallClient.startSession(cfg.resolvedHttpBase(), cfg.token)
             }
@@ -143,7 +143,7 @@ fun VideoCallScreen() {
             .fillMaxSize()
             .background(Color(0xFF0B0A0F))
     ) {
-        val bmp = frameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        val bmp = remember(frameBytes) { frameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) } }
         if (bmp != null) {
             Image(
                 bitmap = bmp.asImageBitmap(),

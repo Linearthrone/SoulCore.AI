@@ -1,6 +1,7 @@
 ---
 type: proposal
-status: unexecuted
+prop_id: PROP-3-link-messenger-product
+status: parked-pending-digits-pass
 tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-19

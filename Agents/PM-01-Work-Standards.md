@@ -3,7 +3,7 @@ type: rule
 role: PM-01
 version: 1.4
 created: 2026-03-23
-updated: 2026-07-29
+updated: 2026-08-19
 ---
 
 # PM-01 Work Standards
@@ -30,12 +30,16 @@ PM-01 is the project master controller, not a developer, not ops, not QA.
 ### 1.1 Inbound from TT-01 (Pre-PM + Unblock)
 
 When you receive `PROP-{N}-TT01-to-PM01.md` (legacy: `TASK-*-TT01-to-PM01.md`) or the user points at a file in `docs/agents/unexecuted_proposals/`:
+When you receive a TT intake (`PROP-{N}` / `PROP-{N}.0` / legacy `TASK-*-TT01-to-PM01.md`) or the user points at a file in `docs/agents/unexecuted_proposals/`:
 
-1. Read the proposal (avenues, recommendation, risks, open questions)
+1. Read the proposal (avenues, recommendation, risks, open questions) — require `prop_id` on new proposals (`docs/agents/PROP_NUMBERING.md`)
 2. Decide: accept recommended route, pick an alternative, or send back to TT-01 for another pass
 3. Issue execution tickets as **`PROP-N.M-PM01-to-{ROLE}.md`** (`.1`, `.2`, …). Do not treat the proposal or the PROP intake as an execution ticket. Do not invent a new TASK-NNN for work that came from a PROP.
 4. Leave the proposal in `unexecuted_proposals/` unless the user asks to archive/withdraw; prefer updating its notes over deleting history
 5. If this was an **unblock eval** for a stuck ticket: close or supersede the blocked ticket, ticket the new path immediately (Â§9.1), tell the user what changed
+3. Issue execution tickets as **`PROP-{N}.{M}-PM01-to-{ROLE}.md`** (PM may adjust the `.M` split vs TT's suggestion). Do not treat the proposal itself as an execution ticket. Do **not** invent a new bare `TASK-###` that can collide with unrelated waves.
+4. Leave the proposal in `unexecuted_proposals/`; set `status: accepted-pm-ticketed` and list splits under `pm_tickets`
+5. If this was an **unblock eval** for a stuck legacy ticket: close or supersede the blocked ticket, ticket the new path immediately (§9.1), tell the user what changed
 
 ### 1.2 Keep the Team Moving (Momentum Rule)
 
@@ -87,7 +91,11 @@ Every task issued must include:
 | Acceptance Criteria | Quantifiable Pass/Fail standards |
 | Reply Requirements | Required evidence (logs/screenshots/output) |
 
-**Task ticket filename:** `TASK-{date}-{ID}-PM01-to-{role}.md`
+**Task ticket filename (TT-sourced work, 2026-08-19+):** `PROP-{N}.{M}-PM01-to-{role}.md`
+
+**Task ticket filename (legacy / non-TT chores):** `TASK-{date}-{ID}-PM01-to-{role}.md`
+
+See `docs/agents/PROP_NUMBERING.md`. PM may re-divide `.M` labor after TT suggests a split.
 
 Valid `{role}` recipients: `FED01` | `BED01` | `DBD01` | `SEC01` | `OPS01` | `QA01` | `SLOP01` | `TT01` (legacy `DEV01` only if Â§10 allows)
 

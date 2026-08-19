@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using SoulCore.Inference.Tools.Browser;
 
 namespace SoulCore.Inference.Tools.Desktop;
 
@@ -17,10 +18,12 @@ public sealed partial class VirtualBoxGuestAppLauncher
             return started;
 
         await TryFocusFirefoxAsync(ct).ConfigureAwait(false);
+        // BED-194: spawn ≠ loaded/logged-in. action_ok only; goal_complete=false.
         return new DesktopOpResult(
             true,
-            $"Opened {target} in Firefox inside the {GuestOpenedMarker} (not Kurt's Windows Chrome).",
-            new { url = target, coords = "guest-framebuffer", hostBrowser = false });
+            $"Firefox launched toward {target} in the {GuestOpenedMarker} (not Kurt's Windows Chrome). " +
+            "goal_complete=false — page load NOT verified. Call browser_snapshot / browser_click_text before claiming navigated or logged in.",
+            BrowserResultHonesty.LaunchOnly(target, "vbox-guest"));
     }
 
     public async Task<DesktopOpResult> BrowserSnapshotAsync(string? query = null, CancellationToken ct = default)

@@ -1115,6 +1115,11 @@ public sealed class OllamaInferenceClient : IInferenceClient
              && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
                  || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
                  || string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal)))
+            || (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal)
+                && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
+                    || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
+                    || string.Equals(toolName, "browser_snapshot", StringComparison.Ordinal)
+                    || string.Equals(toolName, "browser_fill", StringComparison.Ordinal)))
             || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
                 && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
                     || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal))));
@@ -1123,8 +1128,11 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// Alternates that fulfill the forced intent (consume ForceTool).
     /// </summary>
     private static bool IsForceSatisfyingAlternate(string? forceToolName, string toolName) =>
-        string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
-        && string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal);
+        (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
+         && string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal))
+        || (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal)
+            && (string.Equals(toolName, "browser_fill", StringComparison.Ordinal)
+                || string.Equals(toolName, "browser_click", StringComparison.Ordinal)));
 
     private static HashSet<string> BuildForceToolNameSet(string forceToolName)
     {
@@ -1141,6 +1149,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
             yield return "desktop_screenshot";
             yield return "desktop_open_app";
             yield return "browser_navigate";
+        }
+        else if (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal))
+        {
+            yield return "browser_navigate";
+            yield return "browser_snapshot";
+            yield return "browser_fill";
+            yield return "desktop_open_app";
         }
         else if (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal))
         {

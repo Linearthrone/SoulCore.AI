@@ -14,7 +14,9 @@ Thin launchers for Victoria's local ears + voice:
 .\House\House.Voice\start-tts.ps1
 ```
 
-Prefer Python 3.11 at `V:\Python311\python.exe` (scripts auto-resolve).
+Prefer Python 3.11 at `V:\Python311\python.exe` (scripts auto-resolve to
+sibling `pythonw.exe` when present so ALLSTART does not leave blank console
+windows).
 
 ## Chatterbox deps (one-time)
 

@@ -6,7 +6,7 @@ Structured briefs produced by **TT-01 (Thinktank Facilitator)** before PM-01 exe
 
 - Park explored ideas that are **not yet** turned into execution tickets
 - Keep a durable record of avenues, recommendations, risks, and open questions
-- Optionally hand off to PM-01 without losing the thinktank work
+- Hand off to PM-01 without losing the thinktank work
 
 ## Filename + ID convention
 
@@ -34,26 +34,29 @@ Older named ids (`PROP-COMPANION-01`, etc.) stay as historical; new work is inte
 Slug from the **need or want** (lowercase kebab-case):
 
 ```text
-export-chat-history-to-xlsx.md
-reduce-pwa-login-latency.md
-harden-multi-company-ai-isolation.md
+victoria-digits-sms-channel.md
+victoria-ue-reliable-embodiment.md
 ```
 
-If a slug exists, append `-2`, `-3`, â€¦ â€” do not overwrite without confirmation.
+Frontmatter **must** include `prop_id: PROP-{N}-{subject}` once numbered.
+
+If a slug exists, append `-2`, `-3`, … — do not overwrite without confirmation.
 
 ## Status values
 
 | `status` | Meaning |
 | --- | --- |
 | `unexecuted` | Parked; thinktank done, not sent to PM |
-| `sent-to-pm` | User opted to hand off; see `pm_intake` |
+| `sent-to-pm` | User opted to hand off; see `pm_intake` / `prop_id` |
+| `accepted-pm-ticketed` | PM accepted; splits live as `PROP-N.M` |
+| `parked-pending-digits-pass` | Explicit hold (e.g. Link rewrite) |
 | `withdrawn` | Explicitly abandoned |
 
 ## Who writes here
 
-- **TT-01** â€” primary author (idea exploration **and** PM unblock evals)
-- **PM-01** â€” may annotate after intake; tickets execution from sent proposals; should not dump raw task tickets here
-- Execution roles (FED/BED/â€¦) â€” do not write proposals here
+- **TT-01** — primary author (idea exploration **and** PM unblock evals)
+- **PM-01** — may annotate after intake; tickets execution from sent proposals; should not dump raw task tickets here
+- Execution roles (FED/BED/…) — do not write proposals here
 
 ## Unblock proposals
 
@@ -63,7 +66,8 @@ When PM sends `to-TT01` because a ticket cannot complete, TT writes a proposal h
 
 | Path | Use |
 | --- | --- |
-| `docs/agents/tasks/` | PROP intakes + PROP-N.M (or legacy TASK) tickets |
+| `docs/agents/PROP_NUMBERING.md` | PROP registry + rules |
+| `docs/agents/tasks/` | Execution tickets (`PROP-N.M-…` or legacy `TASK-…`) |
 | `docs/agents/reports/` | Role completion reports |
 | `Agents/TT-01.md` | Thinktank role definition |
 | `Agents/PM-01-EN.md` | PM receives sent proposals |
