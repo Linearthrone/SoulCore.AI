@@ -21,8 +21,9 @@ public sealed class BrowserNavigateTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_navigate",
         Description:
-            "Open a URL in Ubuntu Firefox inside the VM (not Kurt's Windows Chrome). " +
-            "Prefer this for websites, then browser_snapshot / browser_click_text.",
+            "Open a URL in Victoria's browser (Playwright Chromium when BrowserBackend=playwright; " +
+            "else guest Firefox). Success means load attempted — goal_complete stays false until " +
+            "login/forms are done. Prefer browser_snapshot / browser_click_text next.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -60,8 +61,8 @@ public sealed class BrowserSnapshotTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_snapshot",
         Description:
-            "List labeled controls in guest Firefox (buttons, links, inputs) with guest coordinates. " +
-            "Use this to find Login / Sign in — do not guess window-center clicks.",
+            "List labeled controls (buttons, links, inputs). Prefer this to find Login / Sign in — " +
+            "do not guess window-center clicks. If degraded=true / locator=pixel, PNG alone cannot prove login.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -101,8 +102,7 @@ public sealed class BrowserClickTextTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_click_text",
         Description:
-            "Click a control in guest Firefox by visible text (Login, Sign in, a link). " +
-            "Prefer this over desktop_click pixel guesses.",
+            "Click a control by visible text (Login, Sign in, a link). Prefer this over desktop_click pixel guesses.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -165,7 +165,13 @@ public sealed class BrowserFillTool : ITool
 
         var result = await _bridge.FillAsync(fieldProp.GetString()!.Trim(), valueProp.GetString() ?? "", ct)
             .ConfigureAwait(false);
-        return new ToolResult(result.Success, result.Content, result.Data);
+        // SEC-197: never echo typed secrets in Content (bridge may already redact).
+        var content = BrowserResultHonesty.RedactSecrets(result.Content);
+        var data = result.Data ?? BrowserResultHonesty.FillRedacted(
+            fieldProp.GetString()!.Trim(),
+            (valueProp.GetString() ?? "").Length,
+            _bridge.BackendName);
+        return new ToolResult(result.Success, content, data);
     }
 }
 

@@ -333,6 +333,31 @@ $env:HOUSE_SOULCORE_HOST = "127.0.0.1"
 $env:HOUSE_SOULCORE_PORT = "$chosenPort"
 Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
 
+# OPS-198: ensure Playwright Chromium for BrowserBackend=playwright (soft-fail).
+$InstallPlaywright = Join-Path $RepoRoot "SoulCore\scripts\install-playwright.ps1"
+if (Test-Path -LiteralPath $InstallPlaywright) {
+    Write-Host "=== ALLSTART: Playwright Chromium (OPS-198, soft-fail) ==="
+    try {
+        $pwArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright)
+        $pwResult = Invoke-ScriptWithTimeout `
+            -Label "install-playwright" `
+            -ArgumentList $pwArgs `
+            -WorkingDirectory $RepoRoot `
+            -TimeoutSec 180
+        if ($pwResult.TimedOut) {
+            Write-Warning "install-playwright timed out — continuing (browser_* may fail until Chromium is installed)"
+        } elseif ($pwResult.ExitCode -ne 0) {
+            Write-Warning "install-playwright exited $($pwResult.ExitCode) — continuing (set BrowserBackend=native to use Chrome extension)"
+        } else {
+            Write-Host "Playwright Chromium OK (Victoria profile under LocalAppData\SoulCore\victoria-browser)"
+        }
+    } catch {
+        Write-Warning "install-playwright failed: $($_.Exception.Message) — continuing"
+    }
+} else {
+    Write-Warning "install-playwright.ps1 missing — skip Playwright bootstrap"
+}
+
 # --- Tailscale serve: enable proxies now that Host is healthy ---
 # Applies TCP :7700 + HTTPS :8443 (tailnet-only). Soft-fail: local desktop
 # still works without it. Skipped entirely if -SkipTailscaleServe or sync failed.

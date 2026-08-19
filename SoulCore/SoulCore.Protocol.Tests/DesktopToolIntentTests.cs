@@ -1,3 +1,4 @@
+using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Protocol.Tests;
@@ -9,7 +10,8 @@ public class DesktopToolIntentTests
     [InlineData("what's on my desktop?", "desktop_screenshot")]
     [InlineData("use the computer and draw a line", "desktop_screenshot")]
     [InlineData("click on the Chrome window", "desktop_screenshot")]
-    [InlineData("click the login button", "desktop_screenshot")]
+    [InlineData("click the login button", "browser_click_text")]
+    [InlineData("sign in on the page", "browser_click_text")]
     [InlineData("what windows are open?", "desktop_screenshot")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]
@@ -23,6 +25,33 @@ public class DesktopToolIntentTests
     {
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));
         Assert.Equal(expectedTool, match.ToolName);
+    }
+
+    [Fact]
+    public void ComputerUseGuidance_Block_PrefersLabeledBrowserOverScreenshotFirst()
+    {
+        Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("goal_complete=false", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.DoesNotContain("call desktop_screenshot first and click from the PNG", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("Pixel clicks are a FALLBACK", ComputerUseGuidance.Block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BrowserResultHonesty_LaunchOnly_IsNotGoalComplete()
+    {
+        var o = BrowserResultHonesty.LaunchOnly("https://example.com", "vbox-guest");
+        var json = System.Text.Json.JsonSerializer.Serialize(o);
+        Assert.Contains("\"goal_complete\":false", json, StringComparison.Ordinal);
+        Assert.Contains("\"action_ok\":true", json, StringComparison.Ordinal);
+        Assert.Contains("\"load_verified\":false", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BrowserResultHonesty_RedactSecrets_ScrubsPasswordAssignments()
+    {
+        var scrubbed = BrowserResultHonesty.RedactSecrets("filled password=hunter2 ok");
+        Assert.DoesNotContain("hunter2", scrubbed, StringComparison.Ordinal);
+        Assert.Contains("[redacted]", scrubbed, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
