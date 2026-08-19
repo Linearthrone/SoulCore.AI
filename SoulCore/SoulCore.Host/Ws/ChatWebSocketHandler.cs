@@ -1373,10 +1373,13 @@ public sealed class ChatWebSocketHandler
         }
         else if (DesktopToolIntent.TryMatch(text, out var desktopIntent))
         {
-            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = desktopIntent.ToolName };
+            var forceTool = desktopIntent.ToolName;
+            // VM scope: keep ForceTool=desktop_open_app — backend injects into the guest
+            // (never Process.Start on the Windows host).
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = forceTool };
             _logger.LogInformation(
                 "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
-                desktopIntent.Intent, desktopIntent.ToolName);
+                desktopIntent.Intent, forceTool);
         }
         else if (HomeBodyToolIntent.TryMatch(text, out var homeIntent))
         {

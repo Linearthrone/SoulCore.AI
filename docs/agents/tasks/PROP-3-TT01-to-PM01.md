@@ -1,0 +1,65 @@
+﻿---
+type: proposal-intake
+prop_id: PROP-3
+from: TT-01
+to: PM-01
+priority: P1
+status: Intake — TINA-main ticketing
+created: 2026-08-19
+environment: TINA-main
+mode: idea
+title: "[TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still"
+proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
+assignee_role: PM-01 (TINA)
+staffing: dedicated UE agents — do not block main Host/FED/BED/Playwright/DIGITS
+---
+
+# PROP-3 : [TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still
+
+**For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
+**Proposal:** `docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md`
+
+Recommended path **unchanged** after Kurt’s answers (1P, one Presence still, Play on shadow). Send for ticketing.
+
+TT-01 does not ticket REX/FED/BED.
+
+## Staffing (required)
+
+**Bring in Unreal-focused / specialist agents — or extra dedicated UE seats — for this work.**  
+Do **not** serialize this behind main SoulCore development (Host, Playwright PROP-3, DIGITS PROP-3, ChatDesktop, Link). Run a **parallel UE lane**.
+
+- **Primary:** REX-01 (Live Coding / PIE possess) **and** additional UE specialists as needed (AnimBP / MetaHuman / Character wrappers / NavMesh).  
+- **BED-01 / FED-01:** only tiny Host/Presence honesty (empty `eye_frame` = error; one still slot). Not a full-stack pause.  
+- **QA:** sit-down on **shadow Play**, not a pipeline log.
+
+## Topology
+
+- Unreal **project name:** MyProject  
+- **Source of truth:** Perforce **on this machine**  
+- **Play / PIE / Pass evidence:** **shadow PC** only  
+
+TASK-191 is still **Partial** (C++ on disk; live PIE can still be `DefaultPawn`). Finish that on **shadow** before new cinema tickets.
+
+## One-paragraph recommended route
+
+Four stacks with separate Pass: (1) Play = **strict first-person Kayleigh**, never Victoria, never flying ghost; (2) Victoria **walks** with measured cm + loco AnimBP; (3) **one** Presence still = her `eye_frame` (no live her-cam, no second UE feed in that panel); (4) single `:8888`. Rebuild + restart + **save Home** on shadow. Do not Pass on Host `success`. TASK-192 call camera stays **later and out of Presence**.
+
+## Constraints Kurt locked
+
+- Strict **first person** for now.  
+- Sight = **still images in Presence; only one**.  
+- MyProject / P4 here / Play on shadow.  
+- Dedicated UE agents; **do not slow main development**.
+
+## Suggested next tickets (UE lane, not binding)
+
+| Order | Role | One-line |
+| --- | --- | --- |
+| 1 | REX-01 + UE specialist | TASK-191 sit-down on shadow: 1P Kayleigh, screenshot possessed class |
+| 2 | UE specialist | Victoria travel-cm + loco AnimBP (wrappers, no MHC reparent) |
+| 3 | UE + small BED | One `eye_capture` → Presence; Host refuses empty |
+| 4 | REX-01 | TASK-192 only after 191 Pass; **not** a second Presence sight |
+
+## Kill criteria
+
+- Player possesses Victoria. MHC reparent. Two servers on 8888. Pass on logs. Call/eye capture on Kayleigh. Blocking 193/194 on this lane.

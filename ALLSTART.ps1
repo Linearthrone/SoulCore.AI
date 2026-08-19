@@ -14,6 +14,7 @@
   .\ALLSTART.ps1 -SkipPreflight
   .\ALLSTART.ps1 -SkipVoice
   .\ALLSTART.ps1 -Configuration Debug
+  .\ALLSTART.ps1 -RestartHost
 #>
 [CmdletBinding()]
 param(
@@ -30,7 +31,9 @@ param(
     [int]$HostStartTimeoutSec = 180,
     [int]$TailscaleTimeoutSec = 30,
     [int]$VoiceTimeoutSec = 45,
-    [int]$BrowserBridgeTimeoutSec = 45
+    [int]$BrowserBridgeTimeoutSec = 45,
+    # Kill existing local Host and start fresh (reloads SoulCore/.env guest password).
+    [switch]$RestartHost
 )
 
 $ErrorActionPreference = "Stop"
@@ -123,6 +126,7 @@ function Start-LocalSoulCore {
     )
     if ($SkipPreflight) { $hostArgList += "-SkipPreflight" }
     if ($ForceRebuild) { $hostArgList += "-ForceRebuild" }
+    if ($RestartHost) { $hostArgList += "-RestartHost" }
 
     $result = Invoke-ScriptWithTimeout `
         -Label "start-soulcore :$LocalPort" `
@@ -281,8 +285,15 @@ $chosenPort = $Port
 $existing = Get-HealthObject -LocalPort $Port
 
 if (Test-LocalVictoriaHealth -Health $existing) {
-    Write-Host "Already running local Victoria on :$Port"
-    Write-Host "  memory: $($existing.memory.path)"
+    if ($RestartHost) {
+        Write-Host "RestartHost: replacing local Victoria on :$Port"
+        Start-LocalSoulCore -LocalPort $Port
+        Wait-LocalVictoria -LocalPort $Port -TimeoutSec $HealthTimeoutSec | Out-Null
+    } else {
+        Write-Host "Already running local Victoria on :$Port"
+        Write-Host "  memory: $($existing.memory.path)"
+        Write-Host "  Tip: after .env / guestcontrol changes use: .\ALLSTART.ps1 -RestartHost"
+    }
 } elseif ($null -ne $existing) {
     Write-Warning "Port $Port answers /health but is NOT this machine's Victoria."
     Write-Warning "  foreign memory.path = $($existing.memory.path)"
@@ -321,6 +332,31 @@ if (Test-LocalVictoriaHealth -Health $existing) {
 $env:HOUSE_SOULCORE_HOST = "127.0.0.1"
 $env:HOUSE_SOULCORE_PORT = "$chosenPort"
 Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
+
+# OPS-198: ensure Playwright Chromium for BrowserBackend=playwright (soft-fail).
+$InstallPlaywright = Join-Path $RepoRoot "SoulCore\scripts\install-playwright.ps1"
+if (Test-Path -LiteralPath $InstallPlaywright) {
+    Write-Host "=== ALLSTART: Playwright Chromium (OPS-198, soft-fail) ==="
+    try {
+        $pwArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright)
+        $pwResult = Invoke-ScriptWithTimeout `
+            -Label "install-playwright" `
+            -ArgumentList $pwArgs `
+            -WorkingDirectory $RepoRoot `
+            -TimeoutSec 180
+        if ($pwResult.TimedOut) {
+            Write-Warning "install-playwright timed out — continuing (browser_* may fail until Chromium is installed)"
+        } elseif ($pwResult.ExitCode -ne 0) {
+            Write-Warning "install-playwright exited $($pwResult.ExitCode) — continuing (set BrowserBackend=native to use Chrome extension)"
+        } else {
+            Write-Host "Playwright Chromium OK (Victoria profile under LocalAppData\SoulCore\victoria-browser)"
+        }
+    } catch {
+        Write-Warning "install-playwright failed: $($_.Exception.Message) — continuing"
+    }
+} else {
+    Write-Warning "install-playwright.ps1 missing — skip Playwright bootstrap"
+}
 
 # --- Tailscale serve: enable proxies now that Host is healthy ---
 # Applies TCP :7700 + HTTPS :8443 (tailnet-only). Soft-fail: local desktop

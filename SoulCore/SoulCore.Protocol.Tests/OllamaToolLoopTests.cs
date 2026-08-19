@@ -481,6 +481,125 @@ public class OllamaToolLoopTests
         Assert.Equal(1, handler.CallCount);
     }
 
+    // ---------------------------------------------------------------------
+    // BED-185: Forced browser_snapshot must allow bootstrap open before
+    // snapshotting (otherwise "waiting on screen data" occurs).
+    // ---------------------------------------------------------------------
+
+    private static ToolDefinition BrowserSnapshotToolDef() => new(
+        "browser_snapshot",
+        "Snapshot the current VM page (optionally focus query for Login/Sign in).",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{"query":{"type":"string"}},"additionalProperties":true}""")
+        .RootElement.Clone());
+
+    private static ToolDefinition DesktopScreenshotToolDef() => new(
+        "desktop_screenshot",
+        "Capture the desktop / VM framebuffer as a PNG.",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{"monitor":{"type":"integer"}},"additionalProperties":true}""")
+        .RootElement.Clone());
+
+    [Fact]
+    public async Task ForceToolName_BrowserSnapshot_AllowsBootstrapDesktopOpenApp()
+    {
+        // Under ForceToolName=browser_snapshot the model may emit a bootstrap
+        // call first (desktop_open_app). The loop must execute the bootstrap
+        // tool but still keep ForceToolName active until browser_snapshot runs.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "desktop_open_app", arguments = new { app = "chrome", args = "" } }
+                        }
+                    }),
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "browser_snapshot", arguments = new { query = "Login" } }
+                        }
+                    }),
+                ChatResponseJson(content: "done", toolCalls: null)
+            });
+
+        var registry = new ScriptedRegistry(
+            ("desktop_open_app", _ => new ToolResult(true, "opened chrome", null)),
+            ("browser_snapshot", _ => new ToolResult(true, "snapshot ok", null)));
+
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open the VM browser and snapshot login" }
+            },
+            new[] { DesktopOpenAppToolDef(), BrowserSnapshotToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "browser_snapshot" });
+
+        Assert.Equal("done", result);
+        Assert.Equal(3, handler.CallCount);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_open_app");
+        Assert.Contains(registry.Calls, c => c.Name == "browser_snapshot");
+
+        // Both iteration 0 and 1 should be forced /v1 until the forced tool
+        // is actually executed.
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
+        Assert.Contains("v1/chat/completions", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+        Assert.Contains("api/chat", handler.CapturedRequests[2].Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForceToolName_BrowserSnapshot_DesktopScreenshotSatisfiesForce()
+    {
+        // When AT-SPI is down, exclusive ForceTool=browser_snapshot must still
+        // allow desktop_screenshot and treat it as satisfying the force so the
+        // Login/UI loop is not stuck refusing every tool.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "desktop_screenshot", arguments = new { monitor = 0 } }
+                        }
+                    }),
+                ChatResponseJson(content: "I see the Login button", toolCalls: null)
+            });
+
+        var registry = new ScriptedRegistry(
+            ("desktop_screenshot", _ => new ToolResult(true, "png ok", null)),
+            ("browser_snapshot", _ => new ToolResult(false, "at-spi down", null)));
+
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "click the login button" }
+            },
+            new[] { DesktopScreenshotToolDef(), BrowserSnapshotToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "browser_snapshot" });
+
+        Assert.Equal("I see the Login button", result);
+        Assert.Contains(registry.Calls, c => c.Name == "desktop_screenshot");
+        Assert.DoesNotContain(registry.Calls, c => c.Name == "browser_snapshot");
+        Assert.Equal(2, handler.CallCount);
+        Assert.Contains("api/chat", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ForceToolName_TextOnly_RetryNudge_ThenDispatches()
     {
@@ -985,6 +1104,66 @@ public class OllamaToolLoopTests
         Assert.Single(registry.Calls);
         Assert.Equal("echo", registry.Calls[0].Name);
     }
+
+    [Fact]
+    public async Task FallbackParser_ExecuteToolTag_DispatchesTool_WhenToolCallsNull()
+    {
+        // gemma4 leak: tool call in <execute_tool> tags with tool_calls: null.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(
+                    content: "<execute_tool> list_desktop_windows{} </execute_tool>",
+                    toolCalls: null),
+                ChatResponseJson(content: "windows listed", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("list_desktop_windows", _ => new ToolResult(true, "[]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "what windows are open?" } },
+            new[] { ListDesktopWindowsToolDef() },
+            registry);
+
+        Assert.Equal("windows listed", result);
+        Assert.Equal(2, handler.CallCount);
+        Assert.Single(registry.Calls);
+        Assert.Equal("list_desktop_windows", registry.Calls[0].Name);
+    }
+
+    [Fact]
+    public async Task ForceTool_ListDesktopWindows_SoftDispatches_WhenModelReturnsTagOnly()
+    {
+        // ForceTool uses /v1/chat/completions — responses must be OpenAI-shaped.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    "<execute_tool> list_desktop_windows{} </execute_tool>",
+                    toolCalls: null),
+                ChatResponseJson(content: "done", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("list_desktop_windows", _ => new ToolResult(true, "[{\"title\":\"Firefox\"}]", null)));
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "use the vm" } },
+            new[] { ListDesktopWindowsToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "list_desktop_windows" });
+
+        Assert.Equal("done", result);
+        Assert.DoesNotContain("execute_tool", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(registry.Calls);
+        Assert.Equal("list_desktop_windows", registry.Calls[0].Name);
+    }
+
+    private static ToolDefinition ListDesktopWindowsToolDef() => new(
+        "list_desktop_windows",
+        "List visible desktop windows.",
+        JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement.Clone());
 
     [Fact]
     public async Task FallbackParser_NameNotRegistered_TreatedAsTextReply()

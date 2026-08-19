@@ -74,7 +74,8 @@ public class ChatWebSocketHandlerToolLoopTests
         ChatWsOptions? chatOptions = null,
         IEmotionState? emotion = null,
         IMemoryStore? memory = null,
-        HermesOptions? hermesOptions = null)
+        HermesOptions? hermesOptions = null,
+        IToolsAccessSettings? toolsAccess = null)
     {
         emotion ??= new StubEmotionState();
         memory ??= new StubMemoryStore();
@@ -95,7 +96,8 @@ public class ChatWebSocketHandlerToolLoopTests
             inference, hermes, emotion, memory, embeddings, charter,
             unreal, soulLoop, toolRegistry, sessionHistory, spendMeter, driftWatcher,
             hub, chatOpts, infOpts, hermesOpts,
-            toolsAccess: new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true),
+            toolsAccess: toolsAccess
+                ?? new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true),
             logger);
     }
 
@@ -241,6 +243,33 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.True(inference.CompleteWithToolsCalled);
         Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
         Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+    }
+
+    // VM scope: ForceTool stays desktop_open_app (guest inject, not host Process.Start).
+    [Fact]
+    public async Task DesktopNlOpenChrome_VmScoped_StillForcesOpenApp()
+    {
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Firefox in the VM." };
+        var hermes = new NullHermesClient();
+        var registry = new ToolRegistry(Array.Empty<ITool>());
+        var unreal = new RecordingUnrealVerbClient();
+        var scoped = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: true,
+            allowMt4Read: false,
+            allowMt4Trade: false,
+            desktopTargetWindowTitle: "victoria-sandbox");
+        var handler = MakeHandler(
+            inference, hermes, registry, unreal, MakeChatOptions(useToolLoop: true),
+            toolsAccess: scoped);
+
+        await RunOneChatTurnAsync(handler, "open Google Chrome");
+
+        Assert.True(inference.CompleteWithToolsCalled);
+        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("DESKTOP SCOPE", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("Preferred workflow", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
     // ---------------------------------------------------------------------

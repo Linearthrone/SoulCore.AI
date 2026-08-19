@@ -167,8 +167,31 @@ Do not enable non-loopback binds. Full 24h soak requires an explicit product gat
 Never commit tokens. Use:
 
 - Local file: `SoulCore/.env` (gitignored; copy from `.env.example`) — Host loads `SOULCORE_*` keys into process env before config bind; existing shell env wins
-- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`
+- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`, `SOULCORE_VBOX_GUEST_PASS` (Ubuntu guest login for victoria-sandbox guestcontrol)
 - Or: `dotnet user-secrets` on `SoulCore.Host` in Development
+
+Guestcontrol smoke test (no password printed):
+
+```powershell
+dotnet run --project SoulCore/SoulCore.Host -c Release -- --secrets-presence
+dotnet run --project SoulCore/SoulCore.Host -c Release -- --guestcontrol-probe
+```
+
+### Sandbox timing (screenshots / tool loop)
+
+Screenshots prefer `VBoxManage controlvm … screenshotpng` (usually &lt;1s). Guest
+`gnome-screenshot` / `import` via guestcontrol is only a fallback with an **8s**
+wait (other guestcontrol `run` defaults remain **20s**; browser AT-SPI python
+**45s**; Ollama HTTP `Inference:TimeoutSeconds` default **180**).
+
+After `-RestartHost`, Host logs include elapsed ms:
+
+- `[timing] screenshot path=screenshotpng ms=…`
+- `[timing] ollama.chat iter=… ms=…`
+- `[timing] tool.exec … name=desktop_screenshot ms=…`
+- `[timing] ollama.loop end … totalMs=…`
+
+On Windows with ALLSTART: `Select-String -Path SoulCore\scripts\.soulcore-host.log -Pattern '\[timing\]'`
 
 `SOULCORE_COMPANION_API_TOKEN` (optional, ≥ 32 random chars recommended): when **set**, Host fail-closes `/ws` upgrades unless the client sends `Authorization: Bearer <token>` or `X-Api-Key: <token>`. When **unset**, local loopback desktop keeps the historical no-header trust model. Set this whenever Tailscale serve is used for phone companion. Never log the raw token; `/health` stays unauthenticated on loopback and must not expose secrets.
 

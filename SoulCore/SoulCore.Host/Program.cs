@@ -14,6 +14,7 @@ using SoulCore.Core.Safety;
 using SoulCore.Hermes;
 using SoulCore.Host;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Inference;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
@@ -37,6 +38,12 @@ DotEnvLoader.TryLoad();
 if (args.Any(a => string.Equals(a, "--secrets-presence", StringComparison.OrdinalIgnoreCase)))
 {
     return ReportSecretsPresence();
+}
+
+// Evidence mode: VirtualBox guestcontrol logon probe (SOULCORE_VBOX_GUEST_*).
+if (args.Any(a => string.Equals(a, "--guestcontrol-probe", StringComparison.OrdinalIgnoreCase)))
+{
+    return await GuestControlProbe.RunAsync(args);
 }
 
 // Evidence mode: write emotion → dispose → reopen → verify (no web host).
@@ -332,6 +339,8 @@ builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+builder.Services.AddSingleton<GuestVmBrowserBridgeHolder>();
+builder.Services.AddSingleton<IVictoriaBrowserViewHub, VictoriaBrowserViewHub>();
 builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
 {
     IDesktopControlBackend inner;
@@ -366,7 +375,13 @@ builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
     var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
     if (string.IsNullOrWhiteSpace(scopeTitle))
         return inner;
-    return new ScopedDesktopControlBackend(inner, scopeTitle);
+    var guest = new VirtualBoxGuestAppLauncher(scopeTitle);
+    sp.GetRequiredService<GuestVmBrowserBridgeHolder>().Set(guest, guest);
+    return new ScopedDesktopControlBackend(
+        inner,
+        scopeTitle,
+        guest,
+        new NativeDesktopControlBackend());
 });
 builder.Services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
     sp.GetRequiredService<IComputerControlGate>(),
@@ -391,10 +406,11 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaN
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaWorldHintTool>();
 builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaVerifyChecklistTool>();
 
-// Browser tools (BED-136 / BED-182): browser_health / capture_tab / click / type / key / scroll.
+// Browser tools (BED-136 / BED-182 / BED-195): browser_health / capture / click / type / key / scroll.
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
-// Backend: Tools.BrowserBackend=native (default) → BrowserCaptureBridge :17891 + Chrome extension.
-// Hermes browser backend retired (BED-185).
+// Backend: Tools.BrowserBackend=playwright (BED-195 Victoria Chromium) preferred even when
+// DesktopTargetWindowTitle is set (VM stays for desktop_*; web uses Playwright).
+// native → BrowserCaptureBridge :17891. Hermes browser backend retired (BED-185).
 builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
@@ -417,6 +433,24 @@ builder.Services.AddSingleton<IBrowserBridge>(sp =>
     var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
     if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
         backend = "none";
+
+    // BED-195: Playwright wins over GuestVm even when DesktopTargetWindowTitle is set.
+    if (string.Equals(backend, ToolsOptions.BackendPlaywright, StringComparison.OrdinalIgnoreCase))
+    {
+        return new PlaywrightBrowserBridge(
+            sp.GetRequiredService<IOptions<ToolsOptions>>(),
+            sp.GetService<ILogger<PlaywrightBrowserBridge>>(),
+            sp.GetRequiredService<IVictoriaBrowserViewHub>());
+    }
+
+    var scopeTitle = (opts.DesktopTargetWindowTitle ?? "").Trim();
+    if (!string.IsNullOrWhiteSpace(scopeTitle))
+    {
+        var holder = sp.GetRequiredService<GuestVmBrowserBridgeHolder>();
+        if (holder.TryGet(out var bridge))
+            return bridge;
+    }
+
     if (string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase)
         || string.Equals(backend, "llmod", StringComparison.OrdinalIgnoreCase)
         || string.Equals(backend, "auto", StringComparison.OrdinalIgnoreCase))
@@ -434,6 +468,12 @@ builder.Services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
     sp.GetRequiredService<IBrowserBridge>(),
     sp.GetRequiredService<IToolsAccessSettings>(),
     sp.GetRequiredService<IDesktopViewHub>()));
+builder.Services.AddSingleton<ITool, BrowserNavigateTool>();
+builder.Services.AddSingleton<ITool, BrowserSnapshotTool>();
+builder.Services.AddSingleton<ITool, BrowserClickTextTool>();
+builder.Services.AddSingleton<ITool, BrowserFillTool>();
+builder.Services.AddSingleton<ITool, BrowserBackTool>();
+builder.Services.AddSingleton<ITool, BrowserTabsTool>();
 builder.Services.AddSingleton<ITool, BrowserClickTool>();
 builder.Services.AddSingleton<ITool, BrowserTypeTool>();
 builder.Services.AddSingleton<ITool, BrowserKeyTool>();
@@ -473,6 +513,7 @@ builder.Services.AddSingleton<ITool, RunBacktestTool>();
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
 builder.Services.AddSingleton<ICompanionOutboundMessenger, CompanionOutboundMessenger>();
+builder.Services.AddSingleton<CompanionCallSessionStore>();
 builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
 builder.Services.AddSingleton<ComfyUiClient>();
 builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
@@ -485,11 +526,19 @@ if (unrealOptions.Enabled)
 {
     builder.Services.AddSingleton<UnrealVerbClientStub>();
     builder.Services.AddSingleton<IUnrealVerbClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
+    builder.Services.AddSingleton<IUnrealCallCameraClient>(sp => sp.GetRequiredService<UnrealVerbClientStub>());
 }
 else
 {
     builder.Services.AddSingleton<IUnrealVerbClient, NullUnrealVerbClient>();
+    builder.Services.AddSingleton<IUnrealEyeCaptureClient, NullUnrealCaptureClient>();
+    builder.Services.AddSingleton<IUnrealCallCameraClient, NullUnrealCaptureClient>();
 }
+
+// OllamaInferenceClient's DI ctor requires IUeLiveSignal. Without this, every
+// chat/WS turn throws and Victoria appears "dead" while /health still 200s.
+builder.Services.AddSingleton<IUeLiveSignal, UnrealUeLiveSignal>();
 
 // Voice: local Whisper STT + Chatterbox TTS (House.Voice satellites).
 builder.Services.AddHttpClient("voice-stt", (sp, client) =>
@@ -890,6 +939,31 @@ app.MapGet("/desktop/view/gallery/{fileName}", (string fileName, IDesktopViewHub
     return Results.File(bytes, contentType);
 });
 
+// FED-196 / BED-195: near-live Victoria Playwright browser (in-memory; not gallery).
+app.MapGet("/browser/view", (IVictoriaBrowserViewHub view) =>
+{
+    var snap = view.GetSnapshot();
+    return Results.Json(new
+    {
+        hasImage = snap.HasImage,
+        imagePath = "/browser/view/image",
+        url = snap.Url,
+        title = snap.Title,
+        lastAction = snap.LastAction,
+        waitingOnYou = snap.WaitingOnYou,
+        backend = snap.Backend,
+        updatedAt = snap.UpdatedUtc,
+        note = "Victoria's dedicated Playwright Chromium (not Kurt's Chrome). In-memory stream only — not written to desktop screenshot gallery."
+    });
+});
+
+app.MapGet("/browser/view/image", (IVictoriaBrowserViewHub view) =>
+{
+    if (!view.TryGetImageBytes(out var bytes, out var contentType) || bytes is null || bytes.Length == 0)
+        return Results.NotFound();
+    return Results.File(bytes, contentType);
+});
+
 app.MapGet("/", () => Results.Redirect("/health"));
 
 var logger = app.Logger;
@@ -934,7 +1008,8 @@ static int ReportSecretsPresence()
         SecretNames.HermesApiKey,
         SecretNames.HuggingFaceToken,
         SecretNames.CompanionApiToken,
-        SecretNames.OllamaApiKey
+        SecretNames.OllamaApiKey,
+        SecretNames.VboxGuestPass
     };
 
     var envPath = DotEnvLoader.ResolveEnvFilePath();

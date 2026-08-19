@@ -88,9 +88,10 @@ public sealed class InferenceOptions
     /// <c>tool_calls</c> indefinitely. The loop returns the last assistant
     /// text (or a capped marker when the model emitted only tool calls) once
     /// the cap is hit. Default 8 — enough for a memory + body turn, bounded
-    /// to keep latency predictable. Must be ≥ 1.
+    /// to keep latency predictable. Default 16 so website navigation
+    /// (screenshot → snapshot → click → type) can finish. Must be ≥ 1.
     /// </summary>
-    public int MaxToolIterations { get; set; } = 8;
+    public int MaxToolIterations { get; set; } = 16;
 
     /// <summary>True when <see cref="BaseUrl"/> targets ollama.com (direct cloud).</summary>
     public bool IsCloudEndpoint => IsOllamaCloudUrl(BaseUrl);

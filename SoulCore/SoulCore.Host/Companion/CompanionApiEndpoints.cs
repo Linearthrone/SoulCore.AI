@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SoulCore.Adapters.Ws;
 using SoulCore.Config;
 using SoulCore.Host.Ws;
 
@@ -133,6 +134,105 @@ public static class CompanionApiEndpoints
             if (!media.TryGetFile(mediaId, out var path, out var meta) || meta is null)
                 return Results.NotFound(new { error = "media not found" });
             return Results.File(path, meta.ContentType, meta.FileName);
+        });
+
+        // --- Video call (FED-192): waist-up Victoria frames; WebRTC later ---
+        group.MapPost("/call/session", async (
+            HttpRequest request,
+            CompanionCallSessionStore sessions,
+            CancellationToken ct) =>
+        {
+            string? contactId = null;
+            if (request.ContentLength is > 0)
+            {
+                try
+                {
+                    using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                        .ConfigureAwait(false);
+                    contactId = doc.RootElement.TryGetProperty("contactId", out var c)
+                        ? c.GetString()
+                        : null;
+                }
+                catch (JsonException)
+                {
+                    return Results.BadRequest(new { error = "invalid JSON body" });
+                }
+            }
+
+            var session = sessions.Start(contactId);
+            return Results.Json(new
+            {
+                ok = true,
+                sessionId = session.SessionId,
+                contactId = session.ContactId,
+                mode = session.Mode,
+                pollUrl = $"/api/companion/v1/call/frame?sessionId={session.SessionId}",
+                webrtc = new
+                {
+                    available = session.WebrtcAvailable,
+                    note = "WebRTC signaling deferred — MVP polls call_capture waist-up frames from Unreal (REX-01 TASK-192)."
+                }
+            });
+        });
+
+        group.MapGet("/call/frame", async (
+            string? sessionId,
+            bool? fallbackEyes,
+            CompanionCallSessionStore sessions,
+            IUnrealCallCameraClient callCam,
+            IUnrealEyeCaptureClient eyes,
+            ILoggerFactory logFactory,
+            CancellationToken ct) =>
+        {
+            var log = logFactory.CreateLogger("SoulCore.Host.Companion.Call");
+            if (!string.IsNullOrWhiteSpace(sessionId) && !sessions.TryGet(sessionId, out _))
+                return Results.NotFound(new { error = "unknown sessionId" });
+
+            var frame = await callCam.CaptureCallFrameAsync(ct).ConfigureAwait(false);
+            var source = "call_capture";
+            var safeSessionIdForLog = string.IsNullOrEmpty(sessionId)
+                ? "(none)"
+                : sessionId.Replace("\r", string.Empty).Replace("\n", string.Empty);
+            if (frame is null && fallbackEyes == true)
+            {
+                frame = await eyes.CaptureEyeAsync(ct).ConfigureAwait(false);
+                source = "eyes_fallback";
+            }
+
+            if (frame is null || frame.Bytes.Length == 0)
+            {
+                log.LogDebug(
+                    "call/frame empty (session={Session}) — UE call_capture not ready?",
+                    safeSessionIdForLog);
+                return Results.Json(
+                    new
+                    {
+                        ok = false,
+                        error = "no_frame",
+                        hint = "Start PIE with Victoria + REX call camera (call_capture). Optional: ?fallbackEyes=true"
+                    },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            var contentType = string.Equals(frame.Format, "jpg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(frame.Format, "jpeg", StringComparison.OrdinalIgnoreCase)
+                ? "image/jpeg"
+                : "image/png";
+            log.LogDebug("call/frame ok source={Source} {W}x{H}", source, frame.Width, frame.Height);
+            return Results.Bytes(
+                frame.Bytes,
+                contentType,
+                fileDownloadName: $"victoria-call.{(contentType.Contains("jpeg") ? "jpg" : "png")}");
+        });
+
+        group.MapDelete("/call/session/{sessionId}", (
+            string sessionId,
+            CompanionCallSessionStore sessions) =>
+        {
+            var removed = sessions.End(sessionId);
+            return removed
+                ? Results.Json(new { ok = true, sessionId })
+                : Results.NotFound(new { error = "unknown sessionId" });
         });
 
         return app;

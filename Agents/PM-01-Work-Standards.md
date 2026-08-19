@@ -3,7 +3,7 @@ type: rule
 role: PM-01
 version: 1.4
 created: 2026-03-23
-updated: 2026-07-29
+updated: 2026-08-19
 ---
 
 # PM-01 Work Standards
@@ -29,13 +29,17 @@ PM-01 is the project master controller, not a developer, not ops, not QA.
 
 ### 1.1 Inbound from TT-01 (Pre-PM + Unblock)
 
-When you receive `TASK-*-TT01-to-PM01.md` or the user points at a file in `docs/agents/unexecuted_proposals/`:
+When you receive `PROP-{N}-TT01-to-PM01.md` (legacy: `TASK-*-TT01-to-PM01.md`) or the user points at a file in `docs/agents/unexecuted_proposals/`:
+When you receive a TT intake (`PROP-{N}` / `PROP-{N}.0` / legacy `TASK-*-TT01-to-PM01.md`) or the user points at a file in `docs/agents/unexecuted_proposals/`:
 
-1. Read the proposal (avenues, recommendation, risks, open questions)
+1. Read the proposal (avenues, recommendation, risks, open questions) — require `prop_id` on new proposals (`docs/agents/PROP_NUMBERING.md`)
 2. Decide: accept recommended route, pick an alternative, or send back to TT-01 for another pass
-3. Issue normal execution tickets (`PM01-to-FED01` / etc.) â€” do not treat the proposal itself as an execution ticket
+3. Issue execution tickets as **`PROP-N.M-PM01-to-{ROLE}.md`** (`.1`, `.2`, …). Do not treat the proposal or the PROP intake as an execution ticket. Do not invent a new TASK-NNN for work that came from a PROP.
 4. Leave the proposal in `unexecuted_proposals/` unless the user asks to archive/withdraw; prefer updating its notes over deleting history
 5. If this was an **unblock eval** for a stuck ticket: close or supersede the blocked ticket, ticket the new path immediately (Â§9.1), tell the user what changed
+3. Issue execution tickets as **`PROP-{N}.{M}-PM01-to-{ROLE}.md`** (PM may adjust the `.M` split vs TT's suggestion). Do not treat the proposal itself as an execution ticket. Do **not** invent a new bare `TASK-###` that can collide with unrelated waves.
+4. Leave the proposal in `unexecuted_proposals/`; set `status: accepted-pm-ticketed` and list splits under `pm_tickets`
+5. If this was an **unblock eval** for a stuck legacy ticket: close or supersede the blocked ticket, ticket the new path immediately (§9.1), tell the user what changed
 
 ### 1.2 Keep the Team Moving (Momentum Rule)
 
@@ -87,7 +91,11 @@ Every task issued must include:
 | Acceptance Criteria | Quantifiable Pass/Fail standards |
 | Reply Requirements | Required evidence (logs/screenshots/output) |
 
-**Task ticket filename:** `TASK-{date}-{ID}-PM01-to-{role}.md`
+**Task ticket filename (TT-sourced work, 2026-08-19+):** `PROP-{N}.{M}-PM01-to-{role}.md`
+
+**Task ticket filename (legacy / non-TT chores):** `TASK-{date}-{ID}-PM01-to-{role}.md`
+
+See `docs/agents/PROP_NUMBERING.md`. PM may re-divide `.M` labor after TT suggests a split.
 
 Valid `{role}` recipients: `FED01` | `BED01` | `DBD01` | `SEC01` | `OPS01` | `QA01` | `SLOP01` | `TT01` (legacy `DEV01` only if Â§10 allows)
 
@@ -210,7 +218,7 @@ PM failed the handoff.
 
 When PM-01 writes `TASK-{id}-PM01-to-{role}.md`:
 
-1. **Hand off immediately** to FED-01 / BED-01 / DBD-01 / SEC-01 / OPS-01 / QA-01 / SLOP-01 / TT-01 â€” in the same response, before telling the
+1. **Hand off immediately** to FED-01 / BED-01 / DBD-01 / SEC-01 / OPS-01 / QA-01 / SLOP-01 / TT-01 / REX-01 / VBOX-01 â€” in the same response, before telling the
    user "waiting on {role}".
 2. **How to hand off:** launch a role subagent (`Task` tool) with that role's playbook
    (`Agents/{FED|BED|DBD|SEC|OPS|QA|SLOP|TT}-01.md` or `-EN.md`) and the task file path. The subagent
@@ -301,7 +309,7 @@ Treat as **unable to complete** when any of:
    - Constraints (must not break X, deadline, etc.)
 2. Hand off to **TT-01** immediately (Â§9.1)
 3. Tell the user: chain paused for thinktank unblock â€” TT evaluating solutions
-4. When `TASK-*-TT01-to-PM01.md` + proposal land: choose a route, **issue new execution tickets**, supersede/cancel the stuck ticket, resume the chain
+4. When `PROP-{N}-TT01-to-PM01.md` + proposal land: choose a route, **issue `PROP-N.M` execution tickets**, supersede/cancel the stuck ticket, resume the chain
 5. If TT cannot solve without user input: notify the user with TTâ€™s clarifying questions â€” then re-ticket after answers
 
 **Forbidden:** Leaving stuck tickets open indefinitely; asking the user to â€œfigure it outâ€ without a TT pass when the blocker is technical/solution-shaped.
@@ -343,8 +351,9 @@ Choose the **narrowest correct owner** before writing the ticket.
 | Test / regression / issue evidence | **QA-01** | `QA01` |
 | Post-QA slop / duplicate / alias audit (read-only) | **SLOP-01** | `SLOP01` |
 | Stuck ticket / no viable path â€” evaluate avenues & solutions | **TT-01** | `TT01` |
+| VirtualBox / Ubuntu guest / VBoxManage | **VBOX-01** | `VBOX01` |
 | Truly inseparable FE+BE (rare; justify in ticket) | DEV-01 | `DEV01` |
 
 **Quick tree:** OPS (deploy?) â†’ QA (test-only?) â†’ after QA Pass on code â†’ **SLOP-01** â†’ stuck/no path? â†’ **TT-01** â†’ SEC (security risk?) â†’ DBD (schema/SQL?) â†’ FED (UI?) â†’ BED (API?) â†’ else **split** into sequenced tickets.
 
-**Playbooks:** `Agents/FED-01.md`, `Agents/BED-01.md`, `Agents/DBD-01.md`, `Agents/SEC-01.md`, `Agents/SLOP-01.md`, `Agents/TT-01.md`, plus OPS/QA docs.
+**Playbooks:** `Agents/FED-01.md`, `Agents/BED-01.md`, `Agents/DBD-01.md`, `Agents/SEC-01.md`, `Agents/SLOP-01.md`, `Agents/TT-01.md`, `Agents/REX-01.md`, `Agents/VBOX-01.md`, plus OPS/QA docs.

@@ -1,3 +1,4 @@
+using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Protocol.Tests;
@@ -7,9 +8,11 @@ public class DesktopToolIntentTests
     [Theory]
     [InlineData("look at my screen", "desktop_screenshot")]
     [InlineData("what's on my desktop?", "desktop_screenshot")]
-    [InlineData("use the computer and draw a line", "list_desktop_windows")]
-    [InlineData("click on the Chrome window", "list_desktop_windows")]
-    [InlineData("what windows are open?", "list_desktop_windows")]
+    [InlineData("use the computer and draw a line", "desktop_screenshot")]
+    [InlineData("click on the Chrome window", "desktop_screenshot")]
+    [InlineData("click the login button", "browser_click_text")]
+    [InlineData("sign in on the page", "browser_click_text")]
+    [InlineData("what windows are open?", "desktop_screenshot")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]
     [InlineData("open Google Chrome", "desktop_open_app")]
@@ -22,6 +25,33 @@ public class DesktopToolIntentTests
     {
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));
         Assert.Equal(expectedTool, match.ToolName);
+    }
+
+    [Fact]
+    public void ComputerUseGuidance_Block_PrefersLabeledBrowserOverScreenshotFirst()
+    {
+        Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("goal_complete=false", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.DoesNotContain("call desktop_screenshot first and click from the PNG", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("Pixel clicks are a FALLBACK", ComputerUseGuidance.Block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BrowserResultHonesty_LaunchOnly_IsNotGoalComplete()
+    {
+        var o = BrowserResultHonesty.LaunchOnly("https://example.com", "vbox-guest");
+        var json = System.Text.Json.JsonSerializer.Serialize(o);
+        Assert.Contains("\"goal_complete\":false", json, StringComparison.Ordinal);
+        Assert.Contains("\"action_ok\":true", json, StringComparison.Ordinal);
+        Assert.Contains("\"load_verified\":false", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BrowserResultHonesty_RedactSecrets_ScrubsPasswordAssignments()
+    {
+        var scrubbed = BrowserResultHonesty.RedactSecrets("filled password=hunter2 ok");
+        Assert.DoesNotContain("hunter2", scrubbed, StringComparison.Ordinal);
+        Assert.Contains("[redacted]", scrubbed, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -59,11 +89,14 @@ public class DesktopToolIntentTests
     [InlineData("open the browser and take a screenshot")]
     [InlineData("open Chrome and take a screenshot")]
     [InlineData("launch chrome then screenshot please")]
-    public void TryMatch_OpenPlusScreenshot_DoesNotExclusiveForce(string text)
+    public void TryMatch_OpenPlusScreenshot_StillForcesOpenApp(string text)
     {
-        // Compound intents must not ForceTool=desktop_open_app only — that
-        // starves the follow-up screenshot turn on gemma4.
-        Assert.False(DesktopToolIntent.TryMatch(text, out _));
+        // ForceTool=open_app; IsPureOpenPrompt=false so the tool-loop continues
+        // for the screenshot follow-on (BED-180). Under VM scope the backend
+        // injects into the guest instead of Process.Start on Windows.
+        Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.Equal("desktop_open_app", match.ToolName);
+        Assert.False(DesktopToolIntent.IsPureOpenPrompt(text));
     }
 
     [Theory]
@@ -85,12 +118,13 @@ public class DesktopToolIntentTests
     }
 
     [Fact]
-    public void ComputerUseGuidance_Block_ForbidsInventedToolsForLocalLaunch()
+    public void ComputerUseGuidance_Block_ForbidsInventedHermesTools()
     {
         Assert.Contains("desktop_open_app", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("Do NOT invent Hermes", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("or terminal", ComputerUseGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("browser_navigate", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }
@@ -99,9 +133,32 @@ public class DesktopToolIntentTests
     public void ComputerUseGuidance_ScopedBlock_LocksVmTitle()
     {
         var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox");
+        Assert.Contains(ComputerUseGuidance.Marker, once, StringComparison.Ordinal);
+        Assert.Contains(ComputerUseGuidance.Block, once, StringComparison.Ordinal);
+        Assert.Contains(ComputerUseGuidance.ScopedBlock("victoria-sandbox"), once, StringComparison.Ordinal);
+        Assert.Contains("Preferred workflow", once, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
+        Assert.Contains("browser_navigate", once, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text", once, StringComparison.Ordinal);
+        Assert.Contains("never Process.Start", once, StringComparison.Ordinal);
+        // Full playbook stays; scoped text is appended after it.
+        Assert.True(
+            once.IndexOf(ComputerUseGuidance.Block, StringComparison.Ordinal)
+            < once.IndexOf("DESKTOP SCOPE", StringComparison.Ordinal));
         Assert.Equal(once, ComputerUseGuidance.AppendToPreamble(once, "victoria-sandbox"));
+    }
+
+    [Theory]
+    [InlineData("use the vm")]
+    [InlineData("look inside the sandbox")]
+    [InlineData("drive victoria-sandbox")]
+    public void TryMatch_VmPhrases_ForcesDesktopTool(string text)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.True(
+            match.ToolName is "list_desktop_windows" or "desktop_screenshot",
+            match.ToolName);
     }
 
     // ---------------------------------------------------------------------
@@ -145,5 +202,22 @@ public class DesktopToolIntentTests
         Assert.Equal(
             "Opened Chrome to https://example.com.",
             DesktopToolIntent.BuildOpenedReply("chrome", "https://example.com"));
+    }
+
+    [Fact]
+    public void BuildOpenedReply_GuestControl_SaysFirefoxInVm()
+    {
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                null,
+                "Opened firefox in the Ubuntu VM via guestcontrol (host VirtualBox window can stay minimized)."));
+        Assert.Equal(
+            "Opened Firefox in the Ubuntu VM to https://example.com.",
+            DesktopToolIntent.BuildOpenedReply(
+                "chrome",
+                "https://example.com",
+                "Opened firefox in the Ubuntu VM via guestcontrol"));
     }
 }

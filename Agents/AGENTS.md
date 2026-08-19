@@ -53,7 +53,7 @@ Notes below are the non-obvious cloud/Linux caveats.
 - To exercise chat wiring without any LLM, set `SOULCORE_ChatWs__StubWhenModelDown=true` for
   deterministic stub replies (`provider=stub`).
 - Built-in no-LLM evidence CLIs on the Host: `--emotion-roundtrip`, `--soul-loop-tick
-  [--enabled]`, `--secrets-presence`.
+  [--enabled]`, `--secrets-presence`, `--guestcontrol-probe`.
 
 ### Optional services
 - **Ollama** (`:11434` and/or Cloud via BED-187) for real chat + tool-loop. Hermes gateway is
@@ -61,3 +61,8 @@ Notes below are the non-obvious cloud/Linux caveats.
   never Hermes MCP.
 - Unreal Engine avatar bridge (`:8888`) is optional; the Host logs a warning and continues
   when it is unreachable (`unreal.connected=false` in `/health`).
+- **victoria-sandbox (VirtualBox):** set `SOULCORE_VBOX_GUEST_USER=victoria` and
+  `SOULCORE_VBOX_GUEST_PASS` (Ubuntu login password) in `SoulCore/.env`, then restart Host.
+  Probe with `dotnet run --project SoulCore/SoulCore.Host -c Release -- --guestcontrol-probe`.
+  Manual `VBoxManage guestcontrol … run --exe /usr/bin/whoami --` — do **not** pass the exe
+  path again after `--` (that makes `id` report "no such user" after a successful logon).
