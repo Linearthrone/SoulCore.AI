@@ -36,7 +36,20 @@ function Test-BridgeHealthy {
     }
 }
 
+function Prefer-Pythonw {
+    param([Parameter(Mandatory = $true)][string]$Exe)
+    # OPS-178 pattern: pythonw.exe has no console subsystem (blank windows gone).
+    if ($Exe -match '(?i)(^|[\\/])pythonw\.exe$') { return $Exe }
+    if ($Exe -match '(?i)python\.exe$') {
+        $w = $Exe -replace '(?i)python\.exe$', 'pythonw.exe'
+        if (Test-Path -LiteralPath $w) { return $w }
+    }
+    return $Exe
+}
+
 function Resolve-Python {
+    # Prefer a normal Python install — never the old Hermes agent venv.
+    # Returns console python.exe (for pip / -c). Long-running bridge uses Prefer-Pythonw.
     $candidates = @(
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
@@ -86,8 +99,13 @@ $python = Resolve-Python
 if (-not $python) {
     throw "python.exe not found - install Python 3.11+ or ensure it is on PATH (not Hermes venv)"
 }
+# pip / import checks need console python; the long-running bridge uses pythonw when present.
+$pythonRun = Prefer-Pythonw $python
 
 Write-Host "[start-browser-bridge] python: $python"
+if ($pythonRun -ne $python) {
+    Write-Host "[start-browser-bridge] bridge runtime (no console): $pythonRun"
+}
 Write-Host "[start-browser-bridge] ensuring pip deps from $ReqFile ..."
 $PipErr = "$PipLog.err"
 if (Test-Path -LiteralPath $PipLog) { Remove-Item -LiteralPath $PipLog -Force -ErrorAction SilentlyContinue }
@@ -122,7 +140,7 @@ foreach ($f in @($LogOut, $LogErr)) {
 }
 
 Write-Host "[start-browser-bridge] Starting $BridgePy on :$Port ..."
-$proc = Start-Process -FilePath $python `
+$proc = Start-Process -FilePath $pythonRun `
     -ArgumentList @($BridgePy) `
     -WorkingDirectory (Split-Path -Parent $BridgePy) `
     -WindowStyle Hidden `
