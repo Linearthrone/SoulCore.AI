@@ -147,9 +147,7 @@ public class HermesMcpRoutingTests
             healthOk: true,
             chatBodies: new[]
             {
-                OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}"""),
-                // DesktopScreenshotTool enriches with ListWindowsAsync after capture.
-                OpenAIContentResponse("open desktop windows:\n[0] Notepad")
+                OpenAIContentResponse("""{"success":true,"content":"screenshot saved: /tmp/desk.png"}""")
             });
         var hermes = MakeClient(handler);
         var tool = MakeDesktopScreenshot(hermes);
@@ -159,10 +157,8 @@ public class HermesMcpRoutingTests
 
         Assert.True(result.Success);
         Assert.Contains("screenshot", result.Content, StringComparison.OrdinalIgnoreCase);
-        // screenshot (computer_use) + enrichment list_desktop_windows
-        Assert.Equal(2, handler.ChatCallCount);
-        Assert.NotNull(handler.LastChatBody);
-        Assert.Contains("list_desktop_windows", handler.LastChatBody!, StringComparison.Ordinal);
+        // Screenshot only — no ListWindows enrichment (avoids a second guest/MCP round trip).
+        Assert.Equal(1, handler.ChatCallCount);
     }
 
     // ---------------------------------------------------------------------

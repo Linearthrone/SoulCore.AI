@@ -39,11 +39,11 @@ public sealed class DesktopScreenshotTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_screenshot",
         Description:
-            "Capture the Ubuntu guest framebuffer (PNG). Returns size plus a window list. " +
+            "Capture the Ubuntu guest framebuffer. A downscaled JPEG is attached for vision. " +
             "REQUIRED before claiming you looked at the VM screen or before desktop_click on in-page UI. " +
             "list_desktop_windows alone is titles/bounds — not vision. " +
-            "For Login/buttons on websites prefer browser_snapshot / browser_click_text after this. " +
-            "Use with desktop_click (guest x,y). Your blue agent cursor will show where you act.",
+            "Prefer browser_click_text for labeled buttons when it works; otherwise desktop_click from the image. " +
+            "Do not call this after every click — once per look is enough.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -72,25 +72,9 @@ public sealed class DesktopScreenshotTool : ITool
             DesktopViewHub.SourceDesktop,
             "desktop_screenshot");
 
-        // Enrich Content with window bounds so the model can click without
-        // relying solely on vision of a huge multi-monitor PNG.
-        string? windowLines = null;
-        try
-        {
-            var windows = await _backend.ListWindowsAsync(ct).ConfigureAwait(false);
-            if (windows.Success && !string.IsNullOrWhiteSpace(windows.Content))
-                windowLines = windows.Content;
-        }
-        catch
-        {
-            // best-effort enrichment
-        }
-
-        var content = result.Content;
-        if (!string.IsNullOrWhiteSpace(windowLines))
-            content = content + "\n\n" + windowLines +
-                      "\nUse desktop_click with screen coords (window center ≈ x+width/2, y+height/2).";
-
-        return new ToolResult(result.Success, content, result.Data);
+        // Do not call ListWindowsAsync here — that is a second guestcontrol round
+        // trip and was a major sandbox lag source. Window bounds stay available via
+        // list_desktop_windows when needed; clicks use coords from the image.
+        return new ToolResult(result.Success, result.Content, result.Data);
     }
 }

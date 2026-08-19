@@ -20,6 +20,9 @@
 param(
     [int]$Port = 7700,
     [switch]$ForceRebuild,
+    # Stop any Host already on this port (pid file + listeners) then start fresh.
+    # Needed after .env / branch changes — ALLSTART otherwise reuses a stale Host.
+    [switch]$RestartHost,
     # Opt-in: run `ollama pull <embed-model>` when the model is missing.
     [switch]$PullEmbedModel,
     # Base URL of the local Ollama server used for the preflight probe.
@@ -117,9 +120,49 @@ function Invoke-InferencePreflight {
     }
 }
 
+function Stop-SoulCoreOnPort {
+    param([int]$LocalPort, [string]$Address, [string]$PidPath)
+    $stopped = $false
+    if (Test-Path -LiteralPath $PidPath) {
+        $raw = (Get-Content -LiteralPath $PidPath -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $oldPid = 0
+        if ([int]::TryParse("$raw", [ref]$oldPid) -and $oldPid -gt 0) {
+            try {
+                $p = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
+                if ($null -ne $p) {
+                    Write-Host "Stopping SoulCore.Host PID $oldPid (from pid file) ..."
+                    Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
+                    $stopped = $true
+                }
+            } catch { }
+        }
+        Remove-Item -LiteralPath $PidPath -Force -ErrorAction SilentlyContinue
+    }
+    try {
+        $conns = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalAddress -eq $Address }
+        foreach ($c in @($conns)) {
+            $ow = [int]$c.OwningProcess
+            if ($ow -le 0) { continue }
+            Write-Host "Stopping listener PID $ow on ${Address}:${LocalPort} ..."
+            Stop-Process -Id $ow -Force -ErrorAction SilentlyContinue
+            $stopped = $true
+        }
+    } catch { }
+    if ($stopped) {
+        Start-Sleep -Milliseconds 800
+    }
+}
+
+if ($RestartHost) {
+    Write-Host "RestartHost: clearing any Host on ${BindAddress}:${Port}"
+    Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
+}
+
 if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
     Write-Host "SoulCore already listening on ${BindAddress}:${Port}"
     Write-Host "Health: $HealthUrl"
+    Write-Host "Tip: after changing SoulCore/.env or guest tools, re-run with -RestartHost so the process reloads secrets."
     exit 0
 }
 
@@ -173,6 +216,13 @@ if (Test-Path -LiteralPath $EnvFile) {
 } else {
     Write-Host ".env not found at $EnvFile (skipping SOULCORE_* load)"
 }
+
+$vboxPass = [Environment]::GetEnvironmentVariable("SOULCORE_VBOX_GUEST_PASS", "Process")
+$vboxUser = [Environment]::GetEnvironmentVariable("SOULCORE_VBOX_GUEST_USER", "Process")
+if ([string]::IsNullOrWhiteSpace($vboxUser)) { $vboxUser = "victoria" }
+$vboxPresent = -not [string]::IsNullOrEmpty($vboxPass)
+$vboxLen = if ($vboxPresent) { $vboxPass.Length } else { 0 }
+Write-Host "guestcontrol: user=$vboxUser SOULCORE_VBOX_GUEST_PASS present=$vboxPresent length=$vboxLen"
 
 # TASK-112: advisory inference/embed preflight (after .env load so
 # SOULCORE_EMBED_MODEL is honored). Warnings only; never blocks Host start.

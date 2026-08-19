@@ -14,6 +14,7 @@
   .\ALLSTART.ps1 -SkipPreflight
   .\ALLSTART.ps1 -SkipVoice
   .\ALLSTART.ps1 -Configuration Debug
+  .\ALLSTART.ps1 -RestartHost
 #>
 [CmdletBinding()]
 param(
@@ -30,7 +31,9 @@ param(
     [int]$HostStartTimeoutSec = 180,
     [int]$TailscaleTimeoutSec = 30,
     [int]$VoiceTimeoutSec = 45,
-    [int]$BrowserBridgeTimeoutSec = 45
+    [int]$BrowserBridgeTimeoutSec = 45,
+    # Kill existing local Host and start fresh (reloads SoulCore/.env guest password).
+    [switch]$RestartHost
 )
 
 $ErrorActionPreference = "Stop"
@@ -123,6 +126,7 @@ function Start-LocalSoulCore {
     )
     if ($SkipPreflight) { $hostArgList += "-SkipPreflight" }
     if ($ForceRebuild) { $hostArgList += "-ForceRebuild" }
+    if ($RestartHost) { $hostArgList += "-RestartHost" }
 
     $result = Invoke-ScriptWithTimeout `
         -Label "start-soulcore :$LocalPort" `
@@ -281,8 +285,15 @@ $chosenPort = $Port
 $existing = Get-HealthObject -LocalPort $Port
 
 if (Test-LocalVictoriaHealth -Health $existing) {
-    Write-Host "Already running local Victoria on :$Port"
-    Write-Host "  memory: $($existing.memory.path)"
+    if ($RestartHost) {
+        Write-Host "RestartHost: replacing local Victoria on :$Port"
+        Start-LocalSoulCore -LocalPort $Port
+        Wait-LocalVictoria -LocalPort $Port -TimeoutSec $HealthTimeoutSec | Out-Null
+    } else {
+        Write-Host "Already running local Victoria on :$Port"
+        Write-Host "  memory: $($existing.memory.path)"
+        Write-Host "  Tip: after .env / guestcontrol changes use: .\ALLSTART.ps1 -RestartHost"
+    }
 } elseif ($null -ne $existing) {
     Write-Warning "Port $Port answers /health but is NOT this machine's Victoria."
     Write-Warning "  foreign memory.path = $($existing.memory.path)"
