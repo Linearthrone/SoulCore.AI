@@ -8,18 +8,28 @@ Structured briefs produced by **TT-01 (Thinktank Facilitator)** before PM-01 exe
 - Keep a durable record of avenues, recommendations, risks, and open questions
 - Hand off to PM-01 without losing the thinktank work
 
-## ID convention (2026-08-19+)
+## Filename + ID convention
 
-**Canonical:** [`docs/agents/PROP_NUMBERING.md`](../PROP_NUMBERING.md)
-
-| Kind | ID | Example |
+| Artifact | ID | Filename |
 | --- | --- | --- |
-| Proposal | `PROP-{N}-{subject}` | `PROP-1-digits-sms-channel` |
-| Split task | `PROP-{N}.{M}` | `PROP-1.1` (OPS kill-test) |
+| Proposal (this folder) | **PROP-N** | kebab slug `.md` (not the ID) |
+| TT → PM intake | **PROP-N** | `docs/agents/tasks/PROP-{N}-TT01-to-PM01.md` |
+| PM → execution | **PROP-N.M** | `docs/agents/tasks/PROP-{N}.{M}-PM01-to-{ROLE}.md` |
 
-TT **does not** assign colliding `TASK-###` numbers for new idea intakes. PM may adjust `.M` splits and roles.
+**TT-01 never uses TASK-NNN.** PM assigns `.1`, `.2`, … when splitting a proposal.
 
-## Filename convention (slug file)
+### Registry (next unused integer)
+
+| prop_id | Slug | Status |
+| --- | --- | --- |
+| PROP-1 | `victoria-reliable-workspace-browser.md` | sent-to-pm |
+| PROP-2 | `victoria-digits-sms-channel.md` | sent-to-pm |
+| PROP-3 | `victoria-ue-reliable-embodiment.md` | sent-to-pm |
+| PROP-4 | `presence-shell-honest-hud.md` | sent-to-pm |
+
+**Next TT assign: PROP-5.**
+
+Older named ids (`PROP-COMPANION-01`, etc.) stay as historical; new work is integer **PROP-N**.
 
 Slug from the **need or want** (lowercase kebab-case):
 
@@ -50,7 +60,7 @@ If a slug exists, append `-2`, `-3`, … — do not overwrite without confirmati
 
 ## Unblock proposals
 
-When PM sends `to-TT01` because a ticket cannot complete, TT writes a proposal here (new `PROP-N` if it is a new brief) and **always** returns a PM intake so PM can re-ticket. See `Agents/PM-01-Work-Standards.md` §9.3.1.
+When PM sends `to-TT01` because a ticket cannot complete, TT writes a proposal here and **always** returns `PROP-{N}-TT01-to-PM01.md` so PM can re-ticket as `PROP-N.M`. See `Agents/PM-01-Work-Standards.md` §9.3.1.
 
 ## Related paths
 

@@ -27,7 +27,7 @@ You are the technical brain and architecture guardian of this project. You hold 
 - **Architect**: Architecture implementation assurance, async pattern governance, direct infrastructure code operations and deployment
 - **Technical CTO**: Technical direction decisions, version planning, quality control
 
-**Upstream (pre-PM + unblock):** **TT-01** (Thinktank Facilitator) explores ideas into `docs/agents/unexecuted_proposals/`, and evaluates **stuck tickets** when PM cannot complete a path. Returns `TASK-*-TT01-to-PM01.md` for PM re-ticketing. See `Agents/TT-01.md` and `Agents/PM-01-Work-Standards.md` Â§1.1â€“1.2, Â§9.3.1.
+**Upstream (pre-PM + unblock):** **TT-01** (Thinktank Facilitator) explores ideas into `docs/agents/unexecuted_proposals/`, and evaluates **stuck tickets** when PM cannot complete a path. Returns `PROP-{N}-TT01-to-PM01.md` for PM re-ticketing as **`PROP-N.M`**. See `Agents/TT-01.md` §6.4 and `Agents/PM-01-Work-Standards.md` §1.1 / §9.3.1.
 
 **Momentum / parallel:** Keep tickets advancing every patrol. Fan out independent ready tickets in the same turn (`PM-01-Work-Standards.md` Â§9.1a).
 
@@ -402,7 +402,7 @@ For TT-01 (stuck / unable to complete):
 [Why blocked] Concrete blocker
 [Still required] Goal / success criteria
 [Constraints] Must not break â€¦
-[Acceptance Criteria] Proposal in unexecuted_proposals/ + TASK-*-TT01-to-PM01.md with suggested next tickets
+[Acceptance Criteria] Proposal in unexecuted_proposals/ + PROP-{N}-TT01-to-PM01.md; PM tickets PROP-N.M
 ```
 
 For DEV-01 (legacy only â€” prefer splitting to FED/BED/DBD/SEC):
@@ -462,7 +462,7 @@ PM-01 **must** choose the narrowest correct owner. Do not default everything to 
 - **After code roles finish:** Default chain continues **OPS-01 â†’ QA-01 â†’ SLOP-01** unless change is docs-only.
 - **After QA Pass:** Immediately dispatch **SLOP-01**; on findings ticket DEV remove/dedupe or notify user (ask-user). See `PM-01-Work-Standards.md` Â§5.1.
 - **Unable to complete:** After one re-handoff still blocked â†’ **TT-01** â†’ proposal â†’ PM re-tickets. See Â§9.3.1.
-- **Filename must match recipient:** `TASK-{date}-{ID}-PM01-to-{FED01|BED01|DBD01|SEC01|OPS01|QA01|SLOP01|TT01}.md`
+- **Filename must match recipient:** `PROP-{N}.{M}-PM01-to-{FED01|BED01|…}.md` when the work came from a proposal; otherwise `TASK-{date}-{ID}-PM01-to-{ROLE}.md` (includes `TT01` for unblock evals only).
 
 ---
 
