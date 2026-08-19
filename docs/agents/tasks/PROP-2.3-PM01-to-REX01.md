@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-2.3
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-2.3` (`PROP-2.3-PM01-to-REX01.md`). Keep for history only.
-
----
+prop_root: PROP-2-ue-reliable-embodiment
 type: task
-task_id: TASK-212
+prop_id: PROP-2.3
+legacy_task_id: TASK-212
 from: PM-01
 to: REX-01
 priority: P0
@@ -16,15 +11,15 @@ created: 2026-08-19
 wave: 31
 phase: ue-reliability
 title: One Presence still = Victoria eye_frame (Host refuses empty)
-depends_on: TASK-210
+depends_on: PROP-2.1
 proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
-intake: docs/agents/tasks/TASK-20260819-209-PM01-to-TT01.md
-report: docs/agents/reports/TASK-20260819-212-REX01-to-PM01.md
+intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
+report: docs/agents/reports/PROP-2.3-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 bed_assist: BED-01 only if Host still returns success on empty PNG
 ---
 
-# TASK-212: One eye still in Presence
+# PROP-2.3: One eye still in Presence
 
 ## Problem
 
@@ -54,4 +49,4 @@ If she claims to see, Kurt needs **exactly one** Presence still — Victoria `ey
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-212-REX01-to-PM01.md`
+`docs/agents/reports/PROP-2.3-REX01-to-PM01.md`

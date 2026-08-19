@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-2.2
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-2.2` (`PROP-2.2-PM01-to-REX01.md`). Keep for history only.
-
----
+prop_root: PROP-2-ue-reliable-embodiment
 type: task
-task_id: TASK-211
+prop_id: PROP-2.2
+legacy_task_id: TASK-211
 from: PM-01
 to: REX-01
 priority: P0
@@ -16,15 +11,15 @@ created: 2026-08-19
 wave: 31
 phase: ue-reliability
 title: Victoria travel-cm + loco AnimBP (wrappers, no MHC reparent)
-depends_on: TASK-210
+depends_on: PROP-2.1
 proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
-intake: docs/agents/tasks/TASK-20260819-209-PM01-to-TT01.md
-report: docs/agents/reports/TASK-20260819-211-REX01-to-PM01.md
+intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
+report: docs/agents/reports/PROP-2.2-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 staffing: UE content / AnimBP specialist under REX lane
 ---
 
-# TASK-211: Victoria walks (measured cm) + loco AnimBP
+# PROP-2.2: Victoria walks (measured cm) + loco AnimBP
 
 ## Problem
 
@@ -55,4 +50,4 @@ ISSUE-006 class failures: API ok, **0 cm** travel; T-pose/slide sold as Pass. Vi
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-211-REX01-to-PM01.md`
+`docs/agents/reports/PROP-2.2-REX01-to-PM01.md`

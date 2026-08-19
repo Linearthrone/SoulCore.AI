@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-1.1
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-1.1` (`PROP-1.1-PM01-to-OPS01.md`). Keep for history only.
-
----
+prop_root: PROP-1-digits-sms-channel
 type: task
-task_id: TASK-201
+prop_id: PROP-1.1
+legacy_task_id: TASK-201
 from: PM-01
 to: OPS-01
 priority: P0
@@ -18,12 +13,12 @@ phase: phone-digits
 title: DIGITS gateway Android — Tailscale kill-test (SMS then MMS)
 depends_on: none
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
-intake: docs/agents/tasks/TASK-20260819-200-PM01-to-TT01.md
-report: docs/agents/reports/TASK-20260819-201-OPS01-to-PM01.md
+intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
+report: docs/agents/reports/PROP-1.1-OPS01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 ---
 
-# TASK-201: DIGITS gateway kill-test (OPS)
+# PROP-1.1: DIGITS gateway kill-test (OPS)
 
 ## Problem
 
@@ -57,4 +52,4 @@ Consumer DIGITS is not a Twilio webhook API. We must prove the unused T-Mobile D
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-201-OPS01-to-PM01.md`
+`docs/agents/reports/PROP-1.1-OPS01-to-PM01.md`

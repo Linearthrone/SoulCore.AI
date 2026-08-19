@@ -1,34 +1,29 @@
 ---
-superseded_by: PROP-2.4
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-2.4` (`PROP-2.4-PM01-to-REX01.md`). Keep for history only.
-
----
+prop_root: PROP-2-ue-reliable-embodiment
 type: task
-task_id: TASK-213
+prop_id: PROP-2.4
+legacy_task_id: TASK-213
 from: PM-01
 to: REX-01
 priority: P2
-status: Held — unlock after TASK-210 Pass
+status: Held — unlock after PROP-2.1 Pass
 created: 2026-08-19
 wave: 31
 phase: ue-reliability
 title: Hold TASK-192 call camera — not a Presence sight feed
-depends_on: TASK-210
+depends_on: PROP-2.1
 proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
-intake: docs/agents/tasks/TASK-20260819-209-PM01-to-TT01.md
+intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
 prior: docs/agents/tasks/TASK-20260817-192-PM01-to-REX01.md
-report: docs/agents/reports/TASK-20260819-213-REX01-to-PM01.md
+report: docs/agents/reports/PROP-2.4-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 ---
 
-# TASK-213: TASK-192 stays queued / out of Presence
+# PROP-2.4: TASK-192 stays queued / out of Presence
 
 ## Decision
 
-Waist-up **call_capture** (TASK-192) remains **held** until TASK-210 Pass. When resumed, it is a **separate** companion Call-tab feed — **never** a second Presence “her eyes” slot.
+Waist-up **call_capture** (TASK-192) remains **held** until PROP-2.1 Pass. When resumed, it is a **separate** companion Call-tab feed — **never** a second Presence “her eyes” slot.
 
 ## Do
 
@@ -45,4 +40,4 @@ Waist-up **call_capture** (TASK-192) remains **held** until TASK-210 Pass. When 
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-213-REX01-to-PM01.md` (can be brief Hold ack now)
+`docs/agents/reports/PROP-2.4-REX01-to-PM01.md` (can be brief Hold ack now)

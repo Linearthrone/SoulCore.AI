@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-2.1
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-2.1` (`PROP-2.1-PM01-to-REX01.md`). Keep for history only.
-
----
+prop_root: PROP-2-ue-reliable-embodiment
 type: task
-task_id: TASK-210
+prop_id: PROP-2.1
+legacy_task_id: TASK-210
 from: PM-01
 to: REX-01
 priority: P0
@@ -18,14 +13,14 @@ phase: ue-reliability
 title: Shadow PIE sit-down — 1P Kayleigh possess (finish TASK-191)
 depends_on: none
 proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
-intake: docs/agents/tasks/TASK-20260819-209-PM01-to-TT01.md
+intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
 prior: docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md
-report: docs/agents/reports/TASK-20260819-210-REX01-to-PM01.md
+report: docs/agents/reports/PROP-2.1-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 staffing: REX-01 + UE specialist as needed; parallel to Host/DIGITS
 ---
 
-# TASK-210: Shadow Play — Kayleigh 1P possess Pass
+# PROP-2.1: Shadow Play — Kayleigh 1P possess Pass
 
 ## Problem
 
@@ -58,4 +53,4 @@ TASK-191 is **Partial**: C++/P4 on disk but live PIE can still be `DefaultPawn`.
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-210-REX01-to-PM01.md`
+`docs/agents/reports/PROP-2.1-REX01-to-PM01.md`

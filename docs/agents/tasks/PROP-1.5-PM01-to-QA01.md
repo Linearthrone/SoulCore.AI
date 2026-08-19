@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-1.5
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-1.5` (`PROP-1.5-PM01-to-QA01.md`). Keep for history only.
-
----
+prop_root: PROP-1-digits-sms-channel
 type: task
-task_id: TASK-205
+prop_id: PROP-1.5
+legacy_task_id: TASK-205
 from: PM-01
 to: QA-01
 priority: P0
@@ -16,14 +11,14 @@ created: 2026-08-19
 wave: 31
 phase: phone-digits
 title: QA — Kurt SMS round-trip + MMS screenshot still
-depends_on: TASK-201, TASK-202, TASK-203, TASK-204
+depends_on: PROP-1.1, PROP-1.2, PROP-1.3, PROP-1.4
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
-intake: docs/agents/tasks/TASK-20260819-200-PM01-to-TT01.md
-report: docs/agents/reports/TASK-20260819-205-QA01-to-PM01.md
+intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
+report: docs/agents/reports/PROP-1.5-QA01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 ---
 
-# TASK-205: DIGITS QA gate
+# PROP-1.5: DIGITS QA gate
 
 ## Sit-down (not log-only)
 
@@ -44,4 +39,4 @@ handoff: 2026-08-19 — WonderWoman (PM-01)
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-205-QA01-to-PM01.md`
+`docs/agents/reports/PROP-1.5-QA01-to-PM01.md`

@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-2.0
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-2.0` (`PROP-2.0-PM01-to-TT01.md`). Keep for history only.
-
----
+prop_root: PROP-2-ue-reliable-embodiment
 type: task
-task_id: TASK-209
+prop_id: PROP-2.0
+legacy_task_id: TASK-209
 from: PM-01
 to: TT-01
 priority: P1
@@ -17,13 +12,13 @@ wave: 31
 phase: ue-reliability
 title: "[WonderWoman] Accept UE reliability — parallel UE lane"
 proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
-tt_intake_alias: TT used TASK-195 (collides with Playwright BED-195) → remapped to TASK-209..213
+tt_intake_alias: TT used TASK-195 (collides with Playwright BED-195) → remapped to PROP-2.1..2.4
 assignee_role: PM-01 (WonderWoman)
-report: docs/agents/reports/TASK-20260819-209-PM01-to-TT01.md
+report: docs/agents/reports/PROP-2.0-PM01-to-TT01.md
 related: docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md
 ---
 
-# TASK-209: Accept UE reliability (parallel lane)
+# PROP-2.0: Accept UE reliability (parallel lane)
 
 **PM:** WonderWoman (PM-01). **From:** TT-01 idea intake.  
 **Proposal:** `docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md`

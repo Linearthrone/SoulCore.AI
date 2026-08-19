@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-1.6
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-1.6` (`PROP-1.6-PM01-to-FED01.md`). Keep for history only.
-
----
+prop_root: PROP-1-digits-sms-channel
 type: task
-task_id: TASK-206
+prop_id: PROP-1.6
+legacy_task_id: TASK-206
 from: PM-01
 to: FED-01
 priority: P1
@@ -16,14 +11,14 @@ created: 2026-08-19
 wave: 31
 phase: phone-digits
 title: Link shrink — status + ComfyUI only (after DIGITS Pass)
-depends_on: TASK-205
+depends_on: PROP-1.5
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
-intake: docs/agents/tasks/TASK-20260819-200-PM01-to-TT01.md
-report: docs/agents/reports/TASK-20260819-206-FED01-to-PM01.md
+intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
+report: docs/agents/reports/PROP-1.6-FED01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 ---
 
-# TASK-206: Victoria Link → status + ComfyUI
+# PROP-1.6: Victoria Link → status + ComfyUI
 
 ## Problem
 
@@ -31,7 +26,7 @@ Once SMS/MMS is the daily phone chat, Link should stop pretending to be the mess
 
 ## Solution
 
-1. **Gate:** do not start until TASK-205 Pass.
+1. **Gate:** do not start until PROP-1.5 Pass.
 2. Strip or demote chat-as-primary in `House.CompanionAndroid` — status dock + MediaGen remain.
 3. Do **not** implement Messenger-class rewrite (`victoria-link-messenger-product.md`) here.
 4. Deep-link / copy: “Text Victoria at DIGITS” helper optional.
@@ -52,4 +47,4 @@ Once SMS/MMS is the daily phone chat, Link should stop pretending to be the mess
 
 ## Reply
 
-`docs/agents/reports/TASK-20260819-206-FED01-to-PM01.md`
+`docs/agents/reports/PROP-1.6-FED01-to-PM01.md`

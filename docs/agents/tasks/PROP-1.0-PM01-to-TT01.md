@@ -1,13 +1,8 @@
 ---
-superseded_by: PROP-1.0
-superseded_note: Wave 31 remapped to PROP numbering 2026-08-19
----
-
-> **Superseded** by `PROP-1.0` (`PROP-1.0-PM01-to-TT01.md`). Keep for history only.
-
----
+prop_root: PROP-1-digits-sms-channel
 type: task
-task_id: TASK-200
+prop_id: PROP-1.0
+legacy_task_id: TASK-200
 from: PM-01
 to: TT-01
 priority: P1
@@ -17,12 +12,12 @@ wave: 31
 phase: phone-digits
 title: "[WonderWoman] Accept DIGITS SMS/MMS — Avenue B locked"
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
-tt_intake_alias: TT used TASK-194 (collides with Playwright BED-194) → remapped to TASK-200..206
+tt_intake_alias: TT used TASK-194 (collides with Playwright BED-194) → remapped to PROP-1.1..1.6
 assignee_role: PM-01 (WonderWoman)
-report: docs/agents/reports/TASK-20260819-200-PM01-to-TT01.md
+report: docs/agents/reports/PROP-1.0-PM01-to-TT01.md
 ---
 
-# TASK-200: Accept DIGITS SMS/MMS (Avenue B)
+# PROP-1.0: Accept DIGITS SMS/MMS (Avenue B)
 
 **PM:** WonderWoman (PM-01). **From:** TT-01 idea intake.  
 **Proposal:** `docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md`

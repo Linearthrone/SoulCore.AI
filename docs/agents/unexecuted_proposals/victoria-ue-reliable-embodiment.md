@@ -1,5 +1,6 @@
 ---
 type: proposal
+prop_id: PROP-2-ue-reliable-embodiment
 status: accepted-pm-ticketed
 tt_id: TT-01
 created: 2026-08-19
@@ -10,7 +11,7 @@ sent_at: 2026-08-19
 pm_intake: docs/agents/tasks/TASK-20260819-195-TT01-to-PM01.md
 environment: TINA-main
 related: docs/agents/unexecuted_proposals/victoria-embodiment-walk-and-interact.md
-pm_tickets: TASK-209..213
+pm_tickets: PROP-2.1..2.4
 pm_owner: WonderWoman (PM-01)
 ---
 

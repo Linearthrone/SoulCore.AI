@@ -7,11 +7,10 @@ agent: WonderWoman
 
 # WonderWoman PM log — Wave 31 DIGITS + UE
 
-Accepted TT proposals:
+Accepted TT proposals under **PROP numbering**:
 
-1. `victoria-digits-sms-channel.md` → TASK-200..206
-2. `victoria-ue-reliable-embodiment.md` → TASK-209..213 (parallel UE lane)
+1. `PROP-1-digits-sms-channel` → PROP-1.1..1.6
+2. `PROP-2-ue-reliable-embodiment` → PROP-2.1..2.4
+3. `PROP-3-link-messenger-product` parked
 
-ID remap: TT intake ids 194/195 collided with Playwright Wave 30; execution uses 200+ / 209+.
-
-Parked: `victoria-link-messenger-product.md` until DIGITS QA Pass (or gateway kill-test fails → revisit port/Link).
+Convention: `docs/agents/PROP_NUMBERING.md`. Legacy TASK-200..213 files superseded in place.
