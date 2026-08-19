@@ -85,16 +85,16 @@ public sealed class GuestVmBrowserBridge : IBrowserBridge
             return ToBridge(result);
 
         // AT-SPI often breaks after guestcontrol/session churn. Fall back to a
-        // framebuffer PNG so the model can still see Login and desktop_click.
+        // framebuffer PNG — BED-194: mark degraded so this cannot mean "logged in".
         var shot = await _desktop.ScreenshotAsync(ct).ConfigureAwait(false);
         if (shot.Success)
         {
             return new BrowserBridgeResult(
                 true,
-                "browser_snapshot (AT-SPI) failed — fell back to desktop_screenshot. " +
-                "Use desktop_click with coords from the PNG (not window-center). " +
-                "AT-SPI error: " + result.Content + "\n\n" + shot.Content,
-                shot.Data);
+                "browser_snapshot DEGRADED (locator=pixel, goal_complete=false). " +
+                "AT-SPI failed — PNG only. Do NOT claim Login from this alone; use browser_click_text when possible, " +
+                "else desktop_click from the PNG. AT-SPI error: " + result.Content + "\n\n" + shot.Content,
+                MergeData(shot.Data, BrowserResultHonesty.DegradedPixelSnapshot(result.Content)));
         }
 
         return new BrowserBridgeResult(
@@ -130,4 +130,12 @@ public sealed class GuestVmBrowserBridge : IBrowserBridge
 
     private static BrowserBridgeResult ToBridge(DesktopOpResult result) =>
         new(result.Success, result.Content, result.Data);
+
+    private static object? MergeData(object? shotData, object honesty)
+    {
+        // Prefer honesty metadata; keep screenshot bytes if present via anonymous wrap.
+        if (shotData is null)
+            return honesty;
+        return new { screenshot = shotData, honesty };
+    }
 }
