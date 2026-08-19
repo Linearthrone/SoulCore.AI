@@ -59,6 +59,7 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 
 ## In flight (PM)
 
+- **2026-08-19 TASK-193 → Wave 30 web workspace (ACTIVE):** TT proposal accepted (Avenue **A1** Host Playwright + live stream of *her* Chromium). Tickets: **BED-194** honesty/guidance → **BED-195** Playwright bridge → **FED-196** stream pane; parallel **SEC-197** / **OPS-198**; **QA-199**. VS IDE deferred (prefer B1 VS Code-in-browser). Branch `cursor/pm-193-playwright-workspace-tickets-169c`.
 - **2026-08-17 TASK-192 → REX-01 + FED-192:** Mobile **Call** tab + Host `/api/companion/v1/call/*` (frame poll MVP). REX builds Victoria waist-up `call_capture` camera. WebRTC duplex deferred. Branch `cursor/fed-192-videocall-waistup-169c`.
 - **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **`BP_KayleighCharacter` (Kayleigh)**, never Victoria, never flying DefaultPawn. BOB/BOB-01 **retired**. Seat: `Agents/REX-01.md`. Run: `tools/ue_nav/run_rex_pie_possess_kayleigh.ps1`. Ticket: `docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md`.
 - **2026-08-05 TASK-180 → BOB (SUPERSEDED):** retired after wrong Victoria possess attempts — see TASK-191 / REX-01.
