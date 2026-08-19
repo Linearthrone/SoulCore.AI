@@ -1,6 +1,6 @@
----
-type: task
-task_id: TASK-194
+﻿---
+type: proposal-intake
+prop_id: PROP-2
 from: TT-01
 to: PM-01
 priority: P1
@@ -13,7 +13,7 @@ proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 assignee_role: PM-01 (TINA)
 ---
 
-# TASK-194: [TINA-main] Victoria DIGITS SMS/MMS on T-Mobile + MMS screenshots
+# PROP-2 : [TINA-main] Victoria DIGITS SMS/MMS on T-Mobile + MMS screenshots
 
 **For:** **TINA-main** PM-01 (House Victoria / TINA).  
 **From:** TT-01. **Mode:** `idea`.  
@@ -21,7 +21,7 @@ assignee_role: PM-01 (TINA)
 
 Do **not** ticket a Victoria Link Messenger rewrite in this wave (`victoria-link-messenger-product.md` is deprioritized). Do **not** ticket PSTN/voice. TT-01 does not ticket FED/BED.
 
-Related earlier intake (orthogonal web workspace): `TASK-20260819-193-TT01-to-PM01.md`.
+Related earlier intake (orthogonal web workspace): `PROP-1-TT01-to-PM01.md`.
 
 ## One-paragraph recommended route
 

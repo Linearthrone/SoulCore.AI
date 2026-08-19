@@ -1,6 +1,6 @@
----
-type: task
-task_id: TASK-195
+﻿---
+type: proposal-intake
+prop_id: PROP-3
 from: TT-01
 to: PM-01
 priority: P1
@@ -14,7 +14,7 @@ assignee_role: PM-01 (TINA)
 staffing: dedicated UE agents — do not block main Host/FED/BED/Playwright/DIGITS
 ---
 
-# TASK-195: [TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still
+# PROP-3 : [TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
 **Proposal:** `docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md`
@@ -26,7 +26,7 @@ TT-01 does not ticket REX/FED/BED.
 ## Staffing (required)
 
 **Bring in Unreal-focused / specialist agents — or extra dedicated UE seats — for this work.**  
-Do **not** serialize this behind main SoulCore development (Host, Playwright TASK-193, DIGITS TASK-194, ChatDesktop, Link). Run a **parallel UE lane**.
+Do **not** serialize this behind main SoulCore development (Host, Playwright PROP-3, DIGITS PROP-3, ChatDesktop, Link). Run a **parallel UE lane**.
 
 - **Primary:** REX-01 (Live Coding / PIE possess) **and** additional UE specialists as needed (AnimBP / MetaHuman / Character wrappers / NavMesh).  
 - **BED-01 / FED-01:** only tiny Host/Presence honesty (empty `eye_frame` = error; one still slot). Not a full-stack pause.  

@@ -1,6 +1,6 @@
----
+﻿---
 type: report
-task_id: TASK-194
+prop_id: PROP-2
 from: TT-01
 to: PM-01
 created: 2026-08-19
@@ -9,12 +9,12 @@ title: "[TINA-main] Victoria DIGITS SMS/MMS on T-Mobile + MMS screenshots"
 status: sent-to-pm
 ---
 
-# TASK-194 intake (TT-01 → TINA-main PM-01)
+# PROP-2 intake (TT-01 → TINA-main PM-01)
 
 Thinktank complete. DIGITS SMS/MMS fork sent for **TINA-main** ticketing.
 
 - Proposal: `docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md` (`status: sent-to-pm`)
-- Intake: `docs/agents/tasks/TASK-20260819-194-TT01-to-PM01.md`
+- Intake: `docs/agents/tasks/PROP-2-TT01-to-PM01.md`
 - Mode: idea
 - Locked: keep T-Mobile; Avenue B gateway; SMS/MMS v1; MMS screenshot observer; voice later; Link shrink after Pass
 - Deprioritized: Messenger-class Link rewrite

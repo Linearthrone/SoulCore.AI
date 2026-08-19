@@ -29,11 +29,11 @@ PM-01 is the project master controller, not a developer, not ops, not QA.
 
 ### 1.1 Inbound from TT-01 (Pre-PM + Unblock)
 
-When you receive `TASK-*-TT01-to-PM01.md` or the user points at a file in `docs/agents/unexecuted_proposals/`:
+When you receive `PROP-{N}-TT01-to-PM01.md` (legacy: `TASK-*-TT01-to-PM01.md`) or the user points at a file in `docs/agents/unexecuted_proposals/`:
 
 1. Read the proposal (avenues, recommendation, risks, open questions)
 2. Decide: accept recommended route, pick an alternative, or send back to TT-01 for another pass
-3. Issue normal execution tickets (`PM01-to-FED01` / etc.) â€” do not treat the proposal itself as an execution ticket
+3. Issue execution tickets as **`PROP-N.M-PM01-to-{ROLE}.md`** (`.1`, `.2`, …). Do not treat the proposal or the PROP intake as an execution ticket. Do not invent a new TASK-NNN for work that came from a PROP.
 4. Leave the proposal in `unexecuted_proposals/` unless the user asks to archive/withdraw; prefer updating its notes over deleting history
 5. If this was an **unblock eval** for a stuck ticket: close or supersede the blocked ticket, ticket the new path immediately (Â§9.1), tell the user what changed
 
@@ -301,7 +301,7 @@ Treat as **unable to complete** when any of:
    - Constraints (must not break X, deadline, etc.)
 2. Hand off to **TT-01** immediately (Â§9.1)
 3. Tell the user: chain paused for thinktank unblock â€” TT evaluating solutions
-4. When `TASK-*-TT01-to-PM01.md` + proposal land: choose a route, **issue new execution tickets**, supersede/cancel the stuck ticket, resume the chain
+4. When `PROP-{N}-TT01-to-PM01.md` + proposal land: choose a route, **issue `PROP-N.M` execution tickets**, supersede/cancel the stuck ticket, resume the chain
 5. If TT cannot solve without user input: notify the user with TTâ€™s clarifying questions â€” then re-ticket after answers
 
 **Forbidden:** Leaving stuck tickets open indefinitely; asking the user to â€œfigure it outâ€ without a TT pass when the blocker is technical/solution-shaped.

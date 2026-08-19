@@ -1,6 +1,6 @@
----
-type: task
-task_id: TASK-193
+﻿---
+type: proposal-intake
+prop_id: PROP-1
 from: TT-01
 to: PM-01
 priority: P1
@@ -13,7 +13,7 @@ proposal: docs/agents/unexecuted_proposals/victoria-reliable-workspace-browser.m
 assignee_role: PM-01 (TINA)
 ---
 
-# TASK-193: [TINA-main] Victoria dedicated Playwright browser + live stream
+# PROP-1 : [TINA-main] Victoria dedicated Playwright browser + live stream
 
 **For:** **TINA-main** PM-01 environment (House Victoria / TINA).  
 **From:** TT-01 thinktank. **Mode:** `idea` (not unblock).  

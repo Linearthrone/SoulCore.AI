@@ -1,6 +1,6 @@
----
+﻿---
 type: report
-task_id: TASK-193
+prop_id: PROP-1
 from: TT-01
 to: PM-01
 created: 2026-08-19
@@ -9,12 +9,12 @@ title: "[TINA-main] Victoria dedicated Playwright browser + live stream"
 status: sent-to-pm
 ---
 
-# TASK-193 intake (TT-01 → TINA-main PM-01)
+# PROP-1 intake (TT-01 → TINA-main PM-01)
 
 Thinktank complete. Proposal sent for **TINA-main** ticketing.
 
 - Proposal: `docs/agents/unexecuted_proposals/victoria-reliable-workspace-browser.md` (`status: sent-to-pm`)
-- Intake: `docs/agents/tasks/TASK-20260819-193-TT01-to-PM01.md`
+- Intake: `docs/agents/tasks/PROP-1-TT01-to-PM01.md`
 - Mode: idea
 - Locked: A1 Host Playwright + her cookies/passwords + live stream of her Chromium; web MVP; VS IDE later
 
