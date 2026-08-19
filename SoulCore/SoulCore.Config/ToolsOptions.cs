@@ -53,10 +53,23 @@ public sealed class ToolsOptions
     public string DesktopTargetWindowTitle { get; set; } = "";
 
     /// <summary>
-    /// Browser backend: <c>native</c> (default, BED-182 — <c>BrowserCaptureBridge</c> :17891
-    /// + unpacked <c>BrowserCaptureExtension</c>). Hermes retired (BED-185).
+    /// Browser backend: <c>playwright</c> (BED-195 — Victoria dedicated Chromium),
+    /// <c>native</c> (BrowserCaptureBridge :17891), or legacy. When
+    /// <c>playwright</c>, Host prefers it even if DesktopTargetWindowTitle is set
+    /// (VM stays for desktop_*; web Login uses Playwright).
     /// </summary>
     public string BrowserBackend { get; set; } = BackendNative;
+
+    public const string BackendPlaywright = "playwright";
+
+    /// <summary>
+    /// Victoria-only Chromium profile directory. Must NOT be Kurt's Chrome/Edge profile.
+    /// Default: %LOCALAPPDATA%\SoulCore\victoria-browser
+    /// </summary>
+    public string PlaywrightUserDataDir { get; set; } = "";
+
+    /// <summary>When true, launch headed Chromium for debugging (stream still preferred for Kurt).</summary>
+    public bool PlaywrightHeaded { get; set; }
 
     /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>
     public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17891";

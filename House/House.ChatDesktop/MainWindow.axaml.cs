@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
     private readonly SoulCoreDesktopViewClient _desktopView = new();
+    private readonly SoulCoreBrowserViewClient _browserView = new();
     private readonly CompanionMediaClient _media = new();
     private readonly LocalStackControl _stack = new();
     private readonly ChatHistoryStore _chatHistory = new();
@@ -41,7 +42,10 @@ public partial class MainWindow : Window
     private bool _servicesBusy;
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _desktopViewTimer;
+    private readonly DispatcherTimer _browserViewTimer;
     private bool _desktopViewBusy;
+    private bool _browserViewBusy;
+    private string? _lastBrowserImageHash;
     private int _desktopImageWidth;
     private int _desktopImageHeight;
     private int? _desktopCursorX;
@@ -111,6 +115,10 @@ public partial class MainWindow : Window
         _desktopViewTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
         _desktopViewTimer.Tick += async (_, _) => await RefreshDesktopViewAsync();
 
+        // FED-196: near-live Victoria Playwright pane (~2 fps when frames arrive).
+        _browserViewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _browserViewTimer.Tick += async (_, _) => await RefreshVictoriaBrowserViewAsync();
+
         Opened += async (_, _) =>
         {
             WirePushToTalk();
@@ -125,7 +133,9 @@ public partial class MainWindow : Window
             await ProbeHealthAsync();
             _pollTimer.Start();
             _desktopViewTimer.Start();
+            _browserViewTimer.Start();
             await RefreshDesktopViewAsync();
+            await RefreshVictoriaBrowserViewAsync();
             await EnsureDesktopBrowserDefaultsAsync();
         };
 
@@ -133,6 +143,7 @@ public partial class MainWindow : Window
         {
             _pollTimer.Stop();
             _desktopViewTimer.Stop();
+            _browserViewTimer.Stop();
             _desktopPopOut?.Close();
             _popOuts.CloseAll();
             SaveDisplayNameFromEditor();
@@ -141,6 +152,7 @@ public partial class MainWindow : Window
             _health.Dispose();
             _toolsSettings.Dispose();
             _desktopView.Dispose();
+            _browserView.Dispose();
             _media.Dispose();
             _stack.Dispose();
             _chatHistory.Dispose();
@@ -199,6 +211,7 @@ public partial class MainWindow : Window
         else
         {
             _ = RefreshDesktopViewAsync();
+            _ = RefreshVictoriaBrowserViewAsync();
         }
     }
 
