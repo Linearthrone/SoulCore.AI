@@ -64,7 +64,7 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 - **2026-08-19 WonderWoman Wave 31 — UE reliability (parallel lane):** `PROP-2-ue-reliable-embodiment` → **PROP-2.1..2.4** (REX 2.1 finishes TASK-191 sit-down; 2.2 loco; 2.3 eye; 2.4 holds TASK-192 out of Presence). **Do not block** Playwright / DIGITS / Host.
 - **2026-08-19 Playwright Wave 30 (parallel, legacy TASK ids):** BED-194..199 on `cursor/bed-194-playwright-workspace-169c` (PR #53) — Victoria dedicated Chromium + `/browser/view`. Pre-PROP numbering; leave as-is.
 - **2026-08-17 TASK-192 → REX-01 + FED-192:** Mobile **Call** tab + Host `/api/companion/v1/call/*`. **Held behind PROP-2.1** (PROP-2.4). Branch `cursor/fed-192-videocall-waistup-169c`.
-- **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **Kayleigh**. Sit-down Pass tracked as **PROP-2.1** on shadow. Seat: `Agents/REX-01.md`.
+- **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **Kayleigh**. Sit-down Pass tracked as **PROP-2.1** on shadow. Seat: `Agents/REX-01.md`. **Shadow drop-in activate:** `Agents/REX-01-SHADOW.md` (copy onto shadow → `@` in Cursor).
 - **2026-08-05 TASK-180 → BOB (SUPERSEDED):** retired after wrong Victoria possess attempts — see TASK-191 / REX-01.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
 - **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
