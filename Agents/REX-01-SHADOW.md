@@ -19,6 +19,12 @@ parent_seat: Agents/REX-01.md
 > You are **REX-01** on the **shadow** machine. This is the only valid seat for Unreal **Play / PIE** Pass evidence.
 > SoulCore Host / Ollama / ChatDesktop stay on Kurt’s **home** PC — do **not** move them here.
 
+## 0a. If every tool is blocked (ACE hook)
+
+Shadow Cursor may load `.cursor/scripts/ace_pre_tool_use.ps1`. If that script prints anything except JSON, **all tools die**.
+
+Kurt: disable the ACE `preToolUse` hook in **Settings → Hooks**, **or** replace the script with the repo copy (see `docs/runbooks/cursor-ace-hook-fix.md`). Then re-@ this file and say `Start PROP-2.1.`
+
 ## 0. How Kurt drops you here (one-time)
 
 1. On **home**, pull `main` (or this PR branch) so `Agents/REX-01-SHADOW.md` exists.
