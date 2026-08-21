@@ -611,7 +611,11 @@ public partial class MainWindow
                 AppendOrUpdateAssistant(frame, finalize: false);
                 break;
             case SoulCoreFrameTypes.ChatDone:
-                AppendOrUpdateAssistant(frame, finalize: true);
+                var inboundRole = ReadPayloadString(frame, "role");
+                if (string.Equals(inboundRole, "user", StringComparison.OrdinalIgnoreCase))
+                    AppendInboundUser(frame);
+                else
+                    AppendOrUpdateAssistant(frame, finalize: true);
                 break;
             case SoulCoreFrameTypes.Error:
                 SetTyping(false);
@@ -806,6 +810,33 @@ public partial class MainWindow
 
         PresenceStateText.Text = state;
         PresenceStateText.Foreground = brush;
+    }
+
+    private void AppendInboundUser(SoulCoreFrame frame)
+    {
+        // PROP-1.2: SMS/MMS from Kurt mirrored into Presence transcript.
+        var text = ReadPayloadString(frame, "text") ?? string.Empty;
+        var hasMedia = ReadPayloadBool(frame, "hasMedia") == true;
+        var mediaId = ReadPayloadString(frame, "mediaId");
+        if (string.IsNullOrWhiteSpace(text) && !hasMedia && string.IsNullOrWhiteSpace(mediaId))
+            return;
+
+        _lastChatActivityUtc = DateTimeOffset.UtcNow;
+        UpdateEngagementState();
+        SetTyping(false);
+
+        var bubble = new ChatMessage
+        {
+            Role = "user",
+            Text = text,
+            FrameId = frame.Id,
+            MediaId = mediaId
+        };
+        _messages.Add(bubble);
+        PersistMessage(bubble);
+        if (hasMedia || !string.IsNullOrWhiteSpace(mediaId))
+            _ = AttachInboundMediaAsync(bubble);
+        ScrollTranscriptToEnd();
     }
 
     private void AppendOrUpdateAssistant(SoulCoreFrame frame, bool finalize)

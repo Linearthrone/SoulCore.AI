@@ -6,8 +6,9 @@ legacy_task_id: TASK-202
 from: PM-01
 to: BED-01
 priority: P0
-status: Pending
+status: Pass
 created: 2026-08-19
+completed: 2026-08-21
 wave: 31
 phase: phone-digits
 title: Host inbound SMS/MMS adapter → One Thread conversationId
@@ -18,6 +19,7 @@ proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.2-BED01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
+bed_note: 2026-08-21 — POST /api/companion/v1/messages/inbound shipped; next PROP-1.3 outbound
 ---
 
 # PROP-1.2: Inbound SMS/MMS → Host chat pipeline
