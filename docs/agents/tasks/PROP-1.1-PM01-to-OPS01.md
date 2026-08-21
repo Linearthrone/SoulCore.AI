@@ -6,49 +6,46 @@ legacy_task_id: TASK-201
 from: PM-01
 to: OPS-01
 priority: P0
-status: Pending
+status: Pass
 created: 2026-08-19
+completed: 2026-08-21
 wave: 31
 phase: phone-digits
-title: DIGITS gateway Android — Tailscale kill-test (SMS then MMS)
+title: Gateway Android — Tailscale kill-test (SMS then MMS)
 depends_on: none
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.1-OPS01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
+pm_note: 2026-08-21 — Kurt Pass on SM-X218U tablet native MDN (DIGITS identity dropped for this ship)
 ---
 
-# PROP-1.1: DIGITS gateway kill-test (OPS)
+# PROP-1.1: Gateway kill-test (OPS) — **Pass**
 
 ## Problem
 
-Consumer DIGITS is not a Twilio webhook API. We must prove the unused T-Mobile DIGITS line can **terminate SMS/MMS on a device we control** before Host adapters ship.
+Prove a device we control can terminate SMS/MMS before Host adapters ship. Original brief assumed DIGITS; **PM lock 2026-08-21:** use the gateway tablet’s own talk/text MDN instead.
 
-## Solution
+## Solution (as executed)
 
-1. Provision **spare always-on Android** (PM default) with DIGITS line signed in / dual-SIM as needed.
-2. Join **Tailscale** to Kurt’s tailnet; device can reach Host Tailscale IP (not Funnel, not public `:7700`).
-3. Kill-test matrix (manual ok for this ticket):
-   - Kurt Messages → DIGITS: SMS received on gateway
-   - Gateway → Kurt: SMS delivered
-   - Gateway → Kurt: **MMS** of a small PNG (screenshot still)
-4. Document APK/tool choice (Termux+script, companion stub, or existing SMS gateway app) — Prefer something that can POST JSON to Host later (BED-202).
-5. Report: device model, Tailscale hostname, pass/fail per row. **Do not** put the DIGITS number in git/health.
+1. Spare always-on **Samsung Galaxy Tab SM-X218U** with native talk/text.
+2. **Tailscale** on Kurt’s tailnet (no Funnel / no public `:7700`).
+3. Kill-test: inbound SMS, outbound SMS, outbound MMS image — **Pass** (Kurt).
 
-## Do not
+## Do not (still)
 
-- Port to Twilio in this ticket.
+- Port to Twilio unless later Avenue B Host path fails.
 - Bind Host non-loopback / enable Funnel.
-- Use Kurt’s **primary** daily SIM as the bot graph.
+- Commit MDN / tokens to git.
 
 ## Acceptance
 
-| # | Criterion |
-| --- | --- |
-| 1 | SMS inbound + outbound Pass on DIGITS MDN via gateway |
-| 2 | At least one MMS PNG outbound Pass |
-| 3 | Tailscale path only; no Funnel |
-| 4 | Report with evidence (redact MDN / tokens) |
+| # | Criterion | Status |
+| --- | --- | --- |
+| 1 | SMS inbound + outbound Pass on gateway MDN | **Pass** |
+| 2 | At least one MMS image outbound Pass | **Pass** |
+| 3 | Tailscale path only; no Funnel | **Pass** |
+| 4 | Report with evidence (redact MDN / tokens) | **Pass** → `PROP-1.1-OPS01-to-PM01.md` |
 
 ## Reply
 

@@ -4,18 +4,21 @@ prop_id: PROP-1-digits-sms-channel
 status: accepted-pm-ticketed
 tt_id: TT-01
 created: 2026-08-19
-updated: 2026-08-19
-title: "[TINA-main] Victoria DIGITS SMS/MMS on T-Mobile + MMS screenshots"
-need: Give Victoria Kurt’s unused T-Mobile DIGITS line (stay on T-Mobile); SMS/MMS first; she can MMS a screenshot of her work; Link shrinks to status + ComfyUI
+updated: 2026-08-21
+title: "[TINA-main] Victoria SMS/MMS on tablet gateway (was DIGITS)"
+need: Give Victoria an SMS/MMS line Kurt can text from Messages; MMS screenshots of her work; Link shrinks to status + ComfyUI
 sent_at: 2026-08-19
 pm_intake: docs/agents/tasks/TASK-20260819-194-TT01-to-PM01.md
 environment: TINA-main
 forks: docs/agents/unexecuted_proposals/victoria-link-messenger-product.md
 pm_tickets: PROP-1.1..1.6
 pm_owner: WonderWoman (PM-01)
+pm_note: 2026-08-21 — PROP-1.1 Pass on Samsung SM-X218U native MDN; DIGITS identity dropped; Avenue B unchanged
 ---
 
-# Victoria DIGITS number — SMS channel into One Thread
+# Victoria SMS number — channel into One Thread
+
+> **2026-08-21 lock:** Gateway = Samsung Tab **SM-X218U** native talk/text MDN (not DIGITS). PROP-1.1 **Pass**.
 
 ## 1. Need / Want
 
