@@ -72,6 +72,71 @@ public static class CompanionApiEndpoints
                 : Results.BadRequest(new { error = result.Error });
         });
 
+        // PROP-1.2: tablet SMS/MMS gateway → One Thread (presence-local), no tools.
+        group.MapPost("/messages/inbound", async (
+            HttpRequest request,
+            ISmsInboundService inbound,
+            CancellationToken ct) =>
+        {
+            using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                .ConfigureAwait(false);
+            var root = doc.RootElement;
+            var from = root.TryGetProperty("fromE164", out var f) ? f.GetString()
+                : root.TryGetProperty("from", out var f2) ? f2.GetString() : null;
+            var text = root.TryGetProperty("text", out var t) ? t.GetString() : null;
+            var contentType = root.TryGetProperty("contentType", out var ctEl)
+                ? ctEl.GetString()
+                : root.TryGetProperty("imageContentType", out var ict) ? ict.GetString() : null;
+
+            byte[]? imageBytes = null;
+            if (root.TryGetProperty("imageBase64", out var b64) && b64.ValueKind == JsonValueKind.String)
+            {
+                var s = b64.GetString();
+                if (!string.IsNullOrWhiteSpace(s))
+                {
+                    try
+                    {
+                        imageBytes = Convert.FromBase64String(s.Trim());
+                    }
+                    catch (FormatException)
+                    {
+                        return Results.BadRequest(new { error = "imageBase64 invalid" });
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(from))
+                return Results.BadRequest(new { error = "fromE164 required" });
+
+            var result = await inbound
+                .HandleAsync(new SmsInboundRequest(from!, text, imageBytes, contentType), ct)
+                .ConfigureAwait(false);
+
+            if (!result.Ok)
+            {
+                if (string.Equals(result.Error, "chat.model_down", StringComparison.Ordinal))
+                {
+                    return Results.Json(
+                        new { ok = false, error = result.Error, mediaId = result.MediaId },
+                        statusCode: StatusCodes.Status503ServiceUnavailable);
+                }
+
+                return Results.BadRequest(new { ok = false, error = result.Error });
+            }
+
+            return Results.Json(new
+            {
+                ok = true,
+                dropped = result.Dropped,
+                replyText = result.ReplyText,
+                mediaId = result.MediaId,
+                frameId = result.FrameId,
+                stub = result.UsedStub,
+                provider = result.Provider,
+                sessionId = "presence-local"
+            });
+        });
+
         group.MapGet("/media/models", async (ICompanionMediaService media, CancellationToken ct) =>
         {
             var models = await media.ListModelsAsync(ct).ConfigureAwait(false);

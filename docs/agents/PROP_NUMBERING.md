@@ -35,7 +35,7 @@ owner: PM-01 / TT-01
 
 | prop_id | Subject | Status | Splits |
 | --- | --- | --- | --- |
-| PROP-1-digits-sms-channel | DIGITS SMS/MMS Avenue B | accepted-pm-ticketed | 1.1–1.6 |
+| PROP-1-digits-sms-channel | Tablet SMS/MMS Avenue B (MDN = SM-X218U; DIGITS dropped) | **1.1–1.2 Pass** → 1.3+ open | 1.1–1.6 |
 | PROP-2-ue-reliable-embodiment | UE Kayleigh 1P / Victoria walk / one eye | accepted-pm-ticketed | 2.1–2.4 |
 | PROP-3-link-messenger-product | Link Messenger-class rewrite | parked-pending-digits-pass | — |
 

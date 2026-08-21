@@ -12,6 +12,7 @@ wave: 31
 phase: phone-digits
 title: Outbound SMS/MMS + send_screenshot_mms (Playwright/Presence still)
 depends_on: PROP-1.2
+unblocked: 2026-08-21 — PROP-1.2 Pass (inbound API live)
 proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.3-BED01-to-PM01.md

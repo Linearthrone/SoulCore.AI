@@ -60,7 +60,9 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 ## In flight (PM)
 
 - **PROP numbering (2026-08-19+):** TT intakes use `PROP-{N}-{subject}` / splits `PROP-{N}.{M}` — see `docs/agents/PROP_NUMBERING.md`. Stops collisions with `TASK-###`.
-- **2026-08-19 WonderWoman Wave 31 — DIGITS SMS/MMS (Avenue B):** `PROP-1-digits-sms-channel` → **PROP-1.1..1.6** (OPS→BED→SEC→QA→FED Link shrink after Pass). Proposal `victoria-digits-sms-channel.md`. **Parked:** `PROP-3-link-messenger-product`; PSTN/voice. Branch `cursor/pm-digits-ue-tickets-169c`.
+- **2026-08-21 WonderWoman / BED — PROP-1.2 Pass:** `POST /api/companion/v1/messages/inbound` → `presence-local` One Thread, Kurt E.164 allowlist, MMS as media (no tools). Runbook `docs/runbooks/sms-gateway-inbound.md`. **Next:** PROP-1.3 outbound SMS/MMS + screenshot still.
+- **2026-08-21 WonderWoman — PROP-1.1 Pass:** Gateway = Samsung Tab **SM-X218U** native talk/text MDN (DIGITS line **not** used). Tailscale on; SMS in/out + MMS image Pass (Kurt). Do not commit MDN. Leave tablet on + Tailscale up.
+- **2026-08-19 WonderWoman Wave 31 — SMS/MMS (Avenue B):** `PROP-1-digits-sms-channel` → **PROP-1.1..1.6**. Proposal slug kept (`victoria-digits-sms-channel.md`); identity now **tablet MDN**. **Parked:** `PROP-3-link-messenger-product`; PSTN/voice.
 - **2026-08-19 WonderWoman Wave 31 — UE reliability (parallel lane):** `PROP-2-ue-reliable-embodiment` → **PROP-2.1..2.4** (REX 2.1 finishes TASK-191 sit-down; 2.2 loco; 2.3 eye; 2.4 holds TASK-192 out of Presence). **Do not block** Playwright / DIGITS / Host.
 - **2026-08-19 Playwright Wave 30 (parallel, legacy TASK ids):** BED-194..199 on `cursor/bed-194-playwright-workspace-169c` (PR #53) — Victoria dedicated Chromium + `/browser/view`. Pre-PROP numbering; leave as-is.
 - **2026-08-17 TASK-192 → REX-01 + FED-192:** Mobile **Call** tab + Host `/api/companion/v1/call/*`. **Held behind PROP-2.1** (PROP-2.4). Branch `cursor/fed-192-videocall-waistup-169c`.

@@ -22,6 +22,12 @@ public interface ICompanionMediaService
         string? model,
         string? contactId,
         CancellationToken ct = default);
+    /// <summary>PROP-1.2: store inbound MMS bytes (attachment only — not tool input).</summary>
+    Task<CompanionMediaAsset> StoreInboundAsync(
+        byte[] bytes,
+        string contentType,
+        string? contactId,
+        CancellationToken ct = default);
     bool TryGetFile(string mediaId, out string fullPath, out CompanionMediaAsset? meta);
     Task PushGeneratedToChatAsync(
         string mediaId,
@@ -133,6 +139,62 @@ public sealed class CompanionMediaService : ICompanionMediaService
         PersistIndex();
 
         _logger.LogInformation("Companion media stored id={MediaId} bytes={Bytes}", mediaId, png.Length);
+        return asset;
+    }
+
+    public async Task<CompanionMediaAsset> StoreInboundAsync(
+        byte[] bytes,
+        string contentType,
+        string? contactId,
+        CancellationToken ct = default)
+    {
+        if (bytes is null || bytes.Length == 0)
+            throw new ArgumentException("image bytes required", nameof(bytes));
+        if (bytes.Length > 8 * 1024 * 1024)
+            throw new ArgumentException("image too large (max 8 MiB)", nameof(bytes));
+
+        var contact = string.IsNullOrWhiteSpace(contactId)
+            ? _options.DefaultContactId
+            : contactId.Trim();
+
+        var ctNorm = string.IsNullOrWhiteSpace(contentType)
+            ? "image/jpeg"
+            : contentType.Trim().ToLowerInvariant();
+        var ext = ctNorm switch
+        {
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            "image/gif" => ".gif",
+            _ => ".jpg"
+        };
+        if (ctNorm is not ("image/png" or "image/jpeg" or "image/jpg" or "image/webp" or "image/gif"))
+            ctNorm = "image/jpeg";
+
+        var mediaId = Guid.NewGuid().ToString("N");
+        var fileName = mediaId + ext;
+        var dir = _options.ResolveMediaStorePath();
+        Directory.CreateDirectory(dir);
+        var fullPath = Path.Combine(dir, fileName);
+        await File.WriteAllBytesAsync(fullPath, bytes, ct).ConfigureAwait(false);
+
+        var asset = new CompanionMediaAsset(
+            mediaId,
+            contact,
+            fileName,
+            ctNorm == "image/jpg" ? "image/jpeg" : ctNorm,
+            bytes.LongLength,
+            DateTimeOffset.UtcNow,
+            null);
+
+        lock (_gate)
+            _index[mediaId] = asset;
+        PersistIndex();
+
+        _logger.LogInformation(
+            "Companion inbound MMS stored id={MediaId} bytes={Bytes} type={Type}",
+            mediaId,
+            bytes.Length,
+            asset.ContentType);
         return asset;
     }
 

@@ -95,6 +95,8 @@ builder.Services.Configure<SoulLoopOptions>(
     builder.Configuration.GetSection(SoulLoopOptions.SectionName));
 builder.Services.Configure<CompanionOptions>(
     builder.Configuration.GetSection(CompanionOptions.SectionName));
+builder.Services.Configure<SmsOptions>(
+    builder.Configuration.GetSection(SmsOptions.SectionName));
 builder.Services.Configure<SafetyOptions>(
     builder.Configuration.GetSection(SafetyOptions.SectionName));
 builder.Services.Configure<ToolsOptions>(
@@ -517,6 +519,7 @@ builder.Services.AddSingleton<CompanionCallSessionStore>();
 builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
 builder.Services.AddSingleton<ComfyUiClient>();
 builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
+builder.Services.AddSingleton<ISmsInboundService, SmsInboundService>();
 builder.Services.AddSingleton<SoulLoopScaffold>();
 builder.Services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
 builder.Services.AddHostedService<SoulLoopHostedService>();
