@@ -2,7 +2,12 @@ namespace SoulCore.Config;
 
 /// <summary>
 /// Loads local <c>.env</c> into the process environment for <c>SOULCORE_*</c> keys only.
-/// Never logs secret values. Does not overwrite existing non-empty process env (shell wins).
+/// Never logs secret values.
+/// <para>
+/// <b>.env wins:</b> non-empty values from the file overwrite existing process env.
+/// Stale User/Machine tokens inherited into every PowerShell session were causing
+/// companion 401s while <c>SoulCore/.env</c> looked correct (PROP-1.2).
+/// </para>
 /// </summary>
 public static class DotEnvLoader
 {
@@ -11,7 +16,7 @@ public static class DotEnvLoader
     /// <summary>
     /// Apply <c>SOULCORE_*</c> entries from <paramref name="explicitPath"/> or a resolved <c>.env</c>.
     /// </summary>
-    /// <returns>Count of keys newly set on the process environment.</returns>
+    /// <returns>Count of keys set or updated on the process environment.</returns>
     public static int TryLoad(string? explicitPath = null)
     {
         var path = explicitPath ?? ResolveEnvFilePath();
@@ -27,8 +32,16 @@ public static class DotEnvLoader
             if (!key.StartsWith(KeyPrefix, StringComparison.Ordinal))
                 continue;
 
+            // Empty .env value clears the process var so Host falls open (no companion gate).
+            if (string.IsNullOrEmpty(value))
+            {
+                Environment.SetEnvironmentVariable(key, null);
+                applied++;
+                continue;
+            }
+
             var existing = Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrEmpty(existing))
+            if (string.Equals(existing, value, StringComparison.Ordinal))
                 continue;
 
             Environment.SetEnvironmentVariable(key, value);
@@ -85,6 +98,10 @@ public static class DotEnvLoader
             return false;
 
         var line = rawLine.Trim();
+        // Strip UTF-8 BOM if present on first line
+        if (line.Length > 0 && line[0] == '\uFEFF')
+            line = line[1..].TrimStart();
+
         if (line.StartsWith('#'))
             return false;
 

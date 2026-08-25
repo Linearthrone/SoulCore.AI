@@ -186,7 +186,8 @@ $env:Host__BindAddress = $BindAddress
 $env:Host__Port = "$Port"
 
 # Load SOULCORE_* from SoulCore/.env into process env before Start-Process
-# (child inherits). Never log values. Skip comments/blank; do not overwrite non-empty env.
+# (child inherits). Never log values. .env overwrites stale Process/User-inherited
+# tokens so companion auth matches the file Kurt edits (PROP-1.2 401 footgun).
 $EnvFile = Join-Path $SoulCoreRoot ".env"
 $loadedCount = 0
 if (Test-Path -LiteralPath $EnvFile) {
@@ -198,8 +199,6 @@ if (Test-Path -LiteralPath $EnvFile) {
         if ($eq -lt 1) { continue }
         $key = $trimmed.Substring(0, $eq).Trim()
         if ($key -notlike "SOULCORE_*") { continue }
-        $existing = [Environment]::GetEnvironmentVariable($key, "Process")
-        if (-not [string]::IsNullOrEmpty($existing)) { continue }
         $value = $trimmed.Substring($eq + 1).Trim()
         if (
             ($value.StartsWith('"') -and $value.EndsWith('"')) -or
@@ -212,7 +211,7 @@ if (Test-Path -LiteralPath $EnvFile) {
         Set-Item -Path "Env:$key" -Value $value
         $loadedCount++
     }
-    Write-Host "loaded $loadedCount SOULCORE_* keys from .env"
+    Write-Host "loaded/overwrote $loadedCount SOULCORE_* keys from .env (file wins over stale shell env)"
 } else {
     Write-Host ".env not found at $EnvFile (skipping SOULCORE_* load)"
 }
