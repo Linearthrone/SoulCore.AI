@@ -73,68 +73,87 @@ public static class CompanionApiEndpoints
         });
 
         // PROP-1.2: tablet SMS/MMS gateway → One Thread (presence-local), no tools.
+        // Never return empty 500: JsonException → 400 JSON; unexpected → 500 JSON; model_down → 503.
         group.MapPost("/messages/inbound", async (
             HttpRequest request,
             ISmsInboundService inbound,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
-            using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
-                .ConfigureAwait(false);
-            var root = doc.RootElement;
-            var from = root.TryGetProperty("fromE164", out var f) ? f.GetString()
-                : root.TryGetProperty("from", out var f2) ? f2.GetString() : null;
-            var text = root.TryGetProperty("text", out var t) ? t.GetString() : null;
-            var contentType = root.TryGetProperty("contentType", out var ctEl)
-                ? ctEl.GetString()
-                : root.TryGetProperty("imageContentType", out var ict) ? ict.GetString() : null;
+            var log = loggerFactory.CreateLogger("SoulCore.Host.Companion.Inbound");
 
-            byte[]? imageBytes = null;
-            if (root.TryGetProperty("imageBase64", out var b64) && b64.ValueKind == JsonValueKind.String)
+            try
             {
-                var s = b64.GetString();
-                if (!string.IsNullOrWhiteSpace(s))
+                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                    .ConfigureAwait(false);
+                var root = doc.RootElement;
+                var from = root.TryGetProperty("fromE164", out var f) ? f.GetString()
+                    : root.TryGetProperty("from", out var f2) ? f2.GetString() : null;
+                var text = root.TryGetProperty("text", out var t) ? t.GetString() : null;
+                var contentType = root.TryGetProperty("contentType", out var ctEl)
+                    ? ctEl.GetString()
+                    : root.TryGetProperty("imageContentType", out var ict) ? ict.GetString() : null;
+
+                byte[]? imageBytes = null;
+                if (root.TryGetProperty("imageBase64", out var b64) && b64.ValueKind == JsonValueKind.String)
                 {
-                    try
+                    var s = b64.GetString();
+                    if (!string.IsNullOrWhiteSpace(s))
                     {
-                        imageBytes = Convert.FromBase64String(s.Trim());
-                    }
-                    catch (FormatException)
-                    {
-                        return Results.BadRequest(new { error = "imageBase64 invalid" });
+                        try
+                        {
+                            imageBytes = Convert.FromBase64String(s.Trim());
+                        }
+                        catch (FormatException)
+                        {
+                            return Results.BadRequest(new { ok = false, error = "imageBase64 invalid" });
+                        }
                     }
                 }
-            }
 
-            if (string.IsNullOrWhiteSpace(from))
-                return Results.BadRequest(new { error = "fromE164 required" });
+                if (string.IsNullOrWhiteSpace(from))
+                    return Results.BadRequest(new { ok = false, error = "fromE164 required" });
 
-            var result = await inbound
-                .HandleAsync(new SmsInboundRequest(from!, text, imageBytes, contentType), ct)
-                .ConfigureAwait(false);
+                var result = await inbound
+                    .HandleAsync(new SmsInboundRequest(from!, text, imageBytes, contentType), ct)
+                    .ConfigureAwait(false);
 
-            if (!result.Ok)
-            {
-                if (string.Equals(result.Error, "chat.model_down", StringComparison.Ordinal))
+                if (!result.Ok)
                 {
-                    return Results.Json(
-                        new { ok = false, error = result.Error, mediaId = result.MediaId },
-                        statusCode: StatusCodes.Status503ServiceUnavailable);
+                    if (string.Equals(result.Error, "chat.model_down", StringComparison.Ordinal))
+                    {
+                        return Results.Json(
+                            new { ok = false, error = result.Error, mediaId = result.MediaId },
+                            statusCode: StatusCodes.Status503ServiceUnavailable);
+                    }
+
+                    return Results.BadRequest(new { ok = false, error = result.Error });
                 }
 
-                return Results.BadRequest(new { ok = false, error = result.Error });
+                return Results.Json(new
+                {
+                    ok = true,
+                    dropped = result.Dropped,
+                    replyText = result.ReplyText,
+                    mediaId = result.MediaId,
+                    frameId = result.FrameId,
+                    stub = result.UsedStub,
+                    provider = result.Provider,
+                    sessionId = "presence-local"
+                });
             }
-
-            return Results.Json(new
+            catch (JsonException jex)
             {
-                ok = true,
-                dropped = result.Dropped,
-                replyText = result.ReplyText,
-                mediaId = result.MediaId,
-                frameId = result.FrameId,
-                stub = result.UsedStub,
-                provider = result.Provider,
-                sessionId = "presence-local"
-            });
+                log.LogWarning(jex, "Companion inbound rejected: invalid JSON body");
+                return Results.BadRequest(new { ok = false, error = "invalid JSON body" });
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Companion inbound unexpected failure");
+                return Results.Json(
+                    new { ok = false, error = "inbound_failed" },
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
         });
 
         group.MapGet("/media/models", async (ICompanionMediaService media, CancellationToken ct) =>
