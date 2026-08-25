@@ -31,7 +31,7 @@ using SoulCore.Memory;
 using System.Text.Json;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
-// Existing non-empty process env wins; never log secret values.
+// .env overwrites stale Process/User-inherited tokens; never log secret values.
 DotEnvLoader.TryLoad();
 
 // Evidence mode: confirm SecretNames keys present (length/bool only — no values).
@@ -1015,8 +1015,13 @@ static int ReportSecretsPresence()
         SecretNames.VboxGuestPass
     };
 
+    // Load .env the same way Host startup does so this report matches live auth.
+    DotEnvLoader.TryLoad();
+
     var envPath = DotEnvLoader.ResolveEnvFilePath();
     Console.WriteLine($"env_file_found={!string.IsNullOrEmpty(envPath)}");
+    if (!string.IsNullOrEmpty(envPath))
+        Console.WriteLine($"env_file_path={envPath}");
 
     var allPresent = true;
     foreach (var key in keys)
@@ -1025,11 +1030,20 @@ static int ReportSecretsPresence()
         var present = !string.IsNullOrEmpty(value);
         var length = present ? value!.Length : 0;
         allPresent &= present;
-        Console.WriteLine($"{key}: present={present} length={length}");
+        // Fingerprint only — never print the secret. Lets Kurt compare .env vs Host.
+        var fp = present ? ShortFingerprint(value!) : "-";
+        Console.WriteLine($"{key}: present={present} length={length} fp={fp}");
     }
 
     Console.WriteLine($"all_present={allPresent}");
     return allPresent ? 0 : 1;
+}
+
+static string ShortFingerprint(string secret)
+{
+    var hash = System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(secret));
+    return Convert.ToHexString(hash.AsSpan(0, 4)).ToLowerInvariant();
 }
 
 static bool IsLoopback(string address) =>

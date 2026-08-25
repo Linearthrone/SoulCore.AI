@@ -72,6 +72,44 @@ curl -sS -X POST "$HOST/api/companion/v1/messages/inbound" \
 
 For a real SMS→Host bridge later (OPS): Termux Tasker / SMS webhook app that POSTs the same JSON when an SMS arrives. PROP-1.3 wires Host→gateway outbound using `replyText`.
 
+## Auth / 401 with a “perfect” long token
+
+Same gate as `/ws`: `Authorization: Bearer` or `X-Api-Key`.
+
+Windows often has a **stale User/Machine** `SOULCORE_COMPANION_API_TOKEN` that every PowerShell inherits. Older Host/start scripts kept that value and ignored `.env` when the process already had a token → curl (`.env` or a pasted secret) and Host (stale env) disagree → 401 forever even at length 60+.
+
+Verify both sides without pasting the secret:
+
+```powershell
+# Poison? (User-level env — often the culprit)
+[Environment]::GetEnvironmentVariable("SOULCORE_COMPANION_API_TOKEN","User")
+
+# .env on disk (length only)
+(Select-String -Path .\SoulCore\.env -Pattern '^SOULCORE_COMPANION_API_TOKEN=').Line.Split('=',2)[1].Trim().Trim('"').Length
+
+# What Host will use after .env load (length + short fingerprint)
+dotnet run --project SoulCore/SoulCore.Host -c Release -- --secrets-presence
+```
+
+If User env is set and disagrees with `.env`, clear it once:
+
+```powershell
+[Environment]::SetEnvironmentVariable("SOULCORE_COMPANION_API_TOKEN", $null, "User")
+```
+
+Then `.\ALLSTART.ps1 -RestartHost` and curl reading the token **from `.env`**, not `$env:`:
+
+```powershell
+$line = (Select-String -Path .\SoulCore\.env -Pattern '^SOULCORE_COMPANION_API_TOKEN=').Line
+$token = $line.Substring($line.IndexOf('=') + 1).Trim().Trim('"')
+curl.exe -sS -i -X POST "http://127.0.0.1:7700/api/companion/v1/messages/inbound" `
+  -H "Content-Type: application/json" `
+  -H "X-Api-Key: $token" `
+  --data-raw '{"fromE164":"+1XXXXXXXXXX","text":"hey"}'
+```
+
+`fp=` from `--secrets-presence` must match a fingerprint of that same `.env` value. Length alone is not enough (two different 64-char tokens both “look fine”).
+
 ## Security
 
 - Empty allowlist = **deny all**
