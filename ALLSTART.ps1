@@ -345,17 +345,17 @@ if (Test-Path -LiteralPath $InstallPlaywright) {
             -WorkingDirectory $RepoRoot `
             -TimeoutSec 180
         if ($pwResult.TimedOut) {
-            Write-Warning "install-playwright timed out — continuing (browser_* may fail until Chromium is installed)"
+            Write-Warning "install-playwright timed out - continuing (browser_* may fail until Chromium is installed)"
         } elseif ($pwResult.ExitCode -ne 0) {
-            Write-Warning "install-playwright exited $($pwResult.ExitCode) — continuing (set BrowserBackend=native to use Chrome extension)"
+            Write-Warning "install-playwright exited $($pwResult.ExitCode) - continuing (set BrowserBackend=native to use Chrome extension)"
         } else {
             Write-Host "Playwright Chromium OK (Victoria profile under LocalAppData\SoulCore\victoria-browser)"
         }
     } catch {
-        Write-Warning "install-playwright failed: $($_.Exception.Message) — continuing"
+        Write-Warning "install-playwright failed: $($_.Exception.Message) - continuing"
     }
 } else {
-    Write-Warning "install-playwright.ps1 missing — skip Playwright bootstrap"
+    Write-Warning "install-playwright.ps1 missing - skip Playwright bootstrap"
 }
 
 # --- Tailscale serve: enable proxies now that Host is healthy ---
