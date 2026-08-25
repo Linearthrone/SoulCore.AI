@@ -97,16 +97,27 @@ If User env is set and disagrees with `.env`, clear it once:
 [Environment]::SetEnvironmentVariable("SOULCORE_COMPANION_API_TOKEN", $null, "User")
 ```
 
-Then `.\ALLSTART.ps1 -RestartHost` and curl reading the token **from `.env`**, not `$env:`:
+Then `.\ALLSTART.ps1 -RestartHost` and curl reading the token **from `.env`**, not `$env:`.
+
+**PowerShell JSON footgun:** do **not** put JSON inline in `--data-raw '...'` if you ever see empty **500** / `invalid JSON body`. PS can send empty or UTF-16 bodies. Write UTF-8 to a temp file and use `--data-binary`:
 
 ```powershell
 $line = (Select-String -Path .\SoulCore\.env -Pattern '^SOULCORE_COMPANION_API_TOKEN=').Line
 $token = $line.Substring($line.IndexOf('=') + 1).Trim().Trim('"')
+$bodyPath = Join-Path $env:TEMP "soulcore-inbound.json"
+[System.IO.File]::WriteAllText($bodyPath, '{"fromE164":"+1XXXXXXXXXX","text":"hey"}', [System.Text.UTF8Encoding]::new($false))
 curl.exe -sS -i -X POST "http://127.0.0.1:7700/api/companion/v1/messages/inbound" `
-  -H "Content-Type: application/json" `
+  -H "Content-Type: application/json; charset=utf-8" `
   -H "X-Api-Key: $token" `
-  --data-raw '{"fromE164":"+1XXXXXXXXXX","text":"hey"}'
+  --data-binary "@$bodyPath"
 ```
+
+Expect:
+
+- **200** `ok:true` — allowlisted + model/stub reply
+- **200** `dropped:true` — number not on allowlist
+- **503** `chat.model_down` — Ollama down and stub off → set `SOULCORE_Sms__StubWhenModelDown=true` for smoke, or start Ollama
+- **400** `invalid JSON body` — body still mangled (never empty 500 after the inbound error-handling fix)
 
 `fp=` from `--secrets-presence` must match a fingerprint of that same `.env` value. Length alone is not enough (two different 64-char tokens both “look fine”).
 

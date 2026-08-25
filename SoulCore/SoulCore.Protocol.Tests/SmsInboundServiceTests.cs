@@ -99,8 +99,32 @@ public class SmsInboundServiceTests
         Assert.Contains("[Memory]", p);
     }
 
+    [Fact]
+    public async Task ModelDown_StubDisabled_ReturnsChatModelDown()
+    {
+        var inference = new ThrowingInference();
+        var sut = CreateSut(inference, allow: Kurt, stub: false);
+        var result = await sut.HandleAsync(new SmsInboundRequest(Kurt, "hey", null, null));
+        Assert.False(result.Ok);
+        Assert.Equal("chat.model_down", result.Error);
+        Assert.Null(result.ReplyText);
+        Assert.Equal(1, inference.CompleteCalls);
+    }
+
+    [Fact]
+    public async Task ModelDown_StubEnabled_ReturnsStubOk()
+    {
+        var inference = new ThrowingInference();
+        var sut = CreateSut(inference, allow: Kurt, stub: true);
+        var result = await sut.HandleAsync(new SmsInboundRequest(Kurt, "hey", null, null));
+        Assert.True(result.Ok);
+        Assert.True(result.UsedStub);
+        Assert.Equal("stub", result.Provider);
+        Assert.False(string.IsNullOrWhiteSpace(result.ReplyText));
+    }
+
     private static SmsInboundService CreateSut(
-        CountingInference inference,
+        IInferenceClient inference,
         string allow,
         bool stub,
         IChatSessionHistoryStore? history = null,
@@ -150,6 +174,29 @@ public class SmsInboundServiceTests
             ToolLoopCalls++;
             return Task.FromResult("SHOULD_NOT_RUN");
         }
+    }
+
+    private sealed class ThrowingInference : IInferenceClient
+    {
+        public int CompleteCalls { get; private set; }
+
+        public Task<string> CompleteAsync(
+            string prompt,
+            string? systemPreamble = null,
+            CancellationToken cancellationToken = default,
+            int? maxTokens = null)
+        {
+            CompleteCalls++;
+            throw new HttpRequestException("Connection refused (127.0.0.1:11434)");
+        }
+
+        public Task<string> CompleteWithToolsAsync(
+            IReadOnlyList<ChatMessage> messages,
+            IReadOnlyList<ToolDefinition> tools,
+            IToolRegistry registry,
+            CancellationToken cancellationToken = default,
+            ToolLoopOptions? loopOptions = null) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakeMemory : IMemoryStore
