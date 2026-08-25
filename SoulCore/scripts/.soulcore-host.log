@@ -32,9 +32,27 @@ info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Production
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: C:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8000/health
+info: System.Net.Http.HttpClient.Default.ClientHandler[101]
+      Received HTTP response headers after 8.557ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[101]
+      End processing HTTP request after 16.0632ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[100]
+      Start processing HTTP request GET http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.Default.ClientHandler[100]
+      Sending HTTP request GET http://127.0.0.1:8881/
+info: System.Net.Http.HttpClient.Default.ClientHandler[101]
+      Received HTTP response headers after 1.7642ms - 200
+info: System.Net.Http.HttpClient.Default.LogicalHandler[101]
+      End processing HTTP request after 1.8109ms - 200
 info: SoulCore.Host.Ws.ChatWebSocketHandler[0]
-      WS session 016a4577-5764-4024-af4a-94a0a2cfdd65 accepted
+      WS session 928c2bc3-761d-4b2a-adb6-e196b92652fc accepted
+warn: SoulCore.Host.Companion.Auth[0]
+      Companion API rejected (outcome=Invalid header=Authorization)
 info: SoulCore.Host.Loop.SoulLoopScaffold[0]
       SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
-info: SoulCore.Host.Loop.SoulLoopScaffold[0]
-      SoulLoop want[recall]: want[recall]: recall the recent thread and weave it into presence (holding 3 recent beats) (emotion=excited v=0.45 a=0.55 d=0.55 f=0.72); recent=[Reflection] I am feeling excited (v=0.45, a=0.55). want[recall]: recall the rec. (+2 more)
+warn: SoulCore.Host.Companion.Auth[0]
+      Companion API rejected (outcome=Missing header=none)
