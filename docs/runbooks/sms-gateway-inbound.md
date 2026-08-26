@@ -57,20 +57,93 @@ ChatDesktop (if open on `/ws` with `sessionId=presence-local`) receives:
 1. `chat.done` with `role=user`, `channel=sms` (Kurt’s text / photo)
 2. `chat.done` with Victoria’s short reply
 
-## Termux smoke (on the tablet)
+## Tablet SMS → Host (Termux + Tasker)
 
-Replace host MagicDNS / token / Kurt number:
+Victoria’s SM-X218U posts inbound SMS to Host over **Tailscale serve** (no Funnel). Script: repo-root `sms-to-victoria.sh`. **Never** put `SOULCORE_COMPANION_API_TOKEN` in the script or in git.
+
+**This PC (home-pc) reachability — do not curl `127.0.0.1:7700` from WSL:**
+
+| Path | URL |
+| --- | --- |
+| Windows loopback | `http://127.0.0.1:7700` (powershell.exe / curl.exe on Windows only) |
+| Tailscale TCP (tablet default) | `http://100.71.223.95:7700` |
+| Tailscale HTTPS | `https://kaia-reimagined.tailbf9ec2.ts.net:8443` |
+
+Host `.env` on this machine: companion token **length 63**, Kurt allowlist set (do not paste either value). Tablet Tailscale VPN must be on.
+
+### 1) Termux: copy script + token file
+
+On the Tab (F-Droid Termux + `pkg install curl jq`):
 
 ```bash
-TOKEN='…'
-HOST='https://YOUR-PC.YOUR-TAILNET.ts.net'   # or http://100.x.y.z:7700 if serve TCP
-curl -sS -X POST "$HOST/api/companion/v1/messages/inbound" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"fromE164":"+1XXXXXXXXXX","text":"gateway smoke from tablet"}'
+mkdir -p ~/bin ~/.config/soulcore ~/.termux/tasker
+# copy sms-to-victoria.sh from the PC repo (USB, scp, or paste)
+# e.g. from Windows: C:\Users\kurtw\Soul_Core\sms-to-victoria.sh
+cp /path/to/sms-to-victoria.sh ~/bin/sms-to-victoria.sh
+chmod +x ~/bin/sms-to-victoria.sh
+ln -sf ~/bin/sms-to-victoria.sh ~/.termux/tasker/sms-to-victoria.sh
 ```
 
-For a real SMS→Host bridge later (OPS): Termux Tasker / SMS webhook app that POSTs the same JSON when an SMS arrives. PROP-1.3 wires Host→gateway outbound using `replyText`.
+Token file — **one line, same value as Host `SoulCore/.env`**, chmod 600. Paste from a local editor; do not echo it into chat or git:
+
+```bash
+nano ~/.config/soulcore/companion.token
+chmod 600 ~/.config/soulcore/companion.token
+# length only (Host .env is 63 chars; a trailing newline is ok)
+wc -c ~/.config/soulcore/companion.token
+```
+
+Optional HTTPS instead of TCP:
+
+```bash
+echo 'export SOULCORE_HOST=https://kaia-reimagined.tailbf9ec2.ts.net:8443' >> ~/.bashrc
+```
+
+Enable Termux:Tasker (once):
+
+```bash
+# ~/.termux/termux.properties — add:
+# allow-external-apps=true
+termux-reload-settings
+```
+
+### 2) Smoke test (Termux)
+
+Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value on Host — not committed):
+
+```bash
+~/bin/sms-to-victoria.sh --health
+# expect JSON status=ok bind=127.0.0.1 port=7700
+
+~/bin/sms-to-victoria.sh --from '+1XXXXXXXXXX' --text 'gateway smoke from tablet'
+# expect HTTP 200 and ok:true (dropped:true = wrong fromE164)
+# ChatDesktop on presence-local should show the user bubble + Victoria reply
+```
+
+Do **not** `curl 127.0.0.1:7700` from WSL. From WSL use `powershell.exe` or `http://100.71.223.95:7700`.
+
+### 3) Tasker profile (exact)
+
+Install **Termux:Tasker** (same F-Droid source as Termux). Profile:
+
+1. **Profiles → + → Event → Phone → Received Text**
+   - Type: **Any** (or SMS)
+   - Sender: leave empty (Host allowlist drops unknowns)
+2. New task name: `SMS to Victoria`
+3. **+ → Plugin → Termux:Tasker → Configuration**
+   - **Executable:** `sms-to-victoria.sh`  
+     (this is `~/.termux/tasker/sms-to-victoria.sh` → `~/bin/sms-to-victoria.sh`)
+   - **Arguments:** `%SMSRF` `%SMSRB`  
+     (`%SMSRF` = from, `%SMSRB` = body; extra words join as body)
+   - **Working directory:** `$HOME`
+   - **Timeout (seconds):** `60`
+   - **Terminal session:** off
+4. Back out and **tick** to save. Long-press the profile → confirm it is **On**.
+5. Grant Tasker **SMS / Notification** access if Android asks.
+
+Manual Tasker test: **Tasks → SMS to Victoria → Play** after setting `%SMSRF` / `%SMSRB` in Variables, or send a real SMS from Kurt’s allowlisted phone to the Tab MDN.
+
+PROP-1.3 will SMS `replyText` back to Kurt automatically; this bridge is inbound-only.
 
 ## Auth / 401 with a “perfect” long token
 
