@@ -84,10 +84,13 @@ Leave that WSL window open. Machine shows as **`home-pc`** in
 
 **Notes for SoulCore:**
 
-- WSL can usually hit Host at `http://127.0.0.1:7700` (health/WS probes).
+- WSL2 often **cannot** reach Windows Host via `127.0.0.1:7700` (separate NAT).
+  Probe from **Windows** PowerShell, or use Tailscale `http://100.71.223.95:7700/health`.
 - `ALLSTART.ps1` is Windows — from WSL call:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\kurtw\Soul_Core\ALLSTART.ps1' -RestartHost`
 - Live `.env` stays on the Windows tree; don’t commit secrets from the WSL clone.
+- Prefer `powershell.exe -File …\ws-companion-auth-probe.ps1` (Windows) over curling
+  loopback from inside WSL.
 
 ## Tablet (Termux) — no My Machines worker (for now)
 
