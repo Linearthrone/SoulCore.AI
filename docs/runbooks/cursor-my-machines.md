@@ -42,20 +42,52 @@ Do **not** chase unofficial Termux patches for the companion token box.
 
 ## One-time: home PC
 
-PowerShell:
+### Native Windows worker — currently broken (Cursor bug)
+
+`agent login` works, but `agent worker start` on **native Windows** dies with:
+
+```text
+better_sqlite3.node was compiled against ... NODE_MODULE_VERSION 127
+This version of Node.js requires NODE_MODULE_VERSION 137
+```
+
+Same on build `2026.08.11-e8db854`. Reinstall does **not** fix it — bad Windows
+package. Cursor is tracking it; use **WSL** until fixed.
+
+### Workaround: worker inside WSL Ubuntu
+
+In **elevated** PowerShell once:
 
 ```powershell
-cd C:\Users\kurtw\Soul_Core
-agent --version
+wsl --install -d Ubuntu
+# reboot if prompted, finish Ubuntu user setup
+```
+
+Then in **Ubuntu (WSL)**:
+
+```bash
+curl https://cursor.com/install -fsS | bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Repo must live in the WSL filesystem — NOT /mnt/c/...
+mkdir -p ~/repos && cd ~/repos
+git clone https://github.com/Linearthrone/SoulCore.AI.git
+cd SoulCore.AI
+
 agent login
-agent worker start --name home-pc --worker-dir C:\Users\kurtw\Soul_Core
+agent worker start --name home-pc
 ```
 
-Leave that window open (or run under Task Scheduler / NSSM later). Debug:
+Leave that WSL window open. Machine shows as **`home-pc`** in
+[cursor.com/agents](https://cursor.com/agents).
 
-```powershell
-agent worker debug
-```
+**Notes for SoulCore:**
+
+- WSL can usually hit Host at `http://127.0.0.1:7700` (health/WS probes).
+- `ALLSTART.ps1` is Windows — from WSL call:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\kurtw\Soul_Core\ALLSTART.ps1' -RestartHost`
+- Live `.env` stays on the Windows tree; don’t commit secrets from the WSL clone.
 
 ## Tablet (Termux) — no My Machines worker (for now)
 
