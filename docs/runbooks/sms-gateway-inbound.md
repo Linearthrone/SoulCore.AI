@@ -73,24 +73,35 @@ Host `.env` on this machine: companion token **length 63**, Kurt allowlist set (
 
 ### 1) Termux: copy script + token file
 
-On the Tab (F-Droid Termux + `pkg install curl jq`):
+On the Tab (F-Droid Termux + `pkg install curl jq`). Do **not** paste `nano` in a bulk command block — it swallows the rest of the paste.
+
+**Script** — pull from GitHub `main` (no token in this file):
 
 ```bash
 mkdir -p ~/bin ~/.config/soulcore ~/.termux/tasker
-# copy sms-to-victoria.sh from the PC repo (USB, scp, or paste)
-# e.g. from Windows: C:\Users\kurtw\Soul_Core\sms-to-victoria.sh
-cp /path/to/sms-to-victoria.sh ~/bin/sms-to-victoria.sh
+curl -fsSL -o ~/bin/sms-to-victoria.sh \
+  https://raw.githubusercontent.com/Linearthrone/SoulCore.AI/main/sms-to-victoria.sh
 chmod +x ~/bin/sms-to-victoria.sh
 ln -sf ~/bin/sms-to-victoria.sh ~/.termux/tasker/sms-to-victoria.sh
+head -n 5 ~/bin/sms-to-victoria.sh
+# first line must be #!/usr/bin/env bash — if you still have TOKEN='...' this is the old draft
 ```
 
-Token file — **one line, same value as Host `SoulCore/.env`**, chmod 600. Paste from a local editor; do not echo it into chat or git:
+If Termux already has a clone (prompt `~/repos`):
 
 ```bash
-nano ~/.config/soulcore/companion.token
+cp ~/repos/SoulCore.AI/sms-to-victoria.sh ~/bin/sms-to-victoria.sh
+chmod +x ~/bin/sms-to-victoria.sh
+```
+
+**Token file** — one line, same value as Host `SoulCore/.env`. Paste on the tablet only; do not echo it into chat or git.
+
+```bash
+# paste the token, then Ctrl-D
+cat > ~/.config/soulcore/companion.token
 chmod 600 ~/.config/soulcore/companion.token
-# length only (Host .env is 63 chars; a trailing newline is ok)
 wc -c ~/.config/soulcore/companion.token
+# Host .env token is 63 chars; 64 usually means a trailing newline (ok)
 ```
 
 Optional HTTPS instead of TCP:
@@ -113,11 +124,15 @@ Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value 
 
 ```bash
 ~/bin/sms-to-victoria.sh --health
-# expect JSON status=ok bind=127.0.0.1 port=7700
+# expect a line GET http://100.71.223.95:7700/health then JSON status=ok
+# If you get {"dropped":true} immediately, ~/bin still has the old draft
+# (it treats --health / --from as the SMS sender). Re-curl the script above.
 
 ~/bin/sms-to-victoria.sh --from '+1XXXXXXXXXX' --text 'gateway smoke from tablet'
-# expect HTTP 200 and ok:true (dropped:true = wrong fromE164)
-# ChatDesktop on presence-local should show the user bubble + Victoria reply
+# expect: host=... tokenPresent=true tokenLen=63 from=+1... textLen=...
+#         HTTP 200
+#         {"ok":true,"dropped":false,"replyText":"..."}
+# dropped:true with a real +1 number = Host allowlist mismatch (not this script)
 ```
 
 Do **not** `curl 127.0.0.1:7700` from WSL. From WSL use `powershell.exe` or `http://100.71.223.95:7700`.
