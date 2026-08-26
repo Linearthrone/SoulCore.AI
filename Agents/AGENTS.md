@@ -11,6 +11,19 @@ desktop client (`House/House.ChatDesktop`) is a thin GUI front-end built with
 Standard commands live in `SoulCore/README.md` (bind/health/WS, build, evidence CLIs).
 Notes below are the non-obvious cloud/Linux caveats.
 
+### My Machines (home PC + tablet)
+
+Managed cloud VMs cannot touch Kurt’s LAN. For Host restarts, ChatDesktop WS,
+Termux SMS bridge, and Tailscale probes, use **Cursor My Machines** workers:
+
+- Runbook: `docs/runbooks/cursor-my-machines.md`
+- Home PC worker name: `home-pc` → `@Agents/OPS-HOME.md`
+- Tablet Termux worker name: `kayleigh-tab` → `@Agents/OPS-TAB.md`
+
+Start workers with `agent worker start --name …` (CLI). Dispatch new agents from
+[cursor.com/agents](https://cursor.com/agents) picking that machine, or
+`worker=home-pc` / `worker=kayleigh-tab` from Slack/GitHub.
+
 ### Build / test / lint (Linux VM)
 - The **entire** `dotnet build SoulCore/SoulCore.sln` builds on Linux (0 warnings),
   including the Avalonia `House.ChatDesktop`. You can also build individual projects, e.g.
