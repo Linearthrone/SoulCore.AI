@@ -9,21 +9,23 @@ public static class CompanionToken
     public const string EnvName = "SOULCORE_COMPANION_API_TOKEN";
 
     /// <summary>
-    /// If the process env is empty, load SOULCORE_* keys from SoulCore/.env (repo layout).
-    /// Does not overwrite non-empty process values.
+    /// Load SOULCORE_* keys from SoulCore/.env into the process.
+    /// <b>.env wins</b> over stale Process/User-inherited values — same footgun as Host
+    /// (HTTP /health looks "up" while /ws 401s with the wrong Bearer).
     /// </summary>
-    public static void TryLoadFromEnvFile()
+    /// <returns>Count of keys set or updated.</returns>
+    public static int TryLoadFromEnvFile()
     {
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(EnvName)))
-            return;
-
         var envPath = FindSoulCoreEnvFile();
         if (envPath is null)
-            return;
+            return 0;
 
+        var applied = 0;
         foreach (var line in File.ReadLines(envPath))
         {
             var trimmed = line.Trim();
+            if (trimmed.Length > 0 && trimmed[0] == '\uFEFF')
+                trimmed = trimmed[1..].TrimStart();
             if (trimmed.Length == 0 || trimmed.StartsWith('#'))
                 continue;
             var eq = trimmed.IndexOf('=');
@@ -32,24 +34,41 @@ public static class CompanionToken
             var key = trimmed[..eq].Trim();
             if (!key.StartsWith("SOULCORE_", StringComparison.Ordinal))
                 continue;
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
-                continue;
-            var value = trimmed[(eq + 1)..].Trim();
-            if ((value.StartsWith('"') && value.EndsWith('"')) ||
-                (value.StartsWith('\'') && value.EndsWith('\'')))
+
+            var value = Unquote(trimmed[(eq + 1)..].Trim());
+            if (string.IsNullOrEmpty(value))
             {
-                if (value.Length >= 2)
-                    value = value[1..^1];
+                Environment.SetEnvironmentVariable(key, null);
+                applied++;
+                continue;
             }
 
+            var existing = Environment.GetEnvironmentVariable(key);
+            if (string.Equals(existing, value, StringComparison.Ordinal))
+                continue;
+
             Environment.SetEnvironmentVariable(key, value);
+            applied++;
         }
+
+        return applied;
     }
 
     public static string? Resolve()
     {
         var fromEnv = Environment.GetEnvironmentVariable(EnvName);
         return string.IsNullOrWhiteSpace(fromEnv) ? null : fromEnv.Trim();
+    }
+
+    private static string Unquote(string raw)
+    {
+        if (raw.Length >= 2
+            && ((raw[0] == '"' && raw[^1] == '"') || (raw[0] == '\'' && raw[^1] == '\'')))
+        {
+            return raw[1..^1];
+        }
+
+        return raw;
     }
 
     private static string? FindSoulCoreEnvFile()
@@ -64,6 +83,22 @@ public static class CompanionToken
             candidate = Path.Combine(dir.FullName, ".env");
             if (File.Exists(candidate) && dir.Name.Equals("SoulCore", StringComparison.OrdinalIgnoreCase))
                 return candidate;
+        }
+
+        // Also walk from cwd (dotnet run from repo root).
+        try
+        {
+            dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            for (var i = 0; i < 6 && dir is not null; i++, dir = dir.Parent)
+            {
+                var candidate = Path.Combine(dir.FullName, "SoulCore", ".env");
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+        catch
+        {
+            // ignore
         }
 
         return null;

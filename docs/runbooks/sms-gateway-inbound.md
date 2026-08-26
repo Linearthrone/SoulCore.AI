@@ -121,6 +121,12 @@ Expect:
 
 `fp=` from `--secrets-presence` must match a fingerprint of that same `.env` value. Length alone is not enough (two different 64-char tokens both “look fine”).
 
+### ChatDesktop: Host “up” but chat says host down
+
+`/health` is unauthenticated → Services can show Host **up**. Chat uses `/ws`, which requires the companion Bearer. If ChatDesktop has a missing/stale token, WS never connects and send says host down.
+
+Restart ChatDesktop after pulling the `.env`-wins fix (`start-desktopgui.ps1` / `CompanionToken`). Conn status should show **WS connected**, not Offline/unavailable. Then send again.
+
 ## Security
 
 - Empty allowlist = **deny all**
