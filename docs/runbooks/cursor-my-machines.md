@@ -14,11 +14,31 @@ Official docs: [My Machines](https://cursor.com/docs/cloud-agent/self-hosted-gui
 
 | Name | Where | Worker dir | Jobs |
 |------|--------|------------|------|
-| `home-pc` | Windows home (`kaia-reimagined`) | `C:\Users\kurtw\Soul_Core` | Host, ChatDesktop, `.env`, ALLSTART, Ollama, Tailscale serve |
-| `kayleigh-tab` | Samsung Tab SM-X218U Termux | `~/repos/SoulCore.AI` | Termux curl, `sms-to-victoria.sh`, Tailscale client, SMS bridge |
+| `home-pc` | Windows home (`kaia-reimagined`) | `C:\Users\kurtw\Soul_Core` | Host, ChatDesktop, `.env`, ALLSTART, Ollama, Tailscale serve, **primary My Machines worker** |
+| `kayleigh-tab` | Samsung Tab — **not native Termux** (see below) | n/a for now | SMS gateway stays Termux **scripts**; Cursor worker deferred |
 
-Same Cursor account on both. Workers must start inside a **git checkout** of
+Same Cursor account. Workers must start inside a **git checkout** of
 `github.com/Linearthrone/SoulCore.AI` (remote URL must match the agent’s repo).
+
+### Tablet / Termux: CLI will not run (known)
+
+Official `agent` ships a Linux **glibc** Node binary. Termux is Android **bionic** and
+rejects it with:
+
+```text
+error: ".../cursor-agent/versions/.../node" has unexpected e_type: 2
+```
+
+That is **not** a PATH bug — PATH can be correct and `agent` still fails.
+Do **not** chase unofficial Termux patches for the companion token box.
+
+**Practical split:**
+
+1. Run My Machines only on **`home-pc`** (Windows install + worker).
+2. Keep tablet SMS as Termux scripts (`sms-to-victoria.sh` / Tasker) — Kurt or
+   home-pc agent writes the script; tablet only executes it.
+3. Optional later: `proot-distro` Ubuntu on the tab, then install `agent` **inside**
+   that distro (real Linux userland). Only if we need a true `kayleigh-tab` worker.
 
 ## One-time: home PC
 
@@ -37,30 +57,19 @@ Leave that window open (or run under Task Scheduler / NSSM later). Debug:
 agent worker debug
 ```
 
-## One-time: tablet (Termux)
+## Tablet (Termux) — no My Machines worker (for now)
+
+Skip `agent worker start` on native Termux (see e_type error above).
+
+Tablet stays a **dumb gateway**:
 
 ```bash
-agent --version
-agent login
-
-mkdir -p ~/repos
-cd ~/repos
-# if missing:
-git clone https://github.com/Linearthrone/SoulCore.AI.git
-cd SoulCore.AI
-git pull
-
-# keep Termux awake (acquire wake lock in notification if available)
-agent worker start --name kayleigh-tab
+# after sms-to-victoria.sh is in place
+~/bin/sms-to-victoria.sh '+1XXXXXXXXXX' 'script smoke'
 ```
 
-Debug:
-
-```bash
-agent worker debug
-```
-
-If `agent` is not on PATH after install, reopen Termux or `source ~/.bashrc`.
+Wire Tasker → that script when ready. Home-pc agent can draft/update the script
+in git; Kurt copies or `scp`s it to the tab.
 
 ## How to send work to a machine
 
