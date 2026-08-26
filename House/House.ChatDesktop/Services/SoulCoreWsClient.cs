@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using SoulCore.Protocol;
 
 namespace House.ChatDesktop.Services;
@@ -12,6 +13,8 @@ public enum WsConnectionState
     Connecting,
     Connected,
     Unavailable,
+    /// <summary>Host answered but rejected companion auth (401 / missing token).</summary>
+    AuthRejected,
     Blocked
 }
 
@@ -21,6 +24,12 @@ public enum WsConnectionState
 /// </summary>
 public sealed class SoulCoreWsClient : IAsyncDisposable
 {
+    /// <summary>
+    /// Host accepts Bearer or X-Api-Key. Desktop uses X-Api-Key so ClientWebSocket
+    /// does not depend on Authorization (restricted / proxy-stripped on some stacks).
+    /// </summary>
+    public const string AuthHeaderName = "X-Api-Key";
+
     private ClientWebSocket? _socket;
     private CancellationTokenSource? _receiveCts;
 
@@ -41,32 +50,92 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         await DisconnectAsync(notifyDisconnected: false).ConfigureAwait(false);
         SetState(WsConnectionState.Connecting, $"Connecting {ConnectionDefaults.WsUri}");
 
+        var token = CompanionToken.Resolve();
+        var tokenPresent = !string.IsNullOrEmpty(token);
+        var tokenLen = token?.Length ?? 0;
+        // #region agent log
+        AgentDebugLog("A", "SoulCoreWsClient.ConnectAsync:entry", "connect_begin", new
+        {
+            uri = ConnectionDefaults.WsUri.ToString(),
+            tokenPresent,
+            tokenLen,
+            port = ConnectionDefaults.Port
+        });
+        // #endregion
+
         var socket = new ClientWebSocket();
+        var headerAttached = false;
         try
         {
-            var token = CompanionToken.Resolve();
-            if (!string.IsNullOrEmpty(token))
+            if (tokenPresent)
             {
-                // Host requires Bearer / X-Api-Key when SOULCORE_COMPANION_API_TOKEN is set.
-                socket.Options.SetRequestHeader("Authorization", "Bearer " + token);
+                // Prefer X-Api-Key: Host accepts it; avoids Authorization restricted-header /
+                // WinHTTP / proxy footguns that leave /health "up" while /ws stays 401.
+                socket.Options.SetRequestHeader(AuthHeaderName, token);
+                headerAttached = true;
             }
+
+            // #region agent log
+            AgentDebugLog("A", "SoulCoreWsClient.ConnectAsync:headers", "header_ready", new
+            {
+                header = headerAttached ? AuthHeaderName : "none",
+                tokenPresent,
+                tokenLen
+            });
+            // #endregion
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
             await socket.ConnectAsync(ConnectionDefaults.WsUri, timeout.Token).ConfigureAwait(false);
             _socket = socket;
-            SetState(WsConnectionState.Connected, $"WS connected · {ConnectionDefaults.WsUri}");
+            SetState(
+                WsConnectionState.Connected,
+                $"WS connected · {ConnectionDefaults.WsUri} · tokenPresent={tokenPresent} tokenLen={tokenLen} header={(headerAttached ? AuthHeaderName : "none")}");
+            // #region agent log
+            AgentDebugLog("E", "SoulCoreWsClient.ConnectAsync:ok", "connected", new
+            {
+                tokenPresent,
+                tokenLen,
+                header = headerAttached ? AuthHeaderName : "none"
+            });
+            // #endregion
             _receiveCts = new CancellationTokenSource();
             _ = Task.Run(() => ReceiveLoopAsync(_receiveCts.Token));
         }
-        catch (Exception ex) when (ex is WebSocketException or HttpRequestException or OperationCanceledException or InvalidOperationException)
+        catch (Exception ex) when (ex is WebSocketException or HttpRequestException or OperationCanceledException
+                                       or InvalidOperationException or ArgumentException)
         {
             socket.Dispose();
             _socket = null;
-            var hint = GuessAuthFailure(ex)
-                ? $"Host rejected WS auth at {ConnectionDefaults.WsUri}. Set {CompanionToken.EnvName} (SoulCore/.env) and restart ChatDesktop."
-                : $"Host WS down at {ConnectionDefaults.WsUri} ({ex.GetType().Name}: {ex.Message}). Start SoulCore.Host, then Refresh.";
-            SetState(WsConnectionState.Unavailable, hint);
+            var authFail = GuessAuthFailure(ex);
+            var tokenMeta = $"tokenPresent={tokenPresent} tokenLen={tokenLen} header={(headerAttached ? AuthHeaderName : "none")}";
+            string hint;
+            WsConnectionState failState;
+            if (authFail)
+            {
+                failState = WsConnectionState.AuthRejected;
+                hint = tokenPresent
+                    ? $"Host rejected WS auth at {ConnectionDefaults.WsUri} ({tokenMeta}). Match {CompanionToken.EnvName} in SoulCore/.env to Host (restart ChatDesktop after .env changes)."
+                    : $"Host requires companion token at {ConnectionDefaults.WsUri} ({tokenMeta}). Set {CompanionToken.EnvName} in SoulCore/.env and restart ChatDesktop.";
+            }
+            else
+            {
+                failState = WsConnectionState.Unavailable;
+                hint = $"Host WS down at {ConnectionDefaults.WsUri} ({tokenMeta}; {ex.GetType().Name}: {ex.Message}). Start SoulCore.Host, then Refresh.";
+            }
+
+            // #region agent log
+            AgentDebugLog(authFail ? "D" : "C", "SoulCoreWsClient.ConnectAsync:fail", authFail ? "auth_rejected" : "unavailable", new
+            {
+                tokenPresent,
+                tokenLen,
+                header = headerAttached ? AuthHeaderName : "none",
+                exType = ex.GetType().Name,
+                exMessage = ex.Message,
+                failState = failState.ToString()
+            });
+            // #endregion
+            SetState(failState, hint);
         }
     }
 
@@ -122,7 +191,9 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
     {
         if (_socket is not { State: WebSocketState.Open })
         {
-            LastError = $"WS unavailable — {typeLabel} not sent. Host must be up on loopback /ws.";
+            var token = CompanionToken.Resolve();
+            LastError =
+                $"WS unavailable — {typeLabel} not sent. State={State}; tokenPresent={!string.IsNullOrEmpty(token)} tokenLen={token?.Length ?? 0}. Host must be up on loopback /ws with matching {CompanionToken.EnvName}.";
             return false;
         }
 
@@ -160,7 +231,9 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         }
 
         if (notifyDisconnected
-            && State is not WsConnectionState.Unavailable and not WsConnectionState.Blocked)
+            && State is not WsConnectionState.Unavailable
+                and not WsConnectionState.AuthRejected
+                and not WsConnectionState.Blocked)
         {
             SetState(WsConnectionState.Disconnected, "Disconnected from SoulCore WS");
         }
@@ -212,12 +285,36 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         StateChanged?.Invoke(state, detail);
     }
 
-    private static bool GuessAuthFailure(Exception ex)
+    public static bool GuessAuthFailure(Exception ex)
     {
         var msg = ex.Message ?? string.Empty;
         return msg.Contains("401", StringComparison.Ordinal)
-            || msg.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase);
+            || msg.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)
+            || msg.Contains("403", StringComparison.Ordinal);
     }
+
+    // #region agent log
+    private static void AgentDebugLog(string hypothesisId, string location, string message, object data)
+    {
+        try
+        {
+            var line = JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                ["hypothesisId"] = hypothesisId,
+                ["location"] = location,
+                ["message"] = message,
+                ["data"] = data,
+                ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                ["runId"] = Environment.GetEnvironmentVariable("SOULCORE_DEBUG_RUN_ID") ?? "pre-fix"
+            });
+            File.AppendAllText("/opt/cursor/logs/debug.log", line + Environment.NewLine);
+        }
+        catch
+        {
+            // Diagnostics only — never break connect on Windows / missing path.
+        }
+    }
+    // #endregion
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
 }

@@ -60,6 +60,15 @@ public static class CompanionToken
         return string.IsNullOrWhiteSpace(fromEnv) ? null : fromEnv.Trim();
     }
 
+    /// <summary>Safe for UI / logs — never includes the secret.</summary>
+    public static string DescribePresence()
+    {
+        var token = Resolve();
+        return token is null
+            ? "tokenPresent=false tokenLen=0"
+            : $"tokenPresent=true tokenLen={token.Length}";
+    }
+
     private static string Unquote(string raw)
     {
         if (raw.Length >= 2

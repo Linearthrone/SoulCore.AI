@@ -27,7 +27,9 @@ public partial class MainWindow
         UpdateEngagementState();
 
         if (snap.Alive
-            && _ws.State is WsConnectionState.Unavailable or WsConnectionState.Disconnected)
+            && _ws.State is WsConnectionState.Unavailable
+                or WsConnectionState.AuthRejected
+                or WsConnectionState.Disconnected)
         {
             await _ws.ConnectAsync();
         }
@@ -544,6 +546,7 @@ public partial class MainWindow
         {
             WsConnectionState.Connected => "WS connected",
             WsConnectionState.Connecting => "WS connecting",
+            WsConnectionState.AuthRejected => "WS auth",
             WsConnectionState.Unavailable => "WS down",
             WsConnectionState.Blocked => "blocked",
             _ => "WS disconnected"
@@ -577,7 +580,9 @@ public partial class MainWindow
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (state is WsConnectionState.Unavailable or WsConnectionState.Disconnected)
+            if (state is WsConnectionState.Unavailable
+                or WsConnectionState.AuthRejected
+                or WsConnectionState.Disconnected)
             {
                 _presenceFromWs = false;
                 _streamingAssistant = null;

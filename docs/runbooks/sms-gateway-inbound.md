@@ -121,11 +121,20 @@ Expect:
 
 `fp=` from `--secrets-presence` must match a fingerprint of that same `.env` value. Length alone is not enough (two different 64-char tokens both “look fine”).
 
-### ChatDesktop: Host “up” but chat says host down
+### ChatDesktop: Host “up” but chat says host down / WS auth
 
-`/health` is unauthenticated → Services can show Host **up**. Chat uses `/ws`, which requires the companion Bearer. If ChatDesktop has a missing/stale token, WS never connects and send says host down.
+`/health` is unauthenticated → Services can show Host **up**. Chat uses `/ws`, which requires the companion token (`X-Api-Key` from ChatDesktop; Host also accepts Bearer). If ChatDesktop has a missing/stale token, Conn status shows **WS auth** (not a vague down) and send fails.
 
-Restart ChatDesktop after pulling the `.env`-wins fix (`start-desktopgui.ps1` / `CompanionToken`). Conn status should show **WS connected**, not Offline/unavailable. Then send again.
+Restart ChatDesktop after `.env` changes (`start-desktopgui.ps1` / `CompanionToken` — `.env` wins over stale User env). Expect **WS connected**.
+
+Quick probe (never prints the secret):
+
+```powershell
+.\SoulCore\scripts\ws-companion-auth-probe.ps1
+# or: .\SoulCore\scripts\ws-companion-auth-probe.ps1 -Port 7701
+```
+
+Expect `X_API_KEY => CONNECTED` when `SOULCORE_COMPANION_API_TOKEN` is set on Host.
 
 ## Security
 
