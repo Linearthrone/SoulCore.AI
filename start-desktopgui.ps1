@@ -24,6 +24,8 @@ if (-not (Test-Path -LiteralPath $Project)) {
 }
 
 # Load SOULCORE_* from SoulCore/.env so /ws companion auth works (same as start-soulcore).
+# .env overwrites stale Process/User-inherited tokens — otherwise /health looks "up"
+# while chat.send fails (WS Bearer mismatch).
 $EnvFile = Join-Path $RepoRoot "SoulCore\.env"
 $loadedCount = 0
 if (Test-Path -LiteralPath $EnvFile) {
@@ -35,8 +37,6 @@ if (Test-Path -LiteralPath $EnvFile) {
         if ($eq -lt 1) { continue }
         $key = $trimmed.Substring(0, $eq).Trim()
         if ($key -notlike "SOULCORE_*") { continue }
-        $existing = [Environment]::GetEnvironmentVariable($key, "Process")
-        if (-not [string]::IsNullOrEmpty($existing)) { continue }
         $value = $trimmed.Substring($eq + 1).Trim()
         if (
             ($value.StartsWith('"') -and $value.EndsWith('"')) -or
@@ -49,7 +49,7 @@ if (Test-Path -LiteralPath $EnvFile) {
         Set-Item -Path "Env:$key" -Value $value
         $loadedCount++
     }
-    Write-Host "loaded $loadedCount SOULCORE_* keys from .env for ChatDesktop"
+    Write-Host "loaded/overwrote $loadedCount SOULCORE_* keys from .env for ChatDesktop"
 }
 
 Write-Host "Starting House.ChatDesktop ($Configuration)..."
