@@ -132,6 +132,8 @@ Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value 
 # expect: host=... tokenPresent=true tokenLen=63 from=+1... textLen=...
 #         HTTP 200
 #         {"ok":true,"dropped":false,"replyText":"..."}
+# ChatDesktop can show the user bubble before HTTP returns (WS is sent first).
+# curl exit 28 = waited for the model reply past SOULCORE_CURL_MAX_TIME (default 180s).
 # dropped:true with a real +1 number = Host allowlist mismatch (not this script)
 ```
 
@@ -151,7 +153,7 @@ Install **Termux:Tasker** (same F-Droid source as Termux). Profile:
    - **Arguments:** `%SMSRF` `%SMSRB`  
      (`%SMSRF` = from, `%SMSRB` = body; extra words join as body)
    - **Working directory:** `$HOME`
-   - **Timeout (seconds):** `60`
+   - **Timeout (seconds):** `180` (Host inference can take that long; ChatDesktop may show the SMS first)
    - **Terminal session:** off
 4. Back out and **tick** to save. Long-press the profile → confirm it is **On**.
 5. Grant Tasker **SMS / Notification** access if Android asks.

@@ -140,18 +140,36 @@ json_body() {
   exit 2
 }
 
+# Host inference timeout is 180s (appsettings). HTTP waits for replyText;
+# ChatDesktop can show the SMS over /ws before this POST returns.
+CURL_MAX="${SOULCORE_CURL_MAX_TIME:-180}"
+
 body_file="$(mktemp)"
 out_file="$(mktemp)"
 trap 'rm -f "$body_file" "$out_file"' EXIT
 json_body >"$body_file"
 
+set +e
 code="$(
-  curl -sS --max-time 60 -o "$out_file" -w '%{http_code}' \
+  curl -sS --max-time "${CURL_MAX}" -o "$out_file" -w '%{http_code}' \
     -X POST "${HOST}/api/companion/v1/messages/inbound" \
     -H "Content-Type: application/json; charset=utf-8" \
     -H "X-Api-Key: ${TOKEN}" \
     --data-binary "@${body_file}"
 )"
+curl_ec=$?
+set -e
+
+if [[ "$curl_ec" -ne 0 ]]; then
+  echo "curl exit=${curl_ec} (28=timeout after ${CURL_MAX}s waiting for model reply)"
+  echo "ChatDesktop may already show the SMS — /ws is sent before HTTP returns replyText."
+  if [[ -s "$out_file" ]]; then
+    cat "$out_file"
+    echo
+  fi
+  exit "$curl_ec"
+fi
+
 echo "HTTP ${code}"
 if [[ -s "$out_file" ]]; then
   cat "$out_file"
