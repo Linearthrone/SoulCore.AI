@@ -2,7 +2,6 @@ using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
 using SoulCore.Protocol;
 
 namespace House.ChatDesktop.Services;
@@ -53,15 +52,6 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         var token = CompanionToken.Resolve();
         var tokenPresent = !string.IsNullOrEmpty(token);
         var tokenLen = token?.Length ?? 0;
-        // #region agent log
-        AgentDebugLog("A", "SoulCoreWsClient.ConnectAsync:entry", "connect_begin", new
-        {
-            uri = ConnectionDefaults.WsUri.ToString(),
-            tokenPresent,
-            tokenLen,
-            port = ConnectionDefaults.Port
-        });
-        // #endregion
 
         var socket = new ClientWebSocket();
         var headerAttached = false;
@@ -75,15 +65,6 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
                 headerAttached = true;
             }
 
-            // #region agent log
-            AgentDebugLog("A", "SoulCoreWsClient.ConnectAsync:headers", "header_ready", new
-            {
-                header = headerAttached ? AuthHeaderName : "none",
-                tokenPresent,
-                tokenLen
-            });
-            // #endregion
-
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
             await socket.ConnectAsync(ConnectionDefaults.WsUri, timeout.Token).ConfigureAwait(false);
@@ -91,14 +72,6 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
             SetState(
                 WsConnectionState.Connected,
                 $"WS connected · {ConnectionDefaults.WsUri} · tokenPresent={tokenPresent} tokenLen={tokenLen} header={(headerAttached ? AuthHeaderName : "none")}");
-            // #region agent log
-            AgentDebugLog("E", "SoulCoreWsClient.ConnectAsync:ok", "connected", new
-            {
-                tokenPresent,
-                tokenLen,
-                header = headerAttached ? AuthHeaderName : "none"
-            });
-            // #endregion
             _receiveCts = new CancellationTokenSource();
             _ = Task.Run(() => ReceiveLoopAsync(_receiveCts.Token));
         }
@@ -124,17 +97,6 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
                 hint = $"Host WS down at {ConnectionDefaults.WsUri} ({tokenMeta}; {ex.GetType().Name}: {ex.Message}). Start SoulCore.Host, then Refresh.";
             }
 
-            // #region agent log
-            AgentDebugLog(authFail ? "D" : "C", "SoulCoreWsClient.ConnectAsync:fail", authFail ? "auth_rejected" : "unavailable", new
-            {
-                tokenPresent,
-                tokenLen,
-                header = headerAttached ? AuthHeaderName : "none",
-                exType = ex.GetType().Name,
-                exMessage = ex.Message,
-                failState = failState.ToString()
-            });
-            // #endregion
             SetState(failState, hint);
         }
     }
@@ -292,29 +254,6 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
             || msg.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)
             || msg.Contains("403", StringComparison.Ordinal);
     }
-
-    // #region agent log
-    private static void AgentDebugLog(string hypothesisId, string location, string message, object data)
-    {
-        try
-        {
-            var line = JsonSerializer.Serialize(new Dictionary<string, object?>
-            {
-                ["hypothesisId"] = hypothesisId,
-                ["location"] = location,
-                ["message"] = message,
-                ["data"] = data,
-                ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                ["runId"] = Environment.GetEnvironmentVariable("SOULCORE_DEBUG_RUN_ID") ?? "pre-fix"
-            });
-            File.AppendAllText("/opt/cursor/logs/debug.log", line + Environment.NewLine);
-        }
-        catch
-        {
-            // Diagnostics only — never break connect on Windows / missing path.
-        }
-    }
-    // #endregion
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
 }
