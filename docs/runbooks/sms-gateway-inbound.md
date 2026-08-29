@@ -57,9 +57,13 @@ ChatDesktop (if open on `/ws` with `sessionId=presence-local`) receives:
 1. `chat.done` with `role=user`, `channel=sms` (Kurt’s text / photo)
 2. `chat.done` with Victoria’s short reply
 
-## Tablet SMS → Host (Termux + Tasker)
+## Tablet SMS → Host (PROP-1 kill #1)
 
-Victoria’s SM-X218U posts inbound SMS to Host over **Tailscale serve** (no Funnel). Script: repo-root `sms-to-victoria.sh`. **Never** put `SOULCORE_COMPANION_API_TOKEN` in the script or in git.
+Victoria’s SM-X218U posts inbound SMS to Host over **Tailscale serve** (no Funnel).
+**Never** put `SOULCORE_COMPANION_API_TOKEN` in scripts, Tasker exports, or git.
+
+**Preferred bridge: Tasker HTTP Request (no Termux plugin).**  
+Termux `sms-to-victoria.sh` remains a smoke/fallback path. GitHub Termux:Tasker often fails to select in Tasker — do **not** block on that plugin.
 
 **This PC (home-pc) reachability — do not curl `127.0.0.1:7700` from WSL:**
 
@@ -71,7 +75,74 @@ Victoria’s SM-X218U posts inbound SMS to Host over **Tailscale serve** (no Fun
 
 Host `.env` on this machine: companion token **length 63**, Kurt allowlist set (do not paste either value). Tablet Tailscale VPN must be on.
 
-### 1) Termux: copy script + token file
+### A) Primary — Tasker HTTP (do this first)
+
+No Termux:Tasker. No Intent. Tasker posts JSON straight to Host.
+
+#### Once on the tablet
+
+1. Install **Tasker** (Play / official). Grant **SMS** + **Notifications** when asked.
+2. Confirm Tailscale is **Connected** (can reach `100.71.223.95`).
+3. **Vars → +** → name `SOULCORE_TOKEN` → paste the same companion token as Host `.env` (length 63). Do **not** export this project to git/chat.
+4. Optional Var `SOULCORE_HOST` = `http://100.71.223.95:7700` (no trailing slash).
+
+#### Profile
+
+1. **Profiles → + → Event → Phone → Received Text**
+   - Type: **Any** (or SMS)
+   - Sender: leave empty (Host allowlist drops unknowns)
+2. New task: `SMS to Victoria HTTP`
+3. Action 1 — **Code → JavaScriptlet** (escapes quotes/newlines in the SMS body):
+
+```javascript
+var from = local('SMSRF') || global('SMSRF') || '';
+var text = local('SMSRB') || global('SMSRB') || '';
+setLocal('sc_body', JSON.stringify({ fromE164: String(from), text: String(text) }));
+setLocal('sc_from', String(from));
+setLocal('sc_text_len', String(text.length));
+```
+
+4. Action 2 — **Net → HTTP Request**
+   - Method: **POST**
+   - URL: `%SOULCORE_HOST/api/companion/v1/messages/inbound`  
+     (or hardcode `http://100.71.223.95:7700/api/companion/v1/messages/inbound`)
+   - Headers (two lines):
+
+```text
+Content-Type: application/json; charset=utf-8
+X-Api-Key: %SOULCORE_TOKEN
+```
+
+   - Body / File: `%sc_body`
+   - Timeout: **180** seconds (ChatDesktop can show the SMS over `/ws` before HTTP returns)
+   - Continue Task After Error: **on** (so you can flash `%http_data` / `%err` while debugging)
+
+5. Action 3 (optional while debugging) — **Alert → Flash**: `HTTP %http_code from=%sc_from len=%sc_text_len`
+6. Save. Long-press profile → **On**.
+
+#### Manual Play (before a real SMS)
+
+1. **Vars**: set `%SMSRF` = Kurt’s allowlisted E.164 (e.g. `+1…` or 10-digit — Host normalizes).
+2. Set `%SMSRB` = `tasker http smoke`
+3. **Tasks → SMS to Victoria HTTP → Play**
+4. Expect Flash `HTTP 200` (or check Host log / ChatDesktop user bubble + Victoria reply).
+5. Then send a **real SMS** from Kurt’s phone to the Tab MDN → same result = **#1 Done**.
+
+**JSON footgun:** do **not** hand-type `{"fromE164":"%SMSRF","text":"%SMSRB"}` if the SMS can contain `"` or newlines — use the JavaScriptlet. Host returns `400 invalid JSON body` when the body is mangled.
+
+**401:** `%SOULCORE_TOKEN` ≠ Host token (stale User env on PC vs `.env` — see Auth section below).
+
+**200 dropped:true:** sender not on `SOULCORE_Sms__KurtAllowlistE164` (normalize both sides to E.164).
+
+PROP-1.3 will SMS `replyText` back to Kurt automatically; this bridge is inbound-only.
+
+---
+
+### B) Fallback — Termux script + smoke (optional)
+
+Use when you want a Termux curl path, or Tasker HTTP is blocked by OEM network rules.
+
+#### 1) Termux: copy script + token file
 
 On the Tab (F-Droid Termux + `pkg install curl jq`). Do **not** paste `nano` in a bulk command block — it swallows the rest of the paste.
 
@@ -81,8 +152,11 @@ On the Tab (F-Droid Termux + `pkg install curl jq`). Do **not** paste `nano` in 
 mkdir -p ~/bin ~/.config/soulcore ~/.termux/tasker
 curl -fsSL -o ~/bin/sms-to-victoria.sh \
   https://raw.githubusercontent.com/Linearthrone/SoulCore.AI/main/sms-to-victoria.sh
-chmod +x ~/bin/sms-to-victoria.sh
+curl -fsSL -o ~/bin/sms-ping.sh \
+  https://raw.githubusercontent.com/Linearthrone/SoulCore.AI/main/sms-ping.sh
+chmod +x ~/bin/sms-to-victoria.sh ~/bin/sms-ping.sh
 ln -sf ~/bin/sms-to-victoria.sh ~/.termux/tasker/sms-to-victoria.sh
+ln -sf ~/bin/sms-ping.sh ~/.termux/tasker/sms-ping.sh
 head -n 5 ~/bin/sms-to-victoria.sh
 # first line must be #!/usr/bin/env bash — if you still have TOKEN='...' this is the old draft
 ```
@@ -90,8 +164,8 @@ head -n 5 ~/bin/sms-to-victoria.sh
 If Termux already has a clone (prompt `~/repos`):
 
 ```bash
-cp ~/repos/SoulCore.AI/sms-to-victoria.sh ~/bin/sms-to-victoria.sh
-chmod +x ~/bin/sms-to-victoria.sh
+cp ~/repos/SoulCore.AI/sms-to-victoria.sh ~/repos/SoulCore.AI/sms-ping.sh ~/bin/
+chmod +x ~/bin/sms-to-victoria.sh ~/bin/sms-ping.sh
 ```
 
 **Token file** — one line, same value as Host `SoulCore/.env`. Paste on the tablet only; do not echo it into chat or git.
@@ -110,7 +184,7 @@ Optional HTTPS instead of TCP:
 echo 'export SOULCORE_HOST=https://kaia-reimagined.tailbf9ec2.ts.net:8443' >> ~/.bashrc
 ```
 
-Enable Termux:Tasker (once):
+Enable external apps for Intent fallback (once):
 
 ```bash
 # ~/.termux/termux.properties — add:
@@ -118,7 +192,7 @@ Enable Termux:Tasker (once):
 termux-reload-settings
 ```
 
-### 2) Smoke test (Termux)
+#### 2) Smoke test (Termux)
 
 Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value on Host — not committed):
 
@@ -139,28 +213,51 @@ Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value 
 
 Do **not** `curl 127.0.0.1:7700` from WSL. From WSL use `powershell.exe` or `http://100.71.223.95:7700`.
 
-### 3) Tasker profile (exact)
+#### 3) Termux:Tasker plugin (only if F-Droid plugin works)
 
-Install **Termux:Tasker** (same F-Droid source as Termux). Profile:
+Same F-Droid source as Termux. Profile task:
 
-1. **Profiles → + → Event → Phone → Received Text**
-   - Type: **Any** (or SMS)
-   - Sender: leave empty (Host allowlist drops unknowns)
-2. New task name: `SMS to Victoria`
-3. **+ → Plugin → Termux:Tasker → Configuration**
-   - **Executable:** `sms-to-victoria.sh`  
-     (this is `~/.termux/tasker/sms-to-victoria.sh` → `~/bin/sms-to-victoria.sh`)
-   - **Arguments:** `%SMSRF` `%SMSRB`  
-     (`%SMSRF` = from, `%SMSRB` = body; extra words join as body)
-   - **Working directory:** `$HOME`
-   - **Timeout (seconds):** `180` (Host inference can take that long; ChatDesktop may show the SMS first)
-   - **Terminal session:** off
-4. Back out and **tick** to save. Long-press the profile → confirm it is **On**.
-5. Grant Tasker **SMS / Notification** access if Android asks.
+- **Executable:** `sms-to-victoria.sh`
+- **Arguments:** `%SMSRF` `%SMSRB`
+- **Working directory:** `$HOME`
+- **Timeout:** `180`
+- **Terminal session:** off
 
-Manual Tasker test: **Tasks → SMS to Victoria → Play** after setting `%SMSRF` / `%SMSRB` in Variables, or send a real SMS from Kurt’s allowlisted phone to the Tab MDN.
+If the plugin **won’t select** in Tasker, skip this — use **§A HTTP** or **§C Intent**.
 
-PROP-1.3 will SMS `replyText` back to Kurt automatically; this bridge is inbound-only.
+---
+
+### C) Fallback — Tasker Send Intent → Termux `RUN_COMMAND`
+
+Use when HTTP is fine from Termux curl but you still want Tasker → script (no Termux:Tasker plugin).
+
+1. Termux: `allow-external-apps=true` + `termux-reload-settings` (see §B).
+2. Confirm ping first (proves Intent reaches Termux **before** Host):
+
+**Task** `SMS ping Termux` → **System → Send Intent**
+
+| Field | Value |
+| --- | --- |
+| Action | `com.termux.RUN_COMMAND` |
+| Cat | **None** (or Default) |
+| Mime Type | (empty) |
+| Data | (empty) |
+| Extra | `com.termux.RUN_COMMAND_PATH:/data/data/com.termux/files/home/bin/sms-ping.sh` |
+| Extra | `com.termux.RUN_COMMAND_ARGUMENTS:%SMSRF %SMSRB` |
+| Extra | `com.termux.RUN_COMMAND_WORKDIR:/data/data/com.termux/files/home` |
+| Extra | `com.termux.RUN_COMMAND_BACKGROUND:true` |
+| Package | `com.termux` |
+| Class | `com.termux.app.RunCommandService` |
+| Target | **Service** |
+
+Play the task → in Termux: `tail -n 20 ~/sms-forward.log`  
+Expect a `ping ok` line. **No log = Intent never reached Termux** (wrong class/target, `allow-external-apps` off, or OEM kill).
+
+3. When ping works, duplicate the Intent and change `PATH` to  
+   `/data/data/com.termux/files/home/bin/sms-to-victoria.sh`  
+   (same `ARGUMENTS` / `WORKDIR` / `BACKGROUND`). Timeout on Host is still up to 180s; ChatDesktop may show the SMS first.
+
+4. Wire **Received Text** → that task. Real SMS → ChatDesktop = **#1 Done**.
 
 ## Auth / 401 with a “perfect” long token
 

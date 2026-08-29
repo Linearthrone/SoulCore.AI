@@ -127,6 +127,13 @@ fi
 TOKEN_LEN="${#TOKEN}"
 echo "host=${HOST} tokenPresent=true tokenLen=${TOKEN_LEN} from=${FROM} textLen=${#TEXT}"
 
+# Optional local audit trail for Tasker/Intent debug (no token, no body text).
+SMS_LOG="${SOULCORE_SMS_LOG:-${HOME}/sms-forward.log}"
+TS="$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')"
+if mkdir -p "$(dirname "$SMS_LOG")" 2>/dev/null; then
+  echo "${TS} forward start host=${HOST} from=${FROM} textLen=${#TEXT}" >>"$SMS_LOG" || true
+fi
+
 json_body() {
   if command -v jq >/dev/null 2>&1; then
     jq -n --arg from "$FROM" --arg text "$TEXT" '{fromE164:$from, text:$text}'
@@ -167,6 +174,7 @@ if [[ "$curl_ec" -ne 0 ]]; then
     cat "$out_file"
     echo
   fi
+  echo "${TS:-} forward curl_ec=${curl_ec}" >>"${SMS_LOG:-/dev/null}" 2>/dev/null || true
   exit "$curl_ec"
 fi
 
@@ -175,6 +183,7 @@ if [[ -s "$out_file" ]]; then
   cat "$out_file"
   echo
 fi
+echo "${TS:-} forward HTTP ${code}" >>"${SMS_LOG:-/dev/null}" 2>/dev/null || true
 case "$code" in
   200) exit 0 ;;
   *) exit 1 ;;
