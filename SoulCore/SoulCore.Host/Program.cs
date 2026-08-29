@@ -25,6 +25,7 @@ using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.Email;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
@@ -101,6 +102,8 @@ builder.Services.Configure<SafetyOptions>(
     builder.Configuration.GetSection(SafetyOptions.SectionName));
 builder.Services.Configure<ToolsOptions>(
     builder.Configuration.GetSection(ToolsOptions.SectionName));
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection(EmailOptions.SectionName));
 
 var bindOptions = builder.Configuration
     .GetSection(HostBindOptions.SectionName)
@@ -512,6 +515,18 @@ builder.Services.AddSingleton<ITool, ExportHistoryTool>();
 builder.Services.AddSingleton<ITool, GetHistoricalBarsTool>();
 builder.Services.AddSingleton<ITool, RunBacktestTool>();
 
+// Email tools — IMAP/SMTP multi-account (victoria / personal / business).
+// AllowEmailRead / AllowEmailSend / AllowEmailDelete + confirmed=true on send/delete.
+builder.Services.AddSingleton<IEmailBridge, MailKitEmailBridge>();
+builder.Services.AddSingleton<ITool, EmailAccountsTool>();
+builder.Services.AddSingleton<ITool, EmailInboxTool>();
+builder.Services.AddSingleton<ITool, EmailReadTool>();
+builder.Services.AddSingleton<ITool, EmailSearchTool>();
+builder.Services.AddSingleton<ITool, EmailFileTool>();
+builder.Services.AddSingleton<ITool, EmailMarkTool>();
+builder.Services.AddSingleton<ITool, EmailDeleteTool>();
+builder.Services.AddSingleton<ITool, EmailSendTool>();
+
 builder.Services.AddSingleton<PresenceWsHub>();
 builder.Services.AddSingleton<IWsFrameAdapter>(sp => sp.GetRequiredService<PresenceWsHub>());
 builder.Services.AddSingleton<ICompanionOutboundMessenger, CompanionOutboundMessenger>();
@@ -775,6 +790,9 @@ static object ToolsSettingsDto(IToolsAccessSettings access)
         softCursorRestore = access.SoftCursorRestore,
         allowMt4Read = access.AllowMt4Read,
         allowMt4Trade = access.AllowMt4Trade,
+        allowEmailRead = access.AllowEmailRead,
+        allowEmailSend = access.AllowEmailSend,
+        allowEmailDelete = access.AllowEmailDelete,
         desktopBackend = access.DesktopBackend,
         browserBackend = access.BrowserBackend,
         mt4Backend = access.Mt4Backend,
@@ -782,7 +800,7 @@ static object ToolsSettingsDto(IToolsAccessSettings access)
         cuaDriverAvailable = cuaPath is not null,
         cuaDriverPath = cuaPath,
         scope = "session",
-        note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put). Non-empty DesktopTargetWindowTitle hard-scopes desktop_* to that VM/window title substring."
+        note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on; email read/send/delete default off). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put). Non-empty DesktopTargetWindowTitle hard-scopes desktop_* to that VM/window title substring. Email accounts bind from Email:Accounts (env passwords only)."
     };
 }
 
@@ -819,6 +837,12 @@ app.MapPost("/settings/tools", async (HttpRequest request, IToolsAccessSettings 
         access.SetAllowMt4Read(mt4Read);
     if (ReadBool(root, "allowMt4Trade") is { } mt4Trade)
         access.SetAllowMt4Trade(mt4Trade);
+    if (ReadBool(root, "allowEmailRead") is { } emailRead)
+        access.SetAllowEmailRead(emailRead);
+    if (ReadBool(root, "allowEmailSend") is { } emailSend)
+        access.SetAllowEmailSend(emailSend);
+    if (ReadBool(root, "allowEmailDelete") is { } emailDelete)
+        access.SetAllowEmailDelete(emailDelete);
 
     return Results.Json(ToolsSettingsDto(access));
 });

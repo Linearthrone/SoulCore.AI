@@ -15,6 +15,9 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     private int _allowControl;
     private int _allowMt4Read;
     private int _allowMt4Trade;
+    private int _allowEmailRead;
+    private int _allowEmailSend;
+    private int _allowEmailDelete;
     private int _softCursorRestore;
 
     public ComputerControlGate(IOptions<ToolsOptions> options)
@@ -26,6 +29,9 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowControl = opts.AllowComputerControl ? 1 : 0;
         _allowMt4Read = opts.AllowMt4Read ? 1 : 0;
         _allowMt4Trade = opts.AllowMt4Trade ? 1 : 0;
+        _allowEmailRead = opts.AllowEmailRead ? 1 : 0;
+        _allowEmailSend = opts.AllowEmailSend ? 1 : 0;
+        _allowEmailDelete = opts.AllowEmailDelete ? 1 : 0;
         _softCursorRestore = opts.SoftCursorRestore ? 1 : 0;
             DesktopBackend = string.IsNullOrWhiteSpace(opts.DesktopBackend)
             ? ToolsOptions.BackendCua
@@ -61,13 +67,19 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         string browserBackend = ToolsOptions.BackendNative,
         string mt4Backend = ToolsOptions.BackendLlmod,
         bool softCursorRestore = true,
-        string desktopTargetWindowTitle = "")
+        string desktopTargetWindowTitle = "",
+        bool allowEmailRead = false,
+        bool allowEmailSend = false,
+        bool allowEmailDelete = false)
     {
         _allowDesktopCapture = allowDesktopCapture ? 1 : 0;
         _allowBrowserCapture = allowBrowserCapture ? 1 : 0;
         _allowControl = allowComputerControl ? 1 : 0;
         _allowMt4Read = allowMt4Read ? 1 : 0;
         _allowMt4Trade = allowMt4Trade ? 1 : 0;
+        _allowEmailRead = allowEmailRead ? 1 : 0;
+        _allowEmailSend = allowEmailSend ? 1 : 0;
+        _allowEmailDelete = allowEmailDelete ? 1 : 0;
         _softCursorRestore = softCursorRestore ? 1 : 0;
         DesktopBackend = desktopBackend;
         BrowserBackend = browserBackend;
@@ -80,6 +92,9 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public bool AllowComputerControl => Read(ref _allowControl);
     public bool AllowMt4Read => Read(ref _allowMt4Read);
     public bool AllowMt4Trade => Read(ref _allowMt4Trade);
+    public bool AllowEmailRead => Read(ref _allowEmailRead);
+    public bool AllowEmailSend => Read(ref _allowEmailSend);
+    public bool AllowEmailDelete => Read(ref _allowEmailDelete);
     public bool SoftCursorRestore => Read(ref _softCursorRestore);
 
     public string DesktopBackend { get; }
@@ -94,6 +109,9 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public void SetAllowComputerControl(bool enabled) => Write(ref _allowControl, enabled);
     public void SetAllowMt4Read(bool enabled) => Write(ref _allowMt4Read, enabled);
     public void SetAllowMt4Trade(bool enabled) => Write(ref _allowMt4Trade, enabled);
+    public void SetAllowEmailRead(bool enabled) => Write(ref _allowEmailRead, enabled);
+    public void SetAllowEmailSend(bool enabled) => Write(ref _allowEmailSend, enabled);
+    public void SetAllowEmailDelete(bool enabled) => Write(ref _allowEmailDelete, enabled);
     public void SetSoftCursorRestore(bool enabled) => Write(ref _softCursorRestore, enabled);
 
     private static bool Read(ref int flag) =>

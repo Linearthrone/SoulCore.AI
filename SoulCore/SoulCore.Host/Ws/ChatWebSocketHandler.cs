@@ -14,6 +14,7 @@ using SoulCore.Inference;
 using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.ChiefArchitect;
 using SoulCore.Inference.Tools.Desktop;
+using SoulCore.Inference.Tools.Email;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
@@ -376,6 +377,7 @@ public sealed class ChatWebSocketHandler
                 _toolsAccess.DesktopTargetWindowTitle);
             contextPreamble = HomeBodyGuidance.AppendToPreamble(contextPreamble);
             contextPreamble = ChiefArchitectGuidance.AppendToPreamble(contextPreamble);
+            contextPreamble = EmailGuidance.AppendToPreamble(contextPreamble);
         }
 
         var spendSummary = _spendMeter.GetSummary();
@@ -1363,6 +1365,13 @@ public sealed class ChatWebSocketHandler
             _logger.LogInformation(
                 "MT4 NL intent matched: intent={Intent} forceTool={Tool}",
                 mt4Intent.Intent, mt4Intent.ToolName);
+        }
+        else if (EmailToolIntent.TryMatch(text, out var emailIntent))
+        {
+            ollamaLoopOptions = new ToolLoopOptions { ForceToolName = emailIntent.ToolName };
+            _logger.LogInformation(
+                "Email NL intent matched: intent={Intent} forceTool={Tool} account={Account}",
+                emailIntent.Intent, emailIntent.ToolName, emailIntent.AccountId ?? "-");
         }
         else if (ChiefArchitectToolIntent.TryMatch(text, out var caIntent))
         {

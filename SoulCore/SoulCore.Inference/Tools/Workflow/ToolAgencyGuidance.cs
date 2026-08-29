@@ -18,7 +18,10 @@ public static class ToolAgencyGuidance
         "for a full run. Do not ask which workflow if prior history already created one.\n" +
         "When the user asks for MT4 / MetaTrader status, connection, account, or bridge state " +
         "(e.g. \"what's my MT4 status?\"), you MUST call mt4_status with {}. " +
-        "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.";
+        "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.\n" +
+        "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
+        "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
+        "email_send and email_delete require Kurt's confirm (confirmed=true on the second call).";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.
