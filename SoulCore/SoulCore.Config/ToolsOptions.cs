@@ -90,6 +90,15 @@ public sealed class ToolsOptions
     /// <summary>When false (default), MT4 trade/close/backtest refuse even if confirmed.</summary>
     public bool AllowMt4Trade { get; set; }
 
+    /// <summary>When false (default), email list/read/search/file/mark refuse.</summary>
+    public bool AllowEmailRead { get; set; }
+
+    /// <summary>When false (default), email send/reply refuse even if confirmed.</summary>
+    public bool AllowEmailSend { get; set; }
+
+    /// <summary>When false (default), email delete refuse even if confirmed.</summary>
+    public bool AllowEmailDelete { get; set; }
+
     /// <summary>
     /// MT4 backend: <c>llmod</c> (default) → LLMOD MCP HTTP on shadow;
     /// <c>hermes</c> → Hermes gateway fallback; <c>native</c> aliases <c>llmod</c>.

@@ -14,6 +14,9 @@ public sealed class ToolsAccessSnapshot
     public bool SoftCursorRestore { get; init; } = true;
     public bool AllowMt4Read { get; init; }
     public bool AllowMt4Trade { get; init; }
+    public bool AllowEmailRead { get; init; }
+    public bool AllowEmailSend { get; init; }
+    public bool AllowEmailDelete { get; init; }
     public string? DesktopBackend { get; init; }
     public string? BrowserBackend { get; init; }
     public string? Mt4Backend { get; init; }
@@ -82,6 +85,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         bool? softCursorRestore = null,
         bool? allowMt4Read = null,
         bool? allowMt4Trade = null,
+        bool? allowEmailRead = null,
+        bool? allowEmailSend = null,
+        bool? allowEmailDelete = null,
         CancellationToken cancellationToken = default)
     {
         if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
@@ -102,6 +108,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
             if (softCursorRestore is { } soft) doc["softCursorRestore"] = soft;
             if (allowMt4Read is { } r) doc["allowMt4Read"] = r;
             if (allowMt4Trade is { } t) doc["allowMt4Trade"] = t;
+            if (allowEmailRead is { } er) doc["allowEmailRead"] = er;
+            if (allowEmailSend is { } es) doc["allowEmailSend"] = es;
+            if (allowEmailDelete is { } ed) doc["allowEmailDelete"] = ed;
 
             var json = JsonSerializer.Serialize(doc);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -135,6 +144,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         SoftCursorRestore = dto?.SoftCursorRestore ?? true,
         AllowMt4Read = dto?.AllowMt4Read ?? false,
         AllowMt4Trade = dto?.AllowMt4Trade ?? false,
+        AllowEmailRead = dto?.AllowEmailRead ?? false,
+        AllowEmailSend = dto?.AllowEmailSend ?? false,
+        AllowEmailDelete = dto?.AllowEmailDelete ?? false,
         DesktopBackend = dto?.DesktopBackend,
         BrowserBackend = dto?.BrowserBackend,
         Mt4Backend = dto?.Mt4Backend,
@@ -165,6 +177,15 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
 
         [JsonPropertyName("allowMt4Trade")]
         public bool AllowMt4Trade { get; set; }
+
+        [JsonPropertyName("allowEmailRead")]
+        public bool AllowEmailRead { get; set; }
+
+        [JsonPropertyName("allowEmailSend")]
+        public bool AllowEmailSend { get; set; }
+
+        [JsonPropertyName("allowEmailDelete")]
+        public bool AllowEmailDelete { get; set; }
 
         [JsonPropertyName("desktopBackend")]
         public string? DesktopBackend { get; set; }

@@ -11,6 +11,9 @@ public interface IToolsAccessSettings
     bool AllowComputerControl { get; }
     bool AllowMt4Read { get; }
     bool AllowMt4Trade { get; }
+    bool AllowEmailRead { get; }
+    bool AllowEmailSend { get; }
+    bool AllowEmailDelete { get; }
 
     /// <summary>Restore user cursor after Victoria's native click (soft cursor mode).</summary>
     bool SoftCursorRestore { get; }
@@ -32,5 +35,8 @@ public interface IToolsAccessSettings
     void SetAllowComputerControl(bool enabled);
     void SetAllowMt4Read(bool enabled);
     void SetAllowMt4Trade(bool enabled);
+    void SetAllowEmailRead(bool enabled);
+    void SetAllowEmailSend(bool enabled);
+    void SetAllowEmailDelete(bool enabled);
     void SetSoftCursorRestore(bool enabled);
 }

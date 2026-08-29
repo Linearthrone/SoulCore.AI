@@ -407,7 +407,10 @@ public partial class MainWindow
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
             || ToolsAllowMt4ReadCheck is null
-            || ToolsAllowMt4TradeCheck is null)
+            || ToolsAllowMt4TradeCheck is null
+            || ToolsAllowEmailReadCheck is null
+            || ToolsAllowEmailSendCheck is null
+            || ToolsAllowEmailDeleteCheck is null)
         {
             return;
         }
@@ -421,7 +424,10 @@ public partial class MainWindow
             allowComputerControl: ToolsAllowComputerControlCheck.IsChecked == true,
             softCursorRestore: ToolsSoftCursorRestoreCheck.IsChecked == true,
             allowMt4Read: ToolsAllowMt4ReadCheck.IsChecked == true,
-            allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true).ConfigureAwait(true);
+            allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true,
+            allowEmailRead: ToolsAllowEmailReadCheck.IsChecked == true,
+            allowEmailSend: ToolsAllowEmailSendCheck.IsChecked == true,
+            allowEmailDelete: ToolsAllowEmailDeleteCheck.IsChecked == true).ConfigureAwait(true);
 
         ApplyToolsAccess(snap, saved: true);
     }
@@ -442,7 +448,10 @@ public partial class MainWindow
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
             || ToolsAllowMt4ReadCheck is null
-            || ToolsAllowMt4TradeCheck is null)
+            || ToolsAllowMt4TradeCheck is null
+            || ToolsAllowEmailReadCheck is null
+            || ToolsAllowEmailSendCheck is null
+            || ToolsAllowEmailDeleteCheck is null)
         {
             return;
         }
@@ -456,6 +465,9 @@ public partial class MainWindow
             ToolsSoftCursorRestoreCheck.IsChecked = snap.Reachable ? snap.SoftCursorRestore : true;
             ToolsAllowMt4ReadCheck.IsChecked = snap.AllowMt4Read;
             ToolsAllowMt4TradeCheck.IsChecked = snap.AllowMt4Trade;
+            ToolsAllowEmailReadCheck.IsChecked = snap.AllowEmailRead;
+            ToolsAllowEmailSendCheck.IsChecked = snap.AllowEmailSend;
+            ToolsAllowEmailDeleteCheck.IsChecked = snap.AllowEmailDelete;
 
             if (ToolsDesktopBackendBox is not null)
                 ToolsDesktopBackendBox.Text = snap.DesktopBackend ?? "—";
