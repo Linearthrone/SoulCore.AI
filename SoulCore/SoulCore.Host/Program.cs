@@ -534,7 +534,15 @@ builder.Services.AddSingleton<CompanionCallSessionStore>();
 builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromMinutes(5) });
 builder.Services.AddSingleton<ComfyUiClient>();
 builder.Services.AddSingleton<ICompanionMediaService, CompanionMediaService>();
+builder.Services.AddSingleton<ISmsOutboundService>(sp => new SmsOutboundService(
+    sp.GetRequiredService<IOptions<SmsOptions>>(),
+    sp.GetRequiredService<ILogger<SmsOutboundService>>(),
+    sp.GetService<IVictoriaBrowserViewHub>(),
+    sp.GetService<IDesktopViewHub>(),
+    sp.GetService<IHttpClientFactory>()));
 builder.Services.AddSingleton<ISmsInboundService, SmsInboundService>();
+builder.Services.AddSingleton<ITool, SendScreenshotMmsTool>();
+builder.Services.AddHttpClient("sms-outbound-webhook");
 builder.Services.AddSingleton<SoulLoopScaffold>();
 builder.Services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
 builder.Services.AddHostedService<SoulLoopHostedService>();

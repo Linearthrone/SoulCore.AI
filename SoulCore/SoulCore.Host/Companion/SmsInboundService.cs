@@ -24,6 +24,7 @@ public sealed class SmsInboundService : ISmsInboundService
     private readonly IChatSessionHistoryStore _history;
     private readonly ICompanionMediaService _media;
     private readonly PresenceWsHub _hub;
+    private readonly ISmsOutboundService? _outbound;
     private readonly ILogger<SmsInboundService> _logger;
 
     public SmsInboundService(
@@ -36,7 +37,8 @@ public sealed class SmsInboundService : ISmsInboundService
         IChatSessionHistoryStore history,
         ICompanionMediaService media,
         PresenceWsHub hub,
-        ILogger<SmsInboundService> logger)
+        ILogger<SmsInboundService> logger,
+        ISmsOutboundService? outbound = null)
     {
         _sms = sms?.Value ?? throw new ArgumentNullException(nameof(sms));
         _inference = inference?.Value ?? throw new ArgumentNullException(nameof(inference));
@@ -48,6 +50,7 @@ public sealed class SmsInboundService : ISmsInboundService
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _outbound = outbound;
     }
 
     public async Task<SmsInboundResult> HandleAsync(
@@ -175,8 +178,75 @@ public sealed class SmsInboundService : ISmsInboundService
             reply = BuildStubReply(userVisible);
         }
 
-        // Keep SMS replies short for carrier (PROP-1.3 will send outbound SMS).
+        // Keep SMS replies short for carrier (PROP-1.3 outbound SMS).
         reply = TruncateForSms(reply, 480);
+
+        string? outboundJobId = null;
+        string? mmsJobId = null;
+
+        // Screenshot / still ask on SMS path (no tools) → one MMS queue job.
+        if (_outbound is not null
+            && _sms.OutboundEnabled
+            && SmsScreenshotAsk.LooksLikeScreenshotAsk(userVisible))
+        {
+            try
+            {
+                var mms = await _outbound
+                    .EnqueueScreenshotMmsToKurtAsync(
+                        caption: "Victoria still",
+                        source: "sms:screenshot-ask",
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (mms.Ok)
+                {
+                    mmsJobId = mms.JobId;
+                    if (!reply.Contains("still", StringComparison.OrdinalIgnoreCase)
+                        && !reply.Contains("screenshot", StringComparison.OrdinalIgnoreCase))
+                    {
+                        reply = TruncateForSms(reply + " Sending a still now.", 480);
+                    }
+                }
+                else if (mms.RateLimited)
+                {
+                    _logger.LogInformation("SMS screenshot MMS rate-limited: {Err}", mms.Error);
+                }
+                else
+                {
+                    _logger.LogInformation("SMS screenshot MMS skipped: {Err}", mms.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "SMS screenshot MMS enqueue failed");
+            }
+        }
+
+        if (_outbound is not null
+            && _sms.OutboundEnabled
+            && _sms.AutoReplySmsEnabled
+            && !string.IsNullOrWhiteSpace(reply))
+        {
+            try
+            {
+                var smsOut = await _outbound
+                    .EnqueueSmsAsync(
+                        request.FromE164!,
+                        reply,
+                        source: "sms:auto-reply",
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (smsOut.Ok)
+                    outboundJobId = smsOut.JobId;
+                else if (smsOut.RateLimited)
+                    _logger.LogInformation("SMS auto-reply rate-limited: {Err}", smsOut.Error);
+                else
+                    _logger.LogInformation("SMS auto-reply enqueue skipped: {Err}", smsOut.Error);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "SMS auto-reply enqueue failed");
+            }
+        }
 
         var replyFrameId = Guid.NewGuid().ToString("N");
         try
@@ -193,7 +263,9 @@ public sealed class SmsInboundService : ISmsInboundService
                     provider,
                     contactId = _companion.DefaultContactId,
                     hasMedia = false,
-                    mediaId = (string?)null
+                    mediaId = (string?)null,
+                    outboundSmsJobId = outboundJobId,
+                    outboundMmsJobId = mmsJobId
                 },
                 id: replyFrameId);
             await _hub.SendAsync(done.ToJson(), cancellationToken).ConfigureAwait(false);

@@ -156,6 +156,70 @@ public static class CompanionApiEndpoints
             }
         });
 
+        // PROP-1.3: tablet gateway polls outbound SMS/MMS jobs (mockable queue).
+        group.MapGet("/sms/outbound/pending", (
+            ISmsOutboundService outbound,
+            int? limit) =>
+        {
+            var jobs = outbound.ListPending(limit ?? 10);
+            return Results.Json(new
+            {
+                ok = true,
+                jobs = jobs.Select(j => new
+                {
+                    id = j.Id,
+                    kind = j.Kind.ToString().ToLowerInvariant(),
+                    toE164 = j.ToE164,
+                    text = j.Text,
+                    contentType = j.ContentType,
+                    imageBase64 = j.ImageBytes is { Length: > 0 }
+                        ? Convert.ToBase64String(j.ImageBytes)
+                        : null,
+                    createdUtc = j.CreatedUtc,
+                    source = j.Source
+                })
+            });
+        });
+
+        group.MapPost("/sms/outbound/{jobId}/ack", async (
+            string jobId,
+            HttpRequest request,
+            ISmsOutboundService outbound,
+            CancellationToken ct) =>
+        {
+            var success = true;
+            string? error = null;
+            try
+            {
+                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                    .ConfigureAwait(false);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("ok", out var okEl))
+                {
+                    success = okEl.ValueKind switch
+                    {
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        JsonValueKind.String => !string.Equals(
+                            okEl.GetString(), "false", StringComparison.OrdinalIgnoreCase),
+                        _ => true
+                    };
+                }
+
+                if (root.TryGetProperty("error", out var errEl) && errEl.ValueKind == JsonValueKind.String)
+                    error = errEl.GetString();
+            }
+            catch (JsonException)
+            {
+                // Empty body = success ack.
+            }
+
+            var acked = outbound.TryAck(jobId, success, error);
+            return acked
+                ? Results.Json(new { ok = true, jobId })
+                : Results.NotFound(new { ok = false, error = "job_not_found" });
+        });
+
         group.MapGet("/media/models", async (ICompanionMediaService media, CancellationToken ct) =>
         {
             var models = await media.ListModelsAsync(ct).ConfigureAwait(false);
