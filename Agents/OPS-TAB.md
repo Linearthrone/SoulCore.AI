@@ -21,7 +21,8 @@ My Machines: `docs/runbooks/cursor-my-machines.md`
 **Done when:** real SMS from Kurt’s allowlisted phone → Tab MDN appears in ChatDesktop + Victoria replies.
 
 **Primary path (preferred):** Tasker **HTTP Request** + JavaScriptlet JSON body — **no Termux:Tasker plugin**.  
-See runbook **§A**.
+Use **HTTPS** Tailscale URL (`…:8443`), not cleartext `:7700` (Android often blocks HTTP).  
+Dry-run uses `%sc_from` / `%sc_text` Variable Set — **not** Vars `%SMSRF`. See runbook **§A**.
 
 **Fallbacks:** Termux `sms-to-victoria.sh` smoke (**§B**); Tasker **Send Intent** → `com.termux.RUN_COMMAND` with `sms-ping.sh` first (**§C**).
 
