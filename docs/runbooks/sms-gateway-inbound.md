@@ -79,12 +79,16 @@ Host `.env` on this machine: companion token **length 63**, Kurt allowlist set (
 
 No Termux:Tasker. No Intent. Tasker posts JSON straight to Host.
 
+**Prefer HTTPS** for Tasker. Plain `http://100.71.223.95:7700` often fails silently on modern Android (cleartext blocked). Use Tailscale serve HTTPS:
+
+`https://kaia-reimagined.tailbf9ec2.ts.net:8443`
+
 #### Once on the tablet
 
 1. Install **Tasker** (Play / official). Grant **SMS** + **Notifications** when asked.
-2. Confirm Tailscale is **Connected** (can reach `100.71.223.95`).
+2. Confirm Tailscale is **Connected**.
 3. **Vars → +** → name `SOULCORE_TOKEN` → paste the same companion token as Host `.env` (length 63). Do **not** export this project to git/chat.
-4. Optional Var `SOULCORE_HOST` = `http://100.71.223.95:7700` (no trailing slash).
+4. **Vars → +** → name `SOULCORE_HOST` = `https://kaia-reimagined.tailbf9ec2.ts.net:8443` (no trailing slash).
 
 #### Profile
 
@@ -92,20 +96,20 @@ No Termux:Tasker. No Intent. Tasker posts JSON straight to Host.
    - Type: **Any** (or SMS)
    - Sender: leave empty (Host allowlist drops unknowns)
 2. New task: `SMS to Victoria HTTP`
-3. Action 1 — **Code → JavaScriptlet** (escapes quotes/newlines in the SMS body):
+3. Action 1 — **Code → JavaScriptlet** (escapes quotes/newlines; supports dry-run vars):
 
 ```javascript
-var from = local('SMSRF') || global('SMSRF') || '';
-var text = local('SMSRB') || global('SMSRB') || '';
+var from = local('SMSRF') || global('SMSRF') || local('sc_from') || global('sc_from') || '';
+var text = local('SMSRB') || global('SMSRB') || local('sc_text') || global('sc_text') || '';
 setLocal('sc_body', JSON.stringify({ fromE164: String(from), text: String(text) }));
-setLocal('sc_from', String(from));
+setLocal('sc_dbg_from', String(from));
 setLocal('sc_text_len', String(text.length));
 ```
 
 4. Action 2 — **Net → HTTP Request**
    - Method: **POST**
-   - URL: `%SOULCORE_HOST/api/companion/v1/messages/inbound`  
-     (or hardcode `http://100.71.223.95:7700/api/companion/v1/messages/inbound`)
+   - URL: **hardcode** (do not rely on empty `%SOULCORE_HOST`):  
+     `https://kaia-reimagined.tailbf9ec2.ts.net:8443/api/companion/v1/messages/inbound`
    - Headers (two lines):
 
 ```text
@@ -113,28 +117,39 @@ Content-Type: application/json; charset=utf-8
 X-Api-Key: %SOULCORE_TOKEN
 ```
 
-   - Body / File: `%sc_body`
-   - Timeout: **180** seconds (ChatDesktop can show the SMS over `/ws` before HTTP returns)
-   - Continue Task After Error: **on** (so you can flash `%http_data` / `%err` while debugging)
+   - Body: `%sc_body` (Data / Body field — not a file path)
+   - Timeout: **180** seconds
+   - Continue Task After Error: **on**
+   - If Tasker has **Trust any certificate** / insecure SSL: leave **off** for Tailscale HTTPS (cert should be valid)
 
-5. Action 3 (optional while debugging) — **Alert → Flash**: `HTTP %http_code from=%sc_from len=%sc_text_len`
-6. Save. Long-press profile → **On**.
+5. Action 3 — **Alert → Flash**: `HTTP %http_code err=%err from=%sc_dbg_from len=%sc_text_len body=%http_data`
+6. Save. Long-press profile → confirm **On** (green).
 
-#### Manual Play (before a real SMS)
+#### Dry-run Play (Vars screen will NOT let you set `%SMSRF`)
 
-1. **Vars**: set `%SMSRF` = Kurt’s allowlisted E.164 (e.g. `+1…` or 10-digit — Host normalizes).
-2. Set `%SMSRB` = `tasker http smoke`
-3. **Tasks → SMS to Victoria HTTP → Play**
-4. Expect Flash `HTTP 200` (or check Host log / ChatDesktop user bubble + Victoria reply).
-5. Then send a **real SMS** from Kurt’s phone to the Tab MDN → same result = **#1 Done**.
+`%SMSRF` / `%SMSRB` are event-only. Do **not** use the Vars screen for them.
 
-**JSON footgun:** do **not** hand-type `{"fromE164":"%SMSRF","text":"%SMSRB"}` if the SMS can contain `"` or newlines — use the JavaScriptlet. Host returns `400 invalid JSON body` when the body is mangled.
+1. At the **top** of the task, add two temporary actions — **Variables → Variable Set**:
+   - `%sc_from` = your allowlisted number (e.g. `+17066274581`)
+   - `%sc_text` = `tasker http smoke`
+2. **Tasks → SMS to Victoria HTTP → Play**
+3. Read the Flash:
+   - `HTTP 200` + ChatDesktop bubble → good; **disable/delete** the two Variable Set actions; send a real SMS next
+   - `HTTP 401` → `%SOULCORE_TOKEN` ≠ Host token
+   - `HTTP 400` / `fromE164 required` → `from` still empty (JS / Variable Set order wrong — Variable Set must be **above** JavaScriptlet)
+   - `HTTP 0` / empty / `err=…` → network (Tailscale off, wrong URL, or cleartext HTTP blocked — use HTTPS URL above)
+   - `200` + `"dropped":true` → number not on Host allowlist
+4. Real SMS from your phone → tablet cellular MDN = **#1 Done**.
 
-**401:** `%SOULCORE_TOKEN` ≠ Host token (stale User env on PC vs `.env` — see Auth section below).
-
-**200 dropped:true:** sender not on `SOULCORE_Sms__KurtAllowlistE164` (normalize both sides to E.164).
+**JSON footgun:** do **not** hand-type `{"fromE164":"%SMSRF","text":"%SMSRB"}` — use the JavaScriptlet.
 
 PROP-1.3 will SMS `replyText` back to Kurt automatically; this bridge is inbound-only.
+
+#### If Tasker Flash never appears
+
+- Profile is **Off**, or Tasker lacks **SMS** permission
+- JavaScriptlet crashed — open Tasker → **three-dot → Run Log** after Play
+- HTTP action not reached — confirm action order: Variable Set(s) → JavaScriptlet → HTTP Request → Flash
 
 ---
 
