@@ -3,8 +3,8 @@ type: role
 id: OPS-TAB
 role: Tablet gateway (Tasker HTTP primary — Termux optional)
 project: House Victoria
-version: 1.2
-updated: 2026-08-29
+version: 1.3
+updated: 2026-09-02
 ---
 
 # OPS-TAB · Tablet gateway (Tasker HTTP · Termux optional)
@@ -16,14 +16,14 @@ that prepare the SMS → Host bridge.
 Canonical SMS contract: `docs/runbooks/sms-gateway-inbound.md`  
 My Machines: `docs/runbooks/cursor-my-machines.md`
 
-## Kill #1 (now)
+## Kill #1 — Pass (2026-09-02)
 
-**Done when:** real SMS from Kurt’s allowlisted phone → Tab MDN appears in ChatDesktop + Victoria replies.
+Real SMS from Kurt’s phone → Tab MDN → ChatDesktop + Victoria reply verified.
 
-**Primary path (preferred):** Tasker **HTTP Request** + JavaScriptlet JSON body — **no Termux:Tasker plugin**.  
-See runbook **§A**.
+**Working recipe:** Tasker task = **HTTP Request only** (HTTPS `:8443`), Body `{"fromE164":"%SMSRF","text":"%SMSRB"}`, Var `%SOULCORE_TOKEN`.  
+No Send Intent. No JavaScriptlet for normal texts. See runbook **§A**.
 
-**Fallbacks:** Termux `sms-to-victoria.sh` smoke (**§B**); Tasker **Send Intent** → `com.termux.RUN_COMMAND` with `sms-ping.sh` first (**§C**).
+**Fallbacks:** Termux smoke (**§B**); Intent + `sms-ping.sh` (**§C**) — only if HTTP is blocked.
 
 ## Scope
 
