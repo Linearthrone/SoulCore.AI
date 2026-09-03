@@ -3,10 +3,10 @@ type: role
 id: OPS-TAB
 role: Tablet gateway (Tasker HTTP primary — Termux optional)
 project: House Victoria
-version: 1.4
-updated: 2026-09-02
+version: 1.5
+updated: 2026-09-03
 ---
- 
+
 # OPS-TAB · Tablet gateway (Tasker HTTP · Termux optional)
 
 **Native Termux cannot run Cursor `agent`** (glibc Node → `unexpected e_type: 2`).
@@ -16,12 +16,19 @@ that prepare the SMS ↔ Host bridge.
 Canonical SMS contract: `docs/runbooks/sms-gateway-inbound.md`  
 My Machines: `docs/runbooks/cursor-my-machines.md`
 
+## Direction
+
+Satellite apps (**Tasker**, Termux:API, Intent glue) are **temporary**. Target end state:
+self-sufficient House gateway on the tablet (no paid automation babysitting). Keep the
+current bridge working until that lands; do not invent more long-term dependencies on
+third-party automation.
+
 ## Kill #1 — Pass (2026-09-02)
 
 Real SMS from Kurt’s phone → Tab MDN → ChatDesktop + Victoria reply verified.
 
 **Working recipe:** Tasker **HTTP Request only** (HTTPS `:8443`), Body `{"fromE164":"%SMSRF","text":"%SMSRB"}`, Var `%SOULCORE_TOKEN`.  
-No Send Intent. No JavaScriptlet for normal texts.
+No Send Intent. No JavaScriptlet for normal texts. Profile **Received Text** must be **On** (Play is manual-only).
 
 ## PROP-1.3 outbound (ops)
 

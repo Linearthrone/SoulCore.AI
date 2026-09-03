@@ -14,7 +14,9 @@ public sealed record SmsInboundResult(
     string? FrameId,
     string? Error,
     bool UsedStub = false,
-    string? Provider = null);
+    string? Provider = null,
+    string? OutboundSmsJobId = null,
+    string? OutboundMmsJobId = null);
 
 public interface ISmsInboundService
 {

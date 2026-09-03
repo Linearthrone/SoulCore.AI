@@ -64,20 +64,30 @@ ack_job() {
 }
 
 process_once() {
-  local raw jobs_len i id kind to text b64 ct path
-  raw="$(curl -sS --max-time 30 \
-    -H "X-Api-Key: ${TOKEN}" \
-    "${HOST}/api/companion/v1/sms/outbound/pending?limit=5")" || {
-    echo "poll failed" >&2
+  local raw jobs_len i id kind to text b64 ct path code
+  raw="$(
+    curl -sS --max-time 30 -w '\n%{http_code}' \
+      -H "X-Api-Key: ${TOKEN}" \
+      "${HOST}/api/companion/v1/sms/outbound/pending?limit=5"
+  )" || {
+    echo "poll curl failed host=${HOST}" >&2
     return 1
   }
+  code="$(echo "$raw" | tail -n 1)"
+  raw="$(echo "$raw" | sed '$d')"
+
+  if [[ "$code" != "200" ]]; then
+    echo "poll HTTP ${code} body=${raw:0:200}" >&2
+    return 1
+  fi
 
   if ! echo "$raw" | jq -e '.ok == true' >/dev/null 2>&1; then
-    echo "poll bad response: ${raw:0:200}" >&2
+    echo "poll bad JSON: ${raw:0:200}" >&2
     return 1
   fi
 
   jobs_len="$(echo "$raw" | jq '.jobs | length')"
+  echo "poll ok jobs=${jobs_len}"
   if [[ "$jobs_len" -eq 0 ]]; then
     return 0
   fi
@@ -90,18 +100,21 @@ process_once() {
     kind="$(echo "$raw" | jq -r ".jobs[$i].kind")"
     to="$(echo "$raw" | jq -r ".jobs[$i].toE164")"
     text="$(echo "$raw" | jq -r ".jobs[$i].text // \"\"")"
-    echo "${TS} outbound claim id=${id} kind=${kind} to=${to}" >>"$LOG" || true
+    echo "${TS} outbound claim id=${id} kind=${kind} to=${to} textLen=${#text}" >>"$LOG" || true
+    echo "sending kind=${kind} to=${to} textLen=${#text}"
 
     if [[ "$kind" == "sms" ]]; then
       if ! command -v termux-sms-send >/dev/null 2>&1; then
-        echo "termux-sms-send missing — pkg install termux-api" >&2
+        echo "termux-sms-send missing — pkg install termux-api + install Termux:API Android app" >&2
         ack_job "$id" false "termux-sms-send_missing"
         continue
       fi
       if termux-sms-send -n "$to" "$text"; then
         ack_job "$id" true
+        echo "sent sms id=${id}"
         echo "${TS} outbound sms sent id=${id}" >>"$LOG" || true
       else
+        echo "termux-sms-send failed id=${id}" >&2
         ack_job "$id" false "termux-sms-send_failed"
       fi
       continue
@@ -122,12 +135,11 @@ process_once() {
       esac
       path="${MMS_DIR}/${id}.${ext}"
       echo "$b64" | base64 -d >"$path"
-      # Best-effort SMS caption; attach file manually / via Tasker Send MMS if available.
       if [[ -n "$text" ]] && command -v termux-sms-send >/dev/null 2>&1; then
         termux-sms-send -n "$to" "${text} [still saved: ${path}]" || true
       fi
+      echo "mms saved path=${path} id=${id}"
       echo "${TS} outbound mms saved path=${path} id=${id}" >>"$LOG" || true
-      # Notify user on tablet
       if command -v termux-notification >/dev/null 2>&1; then
         termux-notification -t "Victoria MMS still" -c "Saved ${path} — attach/send to Kurt in Messages" || true
       fi
