@@ -1,6 +1,3 @@
-# Soul_Core — Phase 0 secret/hygiene stub (SEC-01 / TASK-004)
-# Expand when SoulCore/ + House/ scaffolds land.
-
 # Secrets & local env
 .env
 .env.*
@@ -43,6 +40,7 @@ Desktop.ini
 Logs/
 tmpcode/
 .codebuddy
+artifacts/
 
 # Host / bridge launcher runtime (ALLSTART)
 SoulCore/scripts/.soulcore-host.pid
@@ -51,3 +49,19 @@ SoulCore/scripts/.soulcore-host.log.*
 SoulCore/scripts/.browser-bridge.pid
 SoulCore/scripts/.browser-bridge*.log
 SoulCore/scripts/.browser-bridge.pip.log
+SoulCore/scripts/.hermes.log
+SoulCore/scripts/.hermes.log.*
+
+# Probe / QA evidence (keep .ps1 harnesses; never commit run output)
+SoulCore/scripts/**/*.log
+SoulCore/scripts/**/*-summary.json
+SoulCore/scripts/**/*-result.txt
+SoulCore/scripts/**/*-evidence.txt
+SoulCore/scripts/**/qa-*-*.json
+tools/**/*.log
+**/.kotlin/errors/
+
+# Docs site build
+docs-site/node_modules/
+docs-site/.vitepress/dist/
+docs-site/.vitepress/cache/
