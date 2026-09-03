@@ -82,6 +82,10 @@ Tasker **HTTP Request** posts straight to Host over **HTTPS** (Android often blo
 
 **URL:** `https://kaia-reimagined.tailbf9ec2.ts.net:8443/api/companion/v1/messages/inbound`
 
+**Prefer HTTPS** for Tasker. Plain `http://100.71.223.95:7700` often fails silently on modern Android (cleartext blocked). Use Tailscale serve HTTPS:
+
+`https://kaia-reimagined.tailbf9ec2.ts.net:8443`
+
 #### Once on the tablet
 
 1. Install **Tasker**. Grant **SMS** + **Notifications**.

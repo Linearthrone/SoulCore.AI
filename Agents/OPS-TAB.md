@@ -6,7 +6,7 @@ project: House Victoria
 version: 1.3
 updated: 2026-09-02
 ---
-
+ 
 # OPS-TAB · Tablet gateway (Tasker HTTP · Termux optional)
 
 **Native Termux cannot run Cursor `agent`** (glibc Node → `unexpected e_type: 2`).
@@ -20,7 +20,7 @@ My Machines: `docs/runbooks/cursor-my-machines.md`
 
 Real SMS from Kurt’s phone → Tab MDN → ChatDesktop + Victoria reply verified.
 
-**Working recipe:** Tasker task = **HTTP Request only** (HTTPS `:8443`), Body `{"fromE164":"%SMSRF","text":"%SMSRB"}`, Var `%SOULCORE_TOKEN`.  
+ b**Working recipe:** Tasker task = **HTTP Request only** (HTTPS `:8443`), Body `{"fromE164":"%SMSRF","text":"%SMSRB"}`, Var `%SOULCORE_TOKEN`.  
 No Send Intent. No JavaScriptlet for normal texts. See runbook **§A**.
 
 **Fallbacks:** Termux smoke (**§B**); Intent + `sms-ping.sh` (**§C**) — only if HTTP is blocked.
