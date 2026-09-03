@@ -5,6 +5,10 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 
 # Product Root Declaration
 
+> **Architecture source of truth is `docs/handbook/`** (searchable via `docs-site/`).  
+> This file is PM scratch / historical gate log. Prefer the handbook for current layout.  
+> **Hermes is retired** — Host uses `NullHermesClient` only; do not restart PreferHermes.
+
 | Field | Value |
 | --- | --- |
 | Execution route | **Avenue A — Soul-spine MVP** |
@@ -13,7 +17,7 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 | Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` |
 | UI | `House/House.ChatDesktop` → SoulCore WS only · root `ALLSTART.ps1` / `ALLSTOP.ps1` |
 | Protocol | Shared `SoulCore/SoulCore.Protocol/` |
-| Inference | **Local baseline:** Ollama `gemma4:latest` (`NumCtx=16384`); tools via Ollama loop. Hermes MCP-only when PreferHermes (Avenue B). Prior gate model `qwen2.5:14b` retained as optional. |
+| Inference | **Local baseline:** Ollama / LLMod tools loop. Hermes process + PreferHermes **retired** (`NullHermesClient`). |
 | Continuity suite | QA-036 **Pass** (C1–C6); QA-081 re-run **Pass** vs soak Host (492 probes, 0 errors) |
 | Short soak | OPS-037 **Pass** — 15 min, 58/58 health; runbook `SoulCore/docs/soak-runbook.md` |
 | 24h soak | OPS-063 **Pass** — stopped at 14h by user decision (2898 probes, 0 errors, disk stable) |

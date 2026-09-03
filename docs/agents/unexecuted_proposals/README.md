@@ -18,18 +18,11 @@ Structured briefs produced by **TT-01 (Thinktank Facilitator)** before PM-01 exe
 
 **TT-01 never uses TASK-NNN.** PM assigns `.1`, `.2`, … when splitting a proposal.
 
-### Registry (next unused integer)
+### Registry
 
-| prop_id | Slug | Status |
-| --- | --- | --- |
-| PROP-1 | `victoria-reliable-workspace-browser.md` | sent-to-pm |
-| PROP-2 | `victoria-digits-sms-channel.md` | sent-to-pm |
-| PROP-3 | `victoria-ue-reliable-embodiment.md` | sent-to-pm |
-| PROP-4 | `presence-shell-honest-hud.md` | sent-to-pm |
+**Single source of truth:** [`../PROP_NUMBERING.md`](../PROP_NUMBERING.md)
 
-**Next TT assign: PROP-5.**
-
-Older named ids (`PROP-COMPANION-01`, etc.) stay as historical; new work is integer **PROP-N**.
+Do **not** maintain a second PROP table here — it drifts. Next free `N` and active subjects live only in `PROP_NUMBERING.md`.
 
 Slug from the **need or want** (lowercase kebab-case):
 
@@ -66,8 +59,10 @@ When PM sends `to-TT01` because a ticket cannot complete, TT writes a proposal h
 
 | Path | Use |
 | --- | --- |
-| `docs/agents/PROP_NUMBERING.md` | PROP registry + rules |
-| `docs/agents/tasks/` | Execution tickets (`PROP-N.M-…` or legacy `TASK-…`) |
-| `docs/agents/reports/` | Role completion reports |
+| `docs/agents/PROP_NUMBERING.md` | PROP registry + rules (canonical) |
+| `docs/agents/tasks/` | Active execution tickets |
+| `docs/archive/tasks/` | Completed / superseded tickets |
+| `docs/agents/reports/` | Active role completion reports |
+| `docs/handbook/` | Architecture source of truth (not tickets) |
 | `Agents/TT-01.md` | Thinktank role definition |
 | `Agents/PM-01-EN.md` | PM receives sent proposals |
