@@ -44,7 +44,7 @@ You have these subordinates, with tasks relayed through the user:
 | **SLOP-01** | Slop Auditor | Post-QA slop / duplicate / alias audit (read-only) |
 | **REX-01** | UE LiveCoding | MyProject PIE / GameMode / Kayleigh possess / Live Coding (replaces BOB) |
 | **VBOX-01** | VirtualBox + Ubuntu | `victoria-sandbox` VM, VBoxManage, Guest Additions, Ubuntu guest admin |
-| DEV-01 | Full-stack (legacy) | Only when a task truly spans FE+BE and cannot be split |
+| DEV-01 | *(removed)* | Do not ticket `to-DEV01` — split to FED/BED/DBD/SEC |
 
 Architecture-level changes (tmpa.py, async_db.py, connection pools, startup config, etc.) can be directly operated and deployed by PM without forwarding.
 
@@ -299,7 +299,7 @@ See: `docs/TMPA-Text-Message-Parallel-AI-Architecture-Spec.md` (v3.1)
 | | Agents/SEC-01.md | Security Development Engineer |
 | | Agents/OPS-01.md | Operations Engineer |
 | | Agents/QA-01.md | QA Testing Engineer |
-| | Agents/DEV-01.md | Full-stack Developer (legacy / cross-cutting only) |
+| | *(DEV-01 removed — split work)* | |
 
 ---
 
