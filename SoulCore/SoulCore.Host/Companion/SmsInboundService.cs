@@ -24,7 +24,7 @@ public sealed class SmsInboundService : ISmsInboundService
     private readonly IChatSessionHistoryStore _history;
     private readonly ICompanionMediaService _media;
     private readonly PresenceWsHub _hub;
-    private readonly ISmsOutboundService? _outbound;
+    private readonly ISmsOutboundService _outbound;
     private readonly ILogger<SmsInboundService> _logger;
 
     public SmsInboundService(
@@ -37,8 +37,8 @@ public sealed class SmsInboundService : ISmsInboundService
         IChatSessionHistoryStore history,
         ICompanionMediaService media,
         PresenceWsHub hub,
-        ILogger<SmsInboundService> logger,
-        ISmsOutboundService? outbound = null)
+        ISmsOutboundService outbound,
+        ILogger<SmsInboundService> logger)
     {
         _sms = sms?.Value ?? throw new ArgumentNullException(nameof(sms));
         _inference = inference?.Value ?? throw new ArgumentNullException(nameof(inference));
@@ -49,8 +49,8 @@ public sealed class SmsInboundService : ISmsInboundService
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
+        _outbound = outbound ?? throw new ArgumentNullException(nameof(outbound));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _outbound = outbound;
     }
 
     public async Task<SmsInboundResult> HandleAsync(
@@ -185,8 +185,7 @@ public sealed class SmsInboundService : ISmsInboundService
         string? mmsJobId = null;
 
         // Screenshot / still ask on SMS path (no tools) → one MMS queue job.
-        if (_outbound is not null
-            && _sms.OutboundEnabled
+        if (_sms.OutboundEnabled
             && SmsScreenshotAsk.LooksLikeScreenshotAsk(userVisible))
         {
             try
@@ -221,8 +220,7 @@ public sealed class SmsInboundService : ISmsInboundService
             }
         }
 
-        if (_outbound is not null
-            && _sms.OutboundEnabled
+        if (_sms.OutboundEnabled
             && _sms.AutoReplySmsEnabled
             && !string.IsNullOrWhiteSpace(reply))
         {
@@ -310,7 +308,8 @@ public sealed class SmsInboundService : ISmsInboundService
             reply.Length);
 
         return new SmsInboundResult(
-            true, false, reply, mediaId, replyFrameId, null, usedStub, provider);
+            true, false, reply, mediaId, replyFrameId, null, usedStub, provider,
+            outboundJobId, mmsJobId);
     }
 
     public static string BuildSmsPreamble(IReadOnlyList<string> recentMemories)
