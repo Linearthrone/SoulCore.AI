@@ -6,7 +6,7 @@ project: House Victoria
 version: 1.4
 updated: 2026-09-02
 ---
-
+ 
 # OPS-TAB · Tablet gateway (Tasker HTTP · Termux optional)
 
 **Native Termux cannot run Cursor `agent`** (glibc Node → `unexpected e_type: 2`).
