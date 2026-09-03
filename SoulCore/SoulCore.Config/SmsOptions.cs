@@ -1,8 +1,8 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// SMS/MMS gateway ingest (PROP-1.2). Values come from env
-/// (<c>SOULCORE_Sms__*</c>) — never commit real MDNs.
+/// SMS/MMS gateway (PROP-1.2 inbound + PROP-1.3 outbound). Env: <c>SOULCORE_Sms__*</c>.
+/// Never commit real MDNs.
 /// </summary>
 public sealed class SmsOptions
 {
@@ -31,4 +31,35 @@ public sealed class SmsOptions
     /// (mirrors ChatWs:StubWhenModelDown for gateway smoke tests).
     /// </summary>
     public bool StubWhenModelDown { get; set; } = false;
+
+    /// <summary>
+    /// PROP-1.3: enqueue SMS replies / MMS stills for the tablet gateway to send.
+    /// </summary>
+    public bool OutboundEnabled { get; set; } = true;
+
+    /// <summary>
+    /// After an allowlisted inbound SMS, enqueue Victoria's <c>replyText</c> as outbound SMS.
+    /// </summary>
+    public bool AutoReplySmsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Optional HTTP webhook the Host POSTs when a message is enqueued
+    /// (<c>{id,kind,toE164,text,contentType,imageBase64?}</c>). Empty = queue-only (tablet polls).
+    /// </summary>
+    public string OutboundWebhookUrl { get; set; } = "";
+
+    /// <summary>Minimum seconds between outbound SMS jobs (anti-spam).</summary>
+    public int MinSecondsBetweenSms { get; set; } = 12;
+
+    /// <summary>Minimum seconds between outbound MMS jobs (anti-spam).</summary>
+    public int MinSecondsBetweenMms { get; set; } = 60;
+
+    /// <summary>Max outbound SMS enqueues per rolling hour.</summary>
+    public int MaxSmsPerHour { get; set; } = 30;
+
+    /// <summary>Max outbound MMS enqueues per rolling hour.</summary>
+    public int MaxMmsPerHour { get; set; } = 6;
+
+    /// <summary>Drop queued jobs older than this many minutes if never acked.</summary>
+    public int PendingTtlMinutes { get; set; } = 120;
 }

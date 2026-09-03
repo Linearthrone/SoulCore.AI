@@ -1,4 +1,4 @@
-# SMS/MMS gateway → Host (PROP-1.2)
+# SMS/MMS gateway → Host (PROP-1.2 inbound + PROP-1.3 outbound)
 
 Victoria’s phone number is the **Samsung Tab SM-X218U** cellular MDN (not DIGITS).
 Host stays on **loopback** (`127.0.0.1:7700`). Reach it from the tablet via **Tailscale serve** (no Funnel).
@@ -12,6 +12,14 @@ SOULCORE_Sms__KurtAllowlistE164=+1XXXXXXXXXX
 # SOULCORE_Sms__VictoriaMdn=+1YYYYYYYYYY
 # SOULCORE_Sms__StubWhenModelDown=true
 # SOULCORE_Sms__ConversationSessionId=presence-local
+# PROP-1.3 outbound (defaults are fine for first live):
+# SOULCORE_Sms__OutboundEnabled=true
+# SOULCORE_Sms__AutoReplySmsEnabled=true
+# SOULCORE_Sms__MinSecondsBetweenSms=12
+# SOULCORE_Sms__MinSecondsBetweenMms=60
+# SOULCORE_Sms__MaxSmsPerHour=30
+# SOULCORE_Sms__MaxMmsPerHour=6
+# SOULCORE_Sms__OutboundWebhookUrl=   # optional; empty = tablet polls queue
 ```
 
 Restart Host after setting. Enable Tailscale serve as usual (`tailscale-serve-soulcore.ps1` / ALLSTART).
@@ -134,7 +142,7 @@ X-Api-Key: %SOULCORE_TOKEN
 
 **Limitation:** if the SMS body contains `"` or raw newlines, that Body template can 400. Optional later: JavaScriptlet + `JSON.stringify` for those messages.
 
-PROP-1.3 will SMS `replyText` back to Kurt automatically; this bridge is inbound-only.
+Host enqueues `replyText` for outbound SMS (PROP-1.3) — tablet must poll or Send SMS (see Outbound section).
 
 #### Status cheat sheet
 
@@ -268,6 +276,52 @@ Expect a `ping ok` line. **No log = Intent never reached Termux** (wrong class/t
    (same `ARGUMENTS` / `WORKDIR` / `BACKGROUND`). Timeout on Host is still up to 180s; ChatDesktop may show the SMS first.
 
 4. Wire **Received Text** → that task. Real SMS → ChatDesktop = **#1 Done**.
+
+## Outbound SMS/MMS (PROP-1.3)
+
+Host does **not** talk to the carrier directly. It enqueues jobs; the tablet drains them.
+
+### Rate limits (defaults)
+
+| Kind | Min gap | Max / hour |
+| --- | --- | --- |
+| SMS | 12 s | 30 |
+| MMS | 60 s | 6 |
+
+No auto-MMS on every `desktop_screenshot`. MMS only when Kurt asks (SMS keywords like “screenshot” / “what do you see”) or ChatDesktop calls tool `send_screenshot_mms`.
+
+### API
+
+- `GET /api/companion/v1/sms/outbound/pending?limit=5` — pending jobs (same auth as inbound)
+- `POST /api/companion/v1/sms/outbound/{id}/ack` — body `{"ok":true}` or `{"ok":false,"error":"…"}`
+
+### Tablet: send replies (pick one)
+
+**A) Termux poller (recommended)**
+
+```bash
+pkg install termux-api jq curl
+curl -fsSL -o ~/bin/sms-outbound-poll.sh \
+  https://raw.githubusercontent.com/Linearthrone/SoulCore.AI/main/sms-outbound-poll.sh
+chmod +x ~/bin/sms-outbound-poll.sh
+# reuse ~/.config/soulcore/companion.token from inbound
+~/bin/sms-outbound-poll.sh --loop 10
+```
+
+SMS → `termux-sms-send`. MMS → file under `~/storage/downloads/soulcore-mms/` + notification (attach/send in Messages).
+
+**B) Tasker Send SMS from inbound HTTP response**
+
+After the working HTTP Request, add **Phone → Send SMS**: Number `%SMSRF`, Message = `replyText` from `%http_data` (Tasker JSON / Variable tools).
+
+Do **not** run A and B together or Kurt gets duplicate texts.
+
+### Live checks
+
+1. Restart Host after pull.
+2. Start poller (A) **or** Tasker Send SMS (B).
+3. Text tablet → Kurt’s phone gets Victoria’s SMS reply.
+4. Text `send me a screenshot` → MMS still queued (poller saves file + notifies).
 
 ## Auth / 401 with a “perfect” long token
 
