@@ -5,7 +5,7 @@
 **Host stays:** `127.0.0.1:7700` — Tailscale **serve** proxies onto loopback.  
 **Do not:** bind Host to `0.0.0.0`, LAN IP, or document Funnel (public internet) as the Phase 0 path.
 
-Related: SEC-152 (`docs/agents/log/TASK-20260727-152-SEC01-to-PM01.md`), PROP-COMPANION-01.
+Related: SEC-152 (see git history / `docs/archive/`); companion remote path shipped.
 
 ---
 

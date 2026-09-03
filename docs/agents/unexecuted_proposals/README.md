@@ -27,9 +27,11 @@ Do **not** maintain a second PROP table here — it drifts. Next free `N` and ac
 Slug from the **need or want** (lowercase kebab-case):
 
 ```text
-victoria-digits-sms-channel.md
-victoria-ue-reliable-embodiment.md
+presence-shell-honest-hud.md
+victoria-link-messenger-product.md
 ```
+
+Ticketed proposals live under `docs/archive/proposals/` once accepted.
 
 Frontmatter **must** include `prop_id: PROP-{N}-{subject}` once numbered.
 
