@@ -33,8 +33,9 @@ Kurt desk  ──WS/HTTP──────────────────�
 | --- | --- |
 | Tasker HTTP SMS trigger | Host companion API + allowlist |
 | Termux outbound poller | Self-sufficient House SMS gateway app (goal) |
-| Hermes PreferHermes path | Ollama tool-loop |
 | DIGITS line identity | Tablet SM-X218U MDN |
+
+Hermes PreferHermes is **gone** (not a temporary bridge): Host uses `NullHermesClient` / Ollama tool-loop only.
 
 ## Related
 
