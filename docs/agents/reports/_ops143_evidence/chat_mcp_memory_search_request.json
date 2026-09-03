@@ -1,9 +1,0 @@
-{
-    "model":  "hermes-agent",
-    "messages":  [
-                     {
-                         "content":  "Use your MCP memory_search tool (house_victoria) with query \u0027OPS143-64K-PROBE\u0027. Briefly report what the tool returned.",
-                         "role":  "user"
-                     }
-                 ]
-}
