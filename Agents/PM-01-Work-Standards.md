@@ -343,7 +343,7 @@ Choose the **narrowest correct owner** before writing the ticket.
 
 | Primary work | Agent | Filename `to-` |
 | --- | --- | --- |
-| UI / components / client state / Nuxt-Vue-WPF surfaces | **FED-01** | `FED01` |
+| UI / Avalonia ChatDesktop / Android Link | **FED-01** | `FED01` |
 | APIs / services / orchestrator / backend logic | **BED-01** | `BED01` |
 | Schema / SQL / indexes / migrations | **DBD-01** | `DBD01` |
 | Authn/authz / hardening / security defects | **SEC-01** | `SEC01` |

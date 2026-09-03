@@ -9,6 +9,7 @@ desktop client (`House/House.ChatDesktop`) is a thin GUI front-end built with
 **Avalonia** (`net8.0`), so it is cross-platform (Linux, Windows, macOS).
 
 Standard commands live in `SoulCore/README.md` (bind/health/WS, build, evidence CLIs).
+Architecture / workflows / conventions: `docs/handbook/` (searchable: `cd docs-site && npm run docs:dev`).
 Notes below are the non-obvious cloud/Linux caveats.
 
 ### My Machines (home PC; tablet scripts only)

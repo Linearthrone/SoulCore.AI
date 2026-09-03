@@ -1,0 +1,15 @@
+{
+  "name": "soulcore-handbook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "bash ./sync-content.sh",
+    "docs:dev": "bash ./sync-content.sh && vitepress dev",
+    "docs:build": "bash ./sync-content.sh && vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.13"
+  }
+}

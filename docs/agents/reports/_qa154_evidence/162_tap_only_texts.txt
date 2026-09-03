@@ -1,8 +1,0 @@
-WS connected · ws://127.0.0.1:7700/ws
-tapOpenQA154
-I am Victoria. How can I assist you today?
-frame loop.want id=0f2ddcbf01ce4009a997a4f4d4bb297d
-Message…
-Victoria
-Connected · ws://127.0.0.1:7700/ws
-10:19

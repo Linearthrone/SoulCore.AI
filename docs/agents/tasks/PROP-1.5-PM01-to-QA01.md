@@ -12,7 +12,7 @@ wave: 31
 phase: phone-digits
 title: QA — Kurt SMS round-trip + MMS screenshot still
 depends_on: PROP-1.1, PROP-1.2, PROP-1.3, PROP-1.4
-proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
+proposal: docs/archive/proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.5-QA01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)

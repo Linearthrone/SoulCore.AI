@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
-using SoulCore.Hermes;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Desktop;
 
@@ -435,43 +434,6 @@ public class DesktopToolsTests
     }
 
     [Fact]
-    public async Task HermesBackend_WhenGatewayDown_ReturnsUnavailable()
-    {
-        var hermes = new StubHermesClient(health: "");
-        var backend = new HermesDesktopControlBackend(hermes);
-
-        var result = await backend.ScreenshotAsync(0);
-
-        Assert.False(result.Success);
-        Assert.Equal(HermesDesktopControlBackend.GatewayUnavailable, result.Content);
-    }
-
-    [Fact]
-    public async Task HermesBackend_WhenGatewayUp_RoutesViaCallMcpToolAsync()
-    {
-        var hermes = new StubHermesClient(health: "{\"status\":\"ok\"}");
-        var backend = new HermesDesktopControlBackend(hermes);
-
-        var result = await backend.ClickAsync(1, 2, "left");
-
-        Assert.True(result.Success);
-        Assert.Contains("computer_use", result.Content, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task HermesBackend_OpenApp_ReturnsUseNativeDirective()
-    {
-        var hermes = new StubHermesClient(health: "{\"status\":\"ok\"}");
-        var backend = new HermesDesktopControlBackend(hermes);
-
-        var result = await backend.OpenAppAsync("chrome");
-
-        Assert.False(result.Success);
-        Assert.Equal(HermesDesktopControlBackend.OpenAppUseNativeMessage, result.Content);
-        Assert.Empty(hermes.McpCalls);
-    }
-
-    [Fact]
     public void ToolsOptions_Defaults_DesktopBrowserGatesOpen()
     {
         var opts = new ToolsOptions();
@@ -582,48 +544,4 @@ public class DesktopToolsTests
         }
     }
 
-    private sealed class StubHermesClient : IHermesClient
-    {
-        private readonly string _health;
-
-        public List<string> McpCalls { get; } = new();
-
-        public StubHermesClient(string health) => _health = health;
-
-        public Task<string> ChatAsync(
-            string message,
-            string? systemPreamble = null,
-            CancellationToken cancellationToken = default,
-            int? maxTokens = null)
-            => Task.FromResult(string.Empty);
-
-        public Task<string> CompleteWithToolsAsync(
-            IReadOnlyList<ChatMessage> messages,
-            IReadOnlyList<ToolDefinition> tools,
-            IToolRegistry registry,
-            CancellationToken cancellationToken = default,
-            ToolLoopOptions? loopOptions = null)
-            => Task.FromResult(string.Empty);
-
-        public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(_health);
-
-        public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(_health))
-                return Task.FromException(new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage));
-            return Task.CompletedTask;
-        }
-
-        public Task<ToolResult> CallMcpToolAsync(
-            string mcpToolName,
-            JsonElement arguments,
-            CancellationToken cancellationToken = default)
-        {
-            McpCalls.Add(mcpToolName);
-            if (string.IsNullOrWhiteSpace(_health))
-                return Task.FromResult(new ToolResult(false, IHermesMcpInvoker.UnavailableMessage, null));
-            return Task.FromResult(new ToolResult(true, $"mcp:{mcpToolName}", null));
-        }
-    }
 }

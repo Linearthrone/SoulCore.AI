@@ -1,8 +1,0 @@
-WS connected · ws://127.0.0.1:7700/ws
-helloQA154
-frame loop.want id=378b44f53bbd462b8880b08ceca576da
-Hello. How can I assist you today?
-Message…
-Victoria
-Connected · ws://127.0.0.1:7700/ws
-10:08
