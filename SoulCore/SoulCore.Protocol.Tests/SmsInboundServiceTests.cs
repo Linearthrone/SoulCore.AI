@@ -135,7 +135,10 @@ public class SmsInboundServiceTests
             {
                 KurtAllowlistE164 = allow,
                 StubWhenModelDown = stub,
-                ConversationSessionId = "presence-local"
+                ConversationSessionId = "presence-local",
+                OutboundEnabled = true,
+                AutoReplySmsEnabled = true,
+                MinSecondsBetweenSms = 0
             }),
             Options.Create(new InferenceOptions { Enabled = true }),
             Options.Create(new ChatWsOptions { StubWhenModelDown = stub }),
@@ -145,6 +148,15 @@ public class SmsInboundServiceTests
             history ?? new ChatSessionHistoryStore(32),
             media ?? new FakeMedia(),
             new PresenceWsHub(NullLogger<PresenceWsHub>.Instance),
+            new SmsOutboundService(
+                Options.Create(new SmsOptions
+                {
+                    KurtAllowlistE164 = allow,
+                    OutboundEnabled = true,
+                    MinSecondsBetweenSms = 0,
+                    MinSecondsBetweenMms = 0
+                }),
+                NullLogger<SmsOutboundService>.Instance),
             NullLogger<SmsInboundService>.Instance);
     }
 

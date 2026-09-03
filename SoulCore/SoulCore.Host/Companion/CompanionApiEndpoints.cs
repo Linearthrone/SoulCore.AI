@@ -139,7 +139,9 @@ public static class CompanionApiEndpoints
                     frameId = result.FrameId,
                     stub = result.UsedStub,
                     provider = result.Provider,
-                    sessionId = "presence-local"
+                    sessionId = "presence-local",
+                    outboundSmsJobId = result.OutboundSmsJobId,
+                    outboundMmsJobId = result.OutboundMmsJobId
                 });
             }
             catch (JsonException jex)

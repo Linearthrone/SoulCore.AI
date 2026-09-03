@@ -124,12 +124,13 @@ public class SmsOutboundServiceTests
             new ChatSessionHistoryStore(32),
             new InboundFakeMedia(),
             new PresenceWsHub(NullLogger<PresenceWsHub>.Instance),
-            NullLogger<SmsInboundService>.Instance,
-            outbound);
+            outbound,
+            NullLogger<SmsInboundService>.Instance);
 
         var result = await inbound.HandleAsync(new SmsInboundRequest(Kurt, "hi", null, null));
         Assert.True(result.Ok);
         Assert.Equal("hey back", result.ReplyText);
+        Assert.False(string.IsNullOrWhiteSpace(result.OutboundSmsJobId));
         var pending = outbound.ListPending();
         Assert.Single(pending);
         Assert.Equal("hey back", pending[0].Text);
