@@ -12,7 +12,7 @@ wave: 31
 phase: ue-reliability
 title: One Presence still = Victoria eye_frame (Host refuses empty)
 depends_on: PROP-2.1
-proposal: docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md
+proposal: docs/archive/proposals/victoria-ue-reliable-embodiment.md
 intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-2.3-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)

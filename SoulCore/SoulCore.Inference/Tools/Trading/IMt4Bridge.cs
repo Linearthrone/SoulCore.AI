@@ -11,7 +11,7 @@ namespace SoulCore.Inference.Tools.Trading;
 /// <remarks>
 /// Default implementation is <see cref="LlmodHttpMt4Bridge"/> which routes to
 /// LLMOD MCP HTTP on shadow (<c>Mt4Backend=llmod</c> or <c>native</c> alias).
-/// <see cref="HermesMt4Bridge"/> remains optional when <c>Mt4Backend=hermes</c>.
+/// Optional <c>llmod</c> HTTP bridge when <c>Mt4Backend=llmod</c>; otherwise unavailable.
 /// </remarks>
 public interface IMt4Bridge
 {

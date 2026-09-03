@@ -10,7 +10,7 @@ using SoulCore.Inference.Tools.Trading;
 
 namespace SoulCore.Protocol.Tests;
 
-/// <summary>BED-169 — LLMOD HTTP MT4 bridge: param mapping, transport failures, Hermes regression.</summary>
+/// <summary>BED-169 — LLMOD HTTP MT4 bridge: param mapping, transport failures.</summary>
 public class LlmodHttpMt4BridgeTests
 {
     [Fact]
@@ -123,24 +123,6 @@ public class LlmodHttpMt4BridgeTests
         Assert.DoesNotContain("\"direction\"", capturedBody, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task HermesBackendRegression_StillRoutesViaHermesInvoker()
-    {
-        var hermes = new RecordingHermesInvoker
-        {
-            Next = new ToolResult(true, "hermes-ok", null)
-        };
-        var bridge = new HermesMt4Bridge(hermes);
-        using var doc = JsonDocument.Parse("{}");
-
-        var result = await bridge.InvokeAsync("mt4_status", doc.RootElement);
-
-        Assert.True(result.Success);
-        Assert.Equal("hermes-ok", result.Content);
-        Assert.Single(hermes.Calls);
-        Assert.Equal("mt4_status", hermes.Calls[0]);
-    }
-
     private static LlmodHttpMt4Bridge MakeBridge(HttpMessageHandler handler)
     {
         var http = new HttpClient(handler);
@@ -189,18 +171,4 @@ public class LlmodHttpMt4BridgeTests
             _responder(request);
     }
 
-    private sealed class RecordingHermesInvoker : IHermesMcpInvoker
-    {
-        public ToolResult Next { get; set; } = new(true, "ok", null);
-        public List<string> Calls { get; } = new();
-
-        public Task<ToolResult> CallMcpToolAsync(
-            string mcpToolName,
-            JsonElement arguments,
-            CancellationToken cancellationToken = default)
-        {
-            Calls.Add(mcpToolName);
-            return Task.FromResult(Next);
-        }
-    }
 }

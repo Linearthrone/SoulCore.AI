@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
-using SoulCore.Hermes;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
@@ -275,34 +274,6 @@ public class BrowserToolsTests
             Assert.Contains(expected, names);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Hermes bridge — unavailable when health empty; parse capture payload
-    // ─────────────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task HermesBrowserBridge_WhenHealthEmpty_ReturnsUnavailable()
-    {
-        var hermes = new StubHermesClient(health: string.Empty);
-        var bridge = new HermesBrowserBridge(hermes);
-
-        var result = await bridge.ClickAsync(1, 2);
-
-        Assert.False(result.Success);
-        Assert.Equal(HermesBrowserBridge.UnavailableContent, result.Content);
-    }
-
-    [Fact]
-    public async Task HermesBrowserBridge_WhenHealthy_RoutesViaCallMcpToolAsync()
-    {
-        var hermes = new StubHermesClient(health: "{\"status\":\"ok\"}");
-        var bridge = new HermesBrowserBridge(hermes);
-
-        var result = await bridge.CaptureTabAsync(0);
-
-        Assert.True(result.Success);
-        Assert.Contains("browser_bridge_capture_tab", result.Content, StringComparison.Ordinal);
-    }
-
     [Fact]
     public async Task UnsupportedBrowserBridge_ReturnsClearError()
     {
@@ -492,47 +463,6 @@ public class BrowserToolsTests
         }
     }
 
-    private sealed class StubHermesClient : IHermesClient
-    {
-        private readonly string _health;
-
-        public StubHermesClient(string health) => _health = health;
-
-        public Task<string> ChatAsync(
-            string message,
-            string? systemPreamble = null,
-            CancellationToken cancellationToken = default,
-            int? maxTokens = null)
-            => Task.FromResult(string.Empty);
-
-        public Task<string> CompleteWithToolsAsync(
-            IReadOnlyList<ChatMessage> messages,
-            IReadOnlyList<ToolDefinition> tools,
-            IToolRegistry registry,
-            CancellationToken cancellationToken = default,
-            ToolLoopOptions? options = null)
-            => Task.FromResult(string.Empty);
-
-        public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(_health);
-
-        public Task EnsureMcpReadyAsync(CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(_health))
-                return Task.FromException(new InvalidOperationException(IHermesMcpInvoker.UnavailableMessage));
-            return Task.CompletedTask;
-        }
-
-        public Task<ToolResult> CallMcpToolAsync(
-            string mcpToolName,
-            JsonElement arguments,
-            CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(_health))
-                return Task.FromResult(new ToolResult(false, IHermesMcpInvoker.UnavailableMessage, null));
-            return Task.FromResult(new ToolResult(true, $"mcp:{mcpToolName}", null));
-        }
-    }
 
     private sealed class CountingHandler : HttpMessageHandler
     {

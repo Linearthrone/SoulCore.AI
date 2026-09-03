@@ -12,7 +12,7 @@ wave: 31
 phase: phone-digits
 title: DIGITS channel security — allowlist, no Funnel, no inbound tools
 depends_on: PROP-1.2
-proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
+proposal: docs/archive/proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.4-SEC01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
