@@ -19,7 +19,8 @@
 | `docs/archive/issues/` | Closed / obsolete issues |
 | `docs/archive/tasks/` | Done, Pass, or superseded tickets |
 | `docs/archive/reports/` | Matching historical reports |
-| `docs/archive/proposals/` | Answered / withdrawn proposal surveys |
+| `docs/archive/qa-harnesses/` | Ticket-scoped QA probe scripts (historical) |
+| `docs/archive/roles/` | Obsolete role templates (cloud OPS-01-EN, etc.) |
 
 Recover deleted dumps from git history: `docs/agents/log/` (353 historical copies), `reports/_*/` evidence folders, Hermes PreferHermes runbook, Host `artifacts/` publish trees.
 

@@ -65,4 +65,4 @@ When PM sends `to-TT01` because a ticket cannot complete, TT writes a proposal h
 | `docs/agents/reports/` | Active role completion reports |
 | `docs/handbook/` | Architecture source of truth (not tickets) |
 | `Agents/TT-01.md` | Thinktank role definition |
-| `Agents/PM-01-EN.md` | PM receives sent proposals |
+| `Agents/PM-01-EN.md` | PM receives sent proposals (`PM-01.md` is a stub → EN) |

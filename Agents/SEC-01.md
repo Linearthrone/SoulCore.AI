@@ -21,9 +21,9 @@ updated: 2026-07-22
 > File paths below are examples. Replace based on your actual project.
 
 1. `.cursor/rules/pm-main-control-patrol.mdc` â€” Global collaboration standards
-2. `Docs/agents/agents/SEC-01.md` â€” This file (role definition)
-3. `Docs/agents/agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
-4. `Docs/agents/RUNBOOK-Secure-Remote-Companion-Access.md` â€” Secure remote access runbook
+2. `Agents/SEC-01.md` â€” This file (role definition)
+3. `Agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
+4. `docs/runbooks/cursor-my-machines.md` â€” Secure remote access runbook
 5. `docs/agents/tasks/` â€” Pending security tasks (`to-SEC01`)
 6. Project security policy docs (as listed by PM-01)
 

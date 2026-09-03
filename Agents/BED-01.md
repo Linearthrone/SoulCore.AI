@@ -21,8 +21,8 @@ updated: 2026-07-22
 > File paths below are examples. Replace based on your actual project.
 
 1. `.cursor/rules/pm-main-control-patrol.mdc` â€” Global collaboration standards
-2. `Docs/agents/agents/BED-01.md` â€” This file (role definition)
-3. `Docs/agents/agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
+2. `Agents/BED-01.md` â€” This file (role definition)
+3. `Agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
 4. `docs/agents/tasks/` â€” Pending backend tasks (`to-BED01`)
 5. Backend / AI module architecture docs (as listed by PM-01)
 

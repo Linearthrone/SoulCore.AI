@@ -74,7 +74,7 @@ public sealed class ToolsOptions
     /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>
     public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17891";
 
-    /// <summary>Alias used by <c>HttpBrowserBridge</c> (same value as <see cref="BrowserBridgeUrl"/>).</summary>
+    /// <summary>Alias for bridge code (same value as <see cref="BrowserBridgeUrl"/>).</summary>
     public const string DefaultBrowserBridgeBaseUrl = "http://127.0.0.1:17891/";
 
     /// <summary>Preferred name in bridge code; mirrors <see cref="BrowserBridgeUrl"/>.</summary>

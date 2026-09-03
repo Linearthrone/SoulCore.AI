@@ -9,9 +9,9 @@ updated: 2026-07-29
 
 # PM-01 Â· Project AI-CTO Onboarding Handbook
 
-> This file is the complete role definition for the Master Control AI. Whether starting a new window or continuing a chat, `@Docs/agents/agents/PM-01.md` activates it.
+> This file is the complete role definition for the Master Control AI. Whether starting a new window or continuing a chat, `@Agents/PM-01.md` activates it.
 >
-> âš ï¸ **Must read work standards before starting:** [`Docs/agents/agents/PM-01-Work-Standards.md`](./PM-01-Work-Standards.md)
+> âš ï¸ **Must read work standards before starting:** [`Agents/PM-01-Work-Standards.md`](./PM-01-Work-Standards.md)
 
 ---
 
@@ -59,9 +59,9 @@ Architecture-level changes (tmpa.py, async_db.py, connection pools, startup conf
 | # | File (Example) | What to Read |
 | --- | --- | --- |
 | 1 | `.cursor/rules/pm-main-control-patrol.mdc` | Global PM patrol standards and coordination workflow |
-| 2 | `Docs/agents/agents/PM-01.md` | Project architecture and PM role baseline |
-| 3 | `Docs/agents/RUNBOOK-Secure-Remote-Companion-Access.md` | Security and daily remote operations runbook |
-| 4 | `Docs/agents/tasks/` + `Docs/agents/reports/` | Multi-role file-based collaboration workflow |
+| 2 | `Agents/PM-01.md` | Project architecture and PM role baseline |
+| 3 | `docs/runbooks/cursor-my-machines.md` | Security and daily remote operations runbook |
+| 4 | `docs/agents/tasks/` + `docs/agents/reports/` | Multi-role file-based collaboration workflow |
 | 5 | `.cursor/rules/dev-task-patrol.mdc` | Development execution and handoff standards |
 | 6 | `.cursor/rules/qa-task-patrol.mdc` | QA execution and evidence standards |
 | 7 | `.cursor/rules/ops-task-patrol.mdc` | Operations and deployment standards |
@@ -284,22 +284,22 @@ See: `docs/TMPA-Text-Message-Parallel-AI-Architecture-Spec.md` (v3.1)
 
 | Category | Document (Example) | One-line Description |
 | --- | --- | --- |
-| **Architecture Core** | Docs/agents/agents/PM-01.md | Architecture design root document |
-| **Operations Standards** | Docs/agents/RUNBOOK-Secure-Remote-Companion-Access.md | Daily operations unified entry |
+| **Architecture Core** | Agents/PM-01.md | Architecture design root document |
+| **Operations Standards** | docs/runbooks/cursor-my-machines.md | Daily operations unified entry |
 | | [release-guide].md | Release workflow |
 | | [service-startup].md | Local frontend/backend startup |
 | | [server-ops-manual].md | SSH / process management / Nginx |
 | | [security-policy].md | Security rules |
 | **Architecture Design** | [multi-ai-collaboration].md | Multi-role collaboration design |
 | **Data Assets** | [data-dictionary].md | Core table field definitions |
-| **Team Management** | Docs/agents/agents/PM-01.md | This file (AI-CTO) |
-| | Docs/agents/agents/FED-01.md | Frontend Development Engineer |
-| | Docs/agents/agents/BED-01.md | Backend Development Engineer |
-| | Docs/agents/agents/DBD-01.md | Database Development Engineer |
-| | Docs/agents/agents/SEC-01.md | Security Development Engineer |
-| | Docs/agents/agents/OPS-01.md | Operations Engineer |
-| | Docs/agents/agents/QA-01.md | QA Testing Engineer |
-| | Docs/agents/agents/DEV-01.md | Full-stack Developer (legacy / cross-cutting only) |
+| **Team Management** | Agents/PM-01.md | This file (AI-CTO) |
+| | Agents/FED-01.md | Frontend Development Engineer |
+| | Agents/BED-01.md | Backend Development Engineer |
+| | Agents/DBD-01.md | Database Development Engineer |
+| | Agents/SEC-01.md | Security Development Engineer |
+| | Agents/OPS-01.md | Operations Engineer |
+| | Agents/QA-01.md | QA Testing Engineer |
+| | Agents/DEV-01.md | Full-stack Developer (legacy / cross-cutting only) |
 
 ---
 
@@ -418,7 +418,7 @@ For DEV-01 (legacy only â€” prefer splitting to FED/BED/DBD/SEC):
 
 ### 8.3 Activation Method
 
-Whether new window or continuing chat: `@Docs/agents/agents/XX-01.md Follow the instructions in this file`
+Whether new window or continuing chat: `@Agents/XX-01.md Follow the instructions in this file`
 
 ### 8.4 Agent Selection Guide (Must Use Before Dispatch)
 

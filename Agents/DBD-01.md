@@ -21,8 +21,8 @@ updated: 2026-07-22
 > File paths below are examples. Replace based on your actual project.
 
 1. `.cursor/rules/pm-main-control-patrol.mdc` â€” Global collaboration standards
-2. `Docs/agents/agents/DBD-01.md` â€” This file (role definition)
-3. `Docs/agents/agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
+2. `Agents/DBD-01.md` â€” This file (role definition)
+3. `Agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
 4. `docs/agents/tasks/` â€” Pending database tasks (`to-DBD01`)
 5. Data dictionary / DDL / SKILL schema assets (as listed by PM-01)
 

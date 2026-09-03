@@ -21,8 +21,8 @@ updated: 2026-07-22
 > File paths below are examples. Replace based on your actual project.
 
 1. `.cursor/rules/pm-main-control-patrol.mdc` â€” Global collaboration standards
-2. `Docs/agents/agents/FED-01.md` â€” This file (role definition)
-3. `Docs/agents/agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
+2. `Agents/FED-01.md` â€” This file (role definition)
+3. `Agents/PM-01-Work-Standards.md` â€” Task ticket and handoff standards
 4. `docs/agents/tasks/` â€” Pending frontend tasks (`to-FED01`)
 5. Project frontend startup / release docs (as listed by PM-01)
 
