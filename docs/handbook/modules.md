@@ -8,7 +8,7 @@ Quick index of product modules. Deep dives live under [Architecture](./architect
 | Protocol | `SoulCore/SoulCore.Protocol` | Shared contracts / messages |
 | Inference | `SoulCore/SoulCore.Inference` | LLMod + tool loop |
 | Memory | `SoulCore/SoulCore.Memory` | Continuity, charter, SoulLoop |
-| Hermes (stub) | `SoulCore/SoulCore.Hermes` | `NullHermesClient` only — process retired |
+| Hermes (stub) | `SoulCore/SoulCore.Hermes` | `NullHermesClient` only — live Hermes clients removed (BED-185) |
 | ChatDesktop | `House/House.ChatDesktop` | Presence desk UI |
 | Companion Android | `House/House.CompanionAndroid` | Victoria Link |
 | Voice | `House/House.Voice` | STT/TTS helpers |
