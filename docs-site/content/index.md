@@ -2,20 +2,19 @@
 layout: home
 hero:
   name: SoulCore Handbook
-  text: House Victoria architecture & ops
-  tagline: Use search (Ctrl+K) — architecture, workflows, runbooks.
+  text: House Victoria
+  tagline: Architecture, modules, workflows, and runbooks — searchable.
   actions:
     - theme: brand
-      text: Open handbook
-      link: /handbook/
+      text: Architecture
+      link: /handbook/architecture/overview
     - theme: alt
-      text: SMS runbook
-      link: /runbooks/sms-gateway-inbound
+      text: Conventions
+      link: /handbook/conventions
 features:
-  - title: Architecture
-    details: Host, inference, memory, clients, embodiment, security.
-  - title: Workflows
-    details: ALLSTART, Presence chat, SMS gateway — temporary vs permanent paths.
-  - title: Conventions
-    details: Consistent coding rules; no dead weight.
----
+  - title: Search
+    details: Use the search box (top) for keywords across the handbook and runbooks.
+  - title: Source of truth
+    details: Edit docs/handbook and docs/runbooks in the repo, then run docs-site/sync-content.sh.
+  - title: PROP registry
+    details: Single PROP table lives at /agents/PROP_NUMBERING.

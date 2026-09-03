@@ -5,6 +5,7 @@ Searchable map of the system: what runs where, how pieces talk, and how to opera
 ## Start here
 
 - [Architecture overview](./architecture/overview.md)
+- [Modules map](./modules.md)
 - [Coding conventions](./conventions.md)
 - [Glossary](./glossary.md)
 
