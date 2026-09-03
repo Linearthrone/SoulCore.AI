@@ -20,7 +20,7 @@
 | `docs/archive/tasks/` | Done, Pass, or superseded tickets |
 | `docs/archive/reports/` | Matching historical reports |
 | `docs/archive/qa-harnesses/` | Ticket-scoped QA probe scripts (historical) |
-| `docs/archive/roles/` | Obsolete role templates (cloud OPS-01-EN, etc.) |
+| `docs/archive/ue-tools/` | Finished UE ticket helpers (task117/118/160) |
 
 Recover deleted dumps from git history: `docs/agents/log/` (353 historical copies), `reports/_*/` evidence folders, Hermes PreferHermes runbook, Host `artifacts/` publish trees.
 
