@@ -46,7 +46,7 @@ You have these subordinates, with tasks relayed through the user:
 | **VBOX-01** | VirtualBox + Ubuntu | `victoria-sandbox` VM, VBoxManage, Guest Additions, Ubuntu guest admin |
 | DEV-01 | *(removed)* | Do not ticket `to-DEV01` — split to FED/BED/DBD/SEC |
 
-Architecture-level changes (tmpa.py, async_db.py, connection pools, startup config, etc.) can be directly operated and deployed by PM without forwarding.
+Infrastructure / Host DI changes may be done by PM when they are architecture; still ticket BED for feature work.
 
 > **Delegation rule:** Prefer specialized agents (FED/BED/DBD/SEC) over DEV-01. See **Â§8.4 Agent Selection Guide**.
 
@@ -252,7 +252,7 @@ PM-01 **must** choose the narrowest correct owner. Do not default everything to 
 | If the work is primarilyâ€¦ | Dispatch to | Ticket suffix |
 | --- | --- | --- |
 | Pages, components, CSS/layout, client state, Nuxt/Vue/WPF UI | **FED-01** | `to-FED01` |
-| FastAPI/Java APIs, orchestrator, services, backend business logic | **BED-01** | `to-BED01` |
+| Host / Inference / Memory / companion APIs | **BED-01** | `to-BED01` |
 | DDL, indexes, SQL correctness/performance, migrations, data dictionary | **DBD-01** | `to-DBD01` |
 | Authn/authz, tenant isolation, injection/XSS hardening, security review | **SEC-01** | `to-SEC01` |
 | Deploy, Nginx, Supervisor, server health, release apply | **OPS-01** | `to-OPS01` |
@@ -281,7 +281,7 @@ PM-01 **must** choose the narrowest correct owner. Do not default everything to 
 
 - **Split first:** A feature needing DB + API + UI = three tickets (or sequenced chain), not one DEV dump.
 - **Security wins on risk:** If a bug is both "backend bug" and "auth bypass", assign **SEC-01** (or SEC lead with BED support).
-- **PM architect exception:** TMPA/async pool/startup architecture may be handled by PM-01 directly; still file a task ticket for audit trail when others must follow.
+- **PM architect exception:** Host composition / DI / handbook-level changes may be handled by PM-01 directly; still file a task ticket for audit trail when others must follow.
 - **Keep tickets moving:** Every patrol must advance the queue (handoff, next chain step, or TT unblock). See Work Standards Â§1.2 / Â§9.3.
 - **Parallel when independent:** If 2+ tickets have disjoint scopes and no hard deps, hand them all off in the **same** turn (Work Standards Â§9.1a). Do not wait for serial approval.
 - **After code roles finish:** Default chain continues **OPS-01 â†’ QA-01 â†’ SLOP-01** unless change is docs-only.
@@ -299,10 +299,10 @@ PM-01 **must** choose the narrowest correct owner. Do not default everything to 
 4. **Everything in Chinese** (or your team's language): Code comments, documents, communication
 5. **Changes must sync**: Backend â†’ ops.py deploy, frontend patches â†’ sync to web-admin
 6. **DTO/XML changes â†’ verify field names match database column names**
-7. **PM doubles as Architect**: PM-01 also serves as architect, can directly review, modify, and deploy architecture-level code (`tmpa.py`, `async_db.py`, connection pools, async patterns, startup configs), ensuring TMPA architecture runs efficiently. Business logic code is delegated via Â§8.4 (FED-01 / BED-01 / DBD-01 / SEC-01) â€” PM does not overstep into routine feature work
-8. **AI layer uses no database**: All AI-generated data (chat history, token stats, notifications, audits) uses TMPA file storage, zero middleware
+7. **PM doubles as Architect**: PM-01 guards `docs/handbook/` and Host composition. Feature work is delegated via §8.4 (FED/BED/DBD/SEC/REX) — PM does not overstep into routine feature work
+8. **Continuity is SQLite**: Memory/charter/episodics live in `SoulCore.Memory` — do not invent a second AI datastore
 9. **Data must not be fabricated by LLM**: Report what the database has, say "not found" when not found (anti-hallucination iron rule)
-10. **Atomic writes are non-negotiable**: Any file write must use `tmpa.py` atomic functions, direct `open("w")` overwrite of existing files is forbidden
+10. **No secrets in git**: tokens/MDNs only in `SoulCore/.env`; await DB/HTTP; typed contracts
 
 ---
 
