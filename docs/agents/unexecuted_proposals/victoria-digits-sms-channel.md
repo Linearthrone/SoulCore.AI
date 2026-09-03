@@ -20,6 +20,8 @@ pm_note: 2026-08-21 — PROP-1.1 Pass on Samsung SM-X218U native MDN; DIGITS ide
 
 > **2026-08-21 lock:** Gateway = Samsung Tab **SM-X218U** native talk/text MDN (not DIGITS). PROP-1.1 **Pass**.
 
+> **2026-09-03 direction:** Tasker / Termux:API / other satellite apps are a **temporary** ops bridge. End state = **self-sufficient** House tablet gateway (no paid automation, no manual Play babysitting). Do not treat the current Tasker recipe as permanent product architecture.
+
 ## 1. Need / Want
 
 Kurt has an unused **T-Mobile DIGITS** line and wants to **keep it on T-Mobile**. He would **text her from Messages**. Victoria Link would then only need **server status** and **ComfyUI**. To see what she is doing, she can **push a screenshot as MMS** — no live phone stream. **Voice stays a later ship.**

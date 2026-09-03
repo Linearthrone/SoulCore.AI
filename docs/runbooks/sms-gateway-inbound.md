@@ -3,6 +3,12 @@
 Victoria’s phone number is the **Samsung Tab SM-X218U** cellular MDN (not DIGITS).
 Host stays on **loopback** (`127.0.0.1:7700`). Reach it from the tablet via **Tailscale serve** (no Funnel).
 
+## Direction (product)
+
+**Tasker, Termux:API, and similar satellite apps are a temporary bridge**, not the end state.
+
+Goal: a **self-sufficient** tablet gateway (ideally one House-owned companion / SMS gateway app, or Host-side path that does not depend on paid automation) so Kurt is not babysitting Play buttons, poll loops, or third-party plugins. Until that ships, the Tasker HTTP + Termux poller path below is the supported ops recipe.
+
 ## Host env (home PC — never commit)
 
 ```text
