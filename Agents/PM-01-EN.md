@@ -251,7 +251,7 @@ PM-01 **must** choose the narrowest correct owner. Do not default everything to 
 
 | If the work is primarilyâ€¦ | Dispatch to | Ticket suffix |
 | --- | --- | --- |
-| Pages, components, CSS/layout, client state, Nuxt/Vue/WPF UI | **FED-01** | `to-FED01` |
+| Pages, components, Avalonia desk / Android Link UI | **FED-01** | `to-FED01` |
 | Host / Inference / Memory / companion APIs | **BED-01** | `to-BED01` |
 | DDL, indexes, SQL correctness/performance, migrations, data dictionary | **DBD-01** | `to-DBD01` |
 | Authn/authz, tenant isolation, injection/XSS hardening, security review | **SEC-01** | `to-SEC01` |
