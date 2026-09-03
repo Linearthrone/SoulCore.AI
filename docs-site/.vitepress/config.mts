@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  srcDir: 'content',
   title: 'SoulCore Handbook',
   description: 'Architecture, modules, workflows, and runbooks for SoulCore / House Victoria',
   cleanUrls: true,
