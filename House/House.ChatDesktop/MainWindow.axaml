@@ -14,7 +14,7 @@
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/house-victoria.ico">
   <!-- Frameless shell — thick metal bevel (dark→bright→dark refraction) -->
-  <Border Classes="shell-bevel" Margin="6">
+  <Border Classes="shell-bevel" Margin="4">
   <Border Classes="shell">
     <Grid>
       <Border Classes="shell-inner"/>
@@ -26,7 +26,7 @@
           <Grid ColumnDefinitions="*,Auto,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <Border Width="36" Height="36" CornerRadius="8" Background="#1A1C20"
-                      BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
+                      BorderBrush="{DynamicResource MetalBevelBrush}" BorderThickness="1.5">
                 <TextBlock Text="HV" FontSize="12" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
