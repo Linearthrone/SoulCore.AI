@@ -23,6 +23,7 @@ public partial class MainWindow
 
         ApplyServiceIndicators(snap);
         await RefreshServicesPanelAsync(snap).ConfigureAwait(true);
+        ApplyHonestActivity(preferHost: true);
         UpdateIdentityDetail();
         UpdateEngagementState();
 
@@ -87,97 +88,187 @@ public partial class MainWindow
 
     private async Task RefreshServicesPanelAsync(SoulCoreHealthSnapshot? health = null)
     {
-        if (SvcHostDot is null)
+        if (LampSoulCore is null && SvcHostDot is null)
             return;
 
         var snap = health ?? _lastHealth;
         var ollamaUp = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
         var comfyUp = await _stack.ProbeComfyAsync().ConfigureAwait(true);
+        var sandboxUp = await _stack.ProbeSandboxAsync().ConfigureAwait(true);
 
-        SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
-        SvcHostStatus.Text = snap.Alive ? "up" : "down";
-        SvcHostDetail.Text = snap.Alive
-            ? $"http://{ConnectionDefaults.DisplayEndpoint}/health"
-            : (snap.Detail ?? "Host not answering");
+        // Legacy shim text (hidden)
+        if (SvcHostDot is not null)
+        {
+            SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
+            if (SvcHostStatus is not null) SvcHostStatus.Text = snap.Alive ? "up" : "down";
+            if (SvcHostDetail is not null) SvcHostDetail.Text = snap.Alive ? "SoulCore" : (snap.Detail ?? "down");
+        }
 
-        SvcOllamaDot.Fill = ollamaUp ? _okBrush : _badBrush;
-        SvcOllamaStatus.Text = ollamaUp ? "up" : "down";
-        SvcOllamaDetail.Text = ollamaUp
-            ? (snap.InferenceEnabled ? "tags OK · inference on" : "tags OK · inference off")
-            : "unreachable :11434";
+        if (SvcOllamaDot is not null)
+        {
+            SvcOllamaDot.Fill = ollamaUp ? _okBrush : _badBrush;
+            if (SvcOllamaStatus is not null) SvcOllamaStatus.Text = ollamaUp ? "up" : "down";
+            if (SvcOllamaDetail is not null) SvcOllamaDetail.Text = ollamaUp ? "up" : "down";
+        }
 
         var backend = snap.DesktopBackend ?? "cua";
         var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
-        if (!snap.Reachable)
+        var cuaOn = snap.Reachable && _lastAllowComputerControl == true && driverOk;
+        var cuaWarn = snap.Reachable && _lastAllowDesktopCapture == true && !cuaOn;
+
+        if (SvcCuaDot is not null)
         {
-            SvcCuaDot.Fill = _badBrush;
-            SvcCuaStatus.Text = "host down";
-            SvcCuaDetail.Text = "Enable needs Host /settings/tools";
-        }
-        else if (snap.CuaDriverAvailable == false && backend.Equals("cua", StringComparison.OrdinalIgnoreCase))
-        {
-            SvcCuaDot.Fill = _badBrush;
-            SvcCuaStatus.Text = "driver missing";
-            SvcCuaDetail.Text = "cua-driver not found";
-        }
-        else if (_lastAllowComputerControl == true && driverOk)
-        {
-            SvcCuaDot.Fill = _okBrush;
-            SvcCuaStatus.Text = "control on";
-            SvcCuaDetail.Text = $"backend={backend}";
-        }
-        else if (_lastAllowDesktopCapture == true)
-        {
-            SvcCuaDot.Fill = _warnBrush;
-            SvcCuaStatus.Text = "capture only";
-            SvcCuaDetail.Text = "computer control off";
-        }
-        else
-        {
-            SvcCuaDot.Fill = _mutedBrush;
-            SvcCuaStatus.Text = "off";
-            SvcCuaDetail.Text = "desktop capture + control off";
+            SvcCuaDot.Fill = !snap.Reachable ? _badBrush
+                : cuaOn ? _okBrush
+                : cuaWarn ? _warnBrush
+                : _mutedBrush;
+            if (SvcCuaStatus is not null)
+                SvcCuaStatus.Text = cuaOn ? "on" : (cuaWarn ? "capture" : "off");
         }
 
-        if (snap.UnrealConnected == true)
+        var ueOk = snap.UnrealConnected == true;
+        var ueWarn = snap.UnrealEnabled == true && !ueOk;
+        if (SvcUeDot is not null)
         {
-            SvcUeDot.Fill = _okBrush;
-            SvcUeStatus.Text = "connected";
-        }
-        else if (snap.UnrealEnabled == true)
-        {
-            SvcUeDot.Fill = _warnBrush;
-            SvcUeStatus.Text = "enabled, not connected";
-        }
-        else
-        {
-            SvcUeDot.Fill = snap.Reachable ? _mutedBrush : _badBrush;
-            SvcUeStatus.Text = "off / unknown";
+            SvcUeDot.Fill = ueOk ? _okBrush : ueWarn ? _warnBrush : (snap.Reachable ? _mutedBrush : _badBrush);
+            if (SvcUeStatus is not null)
+                SvcUeStatus.Text = ueOk ? "connected" : ueWarn ? "enabled" : "off";
         }
 
-        SvcUeDetail.Text = snap.UnrealTarget ?? "avatar bridge";
+        if (SvcComfyDot is not null)
+        {
+            SvcComfyDot.Fill = comfyUp ? _okBrush : _mutedBrush;
+            if (SvcComfyStatus is not null) SvcComfyStatus.Text = comfyUp ? "up" : "down";
+        }
 
-        SvcComfyDot.Fill = comfyUp ? _okBrush : _mutedBrush;
-        SvcComfyStatus.Text = comfyUp ? "up" : "down";
-        SvcComfyDetail.Text = comfyUp
-            ? "http://127.0.0.1:8188"
-            : ":8188 not answering";
+        // PROP-4 House lamps
+        SetLamp(LampSoulCore, snap.Alive ? "accent" : "bad");
+        SetLamp(LampOllama, ollamaUp ? "ok" : "bad");
+        SetLamp(LampUnreal, ueOk ? "accent" : "bad");
+        SetLamp(LampComfy, comfyUp ? "accent" : "muted");
+        SetLamp(LampCua, !snap.Reachable ? "bad" : cuaOn ? "accent" : cuaWarn ? "warn" : "muted");
+        SetLamp(LampSandbox, sandboxUp ? "accent" : "muted");
+
+        if (LampSoulCoreHint is not null)
+            LampSoulCoreHint.Text = snap.Alive ? "hold to stop" : "click to start";
+
+        // Closed-drawer pip: red if SoulCore or Unreal down
+        var criticalDown = !snap.Alive || !ueOk;
+        if (HouseDrawerPip is not null)
+            HouseDrawerPip.Fill = criticalDown ? _badBrush : Brushes.Transparent;
     }
 
-    private async void ServicesRefresh_Click(object? sender, RoutedEventArgs e)
+    private static void SetLamp(Button? lamp, string state)
     {
-        if (ServicesStatusText is not null)
-            ServicesStatusText.Text = "Refreshing…";
-        await ProbeHealthAsync().ConfigureAwait(true);
-        if (ServicesStatusText is not null)
-            ServicesStatusText.Text = "Refreshed";
+        if (lamp is null) return;
+        lamp.Classes.Remove("ok");
+        lamp.Classes.Remove("warn");
+        lamp.Classes.Remove("bad");
+        lamp.Classes.Remove("accent");
+        switch (state)
+        {
+            case "ok":
+                lamp.Classes.Add("ok");
+                break;
+            case "warn":
+                lamp.Classes.Add("warn");
+                break;
+            case "bad":
+                lamp.Classes.Add("bad");
+                break;
+            case "accent":
+                lamp.Classes.Add("accent");
+                break;
+            default:
+                break;
+        }
     }
 
-    private async void ServicesAction_Click(object? sender, RoutedEventArgs e)
+    private void HouseDrawerToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        _houseDrawerOpen = !_houseDrawerOpen;
+        if (ServicesPanel is not null)
+            ServicesPanel.IsVisible = _houseDrawerOpen;
+        if (HouseDrawerChevron is not null)
+            HouseDrawerChevron.Text = _houseDrawerOpen ? "▾" : "▴";
+    }
+
+    private async void LampClick_Click(object? sender, RoutedEventArgs e)
     {
         if (_servicesBusy) return;
         if (sender is not Button { Tag: string tag }) return;
 
+        // SoulCore click: start only when down (stop is hold-guarded).
+        if (tag == "soulcore")
+        {
+            if (_lastHealth.Alive) return;
+            await RunServiceActionAsync("host-start").ConfigureAwait(true);
+            return;
+        }
+
+        if (tag == "ollama")
+        {
+            var up = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
+            if (!up)
+                await RunServiceActionAsync("ollama-start").ConfigureAwait(true);
+            return;
+        }
+
+        if (tag == "cua")
+        {
+            if (_lastAllowComputerControl == true)
+                await RunServiceActionAsync("cua-disable").ConfigureAwait(true);
+            else
+                await RunServiceActionAsync("cua-enable").ConfigureAwait(true);
+        }
+    }
+
+    private void LampSoulCore_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_lastHealth.Alive) return;
+        _soulCoreHoldStarted = DateTimeOffset.UtcNow;
+        _soulCoreHoldTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _soulCoreHoldTimer.Tick -= SoulCoreHoldTimer_Tick;
+        _soulCoreHoldTimer.Tick += SoulCoreHoldTimer_Tick;
+        _soulCoreHoldTimer.Start();
+        if (LampSoulCoreHint is not null)
+            LampSoulCoreHint.Text = "holding…";
+    }
+
+    private void LampSoulCore_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        CancelSoulCoreHold(resetHint: true);
+    }
+
+    private async void SoulCoreHoldTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_soulCoreHoldStarted is null) return;
+        var held = DateTimeOffset.UtcNow - _soulCoreHoldStarted.Value;
+        if (held < TimeSpan.FromMilliseconds(1500))
+        {
+            if (LampSoulCoreHint is not null)
+                LampSoulCoreHint.Text = $"hold {Math.Ceiling((1500 - held.TotalMilliseconds) / 100) / 10:0.0}s";
+            return;
+        }
+
+        CancelSoulCoreHold(resetHint: false);
+        if (LampSoulCoreHint is not null)
+            LampSoulCoreHint.Text = "stopping…";
+        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+    }
+
+    private void CancelSoulCoreHold(bool resetHint)
+    {
+        _soulCoreHoldStarted = null;
+        if (_soulCoreHoldTimer is not null)
+            _soulCoreHoldTimer.Stop();
+        if (resetHint && LampSoulCoreHint is not null)
+            LampSoulCoreHint.Text = _lastHealth.Alive ? "hold to stop" : "click to start";
+    }
+
+    private async Task RunServiceActionAsync(string tag)
+    {
+        if (_servicesBusy) return;
         _servicesBusy = true;
         if (ServicesStatusText is not null)
             ServicesStatusText.Text = $"Running {tag}…";
@@ -196,16 +287,8 @@ public partial class MainWindow
                 case "host-restart":
                     result = await _stack.RestartHostAsync().ConfigureAwait(true);
                     break;
-                case "hermes-start":
-                case "hermes-stop":
-                case "hermes-restart":
-                    result = new LocalStackActionResult(false, "ignored (no Hermes)");
-                    break;
                 case "ollama-start":
                     result = await _stack.StartOllamaAsync().ConfigureAwait(true);
-                    break;
-                case "gui-restart":
-                    result = await _stack.RestartChatDesktopAsync().ConfigureAwait(true);
                     break;
                 case "cua-enable":
                 {
@@ -250,6 +333,21 @@ public partial class MainWindow
         {
             _servicesBusy = false;
         }
+    }
+
+    private async void ServicesRefresh_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ServicesStatusText is not null)
+            ServicesStatusText.Text = "Refreshing…";
+        await ProbeHealthAsync().ConfigureAwait(true);
+        if (ServicesStatusText is not null)
+            ServicesStatusText.Text = "Refreshed";
+    }
+
+    private async void ServicesAction_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string tag }) return;
+        await RunServiceActionAsync(tag).ConfigureAwait(true);
     }
 
     private async void RefreshSystem_Click(object? sender, RoutedEventArgs e)
@@ -657,26 +755,39 @@ public partial class MainWindow
 
     private void ApplyLoopWant(SoulCoreFrame frame)
     {
+        // PROP-4 honesty: loop.want must NEVER restamp mood HUD.
+        // Category still informs engagement heuristics; ActivityText comes from Host currentActivity.
         var want = ReadPayloadString(frame, "want");
         var category = ReadPayloadString(frame, "category");
-        var label = ReadPayloadString(frame, "emotionLabel");
-        var valence = ReadPayloadDouble(frame, "valence");
-        var arousal = ReadPayloadDouble(frame, "arousal");
         var parsed = ParseWantWire(want, category);
 
         _lastWantCategory = parsed.Category;
         _lastWantUtc = DateTimeOffset.UtcNow;
-        _lastActivityPhrase = HumanizeActivity(parsed.Category, parsed.Phrase);
-
-        if (ActivityText is not null)
-            ActivityText.Text = _lastActivityPhrase;
-
-        if (!string.IsNullOrWhiteSpace(label))
-            ApplyMoodToHud(label.Trim(), valence ?? _lastValence, arousal ?? _lastArousal);
-        else if (valence is not null || arousal is not null)
-            ApplyMoodToHud(MoodLabelText?.Text ?? "—", valence ?? _lastValence, arousal ?? _lastArousal);
 
         UpdateEngagementState();
+        ApplyHonestActivity(preferHost: true);
+    }
+
+    /// <summary>
+    /// PROP-4: activity = doing-now from Host presence.currentActivity / desktop LastAction / chat.
+    /// Never raw SoulLoop want slogans.
+    /// </summary>
+    private void ApplyHonestActivity(bool preferHost = false)
+    {
+        if (ActivityText is null) return;
+
+        string? phrase = null;
+        if (preferHost || string.IsNullOrWhiteSpace(_lastActivityPhrase))
+            phrase = _lastHealth.CurrentActivity;
+
+        if (string.IsNullOrWhiteSpace(phrase))
+            phrase = _lastActivityPhrase;
+
+        if (string.IsNullOrWhiteSpace(phrase))
+            phrase = "With herself";
+
+        _lastActivityPhrase = phrase;
+        ActivityText.Text = phrase;
     }
 
     private static string HumanizeActivity(string? category, string phrase)
@@ -805,7 +916,10 @@ public partial class MainWindow
             state = "Sleeping";
             brush = _mutedBrush;
             if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
-                ActivityText.Text = sleepCat ? HumanizeActivity(cat, _lastActivityPhrase ?? "") : "Resting";
+            {
+                ActivityText.Text = sleepCat ? "Resting" : "Resting";
+                _lastActivityPhrase = ActivityText.Text;
+            }
         }
         else if (recentChat || activeCat || TypingIndicator is { IsVisible: true })
         {
@@ -817,7 +931,10 @@ public partial class MainWindow
             state = "Idle";
             brush = _warnBrush;
             if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
-                ActivityText.Text = "Waiting";
+            {
+                ActivityText.Text = "With herself";
+                _lastActivityPhrase = ActivityText.Text;
+            }
         }
         else
         {

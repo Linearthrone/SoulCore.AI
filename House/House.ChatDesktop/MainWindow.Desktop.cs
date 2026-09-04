@@ -93,29 +93,33 @@ public partial class MainWindow
             _ => "Desktop"
         };
 
-        DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
-            ? "Waiting for a real capture (eyes / desktop / browser)…"
-            : $"{sourceLabel}: {snap.LastAction}";
+        var when = snap.UpdatedAt?.ToLocalTime().ToString("MMM d · h:mm:ss tt") ?? "—";
+        if (DesktopViewStampText is not null)
+            DesktopViewStampText.Text = snap.HasImage ? when : "No still yet";
 
+        // Soft activity hint from real capture (does not override Host currentActivity when fresh).
         if (!string.IsNullOrWhiteSpace(snap.LastAction)
             && !snap.LastAction.Contains("Waiting", StringComparison.OrdinalIgnoreCase))
         {
-            _lastChatActivityUtc = DateTimeOffset.UtcNow;
-            if (string.IsNullOrWhiteSpace(_lastActivityPhrase)
-                || _lastActivityPhrase.Equals("Idle", StringComparison.OrdinalIgnoreCase))
+            var looking = sourceLabel switch
             {
-                _lastActivityPhrase = sourceLabel switch
-                {
-                    "Her eyes" => "Looking through her eyes",
-                    "Browser tab" => "Looking at a browser tab",
-                    _ => "Using the desktop"
-                };
+                "Her eyes" => "Looking around",
+                "Browser tab" => "Browsing",
+                _ => snap.LastAction
+            };
+            if (string.IsNullOrWhiteSpace(_lastHealth.CurrentActivity))
+            {
+                _lastActivityPhrase = looking;
+                ApplyHonestActivity(preferHost: false);
             }
 
             UpdateEngagementState();
         }
 
-        var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "-";
+        DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
+            ? "Waiting…"
+            : $"{sourceLabel}: {snap.LastAction}";
+
         var soft = snap.SoftCursorRestore ? "agent/background" : "foreground ok";
         DesktopViewMetaText.Text = snap.HasImage
             ? $"{sourceLabel} · {snap.Width}×{snap.Height} · {soft} · {when}"
@@ -124,7 +128,7 @@ public partial class MainWindow
         if (DesktopViewPathText is not null)
         {
             DesktopViewPathText.Text = string.IsNullOrWhiteSpace(snap.DiskPath)
-                ? (string.IsNullOrWhiteSpace(snap.GalleryDir) ? "" : $"Gallery: {snap.GalleryDir}")
+                ? (string.IsNullOrWhiteSpace(snap.GalleryDir) ? "" : snap.GalleryDir)
                 : snap.DiskPath;
         }
 
@@ -267,6 +271,22 @@ public partial class MainWindow
             dir = System.IO.Path.GetDirectoryName(_lastDesktopDiskPath);
 
         if (string.IsNullOrWhiteSpace(dir))
+        {
+            dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SoulCore",
+                "scratch",
+                "presence-gallery");
+        }
+
+        // PROP-4 SEC: Folder opens scratch gallery only — never memory-sight copies.
+        var memorySight = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoulCore",
+            "memory",
+            "sight");
+        if (!string.IsNullOrWhiteSpace(dir)
+            && dir.StartsWith(memorySight, StringComparison.OrdinalIgnoreCase))
         {
             dir = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

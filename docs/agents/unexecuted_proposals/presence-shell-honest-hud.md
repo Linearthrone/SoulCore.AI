@@ -1,9 +1,9 @@
 ---
 type: proposal
-status: sent-to-pm
+status: in-progress
 tt_id: TT-01
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-09-04
 title: "[TINA-main] Presence House drawer + installer/icon/updates"
 need: Honest Presence HUD, House lamp drawer, dumpable sight; Windows installer + icon; update notify or auto-update then notify
 sent_at: 2026-08-19

@@ -17,6 +17,7 @@ using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Email;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
+using SoulCore.Inference.Presence;
 using SoulCore.Memory;
 
 namespace SoulCore.Host.Ws;
@@ -44,6 +45,7 @@ public sealed class ChatWebSocketHandler
     private readonly ChatWsOptions _chatOptions;
     private readonly InferenceOptions _inferenceOptions;
     private readonly IToolsAccessSettings _toolsAccess;
+    private readonly IPresenceActivityHub? _presenceActivity;
     private readonly ILogger<ChatWebSocketHandler> _logger;
 
     /// <summary>Max chars of the combined identity+memory preamble (before emotion).</summary>
@@ -75,7 +77,8 @@ public sealed class ChatWebSocketHandler
         IOptions<HermesOptions> hermesOptions,
         IToolsAccessSettings toolsAccess,
         ILogger<ChatWebSocketHandler> logger,
-        IVoiceSpeakService? voiceSpeak = null)
+        IVoiceSpeakService? voiceSpeak = null,
+        IPresenceActivityHub? presenceActivity = null)
     {
         _inference = inference;
         _ = hermes; // BED-185: unused — NullHermesClient only
@@ -95,6 +98,7 @@ public sealed class ChatWebSocketHandler
         _chatOptions = chatOptions.Value;
         _inferenceOptions = inferenceOptions.Value;
         _toolsAccess = toolsAccess ?? throw new ArgumentNullException(nameof(toolsAccess));
+        _presenceActivity = presenceActivity;
         _logger = logger;
     }
 
@@ -316,6 +320,8 @@ public sealed class ChatWebSocketHandler
             return;
         }
 
+        _presenceActivity?.NoteChat("user");
+
         // BED-158: prefer client payload.sessionId; fall back to WS connection id
         // so multi-turn on the same socket still carries history when the client
         // omits sessionId.
@@ -484,6 +490,8 @@ public sealed class ChatWebSocketHandler
                 new { text = reply, stub = usedStub, provider },
                 id: frame.Id),
             cancellationToken).ConfigureAwait(false);
+
+        _presenceActivity?.NoteChat("assistant");
 
         if (!usedStub)
         {

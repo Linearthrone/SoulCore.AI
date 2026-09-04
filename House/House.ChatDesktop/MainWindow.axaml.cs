@@ -40,6 +40,9 @@ public partial class MainWindow : Window
     private bool _toolsAccessHydrating;
     private bool _toolsDefaultsApplied;
     private bool _servicesBusy;
+    private bool _houseDrawerOpen;
+    private DateTimeOffset? _soulCoreHoldStarted;
+    private DispatcherTimer? _soulCoreHoldTimer;
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _desktopViewTimer;
     private readonly DispatcherTimer _browserViewTimer;
