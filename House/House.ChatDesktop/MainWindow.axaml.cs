@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly SoulCoreHealthClient _health = new();
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
+    private readonly SoulCoreEmailSettingsClient _emailSettings = new();
     private readonly SoulCoreDesktopViewClient _desktopView = new();
     private readonly SoulCoreBrowserViewClient _browserView = new();
     private readonly CompanionMediaClient _media = new();
@@ -39,6 +40,9 @@ public partial class MainWindow : Window
     private bool _pttBusy;
     private bool _toolsAccessHydrating;
     private bool _toolsDefaultsApplied;
+    private bool _emailAccountsHydrating;
+    private string? _pendingQuote;
+    private IReadOnlyList<EmailAccountSnapshot> _emailAccounts = Array.Empty<EmailAccountSnapshot>();
     private bool _servicesBusy;
     private bool _houseDrawerOpen;
     private DateTimeOffset? _soulCoreHoldStarted;
@@ -154,6 +158,7 @@ public partial class MainWindow : Window
             _notifications.Dispose();
             _health.Dispose();
             _toolsSettings.Dispose();
+            _emailSettings.Dispose();
             _desktopView.Dispose();
             _browserView.Dispose();
             _media.Dispose();
@@ -242,6 +247,7 @@ public partial class MainWindow : Window
         SeedNotificationControls();
         UpdateIdentityDetail();
         _ = RefreshToolsAccessAsync();
+        _ = RefreshEmailAccountsAsync();
     }
 
     private void OpenPresenceFromIdentity_Click(object? sender, RoutedEventArgs e) =>
@@ -501,6 +507,8 @@ public partial class MainWindow : Window
 
         ChatInput.Text = string.Empty;
         _streamingAssistant = null;
+        var quoted = _pendingQuote;
+        ClearQuote();
 
         string? cachedPath = null;
         Bitmap? bubbleImage = null;
@@ -511,10 +519,14 @@ public partial class MainWindow : Window
             catch { bubbleImage = null; }
         }
 
+        var displayText = string.IsNullOrWhiteSpace(quoted)
+            ? text
+            : $"↪ {TruncateForChip(quoted, 120)}\n{text}";
+
         var userMsg = new ChatMessage
         {
             Role = "user",
-            Text = text,
+            Text = displayText,
             MediaPath = cachedPath,
             Image = bubbleImage
         };
@@ -526,7 +538,7 @@ public partial class MainWindow : Window
         UpdateEngagementState();
         ScrollTranscriptToEnd();
 
-        var sent = await _ws.SendChatAsync(text);
+        var sent = await _ws.SendChatAsync(text, quoted);
         if (!sent)
         {
             SetTyping(false);
@@ -580,5 +592,64 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(
             () => TranscriptScroll.Offset = new Vector(TranscriptScroll.Offset.X, TranscriptScroll.Extent.Height),
             DispatcherPriority.Background);
+    }
+
+    private void SetPendingQuote(string? excerpt)
+    {
+        var trimmed = (excerpt ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            ClearQuote();
+            return;
+        }
+
+        const int max = 2000;
+        _pendingQuote = trimmed.Length <= max ? trimmed : trimmed[..max] + "…";
+        if (QuoteChip is not null) QuoteChip.IsVisible = true;
+        if (QuoteChipText is not null) QuoteChipText.Text = _pendingQuote;
+    }
+
+    private void ClearQuote()
+    {
+        _pendingQuote = null;
+        if (QuoteChip is not null) QuoteChip.IsVisible = false;
+        if (QuoteChipText is not null) QuoteChipText.Text = string.Empty;
+    }
+
+    private void ClearQuote_Click(object? sender, RoutedEventArgs e) => ClearQuote();
+
+    private void MessageText_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        // Selection is consumed via context menu / Quote button — no auto-quote on release.
+    }
+
+    private void QuoteSelection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Parent: ContextMenu { PlacementTarget: SelectableTextBlock tb } })
+            return;
+        var selected = tb.SelectedText;
+        if (string.IsNullOrWhiteSpace(selected))
+            selected = tb.Text;
+        SetPendingQuote(selected);
+    }
+
+    private void QuoteMessage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Parent: ContextMenu { PlacementTarget: SelectableTextBlock tb } })
+            return;
+        SetPendingQuote(tb.Text);
+    }
+
+    private void QuoteMessageButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ChatMessage msg })
+            return;
+        SetPendingQuote(msg.Text);
+    }
+
+    private static string TruncateForChip(string text, int max)
+    {
+        var oneLine = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return oneLine.Length <= max ? oneLine : oneLine[..max] + "…";
     }
 }

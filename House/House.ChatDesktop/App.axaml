@@ -32,6 +32,28 @@
     <SolidColorBrush x:Key="GaugeTrackBrush" Color="#1A1C20"/>
     <SolidColorBrush x:Key="GaugeFillBrush" Color="#3D8BFF"/>
     <SolidColorBrush x:Key="ShellGlowBrush" Color="#334BA3FF"/>
+    <!-- Mockup metal: dark → bright refraction → dark (bevel / light strike) -->
+    <LinearGradientBrush x:Key="MetalBevelBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#0A0B0D" Offset="0"/>
+      <GradientStop Color="#2A2E36" Offset="0.28"/>
+      <GradientStop Color="#A8AEB8" Offset="0.46"/>
+      <GradientStop Color="#F2F4F7" Offset="0.50"/>
+      <GradientStop Color="#7A8290" Offset="0.54"/>
+      <GradientStop Color="#1C1F26" Offset="0.72"/>
+      <GradientStop Color="#0A0B0D" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MetalBevelHorizBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Color="#0C0D10" Offset="0"/>
+      <GradientStop Color="#6E7684" Offset="0.42"/>
+      <GradientStop Color="#E8EAEE" Offset="0.50"/>
+      <GradientStop Color="#4A5160" Offset="0.58"/>
+      <GradientStop Color="#101114" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ShellFaceBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Color="#1A1C20" Offset="0"/>
+      <GradientStop Color="#121316" Offset="0.35"/>
+      <GradientStop Color="#0E0F12" Offset="1"/>
+    </LinearGradientBrush>
     <FontFamily x:Key="DisplayFont">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
     <ImageBrush x:Key="BrushedTextureBrush"
                 Source="avares://House.ChatDesktop/Assets/brushed-charcoal.png"
@@ -49,18 +71,34 @@
       <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}"/>
     </Style>
 
+    <Style Selector="Border.shell-bevel">
+      <Setter Property="Background" Value="{DynamicResource MetalBevelBrush}"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="3"/>
+      <Setter Property="BoxShadow" Value="0 0 0 1 #334BA3FF, 0 22 56 0 #DD000000, inset 0 1 0 0 #66FFFFFF"/>
+    </Style>
+
     <Style Selector="Border.shell">
-      <Setter Property="Background" Value="{DynamicResource ShellBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource ShellFaceBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource MetalBevelHorizBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="CornerRadius" Value="13"/>
       <Setter Property="ClipToBounds" Value="True"/>
-      <Setter Property="BoxShadow" Value="0 0 0 1 #224BA3FF, 0 18 48 0 #CC000000"/>
+      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #55FFFFFF, inset 0 -1 0 0 #AA000000, inset 1 0 0 0 #22FFFFFF, inset -1 0 0 0 #44000000"/>
     </Style>
 
     <Style Selector="Border.shell-inner">
       <Setter Property="Background" Value="{DynamicResource BrushedTextureBrush}"/>
-      <Setter Property="Opacity" Value="0.35"/>
+      <Setter Property="Opacity" Value="0.42"/>
+      <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <Style Selector="Border.shell-rim">
+      <Setter Property="BorderBrush" Value="#88C8D0DA"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="IsHitTestVisible" Value="False"/>
+      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #99FFFFFF, inset 0 -1 0 0 #66000000"/>
     </Style>
 
     <Style Selector="Button.frame-nav">
@@ -310,13 +348,13 @@
 
     <Style Selector="Border.metal">
       <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource MetalBevelBrush}"/>
+      <Setter Property="BorderThickness" Value="1.5"/>
       <Setter Property="CornerRadius" Value="10"/>
     </Style>
 
     <Style Selector="Border.glass">
-      <Setter Property="BoxShadow" Value="0 10 28 0 #66000000, inset 0 1 0 0 #28FFFFFF, inset 0 -1 0 0 #22000000"/>
+      <Setter Property="BoxShadow" Value="0 10 28 0 #66000000, inset 0 1 0 0 #44FFFFFF, inset 0 -1 0 0 #44000000, inset 1 0 0 0 #22FFFFFF"/>
     </Style>
 
     <Style Selector="Border.inset">

@@ -63,10 +63,14 @@ data class SoulCoreFrame(
                 payload = payload
             )
 
-        fun chatSend(text: String, sessionId: String?): SoulCoreFrame {
+        fun chatSend(text: String, sessionId: String?, quotedText: String? = null): SoulCoreFrame {
             val payload = JSONObject().put("text", text)
             if (!sessionId.isNullOrBlank()) {
                 payload.put("sessionId", sessionId)
+            }
+            val quote = quotedText?.trim().orEmpty()
+            if (quote.isNotEmpty()) {
+                payload.put("quotedText", quote.take(2000))
             }
             return create(CHAT_SEND, payload)
         }

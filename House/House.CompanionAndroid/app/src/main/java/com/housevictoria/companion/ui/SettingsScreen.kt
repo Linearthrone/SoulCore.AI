@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,6 +45,8 @@ import com.housevictoria.companion.data.CompanionPrefs
 import com.housevictoria.companion.data.NotificationPrefs
 import com.housevictoria.companion.net.CompanionAuthHeaders
 import com.housevictoria.companion.net.CompanionConnection
+import com.housevictoria.companion.net.EmailAccountDto
+import com.housevictoria.companion.net.EmailSettingsClient
 import com.housevictoria.companion.net.HealthClient
 import com.housevictoria.companion.net.WsConnectionState
 import com.housevictoria.companion.notify.ConnectedNotification
@@ -52,6 +55,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -306,6 +313,28 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text("Use system default sound")
             }
             Spacer(Modifier.height(20.dp))
+            Text(
+                text = "Email accounts",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "IMAP/SMTP credentials for victoria / personal / business. " +
+                    "Passwords are write-only — leave blank to keep the current secret. " +
+                    "Uses HTTP base + companion token against Host /settings/email.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            EmailAccountsSection(
+                httpBase = httpBase,
+                token = token,
+                onStatus = { msg, ok ->
+                    status = msg
+                    statusOk = ok
+                }
+            )
+            Spacer(Modifier.height(20.dp))
             OutlinedButton(
                 onClick = {
                     val draft = CompanionConfig(
@@ -410,5 +439,250 @@ fun SettingsScreen(onBack: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EmailAccountsSection(
+    httpBase: String,
+    token: String,
+    onStatus: (String, Boolean?) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var accounts by remember { mutableStateOf(listOf<EmailAccountDto>()) }
+    var selectedId by remember { mutableStateOf("victoria") }
+    var expanded by remember { mutableStateOf(false) }
+    var displayName by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var imapHost by remember { mutableStateOf("imap.gmail.com") }
+    var imapPort by remember { mutableStateOf("993") }
+    var imapSsl by remember { mutableStateOf(true) }
+    var smtpHost by remember { mutableStateOf("smtp.gmail.com") }
+    var smtpPort by remember { mutableStateOf("587") }
+    var smtpSsl by remember { mutableStateOf(false) }
+    var enabled by remember { mutableStateOf(true) }
+    var passwordHint by remember { mutableStateOf("Password status: —") }
+
+    fun applyAccount(account: EmailAccountDto) {
+        selectedId = account.id
+        displayName = account.displayName
+        address = account.address
+        username = account.username
+        imapHost = account.imapHost.ifBlank { "imap.gmail.com" }
+        imapPort = (if (account.imapPort > 0) account.imapPort else 993).toString()
+        imapSsl = account.imapUseSsl
+        smtpHost = account.smtpHost.ifBlank { "smtp.gmail.com" }
+        smtpPort = (if (account.smtpPort > 0) account.smtpPort else 587).toString()
+        smtpSsl = account.smtpUseSsl
+        enabled = account.enabled
+        password = ""
+        passwordHint = when {
+            account.hasPassword && account.isConfigured -> "Password status: set · configured"
+            account.hasPassword -> "Password status: set · incomplete fields"
+            else -> "Password status: not set"
+        }
+    }
+
+    fun loadAccounts(preferId: String? = null) {
+        val base = httpBase.trim().ifBlank { return }
+        onStatus("Loading email accounts…", null)
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                EmailSettingsClient.list(base, token.trim())
+            }
+            if (!result.ok) {
+                onStatus(result.detail ?: "Email load failed", false)
+                return@launch
+            }
+            val list = result.accounts.ifEmpty {
+                listOf(
+                    EmailAccountDto("victoria"),
+                    EmailAccountDto("personal"),
+                    EmailAccountDto("business")
+                )
+            }
+            accounts = list
+            val pick = preferId?.let { id -> list.firstOrNull { it.id.equals(id, true) } }
+                ?: list.firstOrNull { it.id.equals(selectedId, true) }
+                ?: list.first()
+            applyAccount(pick)
+            onStatus(result.detail ?: "Loaded ${list.size} email slot(s)", true)
+        }
+    }
+
+    LaunchedEffect(httpBase, token) {
+        if (httpBase.isNotBlank()) loadAccounts()
+    }
+
+    val slotIds = accounts.map { it.id }.ifEmpty { listOf("victoria", "personal", "business") }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedId,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Account") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            slotIds.forEach { id ->
+                DropdownMenuItem(
+                    text = { Text(id) },
+                    onClick = {
+                        expanded = false
+                        accounts.firstOrNull { it.id.equals(id, true) }?.let { applyAccount(it) }
+                            ?: run {
+                                selectedId = id
+                                passwordHint = "Password status: —"
+                            }
+                    }
+                )
+            }
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Enabled", modifier = Modifier.weight(1f))
+        Switch(checked = enabled, onCheckedChange = { enabled = it })
+    }
+    OutlinedTextField(
+        value = displayName,
+        onValueChange = { displayName = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Display name") },
+        singleLine = true
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = address,
+        onValueChange = { address = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Address") },
+        singleLine = true
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = username,
+        onValueChange = { username = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Username (blank = address)") },
+        singleLine = true
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = password,
+        onValueChange = { password = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Password / app password") },
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        placeholder = { Text("Leave blank to keep") }
+    )
+    Text(
+        text = passwordHint,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = imapHost,
+        onValueChange = { imapHost = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("IMAP host") },
+        singleLine = true
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = imapPort,
+        onValueChange = { imapPort = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("IMAP port") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("IMAP SSL", modifier = Modifier.weight(1f))
+        Switch(checked = imapSsl, onCheckedChange = { imapSsl = it })
+    }
+    OutlinedTextField(
+        value = smtpHost,
+        onValueChange = { smtpHost = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("SMTP host") },
+        singleLine = true
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = smtpPort,
+        onValueChange = { smtpPort = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("SMTP port") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("SMTP implicit TLS", modifier = Modifier.weight(1f))
+        Switch(checked = smtpSsl, onCheckedChange = { smtpSsl = it })
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedButton(
+            onClick = { loadAccounts(selectedId) },
+            modifier = Modifier.weight(1f)
+        ) { Text("Refresh") }
+        Button(
+            onClick = {
+                val base = httpBase.trim()
+                if (base.isBlank()) {
+                    onStatus("HTTP base required for email settings", false)
+                    return@Button
+                }
+                val draft = EmailAccountDto(
+                    id = selectedId,
+                    role = selectedId,
+                    displayName = displayName.trim(),
+                    address = address.trim(),
+                    username = username.trim(),
+                    imapHost = imapHost.trim().ifBlank { "imap.gmail.com" },
+                    imapPort = imapPort.toIntOrNull() ?: 993,
+                    imapUseSsl = imapSsl,
+                    smtpHost = smtpHost.trim().ifBlank { "smtp.gmail.com" },
+                    smtpPort = smtpPort.toIntOrNull() ?: 587,
+                    smtpUseSsl = smtpSsl,
+                    enabled = enabled
+                )
+                onStatus("Saving $selectedId…", null)
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        EmailSettingsClient.upsert(base, token.trim(), draft, password)
+                    }
+                    if (!result.ok) {
+                        onStatus(result.detail ?: "Save failed", false)
+                        return@launch
+                    }
+                    accounts = result.accounts.ifEmpty { accounts }
+                    accounts.firstOrNull { it.id.equals(selectedId, true) }?.let { applyAccount(it) }
+                    password = ""
+                    onStatus("Saved $selectedId", true)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        ) { Text("Save") }
     }
 }

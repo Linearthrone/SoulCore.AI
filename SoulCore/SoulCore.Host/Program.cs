@@ -520,6 +520,8 @@ builder.Services.AddSingleton<ITool, RunBacktestTool>();
 
 // Email tools — IMAP/SMTP multi-account (victoria / personal / business).
 // AllowEmailRead / AllowEmailSend / AllowEmailDelete + confirmed=true on send/delete.
+builder.Services.AddSingleton<SoulCore.Inference.Tools.Email.IEmailAccountStore,
+    SoulCore.Inference.Tools.Email.EmailAccountStore>();
 builder.Services.AddSingleton<IEmailBridge, MailKitEmailBridge>();
 builder.Services.AddSingleton<ITool, EmailAccountsTool>();
 builder.Services.AddSingleton<ITool, EmailInboxTool>();
@@ -867,6 +869,114 @@ app.MapPost("/settings/tools", async (HttpRequest request, IToolsAccessSettings 
 
     return Results.Json(ToolsSettingsDto(access));
 });
+
+// Email account credentials (Presence Settings + companion). Passwords never echoed.
+// Auth mirrors companion API when SOULCORE_COMPANION_API_TOKEN is set.
+app.MapGet("/settings/email", (SoulCore.Inference.Tools.Email.IEmailAccountStore store) =>
+{
+    var accounts = store.ListAccounts().Select(store.ToPublicDto).ToArray();
+    return Results.Json(new
+    {
+        accounts,
+        note = "Passwords are write-only. Leave password blank to keep the current secret. Runtime overrides live under %LOCALAPPDATA%/SoulCore/email-accounts.runtime.json."
+    });
+}).AddEndpointFilter(CompanionEmailAuthFilter);
+
+app.MapPost("/settings/email", async (
+    HttpRequest request,
+    SoulCore.Inference.Tools.Email.IEmailAccountStore store) =>
+{
+    using var doc = await JsonDocument.ParseAsync(request.Body).ConfigureAwait(false);
+    var root = doc.RootElement;
+    if (root.ValueKind != JsonValueKind.Object)
+        return Results.BadRequest(new { error = "expected JSON object" });
+
+    static string? ReadString(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p) || p.ValueKind != JsonValueKind.String)
+            return null;
+        return p.GetString();
+    }
+
+    static int? ReadInt(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p))
+            return null;
+        if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var n))
+            return n;
+        if (p.ValueKind == JsonValueKind.String && int.TryParse(p.GetString(), out var s))
+            return s;
+        return null;
+    }
+
+    static bool? ReadBool(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p))
+            return null;
+        return p.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null
+        };
+    }
+
+    var id = ReadString(root, "id");
+    if (string.IsNullOrWhiteSpace(id))
+        return Results.BadRequest(new { error = "id required (victoria | personal | business)" });
+
+    try
+    {
+        var updated = store.Upsert(new SoulCore.Inference.Tools.Email.EmailAccountWriteRequest
+        {
+            Id = id,
+            Role = ReadString(root, "role"),
+            DisplayName = ReadString(root, "displayName"),
+            Address = ReadString(root, "address"),
+            ImapHost = ReadString(root, "imapHost"),
+            ImapPort = ReadInt(root, "imapPort"),
+            ImapUseSsl = ReadBool(root, "imapUseSsl"),
+            SmtpHost = ReadString(root, "smtpHost"),
+            SmtpPort = ReadInt(root, "smtpPort"),
+            SmtpUseSsl = ReadBool(root, "smtpUseSsl"),
+            Username = ReadString(root, "username"),
+            Password = ReadString(root, "password"),
+            Enabled = ReadBool(root, "enabled")
+        });
+
+        return Results.Json(new
+        {
+            ok = true,
+            account = store.ToPublicDto(updated)
+        });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).AddEndpointFilter(CompanionEmailAuthFilter);
+
+static async ValueTask<object?> CompanionEmailAuthFilter(
+    EndpointFilterInvocationContext context,
+    EndpointFilterDelegate next)
+{
+    var http = context.HttpContext;
+    var config = http.RequestServices.GetService<IConfiguration>();
+    var token = CompanionWsAuth.ResolveConfiguredToken(config);
+    var outcome = CompanionWsAuth.Evaluate(http.Request, token);
+    if (outcome is CompanionWsAuth.AuthOutcome.Missing or CompanionWsAuth.AuthOutcome.Invalid)
+    {
+        var logger = http.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("SoulCore.Host.Settings.Email.Auth");
+        logger.LogWarning(
+            "Email settings rejected ({Safe})",
+            CompanionWsAuth.FormatLogSafe(outcome, CompanionWsAuth.DescribeHeaderSource(http.Request)));
+        return Results.Unauthorized();
+    }
+
+    return await next(context).ConfigureAwait(false);
+}
 
 // TASK-177: Identity tab payload — Companion display name + charter anchor details
 // (read-only from CharterService; no fabricated biography).

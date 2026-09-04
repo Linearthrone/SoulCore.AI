@@ -24,16 +24,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +74,9 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val streamingAssistantId = remember { AtomicReference<String?>(null) }
     var draft by remember { mutableStateOf("") }
+    var pendingQuote by remember { mutableStateOf<String?>(null) }
+    var quoteEditFor by remember { mutableStateOf<ChatMessage?>(null) }
+    var quoteEditText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
@@ -255,7 +263,44 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(messages, key = { it.id }) { msg ->
-                    MessageBubble(msg)
+                    MessageBubble(
+                        message = msg,
+                        onQuote = { full ->
+                            quoteEditFor = msg
+                            quoteEditText = full
+                        }
+                    )
+                }
+            }
+
+            pendingQuote?.let { quote ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Replying to excerpt",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            quote.replace('\n', ' ').take(140),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2
+                        )
+                    }
+                    IconButton(onClick = { pendingQuote = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear quote")
+                    }
                 }
             }
 
@@ -276,10 +321,17 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                     onClick = {
                         val text = draft.trim()
                         if (text.isEmpty()) return@IconButton
+                        val quoted = pendingQuote
                         streamingAssistantId.set(null)
-                        messages.add(ChatMessage(role = MessageRole.USER, content = text))
+                        val display = if (quoted.isNullOrBlank()) {
+                            text
+                        } else {
+                            "↪ ${quoted.replace('\n', ' ').take(120)}\n$text"
+                        }
+                        messages.add(ChatMessage(role = MessageRole.USER, content = display))
                         draft = ""
-                        val result = CompanionConnection.client.sendChat(text)
+                        pendingQuote = null
+                        val result = CompanionConnection.client.sendChat(text, quotedText = quoted)
                         result.exceptionOrNull()?.message?.let { err ->
                             messages.add(ChatMessage(role = MessageRole.SYSTEM, content = err))
                         }
@@ -294,10 +346,54 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
             }
         }
     }
+
+    quoteEditFor?.let {
+        AlertDialog(
+            onDismissRequest = { quoteEditFor = null },
+            title = { Text("Quote excerpt") },
+            text = {
+                Column {
+                    Text(
+                        "Trim to the part you want Victoria to see as context.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SpacerHeight()
+                    OutlinedTextField(
+                        value = quoteEditText,
+                        onValueChange = { quoteEditText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        maxLines = 10
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val excerpt = quoteEditText.trim()
+                        if (excerpt.isNotEmpty()) pendingQuote = excerpt.take(2000)
+                        quoteEditFor = null
+                    }
+                ) { Text("Use quote") }
+            },
+            dismissButton = {
+                TextButton(onClick = { quoteEditFor = null }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage) {
+private fun SpacerHeight() {
+    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+}
+
+@Composable
+private fun MessageBubble(
+    message: ChatMessage,
+    onQuote: (String) -> Unit
+) {
     val isUser = message.role == MessageRole.USER
     val bg = when (message.role) {
         MessageRole.USER -> MaterialTheme.colorScheme.primary
@@ -323,7 +419,9 @@ private fun MessageBubble(message: ChatMessage) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (message.content.isNotBlank()) {
-                Text(text = message.content, color = fg, style = MaterialTheme.typography.bodyMedium)
+                SelectionContainer {
+                    Text(text = message.content, color = fg, style = MaterialTheme.typography.bodyMedium)
+                }
             }
             message.localImagePath?.let { path ->
                 val bmp = remember(path) { BitmapFactory.decodeFile(path) }
@@ -344,6 +442,16 @@ private fun MessageBubble(message: ChatMessage) {
                     color = fg.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.labelSmall
                 )
+            }
+            if (message.content.isNotBlank() &&
+                (message.role == MessageRole.ASSISTANT || message.role == MessageRole.USER)
+            ) {
+                TextButton(
+                    onClick = { onQuote(message.content) },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("Quote", color = fg.copy(alpha = 0.85f))
+                }
             }
         }
     }

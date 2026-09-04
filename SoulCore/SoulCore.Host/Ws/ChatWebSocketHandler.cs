@@ -320,6 +320,9 @@ public sealed class ChatWebSocketHandler
             return;
         }
 
+        var quotedText = ExtractQuotedText(frame.Payload);
+        var modelUserText = QuotedChatText.BuildUserText(text, quotedText);
+
         _presenceActivity?.NoteChat("user");
 
         // BED-158: prefer client payload.sessionId; fall back to WS connection id
@@ -332,7 +335,7 @@ public sealed class ChatWebSocketHandler
         IReadOnlyList<string> recentMemories = Array.Empty<string>();
         try
         {
-            recentMemories = await RecallChatMemoriesAsync(text, cancellationToken).ConfigureAwait(false);
+            recentMemories = await RecallChatMemoriesAsync(modelUserText, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug(
                 "Recalled {Count} episodic memories for chat.send",
                 recentMemories.Count);
@@ -425,7 +428,7 @@ public sealed class ChatWebSocketHandler
             if (useToolLoop)
             {
                 var loopResult = await CompleteChatWithToolsAsync(
-                        text,
+                        modelUserText,
                         contextPreamble,
                         historySessionId,
                         dispatchedToolNames,
@@ -437,11 +440,11 @@ public sealed class ChatWebSocketHandler
             }
             else
             {
-                var result = await CompleteChatAsync(text, contextPreamble, cancellationToken).ConfigureAwait(false);
+                var result = await CompleteChatAsync(modelUserText, contextPreamble, cancellationToken).ConfigureAwait(false);
                 reply = result.Text;
                 provider = result.Provider;
                 // Still record plain user+assistant so non-tool multi-turn has context.
-                AppendPlainTurn(historySessionId, text, reply);
+                AppendPlainTurn(historySessionId, modelUserText, reply);
             }
         }
         catch (Exception ex)
@@ -468,7 +471,7 @@ public sealed class ChatWebSocketHandler
             usedStub = true;
             provider = "stub";
             reply = BuildStubReply(text);
-            AppendPlainTurn(historySessionId, text, reply);
+            AppendPlainTurn(historySessionId, modelUserText, reply);
         }
 
         // Chunk into chat.delta frames (cumulative text) then finalize with chat.done.
@@ -497,7 +500,7 @@ public sealed class ChatWebSocketHandler
         {
             try
             {
-                var episode = await AuthorChatEpisodicAsync(text, reply, provider, cancellationToken)
+                var episode = await AuthorChatEpisodicAsync(modelUserText, reply, provider, cancellationToken)
                     .ConfigureAwait(false);
                 var episodicId = await _memory
                     .WriteEpisodicAsync(episode, "chat", cancellationToken)
@@ -1097,6 +1100,19 @@ public sealed class ChatWebSocketHandler
         if (payload.Value.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
             return textProp.GetString();
         return null;
+    }
+
+    /// <summary>
+    /// Optional excerpt Kurt highlighted from a prior turn (<c>payload.quotedText</c>).
+    /// Caps length so a full essay paste cannot blow the prompt.
+    /// </summary>
+    private static string? ExtractQuotedText(JsonElement? payload)
+    {
+        if (payload is null || payload.Value.ValueKind != JsonValueKind.Object)
+            return null;
+        if (!payload.Value.TryGetProperty("quotedText", out var q) || q.ValueKind != JsonValueKind.String)
+            return null;
+        return QuotedChatText.NormalizeQuoted(q.GetString());
     }
 
     /// <summary>
