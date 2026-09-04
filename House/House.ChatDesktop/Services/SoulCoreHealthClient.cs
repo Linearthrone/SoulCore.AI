@@ -45,6 +45,12 @@ public sealed class SoulCoreHealthSnapshot
     /// <summary>Resolved cua-driver path when available.</summary>
     public string? CuaDriverPath { get; init; }
 
+    /// <summary>PROP-4: Host currentActivity (doing-now), never loop.want slogans.</summary>
+    public string? CurrentActivity { get; init; }
+
+    /// <summary>Source of currentActivity: chat | tool | desktop | life.</summary>
+    public string? ActivitySource { get; init; }
+
     public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>Alive = host HTTP health answered.</summary>
@@ -124,6 +130,8 @@ public sealed class SoulCoreHealthClient : IDisposable
                 DesktopBackend = dto?.Tools?.DesktopBackend,
                 CuaDriverAvailable = dto?.Tools?.CuaDriverAvailable,
                 CuaDriverPath = dto?.Tools?.CuaDriverPath,
+                CurrentActivity = dto?.Presence?.CurrentActivity,
+                ActivitySource = dto?.Presence?.ActivitySource,
                 Detail = null
             };
         }
@@ -171,6 +179,18 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("tools")]
         public ToolsDto? Tools { get; set; }
+
+        [JsonPropertyName("presence")]
+        public PresenceDto? Presence { get; set; }
+    }
+
+    private sealed class PresenceDto
+    {
+        [JsonPropertyName("currentActivity")]
+        public string? CurrentActivity { get; set; }
+
+        [JsonPropertyName("activitySource")]
+        public string? ActivitySource { get; set; }
     }
 
     private sealed class ToolsDto

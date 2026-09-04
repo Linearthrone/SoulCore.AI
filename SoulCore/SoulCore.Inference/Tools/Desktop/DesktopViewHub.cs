@@ -63,8 +63,18 @@ public sealed class DesktopViewHub : IDesktopViewHub
     public const string SourceEyes = "eyes";
     public const string SourceBrowser = "browser";
 
-    /// <summary>Max files kept under the temp gallery (oldest deleted).</summary>
+    /// <summary>Temp gallery root where every capture is written (BED-186).</summary>
     public const int MaxGalleryItems = 48;
+
+    /// <summary>
+    /// PROP-4: memory-bound stills live here (copies). Presence Folder button must never open this.
+    /// </summary>
+    public static string DefaultMemorySightDirectory() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoulCore",
+            "memory",
+            "sight");
 
     private readonly object _gate = new();
     private byte[]? _imageBytes;

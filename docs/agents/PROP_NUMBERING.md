@@ -38,6 +38,6 @@ owner: PM-01 / TT-01
 | PROP-1-digits-sms-channel | Tablet SMS/MMS Avenue B (MDN = SM-X218U; DIGITS dropped). Temp: Tasker/Termux; goal: self-sufficient House gateway. | **1.1–1.3 Pass** → 1.4+ open | 1.1–1.6 |
 | PROP-2-ue-reliable-embodiment | UE Kayleigh 1P / Victoria walk / one eye | accepted-pm-ticketed | 2.1–2.4 |
 | PROP-3-link-messenger-product | Link Messenger-class rewrite | parked until SMS QA Pass | — |
-| PROP-4-presence-shell-honest-hud | Presence House drawer + installer | parked / intake | — |
+| PROP-4-presence-shell-honest-hud | Presence House drawer + installer | **in progress** — shell + honesty + icon shipped; Velopack update toast open | 4.1 FED/BED (this wave); 4.2 OPS installer/update |
 
 Next free `N`: **5**.

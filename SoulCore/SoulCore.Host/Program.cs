@@ -344,6 +344,9 @@ builder.Services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<
 builder.Services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
 builder.Services.AddSingleton<IDesktopViewHub>(sp =>
     new DesktopViewHub(() => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
+// PROP-4: honest Presence activity (doing-now), not SoulLoop want slogans.
+builder.Services.AddSingleton<SoulCore.Inference.Presence.IPresenceActivityHub>(sp =>
+    new SoulCore.Inference.Presence.PresenceActivityHub(sp.GetRequiredService<IDesktopViewHub>()));
 builder.Services.AddSingleton<GuestVmBrowserBridgeHolder>();
 builder.Services.AddSingleton<IVictoriaBrowserViewHub, VictoriaBrowserViewHub>();
 builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
@@ -661,6 +664,7 @@ app.MapGet("/health", async (
     DriftWatcher driftWatcher,
     SpendMeter spendMeter,
     CharterService charter,
+    SoulCore.Inference.Presence.IPresenceActivityHub presenceActivity,
     CancellationToken cancellationToken) =>
 {
     var memoryOk = memory.IsDatabaseOpen;
@@ -753,6 +757,8 @@ app.MapGet("/health", async (
             target = unreal.TargetUrl,
             connected = unreal.IsConnected
         },
+        // PROP-4 BED: Presence HUD activity — short doing-now line (never loop.want slogans).
+        presence = PresenceDto(presenceActivity.GetSnapshot()),
         tools = ToolsSettingsDto(access),
         charter = new
         {
@@ -786,6 +792,13 @@ app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
     var acked = driftWatcher.AcknowledgeAll();
     return Results.Json(new { acked });
 });
+
+static object PresenceDto(SoulCore.Inference.Presence.PresenceActivitySnapshot snap) => new
+{
+    currentActivity = snap.Phrase,
+    activitySource = snap.Source,
+    activityUpdatedAt = snap.UpdatedAt
+};
 
 static object ToolsSettingsDto(IToolsAccessSettings access)
 {

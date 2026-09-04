@@ -225,11 +225,92 @@
       <Setter Property="CornerRadius" Value="8"/>
     </Style>
 
+    <!-- PROP-4: depth without decorative screws -->
+    <Style Selector="Border.glass">
+      <Setter Property="BoxShadow" Value="0 8 24 0 #40000000, inset 0 1 0 0 #33FFFFFF"/>
+    </Style>
+
+    <Style Selector="Border.inset">
+      <Setter Property="BoxShadow" Value="inset 0 2 6 0 #66000000"/>
+    </Style>
+
+    <Style Selector="Border.mood-gem-well">
+      <Setter Property="Background" Value="#1A1628"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BoxShadow" Value="inset 0 2 4 0 #88000000"/>
+    </Style>
+
     <Style Selector="Border.carbon">
       <Setter Property="Background" Value="{DynamicResource CarbonBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <Style Selector="Button.house-tab">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.house-tab:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="Background" Value="#22FFFFFF"/>
+    </Style>
+
+    <Style Selector="Border.house-drawer-body">
+      <Setter Property="Background" Value="#221E38"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    </Style>
+
+    <Style Selector="Border.lamp-well">
+      <Setter Property="Width" Value="44"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="CornerRadius" Value="22"/>
+      <Setter Property="Background" Value="#14101F"/>
+      <Setter Property="BorderBrush" Value="#2E2A40"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="6"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="BoxShadow" Value="inset 0 3 8 0 #AA000000"/>
+    </Style>
+
+    <Style Selector="Button.lamp">
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Background" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  CornerRadius="14"
+                  Width="28" Height="28"
+                  BoxShadow="0 0 10 1 #66000000">
+            <ContentPresenter/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.lamp.ok">
+      <Setter Property="Background" Value="{DynamicResource OkBrush}"/>
+    </Style>
+    <Style Selector="Button.lamp.warn">
+      <Setter Property="Background" Value="{DynamicResource WarnBrush}"/>
+    </Style>
+    <Style Selector="Button.lamp.bad">
+      <Setter Property="Background" Value="{DynamicResource BadBrush}"/>
+    </Style>
+    <Style Selector="Button.lamp.accent">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
     </Style>
 
     <Style Selector="Ellipse.screw">
@@ -238,6 +319,7 @@
       <Setter Property="Fill" Value="{DynamicResource ScrewBrush}"/>
       <Setter Property="Stroke" Value="{DynamicResource ScrewSlotBrush}"/>
       <Setter Property="StrokeThickness" Value="1.5"/>
+      <Setter Property="IsVisible" Value="False"/>
     </Style>
 
     <Style Selector="CheckBox">

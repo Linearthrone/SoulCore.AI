@@ -7,9 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>House.ChatDesktop</RootNamespace>
     <AssemblyName>House.ChatDesktop</AssemblyName>
-    <ApplicationIcon />
+    <ApplicationIcon>Assets\house-victoria.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\SoulCore\SoulCore.Protocol\SoulCore.Protocol.csproj" />

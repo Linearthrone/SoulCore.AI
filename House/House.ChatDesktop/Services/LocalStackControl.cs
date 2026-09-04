@@ -35,6 +35,58 @@ public sealed class LocalStackControl : IDisposable
     public Task<bool> ProbeComfyAsync(CancellationToken ct = default) =>
         ProbeUrlAsync(ComfyUiUrl, ct);
 
+    /// <summary>
+    /// PROP-4: victoria-sandbox running? Loopback/local VBoxManage only.
+    /// </summary>
+    public async Task<bool> ProbeSandboxAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var vbox = FindVBoxManage();
+            if (vbox is null)
+                return false;
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = vbox,
+                ArgumentList = { "list", "runningvms" },
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var proc = Process.Start(psi);
+            if (proc is null) return false;
+            var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+            return stdout.Contains("victoria-sandbox", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? FindVBoxManage()
+    {
+        var candidates = new[]
+        {
+            @"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe",
+            @"C:\Program Files\Oracle\VirtualBox\VBoxManage",
+            "/usr/bin/VBoxManage",
+            "VBoxManage"
+        };
+        foreach (var c in candidates)
+        {
+            if (c is "VBoxManage")
+                return c;
+            if (File.Exists(c))
+                return c;
+        }
+
+        return null;
+    }
+
     public Task<LocalStackActionResult> StartHostAsync(CancellationToken ct = default) =>
         RunScriptAsync("SoulCore\\scripts\\start-soulcore.ps1", Array.Empty<string>(), ct);
 
