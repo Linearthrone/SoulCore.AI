@@ -197,29 +197,66 @@ public partial class MainWindow : Window
 
     private void Nav_Changed(object? sender, RoutedEventArgs e)
     {
-        if (PresenceView is null || SettingsView is null || NavPresence is null) return;
+        // Legacy radio path — Presence is default; Settings toggled via NavSettings_Click.
+        if (PresenceView is null || SettingsView is null) return;
+        if (NavPresence is not null && NavPresence.IsChecked == true)
+            ShowPresenceView();
+    }
 
-        var presence = NavPresence.IsChecked == true;
-        PresenceView.IsVisible = presence;
-        SettingsView.IsVisible = !presence;
-        Title = presence ? "House Victoria — Presence" : "House Victoria — Settings";
+    private void NavSettings_Click(object? sender, RoutedEventArgs e)
+    {
+        if (SettingsView is { IsVisible: true })
+        {
+            ShowPresenceView();
+            return;
+        }
 
-        if (!presence)
-        {
-            ApplySystemStatus(_lastHealth);
-            SeedNotificationControls();
-            UpdateIdentityDetail();
-            _ = RefreshToolsAccessAsync();
-        }
-        else
-        {
-            _ = RefreshDesktopViewAsync();
-            _ = RefreshVictoriaBrowserViewAsync();
-        }
+        ShowSettingsView();
+    }
+
+    private void ShowPresenceView()
+    {
+        if (PresenceView is null || SettingsView is null) return;
+        PresenceView.IsVisible = true;
+        SettingsView.IsVisible = false;
+        if (NavSettings is not null)
+            NavSettings.Classes.Remove("active");
+        if (NavPresence is not null)
+            NavPresence.IsChecked = true;
+        Title = "House Victoria — Presence";
+        _ = RefreshDesktopViewAsync();
+        _ = RefreshVictoriaBrowserViewAsync();
+    }
+
+    private void ShowSettingsView()
+    {
+        if (PresenceView is null || SettingsView is null) return;
+        PresenceView.IsVisible = false;
+        SettingsView.IsVisible = true;
+        if (NavSettings is not null && !NavSettings.Classes.Contains("active"))
+            NavSettings.Classes.Add("active");
+        if (NavPresence is not null)
+            NavPresence.IsChecked = false;
+        Title = "House Victoria — Settings";
+        ApplySystemStatus(_lastHealth);
+        SeedNotificationControls();
+        UpdateIdentityDetail();
+        _ = RefreshToolsAccessAsync();
     }
 
     private void OpenPresenceFromIdentity_Click(object? sender, RoutedEventArgs e) =>
-        NavPresence.IsChecked = true;
+        ShowPresenceView();
+
+    private void TitleDragRegion_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginMoveDrag(e);
+    }
+
+    private void Minimize_Click(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 
     private void IdentitySave_Click(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
 

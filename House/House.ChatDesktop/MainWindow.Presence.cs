@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.Json;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -141,16 +143,16 @@ public partial class MainWindow
             if (SvcComfyStatus is not null) SvcComfyStatus.Text = comfyUp ? "up" : "down";
         }
 
-        // PROP-4 House lamps
-        SetLamp(LampSoulCore, snap.Alive ? "accent" : "bad");
-        SetLamp(LampOllama, ollamaUp ? "ok" : "bad");
-        SetLamp(LampUnreal, ueOk ? "accent" : "bad");
-        SetLamp(LampComfy, comfyUp ? "accent" : "muted");
-        SetLamp(LampCua, !snap.Reachable ? "bad" : cuaOn ? "accent" : cuaWarn ? "warn" : "muted");
-        SetLamp(LampSandbox, sandboxUp ? "accent" : "muted");
+        // PROP-4 House lamps — neon orbs (radial + halo) like the mockup
+        SetLamp(LampSoulCore, GlowSoulCore, snap.Alive ? "blue" : "red");
+        SetLamp(LampOllama, GlowOllama, ollamaUp ? "green" : "red");
+        SetLamp(LampUnreal, GlowUnreal, ueOk ? "blue" : "red");
+        SetLamp(LampComfy, GlowComfy, comfyUp ? "blue" : "off");
+        SetLamp(LampCua, GlowCua, !snap.Reachable ? "red" : cuaOn ? "blue" : cuaWarn ? "warn" : "off");
+        SetLamp(LampSandbox, GlowSandbox, sandboxUp ? "blue" : "off");
 
         if (LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = snap.Alive ? "hold to stop" : "click to start";
+            LampSoulCoreHint.Text = snap.Alive ? "HOLD TO GUARD" : "CLICK TO START";
 
         // Closed-drawer pip: red if SoulCore or Unreal down
         var criticalDown = !snap.Alive || !ueOk;
@@ -158,29 +160,43 @@ public partial class MainWindow
             HouseDrawerPip.Fill = criticalDown ? _badBrush : Brushes.Transparent;
     }
 
-    private static void SetLamp(Button? lamp, string state)
+    private static void SetLamp(Button? lamp, Ellipse? glow, string state)
     {
         if (lamp is null) return;
-        lamp.Classes.Remove("ok");
-        lamp.Classes.Remove("warn");
-        lamp.Classes.Remove("bad");
-        lamp.Classes.Remove("accent");
-        switch (state)
+
+        var (core, mid, halo, haloOpacity) = state switch
         {
-            case "ok":
-                lamp.Classes.Add("ok");
-                break;
-            case "warn":
-                lamp.Classes.Add("warn");
-                break;
-            case "bad":
-                lamp.Classes.Add("bad");
-                break;
-            case "accent":
-                lamp.Classes.Add("accent");
-                break;
-            default:
-                break;
+            "blue" or "accent" => (Color.Parse("#E8F2FF"), Color.Parse("#3D8BFF"), Color.Parse("#4BA3FF"), 0.55),
+            "green" or "ok" => (Color.Parse("#E8FFF0"), Color.Parse("#2EE66A"), Color.Parse("#3DFF8A"), 0.55),
+            "red" or "bad" => (Color.Parse("#FFE8EA"), Color.Parse("#FF3D4A"), Color.Parse("#FF5A64"), 0.50),
+            "warn" => (Color.Parse("#FFF6E8"), Color.Parse("#FFB84D"), Color.Parse("#FFC866"), 0.45),
+            _ => (Color.Parse("#6A6E78"), Color.Parse("#3A3D46"), Color.Parse("#2A2D33"), 0.12),
+        };
+
+        lamp.Background = new RadialGradientBrush
+        {
+            GradientOrigin = new RelativePoint(0.35, 0.3, RelativeUnit.Relative),
+            Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+            Radius = 0.75,
+            GradientStops =
+            {
+                new GradientStop(core, 0),
+                new GradientStop(mid, 0.45),
+                new GradientStop(mid, 1),
+            }
+        };
+
+        if (glow is not null)
+        {
+            glow.Fill = new RadialGradientBrush
+            {
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(0xCC, halo.R, halo.G, halo.B), 0),
+                    new GradientStop(Color.FromArgb(0x00, halo.R, halo.G, halo.B), 1),
+                }
+            };
+            glow.Opacity = haloOpacity;
         }
     }
 
@@ -263,7 +279,7 @@ public partial class MainWindow
         if (_soulCoreHoldTimer is not null)
             _soulCoreHoldTimer.Stop();
         if (resetHint && LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = _lastHealth.Alive ? "hold to stop" : "click to start";
+            LampSoulCoreHint.Text = _lastHealth.Alive ? "HOLD TO GUARD" : "CLICK TO START";
     }
 
     private async Task RunServiceActionAsync(string tag)

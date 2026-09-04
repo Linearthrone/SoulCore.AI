@@ -89,6 +89,17 @@ public sealed class ChatMessage : INotifyPropertyChanged
 
     public bool IsSystem => Role == "system";
 
+    public bool IsAssistant => Role == "assistant";
+
+    /// <summary>Contact bubble left of message (Victoria).</summary>
+    public bool ShowLeftAvatar => IsAssistant;
+
+    /// <summary>Contact bubble right of message (Kurt).</summary>
+    public bool ShowRightAvatar => IsUser;
+
+    /// <summary>Non-system rows use the avatar+bubble layout.</summary>
+    public bool ShowChatRow => !IsSystem;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>

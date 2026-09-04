@@ -4,106 +4,121 @@
         Title="House Victoria — Presence"
         Height="780" Width="1180"
         MinHeight="600" MinWidth="900"
-        Background="{DynamicResource BgBrush}"
+        Background="Transparent"
         Foreground="{DynamicResource TextBrush}"
-        TransparencyLevelHint="AcrylicBlur,Blur,None"
+        TransparencyLevelHint="Transparent,AcrylicBlur,Blur,None"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/house-victoria.ico">
-  <DockPanel>
-    <Border DockPanel.Dock="Top" Classes="carbon" Padding="14,8" CornerRadius="0">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-          <TextBlock Text="House Victoria" FontSize="20" FontWeight="Bold"
-                     Foreground="{DynamicResource AccentBrush}" Margin="4,0,10,0" VerticalAlignment="Center"/>
-          <RadioButton x:Name="NavPresence" Classes="nav" GroupName="Nav" Content="Presence"
-                       IsChecked="True" IsCheckedChanged="Nav_Changed"/>
-          <RadioButton x:Name="NavSettings" Classes="nav" GroupName="Nav" Content="Settings"
-                       IsCheckedChanged="Nav_Changed"/>
-        </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-          <Ellipse x:Name="ConnDot" Width="10" Height="10" Fill="{DynamicResource BadBrush}"/>
-          <TextBlock x:Name="ConnStatusText" Text="Connecting…" Foreground="{DynamicResource MutedBrush}"
-                     VerticalAlignment="Center" FontSize="12"/>
-          <Button Classes="chrome" Content="Refresh" Click="Refresh_Click"/>
-        </StackPanel>
-      </Grid>
-    </Border>
-
-    <Grid x:Name="PresenceView" Margin="12" RowDefinitions="Auto,*,Auto,Auto">
-      <!-- PROP-4 identity strip: name · mood · activity (gauges only in Correct) -->
-      <Border x:Name="HudPanel" Classes="metal glass" Padding="14,10" Margin="0,0,0,8">
-        <Grid RowDefinitions="Auto,Auto">
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-              <ToggleButton x:Name="HudAlwaysOnTop" Classes="chrome" Content="Pin"
-                            IsCheckedChanged="HudAlwaysOnTop_Changed"/>
-              <Button Classes="chrome" Content="Pop out" Tag="hud" Click="PanelPopOut_Click"/>
-              <Button Classes="ghost" Content="Correct mood…" FontSize="11" Padding="8,3"
-                      Click="CorrectEmotion_Click"/>
-            </StackPanel>
+  <!-- Frameless shell — one floating pane like the mockup -->
+  <Border Classes="shell" Margin="8">
+    <Grid>
+      <Border Classes="shell-inner" IsHitTestVisible="False"/>
+      <DockPanel Margin="0">
+        <!-- Title / identity frame strip (drag region) -->
+        <Border x:Name="TitleDragRegion" DockPanel.Dock="Top" Padding="16,12,12,8"
+                Background="Transparent" PointerPressed="TitleDragRegion_PointerPressed">
+          <Grid ColumnDefinitions="*,Auto,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-              <TextBlock x:Name="IdentityNameText" Text="Victoria" FontWeight="SemiBold" FontSize="18"
-                         VerticalAlignment="Center"/>
-              <Border Classes="mood-gem-well" Width="18" Height="18" CornerRadius="9" VerticalAlignment="Center">
-                <Ellipse x:Name="MoodColorDot" Width="12" Height="12" HorizontalAlignment="Center"
-                         VerticalAlignment="Center" Fill="{DynamicResource MutedBrush}"/>
+              <Border Width="36" Height="36" CornerRadius="8" Background="#1A1C20"
+                      BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
+                <TextBlock Text="HV" FontSize="12" FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
-              <TextBlock x:Name="MoodLabelText" Text="—" FontSize="15" FontWeight="SemiBold"
-                         VerticalAlignment="Center"/>
-              <TextBlock Text="·" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-              <TextBlock x:Name="PresenceStateText" Text="—" FontSize="13" VerticalAlignment="Center"
-                         Foreground="{DynamicResource MutedBrush}"/>
-              <TextBlock Text="·" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-              <TextBlock x:Name="ActivityText" Text="—" FontSize="13" TextWrapping="NoWrap"
-                         TextTrimming="CharacterEllipsis" MaxWidth="420"
-                         Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-              <TextBlock x:Name="EndpointText" Text="127.0.0.1:7700" Foreground="{DynamicResource MutedBrush}"
-                         FontSize="10" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.55"/>
-            </StackPanel>
-          </DockPanel>
-
-          <!-- Hidden until Correct mood — valence/arousal only here (PROP-4) -->
-          <Border x:Name="EmotionCorrectPanel" Grid.Row="1" IsVisible="False" Classes="carbon"
-                  Padding="12" Margin="0,10,0,0">
-            <StackPanel>
-              <TextBlock Text="Correct mood" FontWeight="SemiBold" Margin="0,0,0,8"/>
-              <Grid ColumnDefinitions="90,*,48" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,8">
-                <TextBlock Text="valence" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                <Slider x:Name="CorrectValenceSlider" Grid.Column="1" Minimum="-1" Maximum="1" Value="0" Margin="0,4"/>
-                <TextBlock Grid.Column="2" Text="{Binding #CorrectValenceSlider.Value, StringFormat='{}{0:0.0}'}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="1" Text="arousal" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                <Slider x:Name="CorrectArousalSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Margin="0,4"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding #CorrectArousalSlider.Value, StringFormat='{}{0:0.0}'}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="2" Text="dominance" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                <Slider x:Name="CorrectDominanceSlider" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="0,4"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding #CorrectDominanceSlider.Value, StringFormat='{}{0:0.0}'}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="3" Text="focus" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                <Slider x:Name="CorrectFocusSlider" Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="0,4"/>
-                <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding #CorrectFocusSlider.Value, StringFormat='{}{0:0.0}'}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
-              </Grid>
-              <!-- Keep gauge names for code-behind ApplyMoodToHud (invisible live mirrors) -->
-              <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="False">
-                <ProgressBar x:Name="ValenceGauge" Classes="gauge" Value="0.5" Width="80"/>
-                <TextBlock x:Name="ValenceText" Text="0.0"/>
-                <ProgressBar x:Name="ArousalGauge" Classes="gauge" Value="0" Width="80"/>
-                <TextBlock x:Name="ArousalText" Text="0.0"/>
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock x:Name="IdentityNameText" Text="Victoria" FontWeight="SemiBold" FontSize="16"/>
+                  <Ellipse x:Name="MoodColorDot" Width="8" Height="8" Fill="{DynamicResource MutedBrush}"
+                           VerticalAlignment="Center"/>
+                  <TextBlock x:Name="MoodLabelText" Text="—" FontSize="12" FontWeight="SemiBold"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Ellipse x:Name="ConnDot" Width="7" Height="7" Fill="{DynamicResource BadBrush}"
+                           VerticalAlignment="Center"/>
+                  <TextBlock x:Name="PresenceStateText" Text="—" FontSize="11"
+                             Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                  <TextBlock Text="·" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
+                  <TextBlock x:Name="ActivityText" Text="—" FontSize="11" TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" MaxWidth="380"
+                             Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
               </StackPanel>
-              <TextBox x:Name="CorrectNoteBox" Classes="input" MaxLength="200" Height="34"
-                       VerticalContentAlignment="Center" Padding="10,0" Margin="0,0,0,10" Watermark="short note"/>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Classes="ghost" Content="Cancel" Click="CorrectEmotionCancel_Click"/>
-                <Button Classes="primary" Content="Save" Click="CorrectEmotionSave_Click"/>
+              <!-- brand center-ish -->
+              <StackPanel Margin="24,0,0,0" VerticalAlignment="Center" Opacity="0.85">
+                <TextBlock Text="HOUSE VICTORIA" FontSize="11" FontWeight="Bold"
+                           Foreground="{DynamicResource MutedBrush}" LetterSpacing="1.5"/>
+                <TextBlock x:Name="EndpointText" Text="127.0.0.1:7700" FontSize="10"
+                           Foreground="{DynamicResource MutedBrush}" Opacity="0.6"/>
               </StackPanel>
             </StackPanel>
-          </Border>
-        </Grid>
-      </Border>
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,260" ColumnSpacing="10">
+            <!-- Settings sits ON the frame (Presence tab removed) -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,12,0">
+              <Button x:Name="NavSettings" Classes="frame-nav" Content="SETTINGS"
+                      Click="NavSettings_Click"/>
+              <Button Classes="chrome" Content="Correct mood…" FontSize="11" Padding="10,6"
+                      Click="CorrectEmotion_Click"/>
+              <Button Classes="chrome" Content="Refresh" Click="Refresh_Click"/>
+              <TextBlock x:Name="ConnStatusText" Text="" IsVisible="False"/>
+              <!-- Keep hidden for code-behind until fully purged -->
+              <RadioButton x:Name="NavPresence" IsVisible="False" IsChecked="True"/>
+              <Border Classes="mood-gem-well" Width="1" Height="1" IsVisible="False"/>
+              <ToggleButton x:Name="HudAlwaysOnTop" IsVisible="False"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+              <Button Classes="window-chrome" Content="─" Click="Minimize_Click"/>
+              <Button Classes="window-chrome close" Content="✕" Click="Close_Click"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- Correct-mood panel (shared, overlays under strip) -->
+        <Border x:Name="HudPanel" DockPanel.Dock="Top" IsVisible="False" Margin="12,0,12,0"/>
+        <Border x:Name="EmotionCorrectPanel" DockPanel.Dock="Top" IsVisible="False" Classes="carbon glass"
+                Padding="12" Margin="12,0,12,8">
+          <StackPanel>
+            <TextBlock Text="Correct mood" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <Grid ColumnDefinitions="90,*,48" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,8">
+              <TextBlock Text="valence" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+              <Slider x:Name="CorrectValenceSlider" Grid.Column="1" Minimum="-1" Maximum="1" Value="0" Margin="0,4"/>
+              <TextBlock Grid.Column="2" Text="{Binding #CorrectValenceSlider.Value, StringFormat='{}{0:0.0}'}"
+                         VerticalAlignment="Center" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Row="1" Text="arousal" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+              <Slider x:Name="CorrectArousalSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Margin="0,4"/>
+              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding #CorrectArousalSlider.Value, StringFormat='{}{0:0.0}'}"
+                         VerticalAlignment="Center" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Row="2" Text="dominance" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+              <Slider x:Name="CorrectDominanceSlider" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="0,4"/>
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding #CorrectDominanceSlider.Value, StringFormat='{}{0:0.0}'}"
+                         VerticalAlignment="Center" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Row="3" Text="focus" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+              <Slider x:Name="CorrectFocusSlider" Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="0,4"/>
+              <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding #CorrectFocusSlider.Value, StringFormat='{}{0:0.0}'}"
+                         VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="False">
+              <ProgressBar x:Name="ValenceGauge" Classes="gauge" Value="0.5" Width="80"/>
+              <TextBlock x:Name="ValenceText" Text="0.0"/>
+              <ProgressBar x:Name="ArousalGauge" Classes="gauge" Value="0" Width="80"/>
+              <TextBlock x:Name="ArousalText" Text="0.0"/>
+            </StackPanel>
+            <TextBox x:Name="CorrectNoteBox" Classes="input" MaxLength="200" Height="34"
+                     VerticalContentAlignment="Center" Padding="10,0" Margin="0,0,0,10" Watermark="short note"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+              <Button Classes="ghost" Content="Cancel" Click="CorrectEmotionCancel_Click"/>
+              <Button Classes="primary" Content="Save" Click="CorrectEmotionSave_Click"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+    <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
+      <Grid Grid.Row="0" ColumnDefinitions="*,260" ColumnSpacing="10">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">
@@ -112,7 +127,7 @@
                               IsCheckedChanged="ChatAlwaysOnTop_Changed"/>
                 <Button Classes="chrome" Content="Pop out" Tag="chat" Click="PanelPopOut_Click"/>
               </StackPanel>
-              <TextBlock Text="Messages" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <TextBlock Text="" IsVisible="False"/>
             </DockPanel>
             <Border Grid.Row="1" Classes="carbon inset" Padding="6" ClipToBounds="True">
               <ScrollViewer x:Name="TranscriptScroll" VerticalScrollBarVisibility="Auto">
@@ -120,19 +135,39 @@
                   <ItemsControl x:Name="TranscriptList">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border Classes="bubble" Classes.user="{Binding IsUser}" Classes.system="{Binding IsSystem}">
-                          <StackPanel>
-                            <DockPanel Margin="0,0,0,4">
-                              <TextBlock Text="{Binding DisplayTime}" DockPanel.Dock="Right" FontSize="10"
-                                         Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                              <TextBlock Text="{Binding DisplayRole}" FontSize="11"
-                                         Foreground="{DynamicResource AccentBrush}"/>
-                            </DockPanel>
-                            <Image Source="{Binding Image}" IsVisible="{Binding HasImage}"
-                                   MaxHeight="240" MaxWidth="360" Stretch="Uniform" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding Text}" IsVisible="{Binding HasText}" TextWrapping="Wrap"/>
-                          </StackPanel>
-                        </Border>
+                        <Panel>
+                          <Border Classes="bubble system" IsVisible="{Binding IsSystem}"
+                                  Classes.system="True">
+                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                          </Border>
+                          <Grid Classes="msg-row" ColumnDefinitions="Auto,*,Auto"
+                                IsVisible="{Binding ShowChatRow}">
+                            <Border Classes="contact-bubble assistant"
+                                    IsVisible="{Binding ShowLeftAvatar}">
+                              <TextBlock Text="V" FontSize="12" FontWeight="Bold"
+                                         Foreground="{DynamicResource AccentBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <Border Grid.Column="1"
+                                    Classes="bubble"
+                                    Classes.user="{Binding IsUser}">
+                              <StackPanel>
+                                <Image Source="{Binding Image}" IsVisible="{Binding HasImage}"
+                                       MaxHeight="240" MaxWidth="360" Stretch="Uniform" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding Text}" IsVisible="{Binding HasText}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DisplayTime}" FontSize="10" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource MutedBrush}"/>
+                              </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Classes="contact-bubble user"
+                                    IsVisible="{Binding ShowRightAvatar}">
+                              <TextBlock Text="K" FontSize="12" FontWeight="Bold"
+                                         Foreground="{DynamicResource TextBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                          </Grid>
+                        </Panel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -216,7 +251,7 @@
         </Grid>
       </Grid>
 
-      <Border Grid.Row="2" Classes="metal glass" Padding="10" Margin="0,8,0,0">
+      <Border Grid.Row="1" Classes="metal glass" Padding="10" Margin="0,8,0,0">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Classes="chrome" Content="Attach" Click="AttachImage_Click"
@@ -245,7 +280,7 @@
       </Border>
 
       <!-- PROP-4 House drawer: closed rail + open lamp tray -->
-      <Border Grid.Row="3" Classes="metal glass" Margin="0,8,0,0" Padding="0">
+      <Border Grid.Row="2" Classes="metal glass" Margin="0,8,0,0" Padding="0">
         <Grid RowDefinitions="Auto,Auto">
           <Button x:Name="HouseDrawerTab" Classes="house-tab" HorizontalAlignment="Stretch"
                   Click="HouseDrawerToggle_Click">
@@ -263,56 +298,81 @@
                   Padding="16,10,16,14">
             <Grid RowDefinitions="Auto,Auto">
               <UniformGrid Columns="6" HorizontalAlignment="Stretch">
-                <!-- SoulCore: hold to stop when up -->
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampSoulCore" Classes="lamp" Tag="soulcore"
-                            PointerPressed="LampSoulCore_PointerPressed"
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowSoulCore" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampSoulCore" Classes="lamp" Tag="soulcore"
+                              PointerPressed="LampSoulCore_PointerPressed"
                             PointerReleased="LampSoulCore_PointerReleased"
                             Click="LampClick_Click"
-                            ToolTip.Tip="SoulCore Host — click to start; hold ~1.5s to stop"/>
+                            ToolTip.Tip="SoulCore Host — click to start; hold ~1.5s to stop"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="SOULCORE" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                  <TextBlock x:Name="LampSoulCoreHint" Text="hold to stop" FontSize="9"
+                  <TextBlock x:Name="LampSoulCoreHint" Text="HOLD TO GUARD" FontSize="9"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Opacity="0.7"/>
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampOllama" Classes="lamp" Tag="ollama" Click="LampClick_Click"
-                            ToolTip.Tip="Ollama — click to start when down"/>
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowOllama" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampOllama" Classes="lamp" Tag="ollama"
+                              Click="LampClick_Click"
+                            ToolTip.Tip="Ollama"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="OLLAMA" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampUnreal" Classes="lamp" Tag="unreal" IsEnabled="False"
-                            ToolTip.Tip="Unreal avatar bridge (status only)"/>
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowUnreal" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampUnreal" Classes="lamp" Tag="unreal" IsEnabled="False"
+                              ToolTip.Tip="Unreal avatar bridge (status only)"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="UNREAL" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampComfy" Classes="lamp" Tag="comfy" IsEnabled="False"
-                            ToolTip.Tip="ComfyUI :8188"/>
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowComfy" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampComfy" Classes="lamp" Tag="comfy" IsEnabled="False"
+                              ToolTip.Tip="ComfyUI :8188"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="COMFY" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampCua" Classes="lamp" Tag="cua" Click="LampClick_Click"
-                            ToolTip.Tip="CUA gate — click to toggle computer control"/>
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowCua" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampCua" Classes="lamp" Tag="cua"
+                              Click="LampClick_Click"
+                            ToolTip.Tip="CUA gate — click to toggle computer control"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="CUA" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="4">
                   <Border Classes="lamp-well">
-                    <Button x:Name="LampSandbox" Classes="lamp" Tag="sandbox" IsEnabled="False"
-                            ToolTip.Tip="victoria-sandbox VM"/>
+                    <Panel Width="52" Height="52">
+                      <Ellipse x:Name="GlowSandbox" Width="52" Height="52" IsHitTestVisible="False"/>
+                      <Button x:Name="LampSandbox" Classes="lamp" Tag="sandbox" IsEnabled="False"
+                              ToolTip.Tip="victoria-sandbox VM"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Panel>
                   </Border>
                   <TextBlock Text="SANDBOX" FontSize="10" FontWeight="SemiBold"
                              HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
@@ -336,9 +396,15 @@
       </Border>
     </Grid>
 
-    <Grid x:Name="SettingsView" Margin="14" IsVisible="False">
-      <Border Classes="metal" Padding="8" Opacity="0.97">
-        <TabControl Background="Transparent" BorderThickness="0">
+    <Grid x:Name="SettingsView" Margin="12" IsVisible="False">
+      <Border Classes="metal glass" Padding="12">
+        <Grid RowDefinitions="Auto,*">
+          <DockPanel Margin="0,0,0,12">
+            <Button DockPanel.Dock="Left" Classes="frame-nav" Content="← BACK"
+                    Click="OpenPresenceFromIdentity_Click" Margin="0,0,12,0"/>
+            <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          </DockPanel>
+        <TabControl Grid.Row="1" Classes="settings-tabs" Background="Transparent" BorderThickness="0">
           <TabItem Header="Identity">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <StackPanel Margin="12" Spacing="4">
@@ -359,7 +425,7 @@
                 <TextBlock Text="Charter (from Host /health)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="IdentityCharterBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,12"/>
-                <Button Classes="ghost" Content="Open Presence →" HorizontalAlignment="Left"
+                <Button Classes="ghost" Content="← Back to chat" HorizontalAlignment="Left"
                         Click="OpenPresenceFromIdentity_Click"/>
               </StackPanel>
             </ScrollViewer>
@@ -485,7 +551,10 @@
             </StackPanel>
           </TabItem>
         </TabControl>
+        </Grid>
       </Border>
     </Grid>
-  </DockPanel>
+      </DockPanel>
+    </Grid>
+  </Border>
 </Window>
