@@ -1,5 +1,6 @@
 using SoulCore.Adapters.Ws;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 
 namespace SoulCore.Host.Inference;
 

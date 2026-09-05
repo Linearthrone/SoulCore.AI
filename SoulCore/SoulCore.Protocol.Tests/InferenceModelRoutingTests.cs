@@ -1,5 +1,6 @@
 using SoulCore.Config;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 
 namespace SoulCore.Protocol.Tests;
 

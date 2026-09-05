@@ -3,7 +3,8 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools.Trading;
 
 namespace SoulCore.Protocol.Tests;

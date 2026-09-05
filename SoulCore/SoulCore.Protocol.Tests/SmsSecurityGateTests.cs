@@ -9,7 +9,8 @@ using SixLabors.ImageSharp.PixelFormats;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
 using SoulCore.Host.Companion;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Memory;
 
 namespace SoulCore.Protocol.Tests;
@@ -162,7 +163,7 @@ public class SmsSecurityGateTests
     {
         using var image = new Image<Rgba32>(8, 8);
         image.Metadata.ExifProfile = new ExifProfile();
-        image.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, new[] { (Rational)1, (Rational)2, (Rational)3 });
+        image.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, new[] { new Rational(1, 1), new Rational(2, 1), new Rational(3, 1) });
         using var ms = new MemoryStream();
         image.SaveAsJpeg(ms, new JpegEncoder { Quality = 90 });
         return ms.ToArray();

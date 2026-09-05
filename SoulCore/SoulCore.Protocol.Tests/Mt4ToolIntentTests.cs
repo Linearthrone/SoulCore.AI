@@ -1,3 +1,4 @@
+using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 
@@ -61,10 +62,10 @@ public class Mt4ToolIntentTests
 
     private sealed class NullMt4Bridge : SoulCore.Inference.Tools.Trading.IMt4Bridge
     {
-        public Task<SoulCore.Inference.ToolResult> InvokeAsync(
+        public Task<ToolResult> InvokeAsync(
             string mcpToolName,
             System.Text.Json.JsonElement args,
             CancellationToken ct = default) =>
-            Task.FromResult(new SoulCore.Inference.ToolResult(true, "{}", null));
+            Task.FromResult(new ToolResult(true, "{}", null));
     }
 }

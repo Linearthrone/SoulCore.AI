@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Core.Abstractions;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
 

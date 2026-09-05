@@ -1,4 +1,4 @@
-using SoulCore.Inference.Tools;
+using SoulCore.Inference.Tooling;
 
 namespace SoulCore.Protocol.Tests;
 
