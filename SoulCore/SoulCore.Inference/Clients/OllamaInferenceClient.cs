@@ -8,9 +8,8 @@ using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Workflow;
-using SoulCore.Inference.Tools;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Ollama HTTP client (quarry default <c>http://127.0.0.1:11434</c>).

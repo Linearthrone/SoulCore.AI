@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Optional knobs for one <c>CompleteWithToolsAsync</c> turn (BED-162 / BED-165 / BED-168).

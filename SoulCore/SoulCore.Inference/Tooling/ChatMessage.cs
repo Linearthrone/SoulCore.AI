@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// One chat message in the agent loop. Maps to Ollama <c>/api/chat</c> and

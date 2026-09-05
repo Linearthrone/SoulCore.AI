@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Text → float embedding vector (Ollama). Null stub when embeddings disabled.

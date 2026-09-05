@@ -1,6 +1,6 @@
 using SoulCore.Config;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Resolves chat / tool / embed Ollama model names from <see cref="InferenceOptions"/>

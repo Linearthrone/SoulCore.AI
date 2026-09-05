@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Thread-safe in-process session history. Keyed by the client

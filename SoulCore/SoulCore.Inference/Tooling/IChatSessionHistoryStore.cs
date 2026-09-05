@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// In-memory per-<c>sessionId</c> chat + tool transcript store (BED-158 / ISSUE-004).

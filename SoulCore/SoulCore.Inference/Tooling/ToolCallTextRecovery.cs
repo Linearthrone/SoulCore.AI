@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace SoulCore.Inference.Tools;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Recover tool calls leaked into assistant <c>content</c> (gemma4

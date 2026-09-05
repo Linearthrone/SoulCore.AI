@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Local LLM client (Ollama). Real calls via <c>OllamaInferenceClient</c>; null stub when disabled.
