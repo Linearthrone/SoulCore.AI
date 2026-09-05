@@ -38,6 +38,13 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<SoulLoopScaffold>();
         services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
         services.AddHostedService<SoulLoopHostedService>();
+        services.AddSingleton<IChatContextBuilder, ChatContextBuilder>();
+        services.AddSingleton<EmotionSnapshotSender>();
+        services.AddSingleton<ChatPostEffectsHandler>();
+        services.AddSingleton<ChatSendHandler>();
+        services.AddSingleton<EmotionCorrectHandler>();
+        services.AddSingleton<LoopTickHandler>();
+        services.AddSingleton<ChatWebSocketSessionRunner>();
         services.AddSingleton<ChatWebSocketHandler>();
 
         if (unrealOptions.Enabled)

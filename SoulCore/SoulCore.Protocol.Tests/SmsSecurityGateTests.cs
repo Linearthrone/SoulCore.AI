@@ -162,7 +162,9 @@ public class SmsSecurityGateTests
     {
         using var image = new Image<Rgba32>(8, 8);
         image.Metadata.ExifProfile = new ExifProfile();
-        image.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, new[] { (Rational)1, (Rational)2, (Rational)3 });
+        image.Metadata.ExifProfile.SetValue(
+            ExifTag.GPSLatitude,
+            new[] { new Rational(1), new Rational(2), new Rational(3) });
         using var ms = new MemoryStream();
         image.SaveAsJpeg(ms, new JpegEncoder { Quality = 90 });
         return ms.ToArray();
