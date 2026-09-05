@@ -119,16 +119,16 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         }
     }
 
-    public Task<DesktopOpResult> DragAsync(
+    public async Task<DesktopOpResult> DragAsync(
         int x1, int y1, int x2, int y2, string button, CancellationToken ct = default)
     {
-        if (!OperatingSystem.IsWindows())
-            return Task.FromResult(NotWindows("drag"));
-
         ct.ThrowIfCancellationRequested();
+
+        if (!OperatingSystem.IsWindows())
+            return NotWindows("drag");
         var btn = (button ?? "left").Trim().ToLowerInvariant();
         if (btn is not ("left" or "right" or "middle"))
-            return Task.FromResult(new DesktopOpResult(false, $"unsupported button '{button}' (use left|right|middle)", null));
+            return new DesktopOpResult(false, $"unsupported button '{button}' (use left|right|middle)", null);
 
         try
         {
@@ -136,8 +136,8 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
             if (restore && TryBackgroundDrag(x1, y1, x2, y2, btn, out var bgNote))
             {
                 _view?.RecordAction(bgNote, x2, y2);
-                return Task.FromResult(new DesktopOpResult(
-                    true, bgNote, new { x1, y1, x2, y2, button = btn, softCursor = true, delivery = "background" }));
+                return new DesktopOpResult(
+                    true, bgNote, new { x1, y1, x2, y2, button = btn, softCursor = true, delivery = "background" });
             }
 
             POINT saved = default;
@@ -151,11 +151,11 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
             };
 
             if (!SetCursorPos(x1, y1))
-                return Task.FromResult(new DesktopOpResult(false, $"SetCursorPos({x1},{y1}) failed", null));
+                return new DesktopOpResult(false, $"SetCursorPos({x1},{y1}) failed", null);
 
             var downInput = new INPUT[] { MouseInput(down) };
             if (SendInput(1, downInput, Marshal.SizeOf<INPUT>()) != 1)
-                return Task.FromResult(new DesktopOpResult(false, "SendInput mouse-down failed", null));
+                return new DesktopOpResult(false, "SendInput mouse-down failed", null);
 
             // Interpolate moves while button held so CAD apps see a continuous drag.
             const int steps = 20;
@@ -166,13 +166,13 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
                 var mx = (int)Math.Round(x1 + (x2 - x1) * t);
                 var my = (int)Math.Round(y1 + (y2 - y1) * t);
                 if (!SetCursorPos(mx, my))
-                    return Task.FromResult(new DesktopOpResult(false, $"SetCursorPos({mx},{my}) during drag failed", null));
-                Thread.Sleep(15);
+                    return new DesktopOpResult(false, $"SetCursorPos({mx},{my}) during drag failed", null);
+                await Task.Delay(15, ct).ConfigureAwait(false);
             }
 
             var upInput = new INPUT[] { MouseInput(up) };
             if (SendInput(1, upInput, Marshal.SizeOf<INPUT>()) != 1)
-                return Task.FromResult(new DesktopOpResult(false, "SendInput mouse-up failed", null));
+                return new DesktopOpResult(false, "SendInput mouse-up failed", null);
 
             if (hadSaved)
                 _ = SetCursorPos(saved.X, saved.Y);
@@ -181,13 +181,17 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
                 ? $"dragged {btn} from ({x1},{y1}) to ({x2},{y2}) [soft cursor — user pointer restored]"
                 : $"dragged {btn} from ({x1},{y1}) to ({x2},{y2})";
             _view?.RecordAction(note, x2, y2);
-            return Task.FromResult(new DesktopOpResult(
-                true, note, new { x1, y1, x2, y2, button = btn, softCursor = restore, delivery = "foreground" }));
+            return new DesktopOpResult(
+                true, note, new { x1, y1, x2, y2, button = btn, softCursor = restore, delivery = "foreground" });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Task.FromResult(new DesktopOpResult(
-                false, $"native drag failed: {ex.GetType().Name}: {ex.Message}", null));
+            return new DesktopOpResult(
+                false, $"native drag failed: {ex.GetType().Name}: {ex.Message}", null);
         }
     }
 
