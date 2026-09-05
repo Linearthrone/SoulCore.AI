@@ -41,11 +41,11 @@ owner: PM-01 / TT-01
 | PROP-4-presence-shell-honest-hud | Presence House drawer + installer | **accepted-pm-ticketed** — TINA 2026-09-05 | 4.1 FED · 4.2 OPS |
 | PROP-5-host-sqlite-concurrency-ownership | Host SQLite concurrency + charter ownership + SoulLoop single-flight | **Pass** — 5.1–5.4 Accepted 2026-09-05 (`cursor/prop5-sqlite-gate-8a1f`) | 5.1–5.4 |
 | PROP-6-desktop-drag-async-delay | Desktop drag Thread.Sleep → async delay | **Pass** — 6.1 Accepted 2026-09-05 (`cursor/prop6-desktop-delay-8a1f`) | 6.1 |
-| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **unblocked** — PROP-5 Pass; next Host lane | — |
+| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **Pass** — 7.1 Accepted 2026-09-05 (`cursor/prop7-hermes-cleanup-8a1f`) | — |
 | PROP-8-chat-orchestration-decomposition | ChatWebSocketHandler strangler + prompt builder + history + gated parallel reads | **accepted-gated** — after PROP-5; prefer after PROP-9 | — |
 | PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **accepted-gated** — after PROP-5 + PROP-7 | — |
 | PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **accepted-gated** — after PROP-7 | — |
-| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **unblocked** — PROP-5 Pass; may ∥ PROP-7 | — |
+| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **Pass** — 11.1 Accepted 2026-09-05 (`cursor/prop11-memory-repos-8a1f`) | — |
 
 Cluster map: `docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md`  
 Program accept: `docs/agents/tasks/PROP-5-11-PM01-program-accept.md`
