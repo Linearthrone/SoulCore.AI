@@ -1,7 +1,9 @@
 ---
 type: proposal
 prop_id: PROP-6-desktop-drag-async-delay
-status: sent-to-pm
+status: accepted-pm-ticketed
+pm_tickets:
+  - docs/agents/tasks/PROP-6.1-PM01-to-BED01.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05

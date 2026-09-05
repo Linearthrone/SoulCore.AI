@@ -1,7 +1,12 @@
 ---
 type: proposal
 prop_id: PROP-5-host-sqlite-concurrency-ownership
-status: sent-to-pm
+status: accepted-pm-ticketed
+pm_tickets:
+  - docs/agents/tasks/PROP-5.1-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-5.2-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-5.3-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-5.4-PM01-to-QA01.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
