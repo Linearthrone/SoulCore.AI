@@ -28,6 +28,7 @@ using SoulCore.Inference.Tools.Email;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
+using SoulCore.Memory.Repositories;
 using System.Text.Json;
 
 // Local SoulCore/.env → process env (SOULCORE_* only) before any config bind.
@@ -148,17 +149,19 @@ if (!IsLoopback(bindOptions.BindAddress))
 
 builder.WebHost.UseUrls($"http://{bindOptions.BindAddress}:{bindOptions.Port}");
 
-builder.Services.AddSingleton<SqliteMemoryStore>();
-builder.Services.AddSingleton<IMemoryStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
-builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteMemoryStore>());
-// BED-140: Victoria's own task store (victoria_tasks table). Separate from
-// PM tickets under docs/agents/tasks/ — those are human-authored orchestration
-// artifacts; this store is model-managed via task_* tools.
-builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
-// BED-141: Victoria's workflow store (victoria_workflows) — ordered steps via workflow_* tools.
-builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
-// Victoria journals: feeling / animation / environment notebooks.
-builder.Services.AddSingleton<IVictoriaJournalStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+// PROP-11.1: one SQLite session + focused repos behind existing interfaces.
+builder.Services.AddSingleton<SqliteMemorySession>();
+builder.Services.AddSingleton<SqliteEpisodicMemoryRepository>();
+builder.Services.AddSingleton<IMemoryStore>(sp => sp.GetRequiredService<SqliteEpisodicMemoryRepository>());
+builder.Services.AddSingleton<SqliteEmotionRepository>();
+builder.Services.AddSingleton<IEmotionState>(sp => sp.GetRequiredService<SqliteEmotionRepository>());
+builder.Services.AddSingleton<SqliteVictoriaTaskRepository>();
+builder.Services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteVictoriaTaskRepository>());
+builder.Services.AddSingleton<SqliteVictoriaWorkflowRepository>();
+builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteVictoriaWorkflowRepository>());
+builder.Services.AddSingleton<SqliteVictoriaJournalRepository>();
+builder.Services.AddSingleton<IVictoriaJournalStore>(sp => sp.GetRequiredService<SqliteVictoriaJournalRepository>());
+builder.Services.AddSingleton<SqliteMemoryStore>(sp => new SqliteMemoryStore(sp.GetRequiredService<SqliteMemorySession>()));
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
 // PROP-5.3: Charter shares the memory DB file; both serialize via SqlitePathGate on ResolveDbPath().
@@ -204,7 +207,7 @@ builder.Services.AddSingleton<IToolRegistry, ToolRegistry>();
 
 // BED-133: expose the memory count/stats surface (implemented additively by
 // SqliteMemoryStore; does NOT extend IMemoryStore, so existing stubs stay green).
-builder.Services.AddSingleton<IMemoryStats>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+builder.Services.AddSingleton<IMemoryStats>(sp => sp.GetRequiredService<SqliteEpisodicMemoryRepository>());
 
 // BED-133: system + filesystem tools. list_tools + system_info have no security
 // gate (local, no secrets). Filesystem tools enforce ToolsOptions whitelist.

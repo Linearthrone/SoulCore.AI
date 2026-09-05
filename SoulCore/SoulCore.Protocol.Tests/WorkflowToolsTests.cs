@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
+using SoulCore.Memory.Repositories;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -600,8 +601,9 @@ public class WorkflowToolsTests
             services.AddSingleton(Microsoft.Extensions.Options.Options.Create(
                 new SoulCore.Config.MemoryOptions { DbPath = path }));
             services.AddLogging();
-            services.AddSingleton<SqliteMemoryStore>();
-            services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+            services.AddSingleton<SqliteMemorySession>();
+            services.AddSingleton<SqliteVictoriaWorkflowRepository>();
+            services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteVictoriaWorkflowRepository>());
             services.AddSingleton<IToolRegistry, ToolRegistry>();
             services.AddSingleton<ITool, WorkflowCreateTool>();
             services.AddSingleton<ITool, WorkflowGetTool>();
@@ -618,7 +620,7 @@ public class WorkflowToolsTests
             Assert.Contains("echo", names);
 
             var store = sp.GetRequiredService<IVictoriaWorkflowStore>();
-            Assert.Same(sp.GetRequiredService<SqliteMemoryStore>(), store);
+            Assert.Same(sp.GetRequiredService<SqliteVictoriaWorkflowRepository>(), store);
         }
         finally
         {

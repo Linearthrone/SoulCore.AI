@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
+using SoulCore.Memory.Repositories;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -328,8 +329,9 @@ public class TaskToolsTests
             services.AddSingleton(Microsoft.Extensions.Options.Options.Create(
                 new SoulCore.Config.MemoryOptions { DbPath = path }));
             services.AddLogging();
-            services.AddSingleton<SqliteMemoryStore>();
-            services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
+            services.AddSingleton<SqliteMemorySession>();
+            services.AddSingleton<SqliteVictoriaTaskRepository>();
+            services.AddSingleton<IVictoriaTaskStore>(sp => sp.GetRequiredService<SqliteVictoriaTaskRepository>());
             services.AddSingleton<IToolRegistry, ToolRegistry>();
             services.AddSingleton<ITool, TaskCreateTool>();
             services.AddSingleton<ITool, TaskGetTool>();
@@ -345,7 +347,7 @@ public class TaskToolsTests
             Assert.Contains("task_list", names);
 
             var store = sp.GetRequiredService<IVictoriaTaskStore>();
-            Assert.Same(sp.GetRequiredService<SqliteMemoryStore>(), store);
+            Assert.Same(sp.GetRequiredService<SqliteVictoriaTaskRepository>(), store);
         }
         finally
         {

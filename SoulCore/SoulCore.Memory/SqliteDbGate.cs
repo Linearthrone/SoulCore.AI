@@ -9,11 +9,11 @@ internal static class SqliteDbGate
         Func<CancellationToken, Task> work,
         CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemoryStore));
+        ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemorySession));
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemoryStore));
+            ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemorySession));
             await work(cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -28,11 +28,11 @@ internal static class SqliteDbGate
         Func<CancellationToken, Task<T>> work,
         CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemoryStore));
+        ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemorySession));
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemoryStore));
+            ObjectDisposedException.ThrowIf(disposed, typeof(SqliteMemorySession));
             return await work(cancellationToken).ConfigureAwait(false);
         }
         finally
