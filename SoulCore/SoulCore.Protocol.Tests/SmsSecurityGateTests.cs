@@ -76,7 +76,7 @@ public class SmsSecurityGateTests
 
         Assert.Equal(0, inference.ToolLoopCalls);
         Assert.Equal(1, inference.CompleteCalls);
-        Assert.Contains("do not invent tool calls", inference.LastSystemPreamble ?? "", StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not call tools", inference.LastSystemPreamble ?? "", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class SmsSecurityGateTests
     {
         using var image = new Image<Rgba32>(8, 8);
         image.Metadata.ExifProfile = new ExifProfile();
-        image.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, new[] { (Rational)1, (Rational)2, (Rational)3 });
+        image.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, new Rational[] { new(1, 1), new(2, 1), new(3, 1) });
         using var ms = new MemoryStream();
         image.SaveAsJpeg(ms, new JpegEncoder { Quality = 90 });
         return ms.ToArray();
@@ -173,7 +173,7 @@ public class SmsSecurityGateTests
         try
         {
             using var image = Image.Load(jpeg);
-            return image.Metadata.ExifProfile is not null && image.Metadata.ExifProfile.Values.Count > 0;
+            return image.Metadata.ExifProfile?.Values.Count > 0;
         }
         catch
         {
