@@ -4,7 +4,8 @@ prop_range: PROP-5..PROP-11
 from: TT-01
 to: PM-01
 priority: P0
-status: Intake — TINA-main ticketing
+status: Accepted — TINA Wave NOW staffed 2026-09-05
+pm_accept: docs/agents/tasks/PROP-5-11-PM01-program-accept.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main

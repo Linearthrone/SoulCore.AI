@@ -22,11 +22,14 @@ updated: 2026-09-05
 
 ## Active work (see PROP registry)
 
-- **PROP-1** SMS/MMS — 1.1–1.3 Pass; 1.4–1.6 open
-- **PROP-2** UE reliability — 2.1–2.4 (REX)
+- **PROP-1** SMS/MMS — 1.1–1.3 Pass; **1.4 SEC / 1.5 QA / 1.6 FED** open (Wave NOW seat C)
+- **PROP-2** UE reliability — **2.1–2.4 REX** (Wave NOW seat D; shadow PIE)
 - **PROP-3** Link rewrite — parked until SMS QA Pass
-- **PROP-4** Presence HUD — in progress / TINA intake
-- **PROP-5..11** architecture-eval wipeout — **sent-to-pm** TINA-main 2026-09-05 (program: `docs/agents/tasks/PROP-5-11-TT01-to-PM01-program.md`)
+- **PROP-4** Presence HUD — **4.1 FED / 4.2 OPS** ticketed (Wave NOW seat E)
+- **PROP-5..11** architecture-eval wipeout — **TINA accepted 2026-09-05**
+  - **NOW:** PROP-5.1–5.3 BED + 5.4 QA (sole Host) · PROP-6.1 BED (desktop, parallel)
+  - **Gated:** PROP-7/11 after 5 · PROP-9 after 5+7 · PROP-10 after 7 · PROP-8 after 5 (prefer after 9)
+  - Accept: `docs/agents/tasks/PROP-5-11-PM01-program-accept.md`
 - **TASK-191 / 192** — REX Kayleigh possess + call capture (192 held)
 
 Do not treat this file as architecture documentation. Edit the handbook instead.

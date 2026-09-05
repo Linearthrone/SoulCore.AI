@@ -7,6 +7,7 @@ from: PM-01
 to: SEC-01
 priority: P0
 status: Pending
+tina_wave_now: 2026-09-05 — reaffirmed by TINA program accept
 created: 2026-08-19
 wave: 31
 phase: phone-digits

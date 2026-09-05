@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-7-hermes-dead-surface-cleanup
-status: sent-to-pm
+status: accepted-gated
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
