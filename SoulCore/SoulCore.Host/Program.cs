@@ -11,7 +11,6 @@ using SoulCore.Config;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Charter;
 using SoulCore.Core.Safety;
-using SoulCore.Hermes;
 using SoulCore.Host;
 using SoulCore.Host.Companion;
 using SoulCore.Host.Inference;
@@ -84,8 +83,6 @@ builder.Services.Configure<MemoryOptions>(
     builder.Configuration.GetSection(MemoryOptions.SectionName));
 builder.Services.Configure<InferenceOptions>(
     builder.Configuration.GetSection(InferenceOptions.SectionName));
-builder.Services.Configure<HermesOptions>(
-    builder.Configuration.GetSection(HermesOptions.SectionName));
 builder.Services.Configure<UnrealBridgeOptions>(
     builder.Configuration.GetSection(UnrealBridgeOptions.SectionName));
 builder.Services.Configure<VoiceOptions>(
@@ -112,10 +109,6 @@ var bindOptions = builder.Configuration
 var inferenceOptions = builder.Configuration
     .GetSection(InferenceOptions.SectionName)
     .Get<InferenceOptions>() ?? new InferenceOptions();
-
-var hermesOptions = builder.Configuration
-    .GetSection(HermesOptions.SectionName)
-    .Get<HermesOptions>() ?? new HermesOptions();
 
 var unrealOptions = builder.Configuration
     .GetSection(UnrealBridgeOptions.SectionName)
@@ -144,41 +137,6 @@ var safetyOptions = builder.Configuration
 var toolsOptions = builder.Configuration
     .GetSection(ToolsOptions.SectionName)
     .Get<ToolsOptions>() ?? new ToolsOptions();
-
-// BED-185: Hermes retired — hard-disable regardless of appsettings / SOULCORE_* env.
-// Open Chrome + URLs via desktop_open_app (Ollama tool-loop), never Hermes gateway.
-if (hermesOptions.Enabled || chatWsOptions.PreferHermes
-    || string.Equals(toolsOptions.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(toolsOptions.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(toolsOptions.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-{
-    Console.WriteLine(
-        "[SoulCore] BED-185: Hermes retired — forcing Hermes.Enabled=false PreferHermes=false; "
-        + "hermes tool backends remapped (desktop=cua, browser=none, mt4=llmod).");
-}
-
-hermesOptions.Enabled = false;
-chatWsOptions.PreferHermes = false;
-if (string.Equals(toolsOptions.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
-    || string.IsNullOrWhiteSpace(toolsOptions.BrowserBackend))
-    toolsOptions.BrowserBackend = "none";
-if (string.Equals(toolsOptions.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-    toolsOptions.DesktopBackend = ToolsOptions.BackendCua;
-if (string.Equals(toolsOptions.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-    toolsOptions.Mt4Backend = ToolsOptions.BackendLlmod;
-
-builder.Services.PostConfigure<HermesOptions>(o => o.Enabled = false);
-builder.Services.PostConfigure<ChatWsOptions>(o => o.PreferHermes = false);
-builder.Services.PostConfigure<ToolsOptions>(o =>
-{
-    if (string.Equals(o.BrowserBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase)
-        || string.IsNullOrWhiteSpace(o.BrowserBackend))
-        o.BrowserBackend = "none";
-    if (string.Equals(o.DesktopBackend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        o.DesktopBackend = ToolsOptions.BackendCua;
-    if (string.Equals(o.Mt4Backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        o.Mt4Backend = ToolsOptions.BackendLlmod;
-});
 
 // SEC-004: V1 bind = 127.0.0.1 only. Refuse non-loopback without explicit future SEC gate.
 if (!IsLoopback(bindOptions.BindAddress))
@@ -238,7 +196,7 @@ else
 }
 
 // Tool registry (agent-loop foundation, BED-125). Additive — independent of
-// inference/Hermes enablement. Concrete tools (BED-131+) register as ITool
+// inference enablement. Concrete tools (BED-131+) register as ITool
 // singletons elsewhere; ToolRegistry collects them via IEnumerable<ITool>.
 // Empty registry is valid → Host boots clean with zero tools.
 builder.Services.AddSingleton<IToolRegistry, ToolRegistry>();
@@ -322,9 +280,6 @@ else
     builder.Services.AddSingleton<IEmbeddingClient, NullEmbeddingClient>();
 }
 
-// BED-185: never wire HermesHttpClient — NullHermesClient only.
-builder.Services.AddSingleton<IHermesClient, NullHermesClient>();
-
 // BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
 builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 {
@@ -335,7 +290,7 @@ builder.Services.AddSingleton<IChatSessionHistoryStore>(sp =>
 
 // Desktop tools (BED-135): capture + click/type/key with session gates.
 // AllowDesktopCapture / AllowBrowserCapture / AllowComputerControl default true (TASK-177).
-// Backend: Tools:DesktopBackend = "cua" | "native" | "hermes".
+// Backend: Tools:DesktopBackend = "cua" | "native".
 // cua = local cua-driver agent cursor (LLMOD blue overlay; OS mouse untouched).
 // Optional Tools:DesktopTargetWindowTitle hard-scopes clicks to that window (BED-188).
 // Session gates are mutable via GET/POST /settings/tools (Settings → Tools & Access).
@@ -353,8 +308,6 @@ builder.Services.AddSingleton<IDesktopControlBackend>(sp =>
 {
     IDesktopControlBackend inner;
     var backendName = (sp.GetRequiredService<IToolsAccessSettings>().DesktopBackend ?? "cua").Trim();
-    if (string.Equals(backendName, "hermes", StringComparison.OrdinalIgnoreCase))
-        backendName = "cua";
     if (string.Equals(backendName, "cua", StringComparison.OrdinalIgnoreCase)
         || string.Equals(backendName, "auto", StringComparison.OrdinalIgnoreCase))
     {
@@ -418,7 +371,7 @@ builder.Services.AddSingleton<ITool, SoulCore.Inference.Tools.ChiefArchitect.CaV
 // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
 // Backend: Tools.BrowserBackend=playwright (BED-195 Victoria Chromium) preferred even when
 // DesktopTargetWindowTitle is set (VM stays for desktop_*; web uses Playwright).
-// native → BrowserCaptureBridge :17891. Hermes browser backend retired (BED-185).
+// native → BrowserCaptureBridge :17891.
 builder.Services.AddHttpClient("browser-bridge", (sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
@@ -439,8 +392,6 @@ builder.Services.AddSingleton<IBrowserBridge>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
     var backend = (opts.BrowserBackend ?? ToolsOptions.BackendNative).Trim();
-    if (string.Equals(backend, ToolsOptions.BackendHermes, StringComparison.OrdinalIgnoreCase))
-        backend = "none";
 
     // BED-195: Playwright wins over GuestVm even when DesktopTargetWindowTitle is set.
     if (string.Equals(backend, ToolsOptions.BackendPlaywright, StringComparison.OrdinalIgnoreCase))
@@ -488,7 +439,7 @@ builder.Services.AddSingleton<ITool, BrowserKeyTool>();
 builder.Services.AddSingleton<ITool, BrowserScrollTool>();
 
 // MT4 trading tools (BED-138): AllowMt4Read / AllowMt4Trade + confirmed=true gate.
-// Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169). Hermes MT4 bridge retired (BED-185).
+// Mt4Backend=llmod → LlmodHttpMt4Bridge (BED-169).
 builder.Services.AddHttpClient<LlmodHttpMt4Bridge>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -497,10 +448,8 @@ builder.Services.AddSingleton<IMt4Bridge>(sp =>
 {
     var tools = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;
     var backend = (tools.Mt4Backend ?? ToolsOptions.BackendLlmod).Trim();
-    if (HermesToolRouting.IsHermesBackend(backend))
-        backend = ToolsOptions.BackendLlmod;
-
-    if (HermesToolRouting.IsLlmodBackend(backend))
+    if (string.Equals(backend, ToolsOptions.BackendLlmod, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(backend, ToolsOptions.BackendNative, StringComparison.OrdinalIgnoreCase))
         return sp.GetRequiredService<LlmodHttpMt4Bridge>();
 
     return new UnavailableMt4Bridge(
@@ -657,6 +606,7 @@ app.MapVoiceApi();
 
 app.MapGet("/health", async (
     IOptions<HostBindOptions> opts,
+    IOptions<SmsOptions> smsOpts,
     IMemoryStore memory,
     IUnrealVerbClient unreal,
     IOptions<UnrealBridgeOptions> unrealOpts,
@@ -743,11 +693,6 @@ app.MapGet("/health", async (
                 : null,
             apiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey())
         },
-        hermes = new
-        {
-            enabled = hermesOptions.Enabled,
-            provider = hermesOptions.Enabled ? "http" : "null"
-        },
         soulLoop = new
         {
             enabled = loopOpts.Value.Enabled,
@@ -785,7 +730,9 @@ app.MapGet("/health", async (
                 monthlyCapUsd = spendSummary.MonthlyCap,
                 capExceeded = spendSummary.CapExceeded
             }
-        }
+        },
+        // PROP-1.4: SMS gateway status — bool/length only (no MDNs/tokens).
+        sms = SmsHealthSnapshot.Build(smsOpts.Value)
     });
 });
 
@@ -1126,13 +1073,12 @@ app.MapGet("/", () => Results.Redirect("/health"));
 
 var logger = app.Logger;
 logger.LogInformation(
-    "SoulCore.Host listening on http://{Address}:{Port} (health: /health, ws: {WsPath}); memory={MemoryPath}; inference={Inference}; hermes={Hermes}; soulLoop={SoulLoop}; unreal={Unreal}",
+    "SoulCore.Host listening on http://{Address}:{Port} (health: /health, ws: {WsPath}); memory={MemoryPath}; inference={Inference}; soulLoop={SoulLoop}; unreal={Unreal}",
     bindOptions.BindAddress,
     bindOptions.Port,
     wsPath,
     app.Services.GetRequiredService<IMemoryStore>().DatabasePath,
     inferenceOptions.Enabled ? "ollama" : "null",
-    hermesOptions.Enabled ? "http" : "null",
     soulLoopOptions.Enabled ? "enabled" : "disabled",
     unrealOptions.Enabled ? unrealOptions.WsUrl : "disabled");
 

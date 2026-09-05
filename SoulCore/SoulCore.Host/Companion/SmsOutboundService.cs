@@ -95,6 +95,7 @@ public sealed class SmsOutboundService : ISmsOutboundService
         if (imageBytes is null || imageBytes.Length == 0)
             return new SmsOutboundEnqueueResult(false, null, false, "image_required");
 
+        (imageBytes, contentType) = SmsMmsImageSanitizer.SanitizeForOutbound(imageBytes, contentType);
         var ct = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType.Trim();
         var cap = string.IsNullOrWhiteSpace(caption)
             ? null
