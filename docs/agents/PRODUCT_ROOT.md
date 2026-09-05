@@ -15,7 +15,7 @@ updated: 2026-09-05
 | Code home | `SoulCore/` + `House/` |
 | Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` |
 | Desk UI | `House/House.ChatDesktop` · `ALLSTART.ps1` / `ALLSTOP.ps1` |
-| Inference | Ollama / LLMod tool-loop. **Hermes retired** (`NullHermesClient`) — live-surface purge = PROP-7 |
+| Inference | Ollama / LLMod tool-loop only (PROP-7 removed Hermes live surface) |
 | SMS | Tablet SM-X218U → Companion inbound/outbound APIs (Tasker/Termux temporary) |
 | Embodiment | Shadow PC UE body WS `:8888`; Kayleigh possess = PROP-2 / TASK-191 |
 | Charter | Locked; SoulLoop live — dual-open / concurrency fix = PROP-5 |

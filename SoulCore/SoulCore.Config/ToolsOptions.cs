@@ -9,7 +9,6 @@ public sealed class ToolsOptions
 {
     public const string SectionName = "Tools";
 
-    public const string BackendHermes = "hermes";
     public const string BackendLlmod = "llmod";
     /// <summary>Alias for <see cref="BackendLlmod"/> (BED-169).</summary>
     public const string BackendNative = "native";

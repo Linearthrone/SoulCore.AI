@@ -22,7 +22,7 @@ Kurt desk  ──WS/HTTP──────────────────�
 | Config | `SoulCore/SoulCore.Config` | Options + `.env` loader (`SOULCORE_*`) |
 | Protocol | `SoulCore/SoulCore.Protocol` | Wire frame types (`chat.done`, etc.) |
 | Adapters.Ws | `SoulCore/SoulCore.Adapters.Ws` | Presence hub, Unreal verb stubs |
-| Hermes | `SoulCore/SoulCore.Hermes` | **Retired** — Host uses `NullHermesClient` only (BED-185) |
+| Hermes | `SoulCore/SoulCore.Hermes` | **Retired** — archived package; Host no longer references it (PROP-7) |
 | ChatDesktop | `House/House.ChatDesktop` | Presence desk UI |
 | Companion Android | `House/House.CompanionAndroid` | Victoria Link |
 | Voice | `House/House.Voice` | STT/TTS helpers started by ALLSTART |

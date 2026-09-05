@@ -9,7 +9,6 @@ using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
-using SoulCore.Hermes;
 using SoulCore.Inference;
 using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.ChiefArchitect;
@@ -25,7 +24,6 @@ namespace SoulCore.Host.Ws;
 /// <summary>
 /// Presence chat WebSocket session: chat.send → Ollama (tool-loop) → emotion.snapshot + chat.delta/done,
 /// optional episodic write + Unreal speak/set_emotion side-effects.
-/// Hermes retired (BED-185); <see cref="IHermesClient"/> is retained only for DI signature compat.
 /// </summary>
 public sealed class ChatWebSocketHandler
 {
@@ -60,7 +58,6 @@ public sealed class ChatWebSocketHandler
 
     public ChatWebSocketHandler(
         IInferenceClient inference,
-        IHermesClient hermes,
         IEmotionState emotion,
         IMemoryStore memory,
         IEmbeddingClient embeddings,
@@ -74,15 +71,12 @@ public sealed class ChatWebSocketHandler
         PresenceWsHub hub,
         IOptions<ChatWsOptions> chatOptions,
         IOptions<InferenceOptions> inferenceOptions,
-        IOptions<HermesOptions> hermesOptions,
         IToolsAccessSettings toolsAccess,
         ILogger<ChatWebSocketHandler> logger,
         IVoiceSpeakService? voiceSpeak = null,
         IPresenceActivityHub? presenceActivity = null)
     {
         _inference = inference;
-        _ = hermes; // BED-185: unused — NullHermesClient only
-        _ = hermesOptions;
         _emotion = emotion;
         _memory = memory;
         _embeddings = embeddings;
@@ -460,7 +454,7 @@ public sealed class ChatWebSocketHandler
                         {
                             code = "chat.model_down",
                             message = string.IsNullOrWhiteSpace(ex.Message)
-                                ? "LLM unreachable (Hermes/Ollama)."
+                                ? "LLM unreachable (Ollama)."
                                 : ex.Message
                         },
                         id: frame.Id),
@@ -765,16 +759,11 @@ public sealed class ChatWebSocketHandler
         if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
+                "No LLM client enabled (Inference:Enabled). Refusing stub-as-success.");
         }
 
         Exception? lastError = null;
 
-        // BED-185: Hermes chat path retired — Ollama only.
-        if (_chatOptions.PreferHermes)
-        {
-            _logger.LogWarning("PreferHermes ignored (BED-185 Hermes retired) — Ollama only");
-        }
 
         try
         {
@@ -794,7 +783,7 @@ public sealed class ChatWebSocketHandler
         }
 
         throw lastError ?? new InvalidOperationException(
-            "LLM returned empty reply from Ollama (Hermes retired — BED-185).");
+            "LLM returned empty reply from Ollama.");
     }
 
     /// <summary>
@@ -1298,7 +1287,7 @@ public sealed class ChatWebSocketHandler
 
     /// <summary>
     /// Records token usage into the SpendMeter after a successful inference call. Token counts
-    /// are not yet exposed by the IInferenceClient/IHermesClient response shape, so this estimates
+    /// are not yet exposed by the IInferenceClient response shape, so this estimates
     /// counts from the input (prompt + preamble) and output (reply) text using chars/4 as a rough
     /// proxy. The wiring is in place for when real counts become available. SpendMeter failures
     /// are swallowed so they never break the chat path.
@@ -1347,7 +1336,7 @@ public sealed class ChatWebSocketHandler
         if (!_inferenceOptions.Enabled)
         {
             throw new InvalidOperationException(
-                "No LLM client enabled (Inference:Enabled). Hermes retired (BED-185). Refusing stub-as-success.");
+                "No LLM client enabled (Inference:Enabled). Refusing stub-as-success.");
         }
 
         // Build the agent-loop messages[]: system preamble + prior turns + user.
@@ -1379,7 +1368,7 @@ public sealed class ChatWebSocketHandler
         string? provider = null;
 
         // BED-162 / BED-167: force tool_choice on high-confidence NL intents
-        // (Ollama path — including PreferHermes Avenue B which also uses Ollama).
+        // Ollama tool-loop path.
         // MT4 status wins over workflow when both somehow match (ISSUE-003:
         // models escape "status" phrasing to task_create/task_get).
         ToolLoopOptions? ollamaLoopOptions = null;
@@ -1429,12 +1418,6 @@ public sealed class ChatWebSocketHandler
                 intent.Intent, intent.ToolName);
         }
 
-        // BED-185: Hermes / PreferHermes MCP preflight retired — Ollama tool-loop only.
-        if (_chatOptions.PreferHermes)
-        {
-            _logger.LogWarning(
-                "PreferHermes ignored (BED-185 Hermes retired) — Ollama tool-loop only");
-        }
 
         if (replyText is null && _inferenceOptions.Enabled)
         {
@@ -1460,7 +1443,7 @@ public sealed class ChatWebSocketHandler
         if (replyText is null || provider is null)
         {
             throw lastError ?? new InvalidOperationException(
-                "LLM tool-loop returned empty reply from Ollama (Hermes retired — BED-185).");
+                "LLM tool-loop returned empty reply from Ollama.");
         }
 
         // Persist this turn (user + tool trace + final assistant) for the next send.

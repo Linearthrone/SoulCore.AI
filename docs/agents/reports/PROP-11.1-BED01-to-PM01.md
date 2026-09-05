@@ -14,7 +14,7 @@ verdict: Pass
 
 ## Verdict: **Pass**
 
-Extracted `SqliteMemoryStore` into focused repositories behind existing interfaces. One SQLite file; `SqlitePathGate` from PROP-5 unchanged.
+Extracted `SqliteMemoryStore` into focused repositories behind existing interfaces. One SQLite file; `SqlitePathGate` from PROP-5 unchanged. Memory + Protocol tests: **99/99 Pass**.
 
 ## New types
 

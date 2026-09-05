@@ -4,7 +4,6 @@
     <ProjectReference Include="..\SoulCore.Core\SoulCore.Core.csproj" />
     <ProjectReference Include="..\SoulCore.Memory\SoulCore.Memory.csproj" />
     <ProjectReference Include="..\SoulCore.Inference\SoulCore.Inference.csproj" />
-    <ProjectReference Include="..\SoulCore.Hermes\SoulCore.Hermes.csproj" />
     <ProjectReference Include="..\SoulCore.Adapters.Ws\SoulCore.Adapters.Ws.csproj" />
     <ProjectReference Include="..\SoulCore.Config\SoulCore.Config.csproj" />
     <ProjectReference Include="..\SoulCore.Protocol\SoulCore.Protocol.csproj" />

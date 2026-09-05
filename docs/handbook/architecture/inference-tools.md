@@ -4,7 +4,7 @@
 
 Chat uses **Ollama** (`Inference:BaseUrl` / `Model`) via `CompleteAsync` / `CompleteWithToolsAsync`.
 
-**Hermes is retired (BED-185).** Host forces `Hermes:Enabled=false` and remaps legacy `hermes` tool backends to safe defaults (`cua` / `llmod` / `none`). Do not reintroduce PreferHermes as a live control plane.
+**Hermes is retired (PROP-7).** Host no longer registers `IHermesClient`, `HermesOptions`, or `PreferHermes`. Legacy `hermes` backend strings are unsupported — use `cua`, `playwright`, or `llmod`.
 
 ## Tool areas (ITool registry)
 
@@ -29,4 +29,4 @@ Chat uses **Ollama** (`Inference:BaseUrl` / `Model`) via `CompleteAsync` / `Comp
 
 - Browser backend in Host appsettings: **playwright**
 - Desktop backend: **cua** (with native fallback)
-- MT4 backend: **llmod** (not hermes)
+- MT4 backend: **llmod**
