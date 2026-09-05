@@ -40,8 +40,8 @@ owner: PM-01 / TT-01
 | PROP-3-link-messenger-product | Link Messenger-class rewrite | parked until SMS QA Pass | — |
 | PROP-4-presence-shell-honest-hud | Presence House drawer + installer | **accepted-pm-ticketed** — TINA 2026-09-05 | 4.1 FED · 4.2 OPS |
 | PROP-5-host-sqlite-concurrency-ownership | Host SQLite concurrency + charter ownership + SoulLoop single-flight | **Pass** — 5.1–5.4 Accepted 2026-09-05 (`cursor/prop5-sqlite-gate-8a1f`) | 5.1–5.4 |
-| PROP-6-desktop-drag-async-delay | Desktop drag Thread.Sleep → async delay | **accepted-pm-ticketed** — TINA Wave NOW \|\| PROP-5 | 6.1 BED |
-| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **accepted-gated** — after PROP-5 | — |
+| PROP-6-desktop-drag-async-delay | Desktop drag Thread.Sleep → async delay | **Pass** — 6.1 Accepted 2026-09-05 (`cursor/prop6-desktop-delay-8a1f`) | 6.1 |
+| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **unblocked** — PROP-5 Pass; next Host lane | — |
 | PROP-8-chat-orchestration-decomposition | ChatWebSocketHandler strangler + prompt builder + history + gated parallel reads | **accepted-gated** — after PROP-5; prefer after PROP-9 | — |
 | PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **accepted-gated** — after PROP-5 + PROP-7 | — |
 | PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **accepted-gated** — after PROP-7 | — |
