@@ -148,3 +148,4 @@ public async Task<IReadOnlyDictionary<string, double>> GetAsync(CancellationToke
         try { using var doc = JsonDocument.Parse(json); foreach (var prop in doc.RootElement.EnumerateObject()) if (prop.Value.ValueKind == JsonValueKind.Number && prop.Value.TryGetDouble(out var d) && !map.ContainsKey(prop.Name)) map[prop.Name] = d; }
         catch (JsonException) { }
     }
+}
