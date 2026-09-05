@@ -15,12 +15,12 @@ namespace SoulCore.Inference.Tools.Email;
 /// </summary>
 public sealed class MailKitEmailBridge : IEmailBridge
 {
-    private readonly IOptions<EmailOptions> _options;
+    private readonly IEmailAccountStore _accounts;
     private readonly ILogger<MailKitEmailBridge> _logger;
 
-    public MailKitEmailBridge(IOptions<EmailOptions> options, ILogger<MailKitEmailBridge> logger)
+    public MailKitEmailBridge(IEmailAccountStore accounts, ILogger<MailKitEmailBridge> logger)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -272,10 +272,7 @@ public sealed class MailKitEmailBridge : IEmailBridge
 
     private IEnumerable<EmailAccountOptions> EnumerateAccounts()
     {
-        var list = _options.Value?.Accounts;
-        if (list is null)
-            yield break;
-        foreach (var a in list)
+        foreach (var a in _accounts.ListAccounts())
         {
             if (a is null) continue;
             if (string.IsNullOrWhiteSpace(a.ResolveId()))

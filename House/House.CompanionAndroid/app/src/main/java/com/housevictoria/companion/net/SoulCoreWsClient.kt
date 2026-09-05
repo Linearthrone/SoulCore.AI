@@ -111,7 +111,11 @@ class SoulCoreWsClient(
         }
     }
 
-    fun sendChat(text: String, sessionId: String? = this.sessionId): Result<Unit> {
+    fun sendChat(
+        text: String,
+        sessionId: String? = this.sessionId,
+        quotedText: String? = null
+    ): Result<Unit> {
         val socket = socketRef.get()
         if (socket == null || state != WsConnectionState.Connected) {
             val msg = "WS unavailable — chat.send not sent. Host must be up on loopback /ws. " +
@@ -119,7 +123,7 @@ class SoulCoreWsClient(
             lastError = msg
             return Result.failure(IllegalStateException(msg))
         }
-        val frame = SoulCoreFrame.chatSend(text, sessionId)
+        val frame = SoulCoreFrame.chatSend(text, sessionId, quotedText)
         val ok = socket.send(frame.toJson())
         return if (ok) {
             Result.success(Unit)

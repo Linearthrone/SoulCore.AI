@@ -101,11 +101,16 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         }
     }
 
-    public async Task<bool> SendChatAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<bool> SendChatAsync(
+        string text,
+        string? quotedText = null,
+        CancellationToken cancellationToken = default)
     {
-        var frame = SoulCoreFrame.Create(
-            SoulCoreFrameTypes.ChatSend,
-            new { text, sessionId = "presence-local" });
+        object payload = string.IsNullOrWhiteSpace(quotedText)
+            ? new { text, sessionId = "presence-local" }
+            : new { text, quotedText = quotedText.Trim(), sessionId = "presence-local" };
+
+        var frame = SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, payload);
 
         return await SendFrameAsync(frame, "chat.send", cancellationToken).ConfigureAwait(false);
     }

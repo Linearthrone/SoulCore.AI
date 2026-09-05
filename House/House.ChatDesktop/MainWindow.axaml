@@ -13,10 +13,12 @@
         ExtendClientAreaTitleBarHeightHint="-1"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/house-victoria.ico">
-  <!-- Frameless shell — one floating pane like the mockup -->
-  <Border Classes="shell" Margin="8">
+  <!-- Frameless shell — thick metal bevel (dark→bright→dark refraction) -->
+  <Border Classes="shell-bevel" Margin="4">
+  <Border Classes="shell">
     <Grid>
-      <Border Classes="shell-inner" IsHitTestVisible="False"/>
+      <Border Classes="shell-inner"/>
+      <Border Classes="shell-rim" Margin="1"/>
       <DockPanel Margin="0">
         <!-- Title / identity frame strip (drag region) -->
         <Border x:Name="TitleDragRegion" DockPanel.Dock="Top" Padding="16,12,12,8"
@@ -24,7 +26,7 @@
           <Grid ColumnDefinitions="*,Auto,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <Border Width="36" Height="36" CornerRadius="8" Background="#1A1C20"
-                      BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
+                      BorderBrush="{DynamicResource MetalBevelBrush}" BorderThickness="1.5">
                 <TextBlock Text="HV" FontSize="12" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -155,7 +157,22 @@
                               <StackPanel>
                                 <Image Source="{Binding Image}" IsVisible="{Binding HasImage}"
                                        MaxHeight="240" MaxWidth="360" Stretch="Uniform" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding Text}" IsVisible="{Binding HasText}" TextWrapping="Wrap"/>
+                                <SelectableTextBlock Text="{Binding Text}" IsVisible="{Binding HasText}"
+                                                     TextWrapping="Wrap"
+                                                     SelectionBrush="{DynamicResource AccentDimBrush}"
+                                                     PointerReleased="MessageText_PointerReleased">
+                                  <SelectableTextBlock.ContextMenu>
+                                    <ContextMenu>
+                                      <MenuItem Header="Quote selection" Click="QuoteSelection_Click"/>
+                                      <MenuItem Header="Quote message" Click="QuoteMessage_Click"/>
+                                    </ContextMenu>
+                                  </SelectableTextBlock.ContextMenu>
+                                </SelectableTextBlock>
+                                <Button Classes="chrome" Content="Quote"
+                                        HorizontalAlignment="Left" Margin="0,4,0,0" Padding="8,2"
+                                        FontSize="10" Tag="{Binding}"
+                                        Click="QuoteMessageButton_Click"
+                                        IsVisible="{Binding HasText}"/>
                                 <TextBlock Text="{Binding DisplayTime}" FontSize="10" Margin="0,6,0,0"
                                            Foreground="{DynamicResource MutedBrush}"/>
                               </StackPanel>
@@ -252,7 +269,7 @@
       </Grid>
 
       <Border Grid.Row="1" Classes="metal glass" Padding="10" Margin="0,8,0,0">
-        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Classes="chrome" Content="Attach" Click="AttachImage_Click"
                     ToolTip.Tip="Attach image (MMS outbound)"/>
@@ -269,7 +286,19 @@
             <TextBlock x:Name="PttHintText" Text="" FontSize="11" Foreground="{DynamicResource MutedBrush}"
                        VerticalAlignment="Center"/>
           </StackPanel>
-          <DockPanel Grid.Row="1">
+          <Border x:Name="QuoteChip" Classes="carbon" Padding="10,6" IsVisible="False">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="chrome" Content="×" Padding="6,1"
+                      Click="ClearQuote_Click" ToolTip.Tip="Clear quote"/>
+              <StackPanel>
+                <TextBlock Text="Replying to excerpt" FontSize="10" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock x:Name="QuoteChipText" FontSize="11" TextWrapping="Wrap" MaxHeight="64"
+                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedBrush}"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <DockPanel Grid.Row="2">
             <Button DockPanel.Dock="Right" Classes="primary" Content="Send" Width="96"
                     Margin="10,0,0,0" Click="Send_Click"/>
             <TextBox x:Name="ChatInput" Classes="input" AcceptsReturn="False" Height="40"
@@ -454,7 +483,7 @@
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowMt4TradeCheck" Content="Allow MT4 trade / close / backtest"
                           Margin="0,0,0,16" Click="ToolsAccessToggle_Click"/>
-                <TextBlock Text="Email" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock Text="Email gates" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <CheckBox x:Name="ToolsAllowEmailReadCheck" Content="Allow email read / sort / mark (victoria + Kurt accounts)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowEmailSendCheck" Content="Allow email send / reply (still asks Kurt to confirm)"
@@ -464,6 +493,57 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="ghost" Content="Refresh" Click="ToolsAccessRefresh_Click"/>
                   <TextBlock x:Name="ToolsAccessStatusText" Foreground="{DynamicResource MutedBrush}"
+                             VerticalAlignment="Center" FontSize="11"/>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <TabItem Header="Email">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="12" Spacing="6">
+                <TextBlock Text="Email accounts" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"
+                           Text="IMAP/SMTP credentials Victoria uses for victoria / personal / business. Passwords are write-only (leave blank to keep). Runtime file: %LOCALAPPDATA%/SoulCore/email-accounts.runtime.json"/>
+                <TextBlock Text="Account" Foreground="{DynamicResource MutedBrush}"/>
+                <ComboBox x:Name="EmailAccountCombo" Classes="input" Height="36"
+                          SelectionChanged="EmailAccountCombo_SelectionChanged"/>
+                <CheckBox x:Name="EmailEnabledCheck" Content="Enabled" Margin="0,4,0,4"/>
+                <TextBlock Text="Display name" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBox x:Name="EmailDisplayNameBox" Classes="input" Height="34" Padding="8,0"
+                         VerticalContentAlignment="Center"/>
+                <TextBlock Text="Address" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBox x:Name="EmailAddressBox" Classes="input" Height="34" Padding="8,0"
+                         VerticalContentAlignment="Center"/>
+                <TextBlock Text="Username (blank = address)" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBox x:Name="EmailUsernameBox" Classes="input" Height="34" Padding="8,0"
+                         VerticalContentAlignment="Center"/>
+                <TextBlock Text="Password / app password" Foreground="{DynamicResource MutedBrush}"/>
+                <TextBox x:Name="EmailPasswordBox" Classes="input" Height="34" Padding="8,0"
+                         PasswordChar="•" VerticalContentAlignment="Center"
+                         Watermark="Leave blank to keep current"/>
+                <TextBlock x:Name="EmailPasswordHint" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                           Text="Password status: —"/>
+                <TextBlock Text="IMAP host / port" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
+                <DockPanel>
+                  <TextBox x:Name="EmailImapPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                           Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="993" Margin="8,0,0,0"/>
+                  <TextBox x:Name="EmailImapHostBox" Classes="input" Height="34" Padding="8,0"
+                           VerticalContentAlignment="Center" Text="imap.gmail.com"/>
+                </DockPanel>
+                <CheckBox x:Name="EmailImapSslCheck" Content="IMAP SSL" IsChecked="True"/>
+                <TextBlock Text="SMTP host / port" Foreground="{DynamicResource MutedBrush}"/>
+                <DockPanel>
+                  <TextBox x:Name="EmailSmtpPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                           Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="587" Margin="8,0,0,0"/>
+                  <TextBox x:Name="EmailSmtpHostBox" Classes="input" Height="34" Padding="8,0"
+                           VerticalContentAlignment="Center" Text="smtp.gmail.com"/>
+                </DockPanel>
+                <CheckBox x:Name="EmailSmtpSslCheck" Content="SMTP implicit TLS (465); off = STARTTLS on 587"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                  <Button Classes="primary" Content="Save account" Click="EmailAccountSave_Click"/>
+                  <Button Classes="ghost" Content="Refresh" Click="EmailAccountsRefresh_Click"/>
+                  <TextBlock x:Name="EmailSettingsStatusText" Foreground="{DynamicResource MutedBrush}"
                              VerticalAlignment="Center" FontSize="11"/>
                 </StackPanel>
               </StackPanel>
@@ -556,5 +636,6 @@
     </Grid>
       </DockPanel>
     </Grid>
+  </Border>
   </Border>
 </Window>

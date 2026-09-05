@@ -513,6 +513,142 @@ public partial class MainWindow
     private async void ToolsAccessRefresh_Click(object? sender, RoutedEventArgs e) =>
         await RefreshToolsAccessAsync();
 
+    private async void EmailAccountsRefresh_Click(object? sender, RoutedEventArgs e) =>
+        await RefreshEmailAccountsAsync();
+
+    private async void EmailAccountSave_Click(object? sender, RoutedEventArgs e)
+    {
+        var id = EmailAccountCombo?.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            if (EmailSettingsStatusText is not null)
+            {
+                EmailSettingsStatusText.Text = "Pick an account slot first";
+                EmailSettingsStatusText.Foreground = _badBrush;
+            }
+            return;
+        }
+
+        int? imapPort = null;
+        if (int.TryParse((EmailImapPortBox?.Text ?? "").Trim(), out var ip) && ip > 0)
+            imapPort = ip;
+        int? smtpPort = null;
+        if (int.TryParse((EmailSmtpPortBox?.Text ?? "").Trim(), out var sp) && sp > 0)
+            smtpPort = sp;
+
+        var password = EmailPasswordBox?.Text;
+        var write = new SoulCoreEmailSettingsClient.EmailAccountWriteDto
+        {
+            Id = id,
+            Role = id,
+            DisplayName = EmailDisplayNameBox?.Text,
+            Address = EmailAddressBox?.Text,
+            Username = EmailUsernameBox?.Text,
+            Password = string.IsNullOrWhiteSpace(password) ? null : password,
+            ImapHost = EmailImapHostBox?.Text,
+            ImapPort = imapPort,
+            ImapUseSsl = EmailImapSslCheck?.IsChecked == true,
+            SmtpHost = EmailSmtpHostBox?.Text,
+            SmtpPort = smtpPort,
+            SmtpUseSsl = EmailSmtpSslCheck?.IsChecked == true,
+            Enabled = EmailEnabledCheck?.IsChecked == true
+        };
+
+        var snap = await _emailSettings.UpsertAsync(write).ConfigureAwait(true);
+        ApplyEmailSettingsSnapshot(snap, saved: true, preferId: id);
+        if (EmailPasswordBox is not null)
+            EmailPasswordBox.Text = string.Empty;
+    }
+
+    private void EmailAccountCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_emailAccountsHydrating) return;
+        var id = EmailAccountCombo?.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(id)) return;
+        var account = _emailAccounts.FirstOrDefault(a =>
+            string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (account is not null)
+            FillEmailEditor(account);
+    }
+
+    private async Task RefreshEmailAccountsAsync()
+    {
+        var snap = await _emailSettings.GetAsync().ConfigureAwait(true);
+        ApplyEmailSettingsSnapshot(snap, saved: false, preferId: EmailAccountCombo?.SelectedItem as string);
+    }
+
+    private void ApplyEmailSettingsSnapshot(EmailSettingsSnapshot snap, bool saved, string? preferId)
+    {
+        _emailAccounts = snap.Accounts ?? Array.Empty<EmailAccountSnapshot>();
+        _emailAccountsHydrating = true;
+        try
+        {
+            if (EmailAccountCombo is not null)
+            {
+                var ids = _emailAccounts.Select(a => a.Id).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (ids.Count == 0)
+                    ids = ["victoria", "personal", "business"];
+                EmailAccountCombo.ItemsSource = ids;
+                var pick = preferId is not null && ids.Contains(preferId, StringComparer.OrdinalIgnoreCase)
+                    ? ids.First(i => string.Equals(i, preferId, StringComparison.OrdinalIgnoreCase))
+                    : ids[0];
+                EmailAccountCombo.SelectedItem = pick;
+                var account = _emailAccounts.FirstOrDefault(a =>
+                    string.Equals(a.Id, pick, StringComparison.OrdinalIgnoreCase));
+                if (account is not null)
+                    FillEmailEditor(account);
+                else
+                    FillEmailEditor(new EmailAccountSnapshot { Id = pick, Role = pick, Enabled = true, ImapPort = 993, SmtpPort = 587, ImapUseSsl = true });
+            }
+        }
+        finally
+        {
+            _emailAccountsHydrating = false;
+        }
+
+        if (EmailSettingsStatusText is null) return;
+        if (!snap.Reachable)
+        {
+            EmailSettingsStatusText.Text = snap.Detail ?? "Host unreachable";
+            EmailSettingsStatusText.Foreground = _badBrush;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snap.Detail) &&
+            (snap.Detail.StartsWith("HTTP", StringComparison.Ordinal) ||
+             snap.Detail.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
+        {
+            EmailSettingsStatusText.Text = snap.Detail;
+            EmailSettingsStatusText.Foreground = _badBrush;
+            return;
+        }
+
+        EmailSettingsStatusText.Text = saved
+            ? $"Saved · {DateTimeOffset.Now:h:mm tt}"
+            : $"Loaded · {_emailAccounts.Count} slot(s) · {DateTimeOffset.Now:h:mm tt}";
+        EmailSettingsStatusText.Foreground = Res("MutedBrush");
+    }
+
+    private void FillEmailEditor(EmailAccountSnapshot account)
+    {
+        if (EmailEnabledCheck is not null) EmailEnabledCheck.IsChecked = account.Enabled;
+        if (EmailDisplayNameBox is not null) EmailDisplayNameBox.Text = account.DisplayName;
+        if (EmailAddressBox is not null) EmailAddressBox.Text = account.Address;
+        if (EmailUsernameBox is not null) EmailUsernameBox.Text = account.Username;
+        if (EmailImapHostBox is not null) EmailImapHostBox.Text = string.IsNullOrWhiteSpace(account.ImapHost) ? "imap.gmail.com" : account.ImapHost;
+        if (EmailImapPortBox is not null) EmailImapPortBox.Text = (account.ImapPort > 0 ? account.ImapPort : 993).ToString();
+        if (EmailImapSslCheck is not null) EmailImapSslCheck.IsChecked = account.ImapUseSsl;
+        if (EmailSmtpHostBox is not null) EmailSmtpHostBox.Text = string.IsNullOrWhiteSpace(account.SmtpHost) ? "smtp.gmail.com" : account.SmtpHost;
+        if (EmailSmtpPortBox is not null) EmailSmtpPortBox.Text = (account.SmtpPort > 0 ? account.SmtpPort : 587).ToString();
+        if (EmailSmtpSslCheck is not null) EmailSmtpSslCheck.IsChecked = account.SmtpUseSsl;
+        if (EmailPasswordHint is not null)
+        {
+            EmailPasswordHint.Text = account.HasPassword
+                ? (account.IsConfigured ? "Password status: set · configured" : "Password status: set · incomplete fields")
+                : "Password status: not set";
+        }
+    }
+
     private async void ToolsAccessToggle_Click(object? sender, RoutedEventArgs e)
     {
         if (_toolsAccessHydrating) return;
