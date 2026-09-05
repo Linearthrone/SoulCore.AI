@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
+using SoulCore.Inference;
 using SoulCore.Host.Voice;
 
 namespace SoulCore.Host.Hosting.ServiceCollectionExtensions;
