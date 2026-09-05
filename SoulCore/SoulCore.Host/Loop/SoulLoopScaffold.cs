@@ -28,6 +28,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
     private readonly DriftWatcher _driftWatcher;
     private readonly ILogger<SoulLoopScaffold> _logger;
     private readonly object _gate = new();
+    private readonly SemaphoreSlim _tickFlight = new(1, 1);
     private string? _lastWant;
     private int _tickCount;
 
@@ -70,6 +71,24 @@ public sealed class SoulLoopScaffold : ISoulLoop
             return;
         }
 
+        if (!await _tickFlight.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogDebug("SoulLoop tick skipped (single-flight busy — overlapping caller)");
+            return;
+        }
+
+        try
+        {
+            await TickCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _tickFlight.Release();
+        }
+    }
+
+    private async Task TickCoreAsync(CancellationToken cancellationToken)
+    {
         IReadOnlyDictionary<string, double> emotion;
         try
         {
@@ -153,7 +172,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
 
         // Episodic self-reflection: write a first-person memory every Nth tick.
         // Throttled to avoid memory bloat (default every 5th tick). Never breaks the loop.
-        var tick = ++_tickCount;
+        var tick = Interlocked.Increment(ref _tickCount);
         var interval = _options.ReflectionIntervalTicks;
         if (interval > 0 && tick % interval == 0)
         {
