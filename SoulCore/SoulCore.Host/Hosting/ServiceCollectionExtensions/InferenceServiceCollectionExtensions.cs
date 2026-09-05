@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Host.Inference;
 using SoulCore.Host.Ws;
 

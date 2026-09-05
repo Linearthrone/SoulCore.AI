@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SoulCore.Config;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Charter;
 using SoulCore.Core.Safety;

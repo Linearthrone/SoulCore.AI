@@ -3,7 +3,8 @@ using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
 using SoulCore.Host.Companion;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Memory;
 
 namespace SoulCore.Protocol.Tests;
