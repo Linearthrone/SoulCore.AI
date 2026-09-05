@@ -398,3 +398,6 @@ Expect `X_API_KEY => CONNECTED` when `SOULCORE_COMPANION_API_TOKEN` is set on Ho
 - Empty allowlist = **deny all**
 - Do not put MDNs or tokens in git
 - Images stored as companion media attachments only — never tool arguments
+- **Gateway auth rotation:** rotate `SOULCORE_COMPANION_API_TOKEN` on a schedule (e.g. quarterly) or after any tablet/Tasker export leak. Generate ≥32 random chars; update Host `.env` and tablet `SOULCORE_TOKEN` / `~/.config/soulcore/companion.token` together; restart Host and re-smoke with `--secrets-presence` fingerprint match. Never commit old tokens.
+- **Dedicated line:** Victoria gateway uses the tablet SM-X218U MDN — not Kurt's primary daily SIM (PROP §8 kill: bot on primary SMS graph).
+- Outbound MMS JPEGs are re-encoded server-side to strip EXIF before queue (PROP-1.4).

@@ -15,7 +15,7 @@ updated: 2026-09-05
 | Code home | `SoulCore/` + `House/` |
 | Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` |
 | Desk UI | `House/House.ChatDesktop` · `ALLSTART.ps1` / `ALLSTOP.ps1` |
-| Inference | Ollama / LLMod tool-loop. **Hermes retired** (`NullHermesClient`) — live-surface purge = PROP-7 |
+| Inference | Ollama / LLMod tool-loop only (PROP-7 removed Hermes live surface) |
 | SMS | Tablet SM-X218U → Companion inbound/outbound APIs (Tasker/Termux temporary) |
 | Embodiment | Shadow PC UE body WS `:8888`; Kayleigh possess = PROP-2 / TASK-191 |
 | Charter | Locked; SoulLoop live — dual-open / concurrency fix = PROP-5 |
@@ -26,11 +26,10 @@ updated: 2026-09-05
 - **PROP-2** UE reliability — **2.1–2.4 REX** (Wave NOW seat D; shadow PIE)
 - **PROP-3** Link rewrite — parked until SMS QA Pass
 - **PROP-4** Presence HUD — **4.1 FED / 4.2 OPS** ticketed (Wave NOW seat E)
-- **PROP-5..11** architecture-eval wipeout — **TINA accepted 2026-09-05**
-  - **PROP-5 Pass** (5.1–5.4) · **PROP-6.1 Pass** — merge branches below
-  - **Next Host:** PROP-7 · **Next Memory (∥):** PROP-11
-  - Still gated: PROP-9 after 5+7 · PROP-10 after 7 · PROP-8 after 5 (prefer after 9)
-  - Accept: `docs/agents/tasks/PROP-5-11-PM01-program-accept.md`
+- **PROP-5..11** architecture-eval wipeout — **TINA COMPLETE 2026-09-05** (all Pass)
+  - Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
+  - Integrate tip: `cursor/tina-wipeout-integrate-8a1f`
+  - Human left: merge PRs · Presence Windows QA · SMS tablet · UE shadow
 - **TASK-191 / 192** — REX Kayleigh possess + call capture (192 held)
 
 Do not treat this file as architecture documentation. Edit the handbook instead.

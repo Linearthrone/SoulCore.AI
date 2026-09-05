@@ -6,9 +6,9 @@ Quick index of product modules. Deep dives live under [Architecture](./architect
 | --- | --- | --- |
 | Host | `SoulCore/SoulCore.Host` | HTTP/WS companion API, DI composition root |
 | Protocol | `SoulCore/SoulCore.Protocol` | Shared contracts / messages |
-| Inference | `SoulCore/SoulCore.Inference` | LLMod + tool loop |
+| Inference | `SoulCore/SoulCore.Inference` | Ollama + tool loop |
 | Memory | `SoulCore/SoulCore.Memory` | Continuity, charter, SoulLoop |
-| Hermes (stub) | `SoulCore/SoulCore.Hermes` | `NullHermesClient` only — live Hermes clients removed (BED-185) |
+| Hermes (archived) | `SoulCore/SoulCore.Hermes` | Retired package — no Host reference (PROP-7) |
 | ChatDesktop | `House/House.ChatDesktop` | Presence desk UI |
 | Companion Android | `House/House.CompanionAndroid` | Victoria Link |
 | Voice | `House/House.Voice` | STT/TTS helpers |
