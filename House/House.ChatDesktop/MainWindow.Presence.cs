@@ -177,7 +177,8 @@ public partial class MainWindow
         {
             GradientOrigin = new RelativePoint(0.35, 0.3, RelativeUnit.Relative),
             Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            Radius = 0.75,
+            RadiusX = new RelativeScalar(0.75, RelativeUnit.Relative),
+            RadiusY = new RelativeScalar(0.75, RelativeUnit.Relative),
             GradientStops =
             {
                 new GradientStop(core, 0),
