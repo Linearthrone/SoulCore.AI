@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-7-hermes-dead-surface-cleanup
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -10,6 +10,8 @@ need: Remove retired Hermes from live Host contracts/config so Ollama is the una
 parallel_with: PROP-11 (Memory-only), PROP-1/2/4
 blocked_by: PROP-5 (sole Host lane until Pass)
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-7-TT01-to-PM01.md
 ---
 
 # Hermes dead-surface cleanup

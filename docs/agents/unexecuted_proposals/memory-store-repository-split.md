@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-11-memory-store-repository-split
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -10,6 +10,8 @@ need: Split SqliteMemoryStore god-object into repositories behind existing inter
 parallel_with: PROP-7 (Host Hermes), PROP-10 (Inference folders), PROP-1/2/4
 blocked_by: PROP-5
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-11-TT01-to-PM01.md
 ---
 
 # Memory store repository split

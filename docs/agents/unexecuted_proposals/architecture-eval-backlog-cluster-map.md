@@ -1,9 +1,11 @@
 ---
 type: tt-cluster-map
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
+sent_at: 2026-09-05
+environment: TINA-main
 title: Architecture eval vs live backlog — parallel cluster map
 source_eval: architecture review 2026-09-05 (Good→Great / Needs Attention / Restructure / Better-if)
 ---

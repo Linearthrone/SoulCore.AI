@@ -1,14 +1,14 @@
 ---
 type: proposal
 prop_id: PROP-5-host-sqlite-concurrency-ownership
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
 title: Host SQLite concurrency + charter ownership + SoulLoop single-flight
 need: Stop concurrent chat/SMS/SoulLoop/tool paths from racing one SqliteConnection (and a second Charter opener on the same file) so continuity stays boringly reliable
-sent_at:
-pm_intake:
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-5-TT01-to-PM01.md
 source_eval: architecture review 2026-09-05 (Good-to-Great / Needs Attention / Reorg / Better-if)
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
 parallel_with: PROP-1, PROP-2, PROP-4, PROP-6

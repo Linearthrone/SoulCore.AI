@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-9-host-di-composition-modules
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -10,6 +10,8 @@ need: Keep Program.cs as composition root without a 1.1k-line kitchen sink — g
 parallel_with: PROP-10, PROP-11, PROP-1/2/4
 blocked_by: PROP-5, PROP-7
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-9-TT01-to-PM01.md
 ---
 
 # Host DI composition modules

@@ -39,13 +39,13 @@ owner: PM-01 / TT-01
 | PROP-2-ue-reliable-embodiment | UE Kayleigh 1P / Victoria walk / one eye | accepted-pm-ticketed | 2.1–2.4 |
 | PROP-3-link-messenger-product | Link Messenger-class rewrite | parked until SMS QA Pass | — |
 | PROP-4-presence-shell-honest-hud | Presence House drawer + installer | **in progress** — shell + honesty + icon shipped; Velopack update toast open | 4.1 FED/BED (this wave); 4.2 OPS installer/update |
-| PROP-5-host-sqlite-concurrency-ownership | Host SQLite concurrency + charter ownership + SoulLoop single-flight | **unexecuted** — TT parked 2026-09-05; not sent to PM | — |
-| PROP-6-desktop-drag-async-delay | Desktop drag Thread.Sleep → async delay | **unexecuted** — TT parked 2026-09-05; parallel NOW w/ PROP-5 | — |
-| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **unexecuted** — after PROP-5 (Host lane) | — |
-| PROP-8-chat-orchestration-decomposition | ChatWebSocketHandler strangler + prompt builder + history + gated parallel reads | **unexecuted** — after PROP-5; prefer after PROP-9 | — |
-| PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **unexecuted** — after PROP-5 + PROP-7 | — |
-| PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **unexecuted** — after PROP-7 | — |
-| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **unexecuted** — after PROP-5 | — |
+| PROP-5-host-sqlite-concurrency-ownership | Host SQLite concurrency + charter ownership + SoulLoop single-flight | **sent-to-pm** — TINA-main 2026-09-05 | — |
+| PROP-6-desktop-drag-async-delay | Desktop drag Thread.Sleep → async delay | **sent-to-pm** — TINA-main 2026-09-05; parallel NOW w/ PROP-5 | — |
+| PROP-7-hermes-dead-surface-cleanup | Remove live Hermes contracts/config/DI + docs honesty | **sent-to-pm** — TINA-main 2026-09-05; after PROP-5 | — |
+| PROP-8-chat-orchestration-decomposition | ChatWebSocketHandler strangler + prompt builder + history + gated parallel reads | **sent-to-pm** — TINA-main 2026-09-05; after PROP-5; prefer after PROP-9 | — |
+| PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **sent-to-pm** — TINA-main 2026-09-05; after PROP-5 + PROP-7 | — |
+| PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **sent-to-pm** — TINA-main 2026-09-05; after PROP-7 | — |
+| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **sent-to-pm** — TINA-main 2026-09-05; after PROP-5 | — |
 
 Cluster map: `docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md`
 

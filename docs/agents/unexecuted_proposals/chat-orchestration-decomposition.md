@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-8-chat-orchestration-decomposition
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -10,6 +10,8 @@ need: Break ChatWebSocketHandler (~1.6k lines) into testable command/session pie
 parallel_with: PROP-10 (Inference-only), PROP-1/2/4
 blocked_by: PROP-5; prefer also after PROP-9
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-8-TT01-to-PM01.md
 ---
 
 # Chat orchestration decomposition

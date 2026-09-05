@@ -1,7 +1,7 @@
 ---
 type: proposal
 prop_id: PROP-6-desktop-drag-async-delay
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -10,6 +10,8 @@ need: Stop NativeDesktopControlBackend drag interpolation from blocking a thread
 parallel_with: PROP-1, PROP-2, PROP-4, PROP-5
 blocked_by: none
 cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+sent_at: 2026-09-05
+pm_intake: docs/agents/tasks/PROP-6-TT01-to-PM01.md
 ---
 
 # Desktop drag — async delay
