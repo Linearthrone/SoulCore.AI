@@ -10,6 +10,8 @@ need: Stop concurrent chat/SMS/SoulLoop/tool paths from racing one SqliteConnect
 sent_at:
 pm_intake:
 source_eval: architecture review 2026-09-05 (Good-to-Great / Needs Attention / Reorg / Better-if)
+cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+parallel_with: PROP-1, PROP-2, PROP-4, PROP-6
 ---
 
 # Host SQLite concurrency + charter ownership + SoulLoop single-flight
