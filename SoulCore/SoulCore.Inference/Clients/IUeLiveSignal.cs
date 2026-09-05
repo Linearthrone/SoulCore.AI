@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// True when Unreal body / PIE is live (shadow VRAM contended).

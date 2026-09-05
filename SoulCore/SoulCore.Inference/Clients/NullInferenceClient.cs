@@ -1,4 +1,4 @@
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Stub — returns empty; no network / no LLM. The tool-loop stub returns a

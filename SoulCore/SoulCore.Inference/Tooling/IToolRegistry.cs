@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Tool registry — the dispatch surface both inference paths
