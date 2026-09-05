@@ -5,7 +5,7 @@ prop_root: PROP-5-host-sqlite-concurrency-ownership
 from: PM-01
 to: BED-01
 priority: P0
-status: Pending
+status: Completed
 created: 2026-09-05
 wave: wipeout-now
 title: SqliteMemoryStore async command serialization + busy_timeout

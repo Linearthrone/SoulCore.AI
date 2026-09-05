@@ -203,6 +203,7 @@ builder.Services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredServic
 builder.Services.AddSingleton<IVictoriaJournalStore>(sp => sp.GetRequiredService<SqliteMemoryStore>());
 
 // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
+// PROP-5.3: Charter shares the memory DB file; both serialize via SqlitePathGate on ResolveDbPath().
 builder.Services.AddSingleton<CharterService>(_ => new CharterService(memoryOptions.ResolveDbPath()));
 builder.Services.AddSingleton<ICharter>(sp => sp.GetRequiredService<CharterService>());
 builder.Services.AddSingleton<DriftWatcher>(_ => new DriftWatcher(safetyOptions.DriftSloMinutes));

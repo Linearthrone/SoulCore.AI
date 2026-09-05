@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Core.Abstractions;
+using SoulCore.Core.Sqlite;
 
 namespace SoulCore.Memory;
 
@@ -53,7 +54,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
     private readonly ILogger<SqliteMemoryStore> _logger;
     private readonly SqliteConnection _connection;
-    private readonly object _gate = new();
+    private readonly SemaphoreSlim _dbGate;
     private bool _disposed;
 
     public SqliteMemoryStore(IOptions<MemoryOptions> options, ILogger<SqliteMemoryStore> logger)
@@ -62,6 +63,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         DatabasePath = options.Value.ResolveDbPath();
+        _dbGate = SqlitePathGate.ForPath(DatabasePath);
         var dir = Path.GetDirectoryName(DatabasePath);
         if (!string.IsNullOrEmpty(dir))
             Directory.CreateDirectory(dir);
@@ -70,10 +72,12 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         {
             DataSource = DatabasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared
+            Cache = SqliteCacheMode.Shared,
+            DefaultTimeout = SqlitePathGate.DefaultBusyTimeoutMs / 1000
         }.ToString());
 
         _connection.Open();
+        ApplyBusyTimeout();
         ApplyMigrations();
         IsDatabaseOpen = true;
         _logger.LogInformation("SqliteMemoryStore ready at {DbPath}", DatabasePath);
@@ -102,10 +106,13 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         if (_disposed) return 0;
         try
         {
-            await using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*) FROM episodic_memories WHERE is_quarantined = 0;";
-            var result = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            return result is null || result is DBNull ? 0 : Convert.ToInt64(result, CultureInfo.InvariantCulture);
+            return await RunDbAsync(async ct =>
+            {
+                await using var cmd = _connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM episodic_memories WHERE is_quarantined = 0;";
+                var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
+                return result is null || result is DBNull ? 0 : Convert.ToInt64(result, CultureInfo.InvariantCulture);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -113,15 +120,17 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
     }
 
+
     public async Task<long> WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (string.IsNullOrWhiteSpace(text))
             throw new ArgumentException("Episodic content must be non-empty.", nameof(text));
 
         var source = NormalizeSource(sourceLabel);
         var occurredAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -132,14 +141,15 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$occurred_at", occurredAt);
         cmd.Parameters.AddWithValue("$source", source);
         cmd.Parameters.AddWithValue("$quarantined", string.Equals(source, "imported", StringComparison.Ordinal) ? 1 : 0);
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
         await using var idCmd = _connection.CreateCommand();
         idCmd.CommandText = "SELECT last_insert_rowid();";
-        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var result = await idCmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         if (result is null || result is DBNull)
             throw new InvalidOperationException("Failed to obtain episodic_memories row id after insert.");
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task StoreEmbeddingAsync(
@@ -148,7 +158,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         string model,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         ArgumentNullException.ThrowIfNull(vector);
         if (episodicId <= 0)
             throw new ArgumentOutOfRangeException(nameof(episodicId));
@@ -158,7 +168,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         var modelName = string.IsNullOrWhiteSpace(model) ? "nomic-embed-text" : model.Trim();
         var blob = VectorSimilarity.ToLittleEndianBlob(vector);
         var createdAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-
+        await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -175,17 +186,19 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$dims", vector.Length);
         cmd.Parameters.AddWithValue("$vector", blob);
         cmd.Parameters.AddWithValue("$created_at", createdAt);
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<(long Id, string Content)>> ListEpisodicsMissingEmbeddingsAsync(
         int limit,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (limit <= 0)
             return Array.Empty<(long, string)>();
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -200,11 +213,12 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$limit", limit);
 
         var list = new List<(long Id, string Content)>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
             list.Add((reader.GetInt64(0), reader.GetString(1)));
 
         return list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<string>> RecallSimilarAsync(
@@ -212,11 +226,12 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         int limit,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         ArgumentNullException.ThrowIfNull(queryVector);
         if (limit <= 0 || queryVector.Length == 0)
             return Array.Empty<string>();
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -232,8 +247,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$scan_cap", SimilarRecallScanCap);
 
         var candidates = new List<(string Item, float[] Vector)>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
             var content = reader.GetString(0);
             var blob = (byte[])reader.GetValue(1);
@@ -243,14 +258,16 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
 
         return VectorSimilarity.RankByCosineTopK(queryVector, candidates, limit);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (limit <= 0)
             return Array.Empty<string>();
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -262,17 +279,19 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$limit", limit);
 
         var list = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
             list.Add(reader.GetString(0));
 
         return list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyDictionary<string, double>> GetAsync(CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
 
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -280,8 +299,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             FROM emotion_state WHERE id = 1;
             """;
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
             throw new InvalidOperationException("emotion_state singleton row missing (id=1).");
 
         var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
@@ -294,24 +313,27 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         var componentsJson = reader.IsDBNull(3) ? "{}" : reader.GetString(3);
         MergeComponentsJson(componentsJson, map);
         return map;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reads <c>emotion_state.revision</c> for the singleton row (id=1).</summary>
     public async Task<long> GetRevisionAsync(CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
 
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText = "SELECT revision FROM emotion_state WHERE id = 1;";
-        var result = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         if (result is null || result is DBNull)
             throw new InvalidOperationException("emotion_state singleton row missing (id=1).");
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SetAsync(IReadOnlyDictionary<string, double> components, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         ArgumentNullException.ThrowIfNull(components);
 
         var valence = GetOrDefault(components, "valence", 0.0);
@@ -331,8 +353,9 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
         var componentsJson = JsonSerializer.Serialize(extras, JsonOptions);
         var updatedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-
-        await using var tx = await _connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await RunDbAsync(async ct =>
+        {
+        await using var tx = await _connection.BeginTransactionAsync(ct).ConfigureAwait(false);
         try
         {
             await using (var update = _connection.CreateCommand())
@@ -354,7 +377,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
                 update.Parameters.AddWithValue("$dominance", dominance);
                 update.Parameters.AddWithValue("$components_json", componentsJson);
                 update.Parameters.AddWithValue("$updated_at", updatedAt);
-                var rows = await update.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                var rows = await update.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
                 if (rows != 1)
                     throw new InvalidOperationException("Failed to update emotion_state singleton.");
             }
@@ -372,16 +395,17 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
                 hist.Parameters.AddWithValue("$arousal", arousal);
                 hist.Parameters.AddWithValue("$dominance", dominance);
                 hist.Parameters.AddWithValue("$components_json", componentsJson);
-                await hist.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                await hist.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
             }
 
-            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(ct).ConfigureAwait(false);
         }
         catch
         {
-            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            await tx.RollbackAsync(ct).ConfigureAwait(false);
             throw;
         }
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     // ─── IVictoriaTaskStore (BED-140) ─────────────────────────────────────
@@ -393,7 +417,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         string? priority,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Task title must be non-empty.", nameof(title));
 
@@ -402,7 +426,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             ? DefaultTaskPriority
             : priority.Trim().ToLowerInvariant();
         var resolvedDescription = description?.Trim() ?? string.Empty;
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -415,23 +440,25 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$priority", resolvedPriority);
         cmd.Parameters.AddWithValue("$created_at", now);
         cmd.Parameters.AddWithValue("$updated_at", now);
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
         await using var idCmd = _connection.CreateCommand();
         idCmd.CommandText = "SELECT last_insert_rowid();";
-        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var result = await idCmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         if (result is null || result is DBNull)
             throw new InvalidOperationException("Failed to obtain victoria_tasks row id after insert.");
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<VictoriaTask?> GetAsync(long id, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (id <= 0)
             return null;
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -442,17 +469,18 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             """;
         cmd.Parameters.AddWithValue("$id", id);
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
             return null;
 
         return ReadVictoriaTask(reader);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<bool> UpdateStatusAsync(long id, string status, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (id <= 0)
             return false;
         if (string.IsNullOrWhiteSpace(status))
@@ -467,7 +495,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
 
         var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -478,8 +507,9 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$status", normalized);
         cmd.Parameters.AddWithValue("$updated_at", now);
         cmd.Parameters.AddWithValue("$id", id);
-        var rows = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         return rows > 0;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -487,8 +517,9 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         string? status = null,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
 
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         if (string.IsNullOrWhiteSpace(status))
         {
@@ -513,13 +544,14 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
 
         var list = new List<VictoriaTask>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
             list.Add(ReadVictoriaTask(reader));
         }
 
         return list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private static VictoriaTask ReadVictoriaTask(SqliteDataReader reader)
@@ -542,7 +574,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         IReadOnlyList<WorkflowStep> steps,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Workflow name must be non-empty.", nameof(name));
         if (steps is null)
@@ -558,7 +590,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
 
         var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
         var stepsJson = SerializeWorkflowSteps(steps);
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -569,23 +602,25 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$steps_json", stepsJson);
         cmd.Parameters.AddWithValue("$created_at", now);
         cmd.Parameters.AddWithValue("$updated_at", now);
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
         await using var idCmd = _connection.CreateCommand();
         idCmd.CommandText = "SELECT last_insert_rowid();";
-        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var result = await idCmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         if (result is null || result is DBNull)
             throw new InvalidOperationException("Failed to obtain victoria_workflows row id after insert.");
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     async Task<VictoriaWorkflow?> IVictoriaWorkflowStore.GetAsync(long id, CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (id <= 0)
             return null;
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -596,11 +631,12 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             """;
         cmd.Parameters.AddWithValue("$id", id);
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
             return null;
 
         return ReadVictoriaWorkflow(reader);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -609,14 +645,15 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         int currentStep,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (id <= 0)
             return false;
         if (currentStep < 0)
             throw new ArgumentOutOfRangeException(nameof(currentStep), "current_step must be >= 0.");
 
         var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -627,8 +664,9 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$current_step", currentStep);
         cmd.Parameters.AddWithValue("$updated_at", now);
         cmd.Parameters.AddWithValue("$id", id);
-        var rows = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         return rows > 0;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private static VictoriaWorkflow ReadVictoriaWorkflow(SqliteDataReader reader)
@@ -699,8 +737,9 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
     public async Task<IReadOnlyList<VictoriaJournalBook>> ListBooksAsync(
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
 
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -715,8 +754,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             """;
 
         var list = new List<VictoriaJournalBook>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
             list.Add(new VictoriaJournalBook(
                 Id: reader.GetString(0),
@@ -726,6 +765,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
 
         return list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -733,10 +773,11 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         string bookId,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (string.IsNullOrWhiteSpace(bookId))
             return null;
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -747,8 +788,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             """;
         cmd.Parameters.AddWithValue("$id", bookId.Trim().ToLowerInvariant());
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
             return null;
 
         return new VictoriaJournalBook(
@@ -756,6 +797,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
             Title: reader.GetString(1),
             Purpose: reader.GetString(2),
             CreatedAt: reader.GetString(3));
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -768,7 +810,7 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         string? occurredAt = null,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (string.IsNullOrWhiteSpace(bookId))
             throw new ArgumentException("Journal book id must be non-empty.", nameof(bookId));
         if (string.IsNullOrWhiteSpace(body))
@@ -786,7 +828,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         var when = string.IsNullOrWhiteSpace(occurredAt) ? now : occurredAt.Trim();
         var resolvedSource = NormalizeSource(source ?? "self");
         var tags = string.IsNullOrWhiteSpace(tagsJson) ? "[]" : tagsJson.Trim();
-
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         cmd.CommandText =
             """
@@ -802,14 +845,15 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$occurred_at", when);
         cmd.Parameters.AddWithValue("$created_at", now);
         cmd.Parameters.AddWithValue("$source", resolvedSource);
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
         await using var idCmd = _connection.CreateCommand();
         idCmd.CommandText = "SELECT last_insert_rowid();";
-        var result = await idCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var result = await idCmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         if (result is null || result is DBNull)
             throw new InvalidOperationException("Failed to obtain victoria_journal_entries row id after insert.");
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -818,9 +862,10 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         int limit = 20,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        var take = Math.Clamp(limit, 1, 200);
 
+        var take = Math.Clamp(limit, 1, 200);
+        return await RunDbAsync(async ct =>
+        {
         await using var cmd = _connection.CreateCommand();
         if (string.IsNullOrWhiteSpace(bookId))
         {
@@ -848,8 +893,8 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         cmd.Parameters.AddWithValue("$limit", take);
 
         var list = new List<VictoriaJournalEntry>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
             list.Add(new VictoriaJournalEntry(
                 Id: reader.GetInt64(0),
@@ -863,17 +908,23 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         }
 
         return list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        lock (_gate)
+        _dbGate.Wait();
+        try
         {
             if (_disposed) return;
             _connection.Dispose();
             IsDatabaseOpen = false;
             _disposed = true;
+        }
+        finally
+        {
+            _dbGate.Release();
         }
     }
 
@@ -882,6 +933,20 @@ public sealed class SqliteMemoryStore : IMemoryStore, IEmotionState, IMemoryStat
         Dispose();
         return ValueTask.CompletedTask;
     }
+
+
+private void ApplyBusyTimeout()
+{
+    using var cmd = _connection.CreateCommand();
+    cmd.CommandText = $"PRAGMA busy_timeout = {SqlitePathGate.DefaultBusyTimeoutMs};";
+    cmd.ExecuteNonQuery();
+}
+
+private Task RunDbAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    => SqliteDbGate.RunAsync(_dbGate, _disposed, work, cancellationToken);
+
+private Task<T> RunDbAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
+    => SqliteDbGate.RunAsync(_dbGate, _disposed, work, cancellationToken);
 
     private void ApplyMigrations()
     {

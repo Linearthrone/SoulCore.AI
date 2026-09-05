@@ -1,14 +1,18 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using SoulCore.Core.Abstractions;
+using SoulCore.Core.Sqlite;
 
 namespace SoulCore.Core.Charter;
 
 /// <summary>
 /// SQLite-backed <see cref="ICharter"/> implementation. Reads and seeds the
-/// <c>charter_anchors</c> table. Opens an independent read/write connection — does
-/// NOT touch the live Host DB or <c>SqliteMemoryStore</c>. Intended for
-/// test/staging use; no DI wiring in Program.cs.
+/// <c>charter_anchors</c> table in the same LocalAppData database file as
+/// <c>SqliteMemoryStore</c>. Host wires this as a singleton on
+/// <c>memoryOptions.ResolveDbPath()</c>; DDL is owned by Memory migrations —
+/// <see cref="EnsureSchema"/> is an idempotent fallback for test-only DBs.
+/// All command paths serialize through the path-keyed <see cref="SqlitePathGate"/>
+/// shared with the memory store (no ungated dual-writer races).
 /// </summary>
 public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
 {
@@ -23,52 +27,68 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
     };
 
     private readonly SqliteConnection _connection;
-    private readonly object _gate = new();
+    private readonly SemaphoreSlim _dbGate;
     private bool _disposed;
 
     /// <summary>
-    /// Opens (or creates) a SQLite DB at <paramref name="dbPath"/> and ensures the
-    /// <c>charter_anchors</c> table exists. The caller owns the file lifecycle —
-    /// pass a temp path for tests.
+    /// Opens a read/write connection at <paramref name="dbPath"/> (same file as memory).
+    /// Host registers one singleton per resolved memory path; tests may pass a temp path.
     /// </summary>
     public CharterService(string dbPath)
     {
         if (string.IsNullOrWhiteSpace(dbPath))
             throw new ArgumentException("dbPath must be non-empty.", nameof(dbPath));
 
-        var dir = Path.GetDirectoryName(dbPath);
+        DatabasePath = SqlitePathGate.NormalizePath(dbPath);
+        _dbGate = SqlitePathGate.ForPath(DatabasePath);
+
+        var dir = Path.GetDirectoryName(DatabasePath);
         if (!string.IsNullOrEmpty(dir))
             Directory.CreateDirectory(dir);
 
         _connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
-            DataSource = dbPath,
+            DataSource = DatabasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared
+            Cache = SqliteCacheMode.Shared,
+            DefaultTimeout = SqlitePathGate.DefaultBusyTimeoutMs / 1000
         }.ToString());
 
-        _connection.Open();
-        EnsureSchema();
+        _dbGate.Wait();
+        try
+        {
+            _connection.Open();
+            ApplyBusyTimeout();
+            EnsureSchema();
+        }
+        finally
+        {
+            _dbGate.Release();
+        }
     }
+
+    /// <summary>Normalized absolute path to the shared SQLite file.</summary>
+    public string DatabasePath { get; }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetAnchorsAsync(CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        return await RunDbAsync(async ct =>
+        {
+            await using var cmd = _connection.CreateCommand();
+            cmd.CommandText =
+                """
+                SELECT body FROM charter_anchors
+                ORDER BY priority ASC, id ASC;
+                """;
 
-        await using var cmd = _connection.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT body FROM charter_anchors
-            ORDER BY priority ASC, id ASC;
-            """;
+            var list = new List<string>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            while (await reader.ReadAsync(ct).ConfigureAwait(false))
+                list.Add(reader.GetString(0));
 
-        var list = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            list.Add(reader.GetString(0));
-
-        return list;
+            return (IReadOnlyList<string>)list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -77,18 +97,19 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
     /// </summary>
     public async Task<(int Total, int Locked)> GetLockCountsAsync(CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
-        await using var cmd = _connection.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT COUNT(*), COALESCE(SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END), 0)
-            FROM charter_anchors;
-            """;
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            return (0, 0);
-        return (reader.GetInt32(0), reader.GetInt32(1));
+        return await RunDbAsync(async ct =>
+        {
+            await using var cmd = _connection.CreateCommand();
+            cmd.CommandText =
+                """
+                SELECT COUNT(*), COALESCE(SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END), 0)
+                FROM charter_anchors;
+                """;
+            await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            if (!await reader.ReadAsync(ct).ConfigureAwait(false))
+                return (0, 0);
+            return (reader.GetInt32(0), reader.GetInt32(1));
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -100,46 +121,47 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         string? kind = null,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
-        await using var cmd = _connection.CreateCommand();
-        if (string.IsNullOrWhiteSpace(kind))
+        return await RunDbAsync(async ct =>
         {
-            cmd.CommandText =
-                """
-                SELECT id, kind, title, body, priority, is_locked, source
-                FROM charter_anchors
-                ORDER BY priority ASC, id ASC;
-                """;
-        }
-        else
-        {
-            ValidateKind(kind);
-            cmd.CommandText =
-                """
-                SELECT id, kind, title, body, priority, is_locked, source
-                FROM charter_anchors
-                WHERE kind = $kind
-                ORDER BY priority ASC, id ASC;
-                """;
-            cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
-        }
+            await using var cmd = _connection.CreateCommand();
+            if (string.IsNullOrWhiteSpace(kind))
+            {
+                cmd.CommandText =
+                    """
+                    SELECT id, kind, title, body, priority, is_locked, source
+                    FROM charter_anchors
+                    ORDER BY priority ASC, id ASC;
+                    """;
+            }
+            else
+            {
+                ValidateKind(kind);
+                cmd.CommandText =
+                    """
+                    SELECT id, kind, title, body, priority, is_locked, source
+                    FROM charter_anchors
+                    WHERE kind = $kind
+                    ORDER BY priority ASC, id ASC;
+                    """;
+                cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
+            }
 
-        var list = new List<CharterAnchorInfo>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-        {
-            list.Add(new CharterAnchorInfo(
-                Id: reader.GetInt64(0),
-                Kind: reader.GetString(1),
-                Title: reader.GetString(2),
-                Body: reader.GetString(3),
-                Priority: reader.GetInt32(4),
-                IsLocked: reader.GetInt32(5) == 1,
-                Source: reader.GetString(6)));
-        }
+            var list = new List<CharterAnchorInfo>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            while (await reader.ReadAsync(ct).ConfigureAwait(false))
+            {
+                list.Add(new CharterAnchorInfo(
+                    Id: reader.GetInt64(0),
+                    Kind: reader.GetString(1),
+                    Title: reader.GetString(2),
+                    Body: reader.GetString(3),
+                    Priority: reader.GetInt32(4),
+                    IsLocked: reader.GetInt32(5) == 1,
+                    Source: reader.GetString(6)));
+            }
 
-        return list;
+            return (IReadOnlyList<CharterAnchorInfo>)list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -148,37 +170,39 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         bool? lockedOnly = null,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
         ValidateKind(kind);
 
-        await using var cmd = _connection.CreateCommand();
-        if (lockedOnly is null)
+        return await RunDbAsync(async ct =>
         {
-            cmd.CommandText =
-                """
-                SELECT body FROM charter_anchors
-                WHERE kind = $kind
-                ORDER BY priority ASC, id ASC;
-                """;
-        }
-        else
-        {
-            cmd.CommandText =
-                """
-                SELECT body FROM charter_anchors
-                WHERE kind = $kind AND is_locked = $locked
-                ORDER BY priority ASC, id ASC;
-                """;
-            cmd.Parameters.AddWithValue("$locked", lockedOnly.Value ? 1 : 0);
-        }
-        cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
+            await using var cmd = _connection.CreateCommand();
+            if (lockedOnly is null)
+            {
+                cmd.CommandText =
+                    """
+                    SELECT body FROM charter_anchors
+                    WHERE kind = $kind
+                    ORDER BY priority ASC, id ASC;
+                    """;
+            }
+            else
+            {
+                cmd.CommandText =
+                    """
+                    SELECT body FROM charter_anchors
+                    WHERE kind = $kind AND is_locked = $locked
+                    ORDER BY priority ASC, id ASC;
+                    """;
+                cmd.Parameters.AddWithValue("$locked", lockedOnly.Value ? 1 : 0);
+            }
+            cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
 
-        var list = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            list.Add(reader.GetString(0));
+            var list = new List<string>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            while (await reader.ReadAsync(ct).ConfigureAwait(false))
+                list.Add(reader.GetString(0));
 
-        return list;
+            return (IReadOnlyList<string>)list;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -186,7 +210,6 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         IReadOnlyList<CharterAnchorSeed> seeds,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(seeds);
 
         if (seeds.Count == 0)
@@ -202,53 +225,61 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
                 throw new ArgumentException($"Seed body must be non-empty (kind={seed.Kind}).", nameof(seeds));
         }
 
-        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-        var inserted = 0;
-
-        await using var tx = await _connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        try
+        return await RunDbAsync(async ct =>
         {
-            foreach (var seed in seeds)
-            {
-                await using var cmd = _connection.CreateCommand();
-                cmd.Transaction = (SqliteTransaction)tx;
-                cmd.CommandText =
-                    """
-                    INSERT INTO charter_anchors (kind, title, body, priority, is_locked, source, created_at, updated_at)
-                    VALUES ($kind, $title, $body, $priority, $locked, $source, $created_at, $updated_at);
-                    """;
-                cmd.Parameters.AddWithValue("$kind", NormalizeKind(seed.Kind));
-                cmd.Parameters.AddWithValue("$title", seed.Title.Trim());
-                cmd.Parameters.AddWithValue("$body", seed.Body.Trim());
-                cmd.Parameters.AddWithValue("$priority", seed.Priority);
-                cmd.Parameters.AddWithValue("$locked", seed.IsLocked ? 1 : 0);
-                cmd.Parameters.AddWithValue("$source", NormalizeSource(seed.Source));
-                cmd.Parameters.AddWithValue("$created_at", now);
-                cmd.Parameters.AddWithValue("$updated_at", now);
+            var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+            var inserted = 0;
 
-                await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-                inserted++;
+            await using var tx = await _connection.BeginTransactionAsync(ct).ConfigureAwait(false);
+            try
+            {
+                foreach (var seed in seeds)
+                {
+                    await using var cmd = _connection.CreateCommand();
+                    cmd.Transaction = (SqliteTransaction)tx;
+                    cmd.CommandText =
+                        """
+                        INSERT INTO charter_anchors (kind, title, body, priority, is_locked, source, created_at, updated_at)
+                        VALUES ($kind, $title, $body, $priority, $locked, $source, $created_at, $updated_at);
+                        """;
+                    cmd.Parameters.AddWithValue("$kind", NormalizeKind(seed.Kind));
+                    cmd.Parameters.AddWithValue("$title", seed.Title.Trim());
+                    cmd.Parameters.AddWithValue("$body", seed.Body.Trim());
+                    cmd.Parameters.AddWithValue("$priority", seed.Priority);
+                    cmd.Parameters.AddWithValue("$locked", seed.IsLocked ? 1 : 0);
+                    cmd.Parameters.AddWithValue("$source", NormalizeSource(seed.Source));
+                    cmd.Parameters.AddWithValue("$created_at", now);
+                    cmd.Parameters.AddWithValue("$updated_at", now);
+
+                    await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+                    inserted++;
+                }
+
+                await tx.CommitAsync(ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                await tx.RollbackAsync(ct).ConfigureAwait(false);
+                throw;
             }
 
-            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            throw;
-        }
-
-        return inserted;
+            return inserted;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        lock (_gate)
+        _dbGate.Wait();
+        try
         {
             if (_disposed) return;
             _connection.Dispose();
             _disposed = true;
+        }
+        finally
+        {
+            _dbGate.Release();
         }
     }
 
@@ -256,6 +287,43 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
     {
         Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    private void ApplyBusyTimeout()
+    {
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = $"PRAGMA busy_timeout = {SqlitePathGate.DefaultBusyTimeoutMs};";
+        cmd.ExecuteNonQuery();
+    }
+
+    private async Task RunDbAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _dbGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            await work(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _dbGate.Release();
+        }
+    }
+
+    private async Task<T> RunDbAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _dbGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return await work(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _dbGate.Release();
+        }
     }
 
     private void EnsureSchema()
