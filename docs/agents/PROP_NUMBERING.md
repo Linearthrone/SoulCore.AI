@@ -45,7 +45,7 @@ owner: PM-01 / TT-01
 | PROP-8-chat-orchestration-decomposition | ChatWebSocketHandler strangler + prompt builder + history + gated parallel reads | **accepted-gated** — after PROP-5; prefer after PROP-9 | — |
 | PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **accepted-gated** — after PROP-5 + PROP-7 | — |
 | PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **accepted-gated** — after PROP-7 | — |
-| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **accepted-gated** — after PROP-5 | — |
+| PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **unblocked** — PROP-5 Pass; may ∥ PROP-7 | — |
 
 Cluster map: `docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md`  
 Program accept: `docs/agents/tasks/PROP-5-11-PM01-program-accept.md`
