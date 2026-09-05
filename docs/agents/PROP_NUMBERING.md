@@ -39,5 +39,6 @@ owner: PM-01 / TT-01
 | PROP-2-ue-reliable-embodiment | UE Kayleigh 1P / Victoria walk / one eye | accepted-pm-ticketed | 2.1–2.4 |
 | PROP-3-link-messenger-product | Link Messenger-class rewrite | parked until SMS QA Pass | — |
 | PROP-4-presence-shell-honest-hud | Presence House drawer + installer | **in progress** — shell + honesty + icon shipped; Velopack update toast open | 4.1 FED/BED (this wave); 4.2 OPS installer/update |
+| PROP-5-host-sqlite-concurrency-ownership | Host SQLite concurrency + charter ownership + SoulLoop single-flight | **unexecuted** — TT parked 2026-09-05; not sent to PM | — |
 
-Next free `N`: **5**.
+Next free `N`: **6**.
