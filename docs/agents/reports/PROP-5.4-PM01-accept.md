@@ -21,4 +21,4 @@ verdict: Pass
 | PROP-11 Memory repo split | **Unblocked** — may parallel PROP-7 (Memory vs Host DI files; coordinate) |
 | PROP-8 / PROP-9 | Still wait for their gates (9 after 7; 8 prefer after 9) |
 
-TINA will mint PROP-7.1 / PROP-11.1 on the next patrol unless Kurt redirects.
+TINA will mint PROP-7.1 / PROP-11.1 on the next patrol unless operator redirects.

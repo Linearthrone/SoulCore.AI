@@ -4,12 +4,12 @@ namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// VM-scoped browser backend. All actions run inside Ubuntu Firefox via Guest
-/// Additions. Never talks to Kurt's Windows Chrome extension on :17891.
+/// Additions. Never talks to the operator's Windows Chrome extension on :17891.
 /// </summary>
 public sealed class GuestVmBrowserBridge : IBrowserBridge
 {
     public const string HostBlocked =
-        "VM scope active: Kurt's Windows Chrome/bridge is blocked. " +
+        "VM scope active: the operator's Windows Chrome/bridge is blocked. " +
         "browser_* tools drive Firefox inside the Ubuntu guest (victoria-sandbox). " +
         "The VirtualBox window can stay minimized.";
 

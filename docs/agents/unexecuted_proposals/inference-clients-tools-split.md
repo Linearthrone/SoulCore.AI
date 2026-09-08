@@ -18,7 +18,7 @@ pm_intake: docs/agents/tasks/PROP-10-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-`SoulCore.Inference` holds Ollama clients, null clients, registry abstractions, and 100+ tool files, and references Memory/Config/Adapters. Kurt wants a boundary where “talk to the model” and “run a capability tool” are not one mental blob — without a premature multi-repo explosion.
+`SoulCore.Inference` holds Ollama clients, null clients, registry abstractions, and 100+ tool files, and references Memory/Config/Adapters. operator wants a boundary where “talk to the model” and “run a capability tool” are not one mental blob — without a premature multi-repo explosion.
 
 ## 2. Goal & Success Criteria
 
@@ -63,7 +63,7 @@ Per-capability assemblies; moving tool-loop into Host.
 
 ## 9. Open Questions
 
-Does Kurt want a literal second csproj this wave, or folder hygiene Pass?
+Does operator want a literal second csproj this wave, or folder hygiene Pass?
 
 ## 10. Suggested PM Handoff
 

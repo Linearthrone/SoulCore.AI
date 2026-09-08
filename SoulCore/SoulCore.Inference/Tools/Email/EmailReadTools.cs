@@ -23,7 +23,7 @@ public sealed class EmailAccountsTool : EmailToolBase
 
     public override ToolDefinition Definition { get; } = new(
         Name: "email_accounts",
-        Description: "List Victoria's mailbox plus Kurt's personal and business accounts she manages. No passwords.",
+        Description: "List Victoria's mailbox plus the operator's personal and business accounts she manages. No passwords.",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

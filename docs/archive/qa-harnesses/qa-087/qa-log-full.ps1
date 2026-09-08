@@ -1,4 +1,4 @@
-$logPath = 'c:\Users\kurtw\Soul_Core\SoulCore\scripts\.soulcore-host.log'
+$logPath = 'c:\Users\operator\Soul_Core\SoulCore\scripts\.soulcore-host.log'
 if (Test-Path $logPath) {
     $f = Get-Item $logPath
     Write-Output ('SIZE: ' + $f.Length)

@@ -20,7 +20,7 @@ public class PresenceActivityHubTests
         var hub = new PresenceActivityHub(new DesktopViewHub(() => true, Path.Combine(Path.GetTempPath(), "pa-" + Guid.NewGuid().ToString("N"))));
         hub.NoteChat("user");
         var snap = hub.GetSnapshot();
-        Assert.Equal("Listening to Kurt", snap.Phrase);
+        Assert.Equal("Listening", snap.Phrase);
         Assert.Equal("chat", snap.Source);
     }
 

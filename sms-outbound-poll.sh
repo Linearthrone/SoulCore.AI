@@ -141,7 +141,7 @@ process_once() {
       echo "mms saved path=${path} id=${id}"
       echo "${TS} outbound mms saved path=${path} id=${id}" >>"$LOG" || true
       if command -v termux-notification >/dev/null 2>&1; then
-        termux-notification -t "Victoria MMS still" -c "Saved ${path} — attach/send to Kurt in Messages" || true
+        termux-notification -t "Victoria MMS still" -c "Saved ${path} — attach/send to operator in Messages" || true
       fi
       ack_job "$id" true
       continue

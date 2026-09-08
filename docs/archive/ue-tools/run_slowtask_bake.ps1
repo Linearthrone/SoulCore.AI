@@ -1,10 +1,10 @@
 # TASK-116: Cmd + ScopedSlowTask pump (no-space script path)
 $ErrorActionPreference = "Continue"
 $Engine = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
-$UProject = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$Script = "C:/Users/kurtw/Soul_Core/tools/ue_nav/slowtask_bake_home_navmesh.py"
-$LogOut = "C:\Users\kurtw\Soul_Core\tools\ue_nav\task116_cmd.log"
-$ScriptLog = "C:\Users\kurtw\Soul_Core\tools\ue_nav\task116_navmesh_result.log"
+$UProject = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$Script = "C:/Users/operator/Soul_Core/tools/ue_nav/slowtask_bake_home_navmesh.py"
+$LogOut = "C:\Users\operator\Soul_Core\tools\ue_nav\task116_cmd.log"
+$ScriptLog = "C:\Users\operator\Soul_Core\tools\ue_nav\task116_navmesh_result.log"
 
 $running = Get-Process -Name "UnrealEditor","UnrealEditor-Cmd" -ErrorAction SilentlyContinue
 if ($running) {

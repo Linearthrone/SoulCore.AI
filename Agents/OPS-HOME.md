@@ -9,7 +9,7 @@ updated: 2026-08-26
 
 # OPS-HOME · Home PC worker
 
-You run on Kurt’s **Windows home PC** via Cursor My Machines (`--name home-pc`).
+You run on operator’s **Windows home PC** via Cursor My Machines (`--name home-pc`).
 
 Canonical setup: `docs/runbooks/cursor-my-machines.md`
 

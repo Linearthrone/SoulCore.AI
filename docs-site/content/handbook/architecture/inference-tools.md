@@ -11,12 +11,12 @@ Chat uses **Ollama** (`Inference:BaseUrl` / `Model`) via `CompleteAsync` / `Comp
 | Area | Examples |
 | --- | --- |
 | Desktop | `desktop_screenshot`, click/type/key — gated; prefer Victoria sandbox scope |
-| Browser | Playwright Victoria browser (`browser_*`) — not Kurt’s Chrome |
+| Browser | Playwright Victoria browser (`browser_*`) — not operator’s Chrome |
 | Body / UE | `speak`, `loco`, `look`, `play_animation`, eye capture |
 | Memory | `recall_memory`, `store_memory` |
 | Email | `email_*` (IMAP/SMTP accounts in config) |
 | MT4 | `llmod` HTTP bridge (default) |
-| SMS | `send_screenshot_mms` (opt-in still to Kurt) |
+| SMS | `send_screenshot_mms` (opt-in still to operator) |
 | Workflow / CA | task/workflow tools, Chief Architect playbooks |
 
 ## Consistency rules

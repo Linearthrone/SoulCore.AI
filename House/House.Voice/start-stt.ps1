@@ -1,7 +1,7 @@
 # Start local faster-whisper STT (LLMOD quarry) on 127.0.0.1:8000
 # Prefer pythonw.exe so ALLSTART does not leave blank console windows (OPS-178 pattern).
 param(
-    [string]$LlmodRoot = "C:\Users\kurtw\LLMOD\LLMOD-max-master",
+    [string]$LlmodRoot = "%USERPROFILE%\LLMOD\LLMOD-max-master",
     [string]$HostAddr = "127.0.0.1",
     [int]$Port = 8000,
     [string]$PythonExe = ""

@@ -24,7 +24,7 @@ handoff: 2026-08-19 — WonderWoman (PM-01)
 
 ## Problem
 
-Phone observer is **MMS stills on ask**, not a live Link stream. Victoria must be able to push a Playwright/Presence frame to Kurt’s Messages.
+Phone observer is **MMS stills on ask**, not a live Link stream. Victoria must be able to push a Playwright/Presence frame to operator’s Messages.
 
 ## Solution
 
@@ -44,7 +44,7 @@ Phone observer is **MMS stills on ask**, not a live Link stream. Victoria must b
 
 | # | Criterion |
 | --- | --- |
-| 1 | Text reply SMS reaches Kurt via gateway |
+| 1 | Text reply SMS reaches operator via gateway |
 | 2 | Explicit screenshot ask → one MMS still |
 | 3 | No auto-spam; rate limit documented |
 | 4 | Tests with mock gateway green |

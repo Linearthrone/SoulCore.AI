@@ -4,7 +4,7 @@ using SoulCore.Inference;
 namespace SoulCore.Host.Companion;
 
 /// <summary>
-/// PROP-1.3: model-callable MMS still to Kurt (opt-in / on ask — not every screenshot).
+/// PROP-1.3: model-callable MMS still to the operator (opt-in / on ask — not every screenshot).
 /// Prefer Victoria browser frame, else Presence desktop hub.
 /// </summary>
 public sealed class SendScreenshotMmsTool : ITool
@@ -21,8 +21,8 @@ public sealed class SendScreenshotMmsTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "send_screenshot_mms",
         Description:
-            "Send Kurt one MMS still of Victoria's current browser or Presence frame. " +
-            "Use only when Kurt explicitly asks for a screenshot / still / pic of what she sees. " +
+            "Send the operator one MMS still of Victoria's current browser or Presence frame. " +
+            "Use only when the operator explicitly asks for a screenshot / still / pic of what she sees. " +
             "Do not call after every desktop_screenshot or tool click.",
         Parameters: ParametersSchema);
 
@@ -37,7 +37,7 @@ public sealed class SendScreenshotMmsTool : ITool
         }
 
         var result = await _outbound
-            .EnqueueScreenshotMmsToKurtAsync(caption, source: "tool:send_screenshot_mms", ct)
+            .EnqueueScreenshotMmsAsync(caption, source: "tool:send_screenshot_mms", ct)
             .ConfigureAwait(false);
 
         if (!result.Ok)
@@ -52,7 +52,7 @@ public sealed class SendScreenshotMmsTool : ITool
 
         return new ToolResult(
             Success: true,
-            Content: $"queued MMS still jobId={result.JobId} for Kurt (tablet gateway will send)",
+            Content: $"queued MMS still jobId={result.JobId} for the operator (tablet gateway will send)",
             Data: new { jobId = result.JobId });
     }
 

@@ -6,7 +6,7 @@ import traceback
 import os
 from datetime import datetime
 
-EVIDENCE_DIR = r"C:\Users\kurtw\Soul_Core\tmpcode\qa117-evidence"
+EVIDENCE_DIR = r"C:\Users\operator\Soul_Core\tmpcode\qa117-evidence"
 LOG_PATH = os.path.join(EVIDENCE_DIR, "task117_path_follow.log")
 OUT_JSON = os.path.join(EVIDENCE_DIR, "task117_summary.json")
 

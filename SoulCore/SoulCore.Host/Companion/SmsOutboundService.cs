@@ -49,7 +49,7 @@ public sealed class SmsOutboundService : ISmsOutboundService
             return new SmsOutboundEnqueueResult(false, null, false, "outbound_disabled");
 
         var to = SmsE164.Normalize(toE164);
-        if (!SmsE164.IsAllowlisted(to, _sms.KurtAllowlistE164))
+        if (!SmsE164.IsAllowlisted(to, _sms.AllowlistE164))
             return new SmsOutboundEnqueueResult(false, null, false, "not_allowlisted");
 
         var body = (text ?? string.Empty).Trim();
@@ -89,7 +89,7 @@ public sealed class SmsOutboundService : ISmsOutboundService
             return new SmsOutboundEnqueueResult(false, null, false, "outbound_disabled");
 
         var to = SmsE164.Normalize(toE164);
-        if (!SmsE164.IsAllowlisted(to, _sms.KurtAllowlistE164))
+        if (!SmsE164.IsAllowlisted(to, _sms.AllowlistE164))
             return new SmsOutboundEnqueueResult(false, null, false, "not_allowlisted");
 
         if (imageBytes is null || imageBytes.Length == 0)
@@ -121,13 +121,13 @@ public sealed class SmsOutboundService : ISmsOutboundService
         return new SmsOutboundEnqueueResult(true, job.Id, false, null);
     }
 
-    public async Task<SmsOutboundEnqueueResult> EnqueueScreenshotMmsToKurtAsync(
+    public async Task<SmsOutboundEnqueueResult> EnqueueScreenshotMmsAsync(
         string? caption = null,
         string? source = null,
         CancellationToken cancellationToken = default)
     {
-        var kurt = FirstAllowlistedKurt();
-        if (kurt is null)
+        var toE164 = FirstAllowlistedNumber();
+        if (toE164 is null)
             return new SmsOutboundEnqueueResult(false, null, false, "allowlist_empty");
 
         if (!TryCaptureStill(out var bytes, out var contentType, out var frameSource))
@@ -138,7 +138,7 @@ public sealed class SmsOutboundService : ISmsOutboundService
             : caption;
 
         return await EnqueueMmsAsync(
-                kurt,
+                toE164,
                 bytes!,
                 contentType!,
                 cap,
@@ -197,9 +197,9 @@ public sealed class SmsOutboundService : ISmsOutboundService
         }
     }
 
-    private string? FirstAllowlistedKurt()
+    private string? FirstAllowlistedNumber()
     {
-        var set = SmsE164.ParseAllowlist(_sms.KurtAllowlistE164);
+        var set = SmsE164.ParseAllowlist(_sms.AllowlistE164);
         return set.Count == 0 ? null : set.OrderBy(x => x, StringComparer.Ordinal).First();
     }
 

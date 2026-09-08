@@ -18,7 +18,7 @@ pm_intake: docs/agents/tasks/PROP-9-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-`Program.cs` mixes config, CLI evidence modes, all DI registrations, middleware, and endpoints (~1237 lines). Kurt wants dependency groups auditable so accidental cross-layer wiring is visible — without changing runtime behavior.
+`Program.cs` mixes config, CLI evidence modes, all DI registrations, middleware, and endpoints (~1237 lines). operator wants dependency groups auditable so accidental cross-layer wiring is visible — without changing runtime behavior.
 
 ## 2. Goal & Success Criteria
 

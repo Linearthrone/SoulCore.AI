@@ -20,7 +20,7 @@ pm_intake: docs/agents/tasks/PROP-6-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-Desktop drag paths use `Thread.Sleep(15)` inside methods that return `Task`, blocking a thread for roughly 300ms per drag. Kurt needs tool calls to stay async-honest so Host threads are not pinned during pointer interpolation.
+Desktop drag paths use `Thread.Sleep(15)` inside methods that return `Task`, blocking a thread for roughly 300ms per drag. operator needs tool calls to stay async-honest so Host threads are not pinned during pointer interpolation.
 
 ## 2. Goal & Success Criteria
 

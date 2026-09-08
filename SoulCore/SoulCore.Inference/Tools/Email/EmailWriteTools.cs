@@ -18,7 +18,7 @@ public sealed class EmailDeleteTool : EmailToolBase
             "account": { "type": "string", "description": "Mailbox id: victoria | personal | business." },
             "uid": { "type": "string", "description": "Message uid to delete." },
             "folder": { "type": "string", "description": "Folder, default INBOX." },
-            "confirmed": { "type": "boolean", "description": "Must be true on the second call after Kurt confirms.", "default": false }
+            "confirmed": { "type": "boolean", "description": "Must be true on the second call after operator confirms.", "default": false }
           },
           "required": ["uid"]
         }
@@ -36,7 +36,7 @@ public sealed class EmailDeleteTool : EmailToolBase
 
     public override ToolDefinition Definition { get; } = new(
         Name: "email_delete",
-        Description: "Delete a message. First call returns a confirmation prompt; only deletes when confirmed=true after Kurt agrees.",
+        Description: "Delete a message. First call returns a confirmation prompt; only deletes when confirmed=true after operator agrees.",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -85,7 +85,7 @@ public sealed class EmailSendTool : EmailToolBase
             "cc": { "type": "string", "description": "Optional CC recipients, comma-separated." },
             "reply_to_uid": { "type": "string", "description": "When set, send as a reply to this uid (sets In-Reply-To)." },
             "folder": { "type": "string", "description": "Folder of reply_to_uid, default INBOX." },
-            "confirmed": { "type": "boolean", "description": "Must be true on the second call after Kurt confirms.", "default": false }
+            "confirmed": { "type": "boolean", "description": "Must be true on the second call after operator confirms.", "default": false }
           },
           "required": ["to", "subject", "body"]
         }
@@ -103,7 +103,7 @@ public sealed class EmailSendTool : EmailToolBase
 
     public override ToolDefinition Definition { get; } = new(
         Name: "email_send",
-        Description: "Send or reply to email from victoria/personal/business. First call returns a confirmation prompt; only sends when confirmed=true after Kurt agrees.",
+        Description: "Send or reply to email from victoria/personal/business. First call returns a confirmation prompt; only sends when confirmed=true after operator agrees.",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

@@ -46,7 +46,7 @@ List rules from `showvminfo` (`Forwarding(...)`). Delete: `natpf1 delete ssh`.
 
 ## Guest Control (no SSH)
 
-Needs Guest Additions + credentials Kurt supplies in-session (never commit):
+Needs Guest Additions + credentials operator supplies in-session (never commit):
 
 ```powershell
 & $VBox guestcontrol "victoria-sandbox" run --exe /usr/bin/lsb_release --username victoria --password $env:VBOX_GUEST_PASS --wait-stdout --wait-stderr -- -a
@@ -70,7 +70,7 @@ Host and guest Additions versions should match (`guestproperty` `GuestAdd/Versio
 ## Shared folders
 
 ```powershell
-& $VBox sharedfolder add "victoria-sandbox" --name hv --hostpath "C:\Users\kurtw\Soul_Core" --automount
+& $VBox sharedfolder add "victoria-sandbox" --name hv --hostpath "C:\Users\operator\Soul_Core" --automount
 ```
 
 Guest (Additions): `/media/sf_hv` ; user must be in `vboxsf`. None configured on last probe.
@@ -87,7 +87,7 @@ systemctl --failed
 sudo apt-get update && sudo apt-get -s upgrade
 ```
 
-Network: netplan under `/etc/netplan/`. Do not switch the VM from NAT to bridged unless Kurt wants LAN exposure.
+Network: netplan under `/etc/netplan/`. Do not switch the VM from NAT to bridged unless operator wants LAN exposure.
 
 ## House Victoria coupling
 

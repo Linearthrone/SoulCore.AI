@@ -306,7 +306,7 @@ public sealed class NativeDesktopControlBackend : IDesktopControlBackend
         string app, string? args = null, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        // Soft/agent mode → launch without activating (Kurt keeps his foreground window).
+        // Soft/agent mode → launch without activating (operator keeps their foreground window).
         var result = DesktopAppLauncher.Launch(app, args, backgroundNoActivate: _softCursorRestore());
         if (result.Success)
             _view?.RecordAction(result.Content);

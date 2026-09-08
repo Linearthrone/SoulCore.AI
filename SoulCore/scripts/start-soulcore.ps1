@@ -187,7 +187,7 @@ $env:Host__Port = "$Port"
 
 # Load SOULCORE_* from SoulCore/.env into process env before Start-Process
 # (child inherits). Never log values. .env overwrites stale Process/User-inherited
-# tokens so companion auth matches the file Kurt edits (PROP-1.2 401 footgun).
+# tokens so companion auth matches the file operator edits (PROP-1.2 401 footgun).
 $EnvFile = Join-Path $SoulCoreRoot ".env"
 $loadedCount = 0
 if (Test-Path -LiteralPath $EnvFile) {

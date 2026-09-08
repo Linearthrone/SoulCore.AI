@@ -212,7 +212,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
             }
         }
 
-        // Victoria Link: unsolicited chat.done so Kurt gets a phone ding without chat.send.
+        // Victoria Link: unsolicited chat.done so the operator gets a phone ding without chat.send.
         await MaybePushProactiveChatAsync(tick, category, label, want, cancellationToken)
             .ConfigureAwait(false);
     }

@@ -7,7 +7,7 @@ to: PM-01
 status: Pass
 created: 2026-08-21
 role: Operations
-executed_by: Kurt (user kill-test)
+executed_by: operator (user kill-test)
 pm_accept: WonderWoman (PM-01)
 ---
 
@@ -15,7 +15,7 @@ pm_accept: WonderWoman (PM-01)
 
 ## Result
 
-**Pass.** Gateway device is live on Kurt’s tailnet; SMS/MMS round-trip proven on the **tablet’s own talk/text MDN** (not DIGITS).
+**Pass.** Gateway device is live on operator’s tailnet; SMS/MMS round-trip proven on the **tablet’s own talk/text MDN** (not DIGITS).
 
 ## PM product lock (2026-08-21)
 
@@ -35,15 +35,15 @@ pm_accept: WonderWoman (PM-01)
 | Role | Spare always-on SMS/MMS gateway |
 | Line | Device native talk/text (not DIGITS app line) |
 | Tailscale | Installed; same tailnet as Host PC |
-| Tailscale hostname | *(Kurt-held — put in private ops notes, not git)* |
+| Tailscale hostname | *(operator-held — put in private ops notes, not git)* |
 
 ## Kill-test matrix
 
 | # | Test | Result |
 | --- | --- | --- |
-| A | Kurt daily phone → gateway MDN (SMS) | **Pass** (Kurt: done) |
-| B | Gateway → Kurt daily (SMS) | **Pass** (Kurt: done) |
-| C | Gateway → Kurt daily (MMS still / image) | **Pass** (Kurt: done) |
+| A | operator daily phone → gateway MDN (SMS) | **Pass** (operator: done) |
+| B | Gateway → operator daily (SMS) | **Pass** (operator: done) |
+| C | Gateway → operator daily (MMS still / image) | **Pass** (operator: done) |
 
 ## Evidence notes
 
@@ -56,8 +56,8 @@ pm_accept: WonderWoman (PM-01)
 - **PROP-1.3** BED outbound + screenshot MMS
 - Then SEC **1.4** / QA **1.5** / FED Link shrink **1.6** after QA Pass
 
-## Follow-ups for Kurt (ops hygiene)
+## Follow-ups for operator (ops hygiene)
 
 1. Leave tablet **plugged in**, Wi‑Fi + Tailscale up (gateway must stay reachable).
-2. Keep Kurt’s daily number for allowlist config (env only when BED ships).
+2. Keep operator’s daily number for allowlist config (env only when BED ships).
 3. Optional: note Tailscale MagicDNS hostname in a private password manager — not in repo.

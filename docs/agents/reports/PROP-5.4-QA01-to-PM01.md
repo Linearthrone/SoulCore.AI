@@ -85,7 +85,7 @@ Full logs: `SoulCore/scripts/logs/prop54-soak-20260905-181655.log`, `SoulCore/sc
 
 - **SMS path:** No dedicated SMS episodic harness in tree; soak uses `observation` and `chat` source labels (same `WriteEpisodicAsync` + gate path Host uses for companion traffic).
 - **Full Protocol.Tests:** `SystemFilesystemToolsTests.ReadFile_SymlinkPointingOut_RejectsWithSuccessFalse` fails on Linux (symlink semantics); pre-existing, out of PROP-5 scope.
-- **Host:** Boots successfully on Linux cloud agent VM (not Blocked-partial). Windows PowerShell soak (`soak-soulcore.ps1`) remains the long-duration continuity path for Kurt's machine.
+- **Host:** Boots successfully on Linux cloud agent VM (not Blocked-partial). Windows PowerShell soak (`soak-soulcore.ps1`) remains the long-duration continuity path for operator's machine.
 
 ## Recommendation
 

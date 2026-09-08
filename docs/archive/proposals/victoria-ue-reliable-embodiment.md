@@ -6,7 +6,7 @@ tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-19
 title: "[TINA-main] UE reliability — Kayleigh 1P, Victoria walk/anims, one eye still"
-need: Reliable Unreal output — MetaHuman animations, Victoria sight and movement, possess Kayleigh when Kurt is in the world
+need: Reliable Unreal output — MetaHuman animations, Victoria sight and movement, possess Kayleigh when operator is in the world
 sent_at: 2026-08-19
 pm_intake: docs/agents/tasks/TASK-20260819-195-TT01-to-PM01.md
 environment: TINA-main
@@ -19,13 +19,13 @@ pm_owner: WonderWoman (PM-01)
 
 ## 1. Need / Want
 
-Kurt cannot trust Unreal this session: **MetaHuman animations**, **Victoria’s sight and movement**, and **possessing his avatar (Kayleigh)** when he is active in `/Game/Home`. Script PASS / Host `success:true` has repeatedly not matched what he sees.
+operator cannot trust Unreal this session: **MetaHuman animations**, **Victoria’s sight and movement**, and **possessing his avatar (Kayleigh)** when he is active in `/Game/Home`. Script PASS / Host `success:true` has repeatedly not matched what he sees.
 
 ## 2. Goal & Success Criteria
 
 **Sit-down gate (this PIE session, not last week’s log):**
 
-1. Play → Kurt **is Kayleigh** (grounded, WASD, not flying `DefaultPawn`, **not Victoria**).
+1. Play → operator **is Kayleigh** (grounded, WASD, not flying `DefaultPawn`, **not Victoria**).
 2. Victoria is the **other person** (AI / `VictoriaAvatar`), walks with **visible travel** (cm, not API-ok).
 3. Locomotion AnimBP actually drives **both** bodies (no T-pose / slide as the Pass).
 4. If she claims to see: **exactly one** Presence still — Victoria **`eye_frame`**. Empty capture is a tool error, not a described room. No live her-cam, no second UE feed in that panel.
@@ -64,7 +64,7 @@ Follow-up 2026-08-19:
 
 ### Avenue A — Serial freeze (recommended)
 
-1. **Finish TASK-191 on the editor Kurt Plays** — rebuild/restart so `HouseGameMode` DLL loads; **saved** Home World Settings; PIE screenshot of **possessed class = Kayleigh**. BED freeze GameMode/possess/cameras.
+1. **Finish TASK-191 on the editor operator Plays** — rebuild/restart so `HouseGameMode` DLL loads; **saved** Home World Settings; PIE screenshot of **possessed class = Kayleigh**. BED freeze GameMode/possess/cameras.
 2. **Re-gate Victoria walk** — transform samples, cm traveled, one `:8888`.
 3. **Eyes honesty** — SceneCapture on **Victoria Character wrapper** head; Host already refuses empty; Presence shows the still.
 4. **Anim MVP** — existing Manny→`metahuman_base_skel` loco; DefaultSlot montages later.
@@ -82,7 +82,7 @@ Host refuses fake success. Honest, worse demo.
 
 - More Live Coding / RC Python as the **reliability** strategy (CONTRA: RC 400, unsaved map, log-Pass).
 - Player camera on Victoria; MHC reparent; `call_capture` before possess.
-- PiP of her eyes in Kurt’s viewport (USER: two first-persons).
+- PiP of her eyes in operator’s viewport (USER: two first-persons).
 
 ## 6. Recommended Route
 
@@ -97,7 +97,7 @@ Host refuses fake success. Honest, worse demo.
 
 **Topology:** Author on **this PC’s Perforce**; **Play/PIE is the shadow PC**. Pass is only valid on **shadow Play**, not “main compiled it.”
 
-**Staffing (Kurt):** Ticket this onto **UE-focused / dedicated Unreal agents** (REX-01 plus extra UE specialists as needed). **Do not serialize this behind main SoulCore/FED/BED/Playwright/DIGITS work.** Main Host/desktop/phone stays unblocked. BED only if Host verb honesty is still lying (`success` with 0 cm / empty PNG).
+**Staffing (operator):** Ticket this onto **UE-focused / dedicated Unreal agents** (REX-01 plus extra UE specialists as needed). **Do not serialize this behind main SoulCore/FED/BED/Playwright/DIGITS work.** Main Host/desktop/phone stays unblocked. BED only if Host verb honesty is still lying (`success` with 0 cm / empty PNG).
 
 **Planes:** `:8888` = PIE body. `:30010` = editor ops (broken parameterized py on shadow). Do not add exec verbs to the body bridge.
 
@@ -118,7 +118,7 @@ Play viewport = **his** Kayleigh first-person camera. Presence = **one** still o
 
 **Kill:** Player possesses Victoria as the “working” PIE; MHC reparent; two servers on 8888; Pass on logs/empty PNG/`fallbackEyes`; flying DefaultPawn Pass; call capture on Kayleigh; stacking 192 before 191.
 
-**Seat dissent:** STRAT serial vs SYS “0.5 day if Kurt at shadow keyboard” — **shadow is required** (user). USER 1P vs 3P — **1P locked**. “One still” vs TASK-192 call camera: **Presence sight = eye_frame only**; phone call camera stays a **later, separate** ticket if still wanted — do not feed it into Presence.
+**Seat dissent:** STRAT serial vs SYS “0.5 day if operator at shadow keyboard” — **shadow is required** (user). USER 1P vs 3P — **1P locked**. “One still” vs TASK-192 call camera: **Presence sight = eye_frame only**; phone call camera stays a **later, separate** ticket if still wanted — do not feed it into Presence.
 
 ## 9. Open Questions for User / PM
 

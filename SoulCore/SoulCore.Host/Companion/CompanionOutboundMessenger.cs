@@ -93,8 +93,8 @@ public sealed class CompanionOutboundMessenger : ICompanionOutboundMessenger
         try
         {
             var episode = hasMedia
-                ? $"[Proactive] Victoria → Kurt ({contact}): {Truncate(body, 240)} [media={mediaId}]"
-                : $"[Proactive] Victoria → Kurt ({contact}): {Truncate(body, 280)}";
+                ? $"[Proactive] Victoria → Operator ({contact}): {Truncate(body, 240)} [media={mediaId}]"
+                : $"[Proactive] Victoria → Operator ({contact}): {Truncate(body, 280)}";
             await _memory.WriteEpisodicAsync(episode, "chat", cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

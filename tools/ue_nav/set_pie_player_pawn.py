@@ -14,19 +14,19 @@ from __future__ import annotations
 import unreal
 
 VICTORIA_MARKERS = ("VictoriaAvatar", "Victoria", "BP_VictoriaCharacter", "BP_MHC_Victoria")
-# Primary product name for Kurt's grounded body in Home.
+# Primary product name for operator's grounded body in Home.
 KAYLEIGH_CLASS = "BP_MHC_Kayleigh"
 PLAYER_MARKERS = (
     KAYLEIGH_CLASS,
     "MHC_Kayleigh",
     "Kayleigh",
     "PlayerAvatar",
-    "Kurt",
+    "operator",
     "Player",
 )
 GAME_MODE_PATH = "/Game/Blueprints/BP_HouseGameMode"
 LOG_PREFIX = "[set_pie_player_pawn]"
-EVIDENCE_DIR = r"C:\Users\kurtw\Soul_Core\tmpcode\bed184-pie-pawn"
+EVIDENCE_DIR = r"C:\Users\operator\Soul_Core\tmpcode\bed184-pie-pawn"
 LOG_FILE = EVIDENCE_DIR + r"\set_pie_player_pawn.log"
 
 _out = []

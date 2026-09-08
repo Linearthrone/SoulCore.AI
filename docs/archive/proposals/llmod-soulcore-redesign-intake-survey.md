@@ -6,8 +6,8 @@ created: 2026-07-22
 updated: 2026-07-22
 title: LLMOD â†’ SoulCore Redesign Intake Survey
 need: Freeze every open product and architecture decision for the last LLMOD rewrite into SoulCore before PM ticketing
-north_star: C:\Users\kurtw\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
-inventory_root: C:\Users\kurtw\LLMOD\LLMOD-max-master
+north_star: C:\Users\operator\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
+inventory_root: C:\Users\operator\LLMOD\LLMOD-max-master
 round: 1
 ---
 
@@ -193,7 +193,7 @@ Qwen3.5-9B-Claude-4.6-HighIQ-THINKING-HERETIC-UNCENSORED-GGUF
 
 - [ ] New `SoulCore` project inside current `LLMOD-max-master` / HouseVictoria.sln
 - [ ] New repo; LLMOD becomes adapter consumer
-- [x] Develop under `C:\Users\kurtw\Soul_Core` workspace; LLMOD adapters stay in LLMOD tree
+- [x] Develop under `C:\Users\operator\Soul_Core` workspace; LLMOD adapters stay in LLMOD tree
 - [ ] TT default: new SoulCore solution/project under LLMOD tree first (shared machine paths), document boundary; move later if needed
 - [ ] Other:
 
@@ -687,7 +687,7 @@ Architecture default: Foundation â†’ Model&Memory â†’ Emotion&Autonomy
 
 ### Q10.3 â€” Where should tickets/reports live? **[P2]**
 
-- [x] `C:\Users\kurtw\Soul_Core\docs\agents\` â† TT default for this program
+- [x] `C:\Users\operator\Soul_Core\docs\agents\` â† TT default for this program
 - [ ] Inside LLMOD `Docs/agents/`
 - [ ] Both (mirror)
 - [ ] Other:

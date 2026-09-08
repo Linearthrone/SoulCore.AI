@@ -19,7 +19,7 @@ staffing: dedicated UE agents — do not block main Host/FED/BED/Playwright/DIGI
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
 **Proposal:** `docs/agents/unexecuted_proposals/victoria-ue-reliable-embodiment.md`
 
-Recommended path **unchanged** after Kurt’s answers (1P, one Presence still, Play on shadow). Send for ticketing.
+Recommended path **unchanged** after operator’s answers (1P, one Presence still, Play on shadow). Send for ticketing.
 
 TT-01 does not ticket REX/FED/BED.
 
@@ -44,7 +44,7 @@ TASK-191 is still **Partial** (C++ on disk; live PIE can still be `DefaultPawn`)
 
 Four stacks with separate Pass: (1) Play = **strict first-person Kayleigh**, never Victoria, never flying ghost; (2) Victoria **walks** with measured cm + loco AnimBP; (3) **one** Presence still = her `eye_frame` (no live her-cam, no second UE feed in that panel); (4) single `:8888`. Rebuild + restart + **save Home** on shadow. Do not Pass on Host `success`. TASK-192 call camera stays **later and out of Presence**.
 
-## Constraints Kurt locked
+## Constraints operator locked
 
 - Strict **first person** for now.  
 - Sight = **still images in Presence; only one**.  

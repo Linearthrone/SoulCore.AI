@@ -14,7 +14,7 @@ Notes below are the non-obvious cloud/Linux caveats.
 
 ### My Machines (home PC; tablet scripts only)
 
-Managed cloud VMs cannot touch Kurt’s LAN. For Host restarts, ChatDesktop WS,
+Managed cloud VMs cannot touch operator’s LAN. For Host restarts, ChatDesktop WS,
 and local probes, use **Cursor My Machines** on the **home PC**:
 
 - Runbook: `docs/runbooks/cursor-my-machines.md`

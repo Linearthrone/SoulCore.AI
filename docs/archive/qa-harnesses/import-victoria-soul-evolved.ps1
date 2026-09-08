@@ -17,7 +17,7 @@
 [CmdletBinding()]
 param(
     [string]$DbPath = (Join-Path (Join-Path $env:LOCALAPPDATA "SoulCore") (Join-Path "memory" "soulcore_memory.db")),
-    [string]$EvolvedPath = "C:\Users\kurtw\LLMOD\LLMOD-max-master\Media\GeneratedFiles\Victoria_Soul_Evolved.md"
+    [string]$EvolvedPath = "C:\Users\operator\LLMOD\LLMOD-max-master\Media\GeneratedFiles\Victoria_Soul_Evolved.md"
 )
 
 $ErrorActionPreference = 'Stop'

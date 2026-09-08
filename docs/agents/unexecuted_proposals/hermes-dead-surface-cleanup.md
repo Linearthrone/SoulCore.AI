@@ -18,7 +18,7 @@ pm_intake: docs/agents/tasks/PROP-7-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-PRODUCT_ROOT already claims Hermes is retired via `NullHermesClient`, but `IHermesClient`, `HermesOptions`, `BackendHermes`, PreferHermes remaps, and handler ctor params still shape startup and obscure the real Ollama-only boundary. Kurt wants dead surface gone — not a second inference stack.
+PRODUCT_ROOT already claims Hermes is retired via `NullHermesClient`, but `IHermesClient`, `HermesOptions`, `BackendHermes`, PreferHermes remaps, and handler ctor params still shape startup and obscure the real Ollama-only boundary. operator wants dead surface gone — not a second inference stack.
 
 ## 2. Goal & Success Criteria
 

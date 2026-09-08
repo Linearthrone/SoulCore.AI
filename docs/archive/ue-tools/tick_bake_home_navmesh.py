@@ -12,7 +12,7 @@ import unreal
 import traceback
 from datetime import datetime
 
-LOG_PATH = r"C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
+LOG_PATH = r"C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
 HOME_MAP = "/Game/Home"
 TAG_BOUNDS = "TASK116_NavMeshBounds"
 

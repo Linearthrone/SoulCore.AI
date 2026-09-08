@@ -25,7 +25,7 @@ third-party automation.
 
 ## Kill #1 — Pass (2026-09-02)
 
-Real SMS from Kurt’s phone → Tab MDN → ChatDesktop + Victoria reply verified.
+Real SMS from operator’s phone → Tab MDN → ChatDesktop + Victoria reply verified.
 
 **Working recipe:** Tasker **HTTP Request only** (HTTPS `:8443`), Body `{"fromE164":"%SMSRF","text":"%SMSRB"}`, Var `%SOULCORE_TOKEN`.  
 No Send Intent. No JavaScriptlet for normal texts. Profile **Received Text** must be **On** (Play is manual-only).

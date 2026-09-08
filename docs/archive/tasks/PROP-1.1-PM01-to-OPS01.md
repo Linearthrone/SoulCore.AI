@@ -17,7 +17,7 @@ proposal: docs/agents/unexecuted_proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.1-OPS01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
-pm_note: 2026-08-21 — Kurt Pass on SM-X218U tablet native MDN (DIGITS identity dropped for this ship)
+pm_note: 2026-08-21 — operator Pass on SM-X218U tablet native MDN (DIGITS identity dropped for this ship)
 ---
 
 # PROP-1.1: Gateway kill-test (OPS) — **Pass**
@@ -29,8 +29,8 @@ Prove a device we control can terminate SMS/MMS before Host adapters ship. Origi
 ## Solution (as executed)
 
 1. Spare always-on **Samsung Galaxy Tab SM-X218U** with native talk/text.
-2. **Tailscale** on Kurt’s tailnet (no Funnel / no public `:7700`).
-3. Kill-test: inbound SMS, outbound SMS, outbound MMS image — **Pass** (Kurt).
+2. **Tailscale** on operator’s tailnet (no Funnel / no public `:7700`).
+3. Kill-test: inbound SMS, outbound SMS, outbound MMS image — **Pass** (operator).
 
 ## Do not (still)
 

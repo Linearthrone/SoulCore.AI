@@ -32,13 +32,13 @@ SoulCore has no carrier SMS. Phone chat must enter the **same** Host conversatio
 
 - Device: **SM-X218U** always-on tablet on Tailscale.
 - Victoria’s number = **tablet cellular MDN** (config/env later — never git).
-- Kurt texts that MDN; gateway will POST into Host (this ticket).
+- operator texts that MDN; gateway will POST into Host (this ticket).
 
 ## Solution
 
 1. Loopback (or Tailscale-authenticated) HTTP ingest for gateway POSTs (text + optional image bytes). SEC-004: Host bind stays loopback; gateway reaches via Tailscale serve **or** Host-side listener that only accepts Tailscale peer + token — **no Funnel**.
 2. Map inbound → existing chat / companion send path so replies use the **shared** conversation with Presence.
-3. Kurt allowlist E.164 (config/env, never commit). Unknown inbound = silent drop.
+3. operator allowlist E.164 (config/env, never commit). Unknown inbound = silent drop.
 4. Inbound MMS image → thread attachment (not executable / not tool args).
 5. Auth: companion/API token on gateway POSTs (reuse or extend `SOULCORE_COMPANION_API_TOKEN` pattern).
 6. Document a minimal Android-side poster (Termux script / small companion) that can run on the SM-X218U — BED owns Host contract; OPS can wire the tablet client after API exists.

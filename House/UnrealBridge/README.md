@@ -79,7 +79,7 @@ Logical SoulCore verb names remain in `UnrealVerbTypes`.
 
 | Item | Path / value |
 | --- | --- |
-| Project | `C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` |
+| Project | `%USERPROFILE%\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` |
 | Engine | **UE 5.8** (`EngineAssociation: "5.8"`) |
 | Plugin | `Plugins/HouseVictoriaBridge/` (`HouseVictoriaBridge.uplugin`) |
 | Built module | `Plugins/HouseVictoriaBridge/Binaries/Win64/UnrealEditor-HouseVictoriaBridge.dll` |
@@ -95,9 +95,9 @@ Stock GameMode uses flying `ADefaultPawn` (spectator “ghost”). Victoria is a
 separate `BP_VictoriaCharacter` (tag `VictoriaAvatar`, AI-possessed). Your body
 on the floor is not possessed until GameMode Default Pawn Class is set.
 
-**Product lock:** PIE should start as Kurt’s grounded Character, not free-fly.
+**Product lock:** PIE should start as operator’s grounded Character, not free-fly.
 
-1. Open `/Game/Home` in UE 5.8 (Kurt’s body is **`BP_MHC_Kayleigh`** on the floor).
+1. Open `/Game/Home` in UE 5.8 (operator’s body is **`BP_MHC_Kayleigh`** on the floor).
 2. Run Editor Python: `tools/ue_nav/set_pie_player_pawn.py`  
    (finds `BP_MHC_Kayleigh`, creates `/Game/Blueprints/BP_HouseGameMode`, sets Default Pawn Class, PlayerStart, World GameMode Override).
 3. Press Play — you should be Kayleigh, not the flying ghost; Victoria stays AI-controlled.

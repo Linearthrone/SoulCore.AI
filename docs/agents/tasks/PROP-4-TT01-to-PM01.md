@@ -19,7 +19,7 @@ assignee_role: PM-01 (TINA)
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
 **Proposal:** `docs/agents/unexecuted_proposals/presence-shell-honest-hud.md`
 
-**Locked layout: House drawer** (rail parked). Kurt wants a **normal Windows app**: **icon + installer**, and **updates** (notify to update, or auto-update then notify — prefer **auto + toast**).
+**Locked layout: House drawer** (rail parked). operator wants a **normal Windows app**: **icon + installer**, and **updates** (notify to update, or auto-update then notify — prefer **auto + toast**).
 
 ## Mockup (required — send with FED/OPS tickets)
 

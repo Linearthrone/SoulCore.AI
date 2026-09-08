@@ -1,7 +1,7 @@
 # QA-01 F2 .env key-prefix audit — prints only KEY NAMES, never values
 $ErrorActionPreference = 'Stop'
-$envPath = 'C:\Users\kurtw\Soul_Core\SoulCore\.env'
-$examplePath = 'C:\Users\kurtw\Soul_Core\SoulCore\.env.example'
+$envPath = 'C:\Users\operator\Soul_Core\SoulCore\.env'
+$examplePath = 'C:\Users\operator\Soul_Core\SoulCore\.env.example'
 
 Write-Output '===== .env key names (values redacted) ====='
 $lines = Get-Content -Path $envPath

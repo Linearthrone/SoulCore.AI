@@ -8,7 +8,7 @@ import os
 import json
 from datetime import datetime
 
-EVIDENCE_DIR = r"C:\Users\kurtw\Soul_Core\tmpcode\qa160-evidence"
+EVIDENCE_DIR = r"C:\Users\operator\Soul_Core\tmpcode\qa160-evidence"
 LOG_PATH = os.path.join(EVIDENCE_DIR, "task160_pie_walk.log")
 OUT_JSON = os.path.join(EVIDENCE_DIR, "task160_summary.json")
 

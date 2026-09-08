@@ -1,6 +1,6 @@
 # QA-01 F4 soak snapshot — read-only tail of soak log + disk + health
 $ErrorActionPreference = 'Continue'
-$logPath = 'C:\Users\kurtw\Soul_Core\SoulCore\scripts\logs\soak-20260723-013126.log'
+$logPath = 'C:\Users\operator\Soul_Core\SoulCore\scripts\logs\soak-20260723-013126.log'
 
 Write-Output '===== F4: SOAK SNAPSHOT ====='
 Write-Output ('SnapshotTime_UTC: ' + [DateTime]::UtcNow.ToString('o'))

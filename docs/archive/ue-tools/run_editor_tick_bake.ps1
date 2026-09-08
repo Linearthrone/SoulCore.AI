@@ -1,17 +1,17 @@
 # TASK-116: UnrealEditor + -ExecCmds py (no ExecutePythonScript — that always quits).
 $ErrorActionPreference = "Continue"
 $Engine = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
-$UProject = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$Script = "C:/Users/kurtw/Soul_Core/tools/ue_nav/tick_bake_home_navmesh.py"
-$LogOut = "C:\Users\kurtw\Soul_Core\tools\ue_nav\task116_editor.log"
-$ScriptLog = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
+$UProject = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$Script = "C:/Users/operator/Soul_Core/tools/ue_nav/tick_bake_home_navmesh.py"
+$LogOut = "C:\Users\operator\Soul_Core\tools\ue_nav\task116_editor.log"
+$ScriptLog = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
 $TimeoutSec = 900
 
-Copy-Item "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\Content\Python\tick_bake_home_navmesh.py" `
-    "C:\Users\kurtw\Soul_Core\tools\ue_nav\tick_bake_home_navmesh.py" -Force
+Copy-Item "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\Content\Python\tick_bake_home_navmesh.py" `
+    "C:\Users\operator\Soul_Core\tools\ue_nav\tick_bake_home_navmesh.py" -Force
 
 # Bump wait budgets for cold start
-$p = "C:\Users\kurtw\Soul_Core\tools\ue_nav\tick_bake_home_navmesh.py"
+$p = "C:\Users\operator\Soul_Core\tools\ue_nav\tick_bake_home_navmesh.py"
 $c = Get-Content $p -Raw
 $c = $c -replace 'MAX_WAIT_TICKS = 900','MAX_WAIT_TICKS = 1800'
 $c = $c -replace 'MAX_BUILD_WAIT_TICKS = 1200','MAX_BUILD_WAIT_TICKS = 1800'

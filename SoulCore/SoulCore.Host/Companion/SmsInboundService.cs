@@ -59,7 +59,7 @@ public sealed class SmsInboundService : ISmsInboundService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!SmsE164.IsAllowlisted(request.FromE164, _sms.KurtAllowlistE164))
+        if (!SmsE164.IsAllowlisted(request.FromE164, _sms.AllowlistE164))
         {
             _logger.LogInformation(
                 "SMS inbound dropped (not allowlisted) from={From}",
@@ -96,7 +96,7 @@ public sealed class SmsInboundService : ISmsInboundService
         // Images are attachments only — never tool args / executable payloads.
         var userVisible = text.Length > 0
             ? text
-            : "[Kurt sent a photo]";
+            : "[Operator sent a photo]";
         if (!string.IsNullOrWhiteSpace(mediaId) && text.Length > 0)
             userVisible = text; // caption kept; mediaId on frame
 
@@ -154,7 +154,7 @@ public sealed class SmsInboundService : ISmsInboundService
             // Force no-tools: CompleteAsync only (never CompleteWithToolsAsync).
             var modelPrompt = string.IsNullOrWhiteSpace(mediaId)
                 ? userVisible
-                : userVisible + "\n\n(Kurt also attached an image; it is stored as media — do not invent tool calls.)";
+                : userVisible + "\n\n(operator also attached an image; it is stored as media — do not invent tool calls.)";
 
             reply = await _inferenceClient
                 .CompleteAsync(modelPrompt, preamble, cancellationToken)
@@ -191,7 +191,7 @@ public sealed class SmsInboundService : ISmsInboundService
             try
             {
                 var mms = await _outbound
-                    .EnqueueScreenshotMmsToKurtAsync(
+                    .EnqueueScreenshotMmsAsync(
                         caption: "Victoria still",
                         source: "sms:screenshot-ask",
                         cancellationToken)
@@ -291,8 +291,8 @@ public sealed class SmsInboundService : ISmsInboundService
         try
         {
             var episode = string.IsNullOrWhiteSpace(mediaId)
-                ? $"[SMS] Kurt → Victoria: {Truncate(userVisible, 200)} | Victoria: {Truncate(reply, 200)}"
-                : $"[SMS] Kurt → Victoria: {Truncate(userVisible, 160)} [media={mediaId}] | Victoria: {Truncate(reply, 160)}";
+                ? $"[SMS] Operator → Victoria: {Truncate(userVisible, 200)} | Victoria: {Truncate(reply, 200)}"
+                : $"[SMS] Operator → Victoria: {Truncate(userVisible, 160)} [media={mediaId}] | Victoria: {Truncate(reply, 160)}";
             await _memory.WriteEpisodicAsync(episode, "chat", cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -317,7 +317,7 @@ public sealed class SmsInboundService : ISmsInboundService
         // No ToolAgency / ComputerUse / desktop guidance — SMS must not invite tools.
         var sb = new System.Text.StringBuilder();
         sb.Append(
-            "You are Victoria. Kurt just texted you from his phone (SMS). " +
+            "You are Victoria. The operator just texted you from their phone (SMS). " +
             "Reply as a short, warm text message — a few sentences max. " +
             "Do not call tools, open apps, or invent function calls.\n");
         if (recentMemories is { Count: > 0 })

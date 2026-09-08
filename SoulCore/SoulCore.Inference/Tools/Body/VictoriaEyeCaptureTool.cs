@@ -33,7 +33,7 @@ public sealed class VictoriaEyeCaptureTool : ITool
         Name: "victoria_eye_capture",
         Description:
             "Capture what Victoria sees from her eye-level camera in the Unreal Home. " +
-            "REQUIRED before claiming you looked at the room, outside, objects, or Kurt's avatar. " +
+            "REQUIRED before claiming you looked at the room, outside, objects, or the Kayleigh avatar. " +
             "Presence shows this frame as 'What she saw'.",
         Parameters: ParametersSchema);
 

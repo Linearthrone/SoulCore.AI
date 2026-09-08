@@ -13,7 +13,7 @@ role: Backend Engineer
 
 ## Result
 
-**Pass (code).** Host accepts gateway POSTs on `POST /api/companion/v1/messages/inbound`, allowlists Kurt’s E.164, stores MMS as companion media (not tool input), runs a **no-tools** chat turn on `presence-local`, and fans out user + assistant `chat.done` frames on Presence WS so ChatDesktop can show the same thread.
+**Pass (code).** Host accepts gateway POSTs on `POST /api/companion/v1/messages/inbound`, allowlists operator’s E.164, stores MMS as companion media (not tool input), runs a **no-tools** chat turn on `presence-local`, and fans out user + assistant `chat.done` frames on Presence WS so ChatDesktop can show the same thread.
 
 ## What shipped
 
@@ -37,12 +37,12 @@ role: Backend Engineer
 | 3 | Inbound image = media, not tool input | **Pass** (unit; CompleteWithTools never called) |
 | 4 | Release build + tests | **Pass** — 11 Sms* tests; Host + ChatDesktop Release 0 errors |
 
-## Kurt / OPS to go live
+## operator / OPS to go live
 
-1. Set `SOULCORE_COMPANION_API_TOKEN` and `SOULCORE_Sms__KurtAllowlistE164` (daily phone) in `SoulCore/.env` — **never commit**.
+1. Set `SOULCORE_COMPANION_API_TOKEN` and `SOULCORE_Sms__AllowlistE164` (daily phone) in `SoulCore/.env` — **never commit**.
 2. Restart Host; ensure Tailscale serve to loopback `:7700`.
 3. From tablet Termux, smoke-curl per runbook; then wire SMS→POST (Tasker / SMS gateway app).
-4. **PROP-1.3** will SMS `replyText` back to Kurt automatically.
+4. **PROP-1.3** will SMS `replyText` back to operator automatically.
 
 ## Do not
 

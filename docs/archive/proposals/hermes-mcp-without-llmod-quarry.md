@@ -5,7 +5,7 @@ tt_id: TT-01
 created: 2026-07-29
 updated: 2026-07-29
 title: Hermes MCP without LLMOD quarry (Linux cloud unblock)
-need: Restore usable MCP/tool path for Phase C/D/F without Kurt's Windows LLMOD tree on cloud agents
+need: Restore usable MCP/tool path for Phase C/D/F without operator's Windows LLMOD tree on cloud agents
 sent_at: 2026-07-29
 pm_intake: docs/agents/tasks/TASK-20260729-159-TT01-to-PM01.md
 stuck_tickets:
@@ -20,9 +20,9 @@ related_issue: ISSUE-20260729-003 (referenced by OPS-143; file missing from work
 OPS-143 brought `hermes-agent` up on Linux cloud (`:8642` health 200) but could
 not register LLMOD MCP servers (`house_victoria`, `house_victoria_data`,
 `computer_use`) because the quarry
-`C:\Users\kurtw\LLMOD\LLMOD-max-master` is absent. Phase C/D/F stay gated.
+`C:\Users\operator\LLMOD\LLMOD-max-master` is absent. Phase C/D/F stay gated.
 Need an actionable route that does **not** require every cloud agent to mount
-Kurt's Windows box, while honoring the user decision of **both backends**
+operator's Windows box, while honoring the user decision of **both backends**
 (native C# + Hermes) and SEC-004 (loopback-only Host bind).
 
 ## 2. Goal & Success Criteria
@@ -61,7 +61,7 @@ Kurt's Windows box, while honoring the user decision of **both backends**
 ### Constraints from TASK-159
 
 - Must not bind Host off loopback (SEC-004).
-- Prefer not requiring Kurt's Windows box for CI cloud agents.
+- Prefer not requiring operator's Windows box for CI cloud agents.
 - Keep native C# tool backends as fallback where already planned (BED-135+).
 - TT-01 must not implement product code.
 
@@ -79,7 +79,7 @@ Kurt's Windows box, while honoring the user decision of **both backends**
 
 | Q | Why it can wait |
 | --- | --- |
-| Will Kurt sync a redacted `MCPServer/` tarball this week? | Avenue A is parallel track; native-first unblocks either way |
+| Will operator sync a redacted `MCPServer/` tarball this week? | Avenue A is parallel track; native-first unblocks either way |
 | Windows-only MT4 / SendInput on cloud? | Native desktop/MT4 may still need Windows runtime for full E2E; Linux can still land schemas + gates + mocks |
 
 ## 5. Thinktank seats (this session)
@@ -114,13 +114,13 @@ Parallel perspective pass (facilitator-run; no nested Task agents). Seats:
 - Integration shape: keep `DesktopBackend`/`BrowserBackend`/`Mt4Backend`
   switches; default cloud/CI → `native`; Windows desk with quarry → `hermes`.
 - Rough cost: native-first = reticket + BED work already scoped; quarry sync =
-  Kurt one-shot + OPS register; Hermes tool_calls fix = small OPS/BED spike.
+  operator one-shot + OPS register; Hermes tool_calls fix = small OPS/BED spike.
 
 ## 6. Avenues Explored
 
 ### Avenue A — Redacted quarry sync / portable MCP artifact
 
-**Idea:** Kurt (or OPS on Windows) exports `MCPServer/` (+ hermes MCP config,
+**Idea:** operator (or OPS on Windows) exports `MCPServer/` (+ hermes MCP config,
 secrets redacted) as a portable artifact: private tarball, submodule, or
 `third_party/hv-mcp/` with Linux-runnable subsets. OPS re-runs `hermes mcp add`
 and re-proves tool list + `tool_calls`.
@@ -141,7 +141,7 @@ and re-proves tool list + `tool_calls`.
 | Pros | Cons |
 | --- | --- |
 | Reproducible on Linux CI | Large rewrite; overlaps native C# tools |
-| Decouples from Kurt's disk path | Desktop/MT4 still need OS backends |
+| Decouples from operator's disk path | Desktop/MT4 still need OS backends |
 | Clean git history | Delays Phase C while reinventing MCP transport |
 
 **Fit:** Only if product insists Hermes MCP is the *sole* execution path.
@@ -190,7 +190,7 @@ Now (cloud)
   Keep Hermes gateway runbooks; Hermes.Enabled=false
   Phase C/D proceed on ITool + native backends + existing security gates
 
-Parallel (Kurt / Windows OPS)
+Parallel (operator / Windows OPS)
   Avenue A: redacted MCPServer export + config template
   OPS follow-up: hermes mcp add ×3; tool-list evidence; tool_calls round-trip
   Then BED-144 hermes routing + QA-145 E2E on a machine with MCP live
@@ -210,7 +210,7 @@ Both backends remain product truth:
 ### What PM should decide first
 
 1. Accept native-first sequencing for Phase C/D (recommended: **yes**).
-2. Whether Avenue A is Kurt-manual this week or "when available" backlog.
+2. Whether Avenue A is operator-manual this week or "when available" backlog.
 3. Whether to fund Avenue D spike before full quarry sync.
 
 ## 8. Alternatives (parked)
@@ -235,7 +235,7 @@ Both backends remain product truth:
 ## 10. Open Questions for User / PM
 
 1. Confirm native-first Phase C/D while Hermes MCP waits on quarry sync? *(recommend yes)*
-2. Kurt: can a redacted `MCPServer/` (+ config) drop happen within ~7 days, or backlog?
+2. operator: can a redacted `MCPServer/` (+ config) drop happen within ~7 days, or backlog?
 3. Fund a 1–2 day Hermes `tool_calls` + echo-MCP spike (Avenue D) before full HV MCP?
 
 ## 11. Suggested PM Handoff
@@ -253,7 +253,7 @@ Suggested next tickets (non-binding on PM):
 | BED-161 | BED-01 | Reticket/amend BED-135: **native desktop backend required**; Hermes path optional when MCP present; drop hard depends_on OPS-143 MCP AC |
 | BED-162 | BED-01 | Same for BED-136 browser — native/fallback bridge required for cloud |
 | BED-163 | BED-01 | Same for BED-138 MT4 — native bridge or explicit Windows-only deferral with mock + gate tests on Linux |
-| OPS-164 | OPS-01 | (Avenue A) Intake redacted MCPServer artifact from Kurt; `hermes mcp add`; tool-list + smoke evidence |
+| OPS-164 | OPS-01 | (Avenue A) Intake redacted MCPServer artifact from operator; `hermes mcp add`; tool-list + smoke evidence |
 | OPS-165 | OPS-01 | (Avenue D, optional) Minimal echo MCP + prove client-visible `tool_calls` on `:8642` |
 | BED-144 | BED-01 | Split or gate: client wiring vs MCP E2E; do not start full hermes routing until OPS-164 or OPS-165 Pass |
 | QA-145 | QA-01 | Remains Hermes MCP E2E gate — stays gated on MCP restore |

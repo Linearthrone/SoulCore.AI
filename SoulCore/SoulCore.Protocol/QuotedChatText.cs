@@ -1,7 +1,7 @@
 namespace SoulCore.Protocol;
 
 /// <summary>
-/// Formats Kurt's quote-reply context into the user turn the model sees.
+/// Formats the operator's quote-reply context into the user turn the model sees.
 /// </summary>
 public static class QuotedChatText
 {
@@ -18,7 +18,7 @@ public static class QuotedChatText
     }
 
     /// <summary>
-    /// Builds the user turn the model sees: quoted excerpt first, then Kurt's reply.
+    /// Builds the user turn the model sees: quoted excerpt first, then the operator's reply.
     /// </summary>
     public static string BuildUserText(string text, string? quotedText)
     {
@@ -31,7 +31,7 @@ public static class QuotedChatText
             .Replace("\n", "\n> ", StringComparison.Ordinal);
 
         return
-            "[Kurt is replying to this excerpt of your earlier message:]\n" +
+            "[The operator is replying to this excerpt of your earlier message:]\n" +
             "> " + blocked +
             "\n\n" + text;
     }

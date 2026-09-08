@@ -18,7 +18,7 @@ assignee_role: PM-01 (TINA)
 # PROP-5..11 program : [TINA-main] Architecture-eval wipeout
 
 **For:** **TINA-main** PM-01 (TINA). **From:** TT-01.  
-Kurt directed: **send it all to TINA**.
+operator directed: **send it all to TINA**.
 
 ## Intakes (ticket from these)
 

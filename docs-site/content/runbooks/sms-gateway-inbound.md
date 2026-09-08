@@ -7,7 +7,7 @@ Host stays on **loopback** (`127.0.0.1:7700`). Reach it from the tablet via **Ta
 
 ```text
 SOULCORE_COMPANION_API_TOKEN=<≥32 random chars>
-SOULCORE_Sms__KurtAllowlistE164=+1XXXXXXXXXX
+SOULCORE_Sms__AllowlistE164=+1XXXXXXXXXX
 # optional:
 # SOULCORE_Sms__VictoriaMdn=+1YYYYYYYYYY
 # SOULCORE_Sms__StubWhenModelDown=true
@@ -62,7 +62,7 @@ Unknown sender → `ok: true, dropped: true` (silent). No tools run on this path
 
 ChatDesktop (if open on `/ws` with `sessionId=presence-local`) receives:
 
-1. `chat.done` with `role=user`, `channel=sms` (Kurt’s text / photo)
+1. `chat.done` with `role=user`, `channel=sms` (operator’s text / photo)
 2. `chat.done` with Victoria’s short reply
 
 ## Tablet SMS → Host (PROP-1 kill #1)
@@ -81,7 +81,7 @@ Termux `sms-to-victoria.sh` remains a smoke/fallback path. GitHub Termux:Tasker 
 | Tailscale TCP (tablet default) | `http://100.71.223.95:7700` |
 | Tailscale HTTPS | `https://kaia-reimagined.tailbf9ec2.ts.net:8443` |
 
-Host `.env` on this machine: companion token **length 63**, Kurt allowlist set (do not paste either value). Tablet Tailscale VPN must be on.
+Host `.env` on this machine: companion token **length 63**, operator allowlist set (do not paste either value). Tablet Tailscale VPN must be on.
 
 ### A) Primary — Tasker HTTP (proven path)
 
@@ -113,7 +113,7 @@ Content-Type: application/json; charset=utf-8
 X-Api-Key: %SOULCORE_TOKEN
 ```
 
-   - Body (hardcoded smoke — use Kurt’s allowlisted number):
+   - Body (hardcoded smoke — use operator’s allowlisted number):
 
 ```json
 {"fromE164":"+1XXXXXXXXXX","text":"tasker http smoke"}
@@ -137,7 +137,7 @@ X-Api-Key: %SOULCORE_TOKEN
    (`%SMSRF` / `%SMSRB` are filled by Tasker when an SMS arrives. The Vars screen will **not** let you set them by hand — that is normal.)
 
 2. **Profiles → + → Event → Phone → Received Text** → link to `SMS to Victoria HTTP` → profile **On**.
-3. Text from Kurt’s allowlisted phone → tablet cellular MDN.
+3. Text from operator’s allowlisted phone → tablet cellular MDN.
    ChatDesktop shows the text + Victoria reply = **PROP-1 kill #1 Done**.
 
 **Limitation:** if the SMS body contains `"` or raw newlines, that Body template can 400. Optional later: JavaScriptlet + `JSON.stringify` for those messages.
@@ -212,7 +212,7 @@ termux-reload-settings
 
 #### 2) Smoke test (Termux)
 
-Use Kurt’s **allowlisted** E.164 (the `SOULCORE_Sms__KurtAllowlistE164` value on Host — not committed):
+Use operator’s **allowlisted** E.164 (the `SOULCORE_Sms__AllowlistE164` value on Host — not committed):
 
 ```bash
 ~/bin/sms-to-victoria.sh --health
@@ -288,7 +288,7 @@ Host does **not** talk to the carrier directly. It enqueues jobs; the tablet dra
 | SMS | 12 s | 30 |
 | MMS | 60 s | 6 |
 
-No auto-MMS on every `desktop_screenshot`. MMS only when Kurt asks (SMS keywords like “screenshot” / “what do you see”) or ChatDesktop calls tool `send_screenshot_mms`.
+No auto-MMS on every `desktop_screenshot`. MMS only when operator asks (SMS keywords like “screenshot” / “what do you see”) or ChatDesktop calls tool `send_screenshot_mms`.
 
 ### API
 
@@ -314,13 +314,13 @@ SMS → `termux-sms-send`. MMS → file under `~/storage/downloads/soulcore-mms/
 
 After the working HTTP Request, add **Phone → Send SMS**: Number `%SMSRF`, Message = `replyText` from `%http_data` (Tasker JSON / Variable tools).
 
-Do **not** run A and B together or Kurt gets duplicate texts.
+Do **not** run A and B together or operator gets duplicate texts.
 
 ### Live checks
 
 1. Restart Host after pull.
 2. Start poller (A) **or** Tasker Send SMS (B).
-3. Text tablet → Kurt’s phone gets Victoria’s SMS reply.
+3. Text tablet → operator’s phone gets Victoria’s SMS reply.
 4. Text `send me a screenshot` → MMS still queued (poller saves file + notifies).
 
 ## Auth / 401 with a “perfect” long token

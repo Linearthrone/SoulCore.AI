@@ -23,12 +23,12 @@ handoff: 2026-08-19 — WonderWoman (PM-01)
 
 ## Solution
 
-1. Kurt-only E.164 allowlist required before any outbound/inbound processing.
+1. operator-only E.164 allowlist required before any outbound/inbound processing.
 2. Inbound SMS/MMS **never** enters tool-loop / ForceTool / desktop control.
 3. No Funnel; no non-loopback Host bind for this feature.
 4. DIGITS number + tokens never in git, `/health`, or logs (length/bool only).
 5. Gateway auth token rotation notes; strip EXIF on outbound MMS if needed.
-6. Threat note: bot must not sit on Kurt’s **primary** SMS graph.
+6. Threat note: bot must not sit on operator’s **primary** SMS graph.
 
 ## Acceptance
 

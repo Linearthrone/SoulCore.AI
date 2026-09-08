@@ -5,7 +5,7 @@
 - Host binds **loopback only** (`127.0.0.1:7700`).
 - No Tailscale **Funnel** / public exposure of Host.
 - Companion token required for `/ws` and companion API when set.
-- SMS: Kurt E.164 **allowlist**; empty allowlist = deny all.
+- SMS: operator E.164 **allowlist**; empty allowlist = deny all.
 - Inbound SMS/MMS never becomes tool input.
 - Never commit MDNs, tokens, `.env`, or evidence dumps with secrets.
 

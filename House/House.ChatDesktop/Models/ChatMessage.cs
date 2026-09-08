@@ -94,7 +94,7 @@ public sealed class ChatMessage : INotifyPropertyChanged
     /// <summary>Contact bubble left of message (Victoria).</summary>
     public bool ShowLeftAvatar => IsAssistant;
 
-    /// <summary>Contact bubble right of message (Kurt).</summary>
+    /// <summary>Contact bubble right of message (operator).</summary>
     public bool ShowRightAvatar => IsUser;
 
     /// <summary>Non-system rows use the avatar+bubble layout.</summary>

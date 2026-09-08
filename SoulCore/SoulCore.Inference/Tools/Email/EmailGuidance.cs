@@ -10,7 +10,7 @@ public static class EmailGuidance
 
     public const string Block =
         Marker + "\n" +
-        "You manage three mailboxes when configured: victoria (yours), personal (Kurt), business (Kurt).\n" +
+        "You manage three mailboxes when configured: victoria (yours), personal, business.\n" +
         "Use email_* tools — do NOT open Gmail in the browser for routine check/sort/reply.\n" +
         "Workflow:\n" +
         "1) email_accounts if you need to see which mailboxes are ready.\n" +
@@ -18,9 +18,9 @@ public static class EmailGuidance
         "3) email_read(uid) before you summarize or reply. Quote facts from the tool result — do not invent mail.\n" +
         "4) Sort with email_file(uid, dest) (Archive / INBOX / a label). Mark read with email_mark.\n" +
         "5) email_delete and email_send are two-phase: first call returns a confirm prompt. " +
-        "Tell Kurt what you would send or delete and wait. Only call again with confirmed=true after he agrees.\n" +
+        "Tell the operator what you would send or delete and wait. Only call again with confirmed=true after they agree.\n" +
         "Never send or delete on a first tool call. Never put passwords in chat. " +
-        "If a tool says AllowEmailRead/Send/Delete is required, tell Kurt to enable it in Settings → Tools & Access.";
+        "If a tool says AllowEmailRead/Send/Delete is required, ask the operator to enable it in Settings → Tools & Access.";
 
     public static string AppendToPreamble(string? contextPreamble)
     {

@@ -4,7 +4,7 @@ Cloud agents (including this one) plan in Cursor’s cloud. **My Machines** work
 run the actual Shell/Read/Write/browser tools on hardware you control — no inbound
 ports, outbound HTTPS only.
 
-Use this when Kurt should stop hand-running PowerShell / Termux steps that a
+Use this when operator should stop hand-running PowerShell / Termux steps that a
 local agent can do: Host restarts, ChatDesktop WS checks, SMS→POST scripts,
 Tailscale probes, Tasker wiring on the tab.
 
@@ -14,7 +14,7 @@ Official docs: [My Machines](https://cursor.com/docs/cloud-agent/self-hosted-gui
 
 | Name | Where | Worker dir | Jobs |
 |------|--------|------------|------|
-| `home-pc` | Windows home (`kaia-reimagined`) | `C:\Users\kurtw\Soul_Core` | Host, ChatDesktop, `.env`, ALLSTART, Ollama, Tailscale serve, **primary My Machines worker** |
+| `home-pc` | Windows home (`kaia-reimagined`) | `C:\Users\operator\Soul_Core` | Host, ChatDesktop, `.env`, ALLSTART, Ollama, Tailscale serve, **primary My Machines worker** |
 | `kayleigh-tab` | Samsung Tab — **not native Termux** (see below) | n/a for now | SMS gateway stays Termux **scripts**; Cursor worker deferred |
 
 Same Cursor account. Workers must start inside a **git checkout** of
@@ -35,7 +35,7 @@ Do **not** chase unofficial Termux patches for the companion token box.
 **Practical split:**
 
 1. Run My Machines only on **`home-pc`** (Windows install + worker).
-2. Keep tablet SMS as Termux scripts (`sms-to-victoria.sh` / Tasker) — Kurt or
+2. Keep tablet SMS as Termux scripts (`sms-to-victoria.sh` / Tasker) — operator or
    home-pc agent writes the script; tablet only executes it.
 3. Optional later: `proot-distro` Ubuntu on the tab, then install `agent` **inside**
    that distro (real Linux userland). Only if we need a true `kayleigh-tab` worker.
@@ -87,7 +87,7 @@ Leave that WSL window open. Machine shows as **`home-pc`** in
 - WSL2 often **cannot** reach Windows Host via `127.0.0.1:7700` (separate NAT).
   Probe from **Windows** PowerShell, or use Tailscale `http://100.71.223.95:7700/health`.
 - `ALLSTART.ps1` is Windows — from WSL call:
-  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\kurtw\Soul_Core\ALLSTART.ps1' -RestartHost`
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\operator\Soul_Core\ALLSTART.ps1' -RestartHost`
 - Live `.env` stays on the Windows tree; don’t commit secrets from the WSL clone.
 - Prefer `powershell.exe -File …\ws-companion-auth-probe.ps1` (Windows) over curling
   loopback from inside WSL.
@@ -104,7 +104,7 @@ Tablet stays a **dumb gateway**:
 ```
 
 Wire Tasker → that script when ready. Home-pc agent can draft/update the script
-in git; Kurt copies or `scp`s it to the tab.
+in git; operator copies or `scp`s it to the tab.
 
 ## How to send work to a machine
 
@@ -124,7 +124,7 @@ Include the machine name:
 ### From this cloud session
 
 This managed cloud VM **cannot** execute on your LAN. After workers are online,
-Kurt (or a follow-up) starts a **new** agent targeting `home-pc` / `kayleigh-tab`.
+operator (or a follow-up) starts a **new** agent targeting `home-pc` / `kayleigh-tab`.
 Paste that agent’s URL back here if you want the cloud agent to read results via
 dashboard / PR.
 

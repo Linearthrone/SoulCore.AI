@@ -62,12 +62,12 @@ public sealed class ToolsOptions
     public const string BackendPlaywright = "playwright";
 
     /// <summary>
-    /// Victoria-only Chromium profile directory. Must NOT be Kurt's Chrome/Edge profile.
+    /// Victoria-only Chromium profile directory. Must NOT be the operator's Chrome/Edge profile.
     /// Default: %LOCALAPPDATA%\SoulCore\victoria-browser
     /// </summary>
     public string PlaywrightUserDataDir { get; set; } = "";
 
-    /// <summary>When true, launch headed Chromium for debugging (stream still preferred for Kurt).</summary>
+    /// <summary>When true, launch headed Chromium for debugging (stream still preferred for the operator).</summary>
     public bool PlaywrightHeaded { get; set; }
 
     /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>

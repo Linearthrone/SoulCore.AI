@@ -17,7 +17,7 @@ mockup: docs/agents/unexecuted_proposals/assets/presence-lamp-drawer-closed-open
 
 ## 1. Need / Want
 
-The desktop Presence app feels **flat** and **badly organized**: meaningless chrome, too much intern copy, services that don’t match how Kurt thinks. He **loves both rail and drawer; locked: drawer.** He also needs this to ship as a **normal Windows app**: **installer + icon** (Start menu / desktop), and when there are updates either **notify to update** or **auto-update then notify** that it was updated.
+The desktop Presence app feels **flat** and **badly organized**: meaningless chrome, too much intern copy, services that don’t match how operator thinks. He **loves both rail and drawer; locked: drawer.** He also needs this to ship as a **normal Windows app**: **installer + icon** (Start menu / desktop), and when there are updates either **notify to update** or **auto-update then notify** that it was updated.
 
 **Drawer mockup (closed vs open):** `docs/agents/unexecuted_proposals/assets/presence-lamp-drawer-closed-open.png`
 
@@ -84,13 +84,13 @@ Later, labeled. First: stop `loop.want` from owning HUD; persist `emotion.snapsh
 **Honesty, then House drawer, then material, plus a real Windows install.** Layout **C + B (drawer locked; rail parked).** Mockup: `docs/agents/unexecuted_proposals/assets/presence-lamp-drawer-closed-open.png`
 
 0. **OPS/FED installer:** `.ico` + Start menu/desktop shortcut; pack as a real installer (Velopack / MSIX / WiX — PM picks). Updates: **auto-apply then toast “Presence updated”** preferred.
-1. **FED+BED data:** Mood ← `emotion.snapshot` only. Activity ← Host `currentActivity` (last tool / LastAction / in-chat / “with herself”), not want slogans. Idle ≠ Sleeping unless she is actually at rest; silent Kurt ≠ empty existence.
+1. **FED+BED data:** Mood ← `emotion.snapshot` only. Activity ← Host `currentActivity` (last tool / LastAction / in-chat / “with herself”), not want slogans. Idle ≠ Sleeping unless she is actually at rest; silent operator ≠ empty existence.
 2. **FED chrome cut:** Host→SoulCore; drop URL, ChatDesktop row, Ollama/CUA/Comfy sentences; **House drawer** lamps; **confirm SoulCore stop**; Unreal/Comfy/Ollama/CUA + **VBox/sandbox** (and Tailscale if serve is how the phone lives). CUA is a **gate**, not a process — lamp = allowed, not Start.exe.
 3. **Sight:** timestamp + folder → **scratch gallery only**. On `store_memory` with a still: **copy** into a **memory-sight** dir the Folder button **never** opens. Dump scratch freely.
 4. **Material:** Kill decorative screws. Use **bitmaps / 9-slice metal and glass** (and/or Win11 acrylic **on this PC**) so panels have bevel and inset, not a flat purple fill.
 5. **Do not** block Playwright/DIGITS/UE lanes; this is a **FED Presence + OPS install** wave with a small BED activity field.
 
-**UI ideas (next level — for Kurt, not a ticket by themselves):**
+**UI ideas (next level — for operator, not a ticket by themselves):**
 
 - **Watchface identity:** stone inlay nameplate; mood as a **cabochon** (color = affect), not a word plus two science bars.
 - **Lamp channel:** aircraft-style LED wells in a brushed rail; the well *is* the switch; SoulCore well needs a **guard** (hold / confirm).
@@ -111,7 +111,7 @@ Later, labeled. First: stop `loop.want` from owning HUD; persist `emotion.snapsh
 
 **Kill:** one folder for dump + memories; lamp-stop Host with no confirm; closed drawer hiding SoulCore/Unreal **down**; more screws as “texture”; HUD still driven by `loop.want`; `/api/tags` 200 sold as “chat-ready” in prose (lamp color only, or model-present if we add it later).
 
-**Seat dissent:** Drawer **locked by Kurt**; rail parked. CONTRA: **hold/confirm for SoulCore**.
+**Seat dissent:** Drawer **locked by operator**; rail parked. CONTRA: **hold/confirm for SoulCore**.
 
 ## 9. Open Questions for User / PM
 
@@ -122,7 +122,7 @@ Still open (do not block drawer):
 1. **Day-one lamp set:** SoulCore, Ollama, Unreal, ComfyUI, CUA, Sandbox — Tailscale/Voice overflow?
 2. **Silent existence:** last real act + decay to Resting, or a short inner sentence never the want slogan?
 3. **SoulCore stop:** confirm dialog vs hold-the-lamp?
-4. **Updates:** auto-then-notify (Kurt liked both) — default **auto + toast** unless SEC forbids unsigned drop?
+4. **Updates:** auto-then-notify (operator liked both) — default **auto + toast** unless SEC forbids unsigned drop?
 
 ## 10. Suggested PM Handoff
 

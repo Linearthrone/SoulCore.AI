@@ -43,13 +43,13 @@ public class SmsE164Tests
 
 public class SmsInboundServiceTests
 {
-    private const string Kurt = "+15551234567";
+    private const string AllowlistedPhone = "+15551234567";
 
     [Fact]
     public async Task UnknownSender_SilentDrop_NoInference()
     {
         var inference = new CountingInference();
-        var sut = CreateSut(inference, allow: Kurt, stub: true);
+        var sut = CreateSut(inference, allow: AllowlistedPhone, stub: true);
         var result = await sut.HandleAsync(new SmsInboundRequest("+19998887777", "hi", null, null));
         Assert.True(result.Ok);
         Assert.True(result.Dropped);
@@ -60,13 +60,13 @@ public class SmsInboundServiceTests
     [Fact]
     public async Task Allowlisted_UsesCompleteAsync_NeverTools_AppendsPresenceHistory()
     {
-        var inference = new CountingInference { Reply = "hey kurt" };
+        var inference = new CountingInference { Reply = "hey AllowlistedPhone" };
         var history = new ChatSessionHistoryStore(32);
-        var sut = CreateSut(inference, allow: Kurt, stub: false, history: history);
+        var sut = CreateSut(inference, allow: AllowlistedPhone, stub: false, history: history);
         var result = await sut.HandleAsync(new SmsInboundRequest("5551234567", "hello from phone", null, null));
         Assert.True(result.Ok);
         Assert.False(result.Dropped);
-        Assert.Equal("hey kurt", result.ReplyText);
+        Assert.Equal("hey AllowlistedPhone", result.ReplyText);
         Assert.Equal(1, inference.CompleteCalls);
         Assert.Equal(0, inference.ToolLoopCalls);
         var msgs = history.GetMessages("presence-local");
@@ -80,10 +80,10 @@ public class SmsInboundServiceTests
     {
         var inference = new CountingInference { Reply = "nice pic" };
         var media = new FakeMedia();
-        var sut = CreateSut(inference, allow: Kurt, stub: true, media: media);
+        var sut = CreateSut(inference, allow: AllowlistedPhone, stub: true, media: media);
         var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
         var result = await sut.HandleAsync(
-            new SmsInboundRequest(Kurt, "look", png, "image/png"));
+            new SmsInboundRequest(AllowlistedPhone, "look", png, "image/png"));
         Assert.True(result.Ok);
         Assert.False(string.IsNullOrWhiteSpace(result.MediaId));
         Assert.Equal(1, media.StoreCalls);
@@ -103,8 +103,8 @@ public class SmsInboundServiceTests
     public async Task ModelDown_StubDisabled_ReturnsChatModelDown()
     {
         var inference = new ThrowingInference();
-        var sut = CreateSut(inference, allow: Kurt, stub: false);
-        var result = await sut.HandleAsync(new SmsInboundRequest(Kurt, "hey", null, null));
+        var sut = CreateSut(inference, allow: AllowlistedPhone, stub: false);
+        var result = await sut.HandleAsync(new SmsInboundRequest(AllowlistedPhone, "hey", null, null));
         Assert.False(result.Ok);
         Assert.Equal("chat.model_down", result.Error);
         Assert.Null(result.ReplyText);
@@ -115,8 +115,8 @@ public class SmsInboundServiceTests
     public async Task ModelDown_StubEnabled_ReturnsStubOk()
     {
         var inference = new ThrowingInference();
-        var sut = CreateSut(inference, allow: Kurt, stub: true);
-        var result = await sut.HandleAsync(new SmsInboundRequest(Kurt, "hey", null, null));
+        var sut = CreateSut(inference, allow: AllowlistedPhone, stub: true);
+        var result = await sut.HandleAsync(new SmsInboundRequest(AllowlistedPhone, "hey", null, null));
         Assert.True(result.Ok);
         Assert.True(result.UsedStub);
         Assert.Equal("stub", result.Provider);
@@ -133,7 +133,7 @@ public class SmsInboundServiceTests
         return new SmsInboundService(
             Options.Create(new SmsOptions
             {
-                KurtAllowlistE164 = allow,
+                AllowlistE164 = allow,
                 StubWhenModelDown = stub,
                 ConversationSessionId = "presence-local",
                 OutboundEnabled = true,
@@ -151,7 +151,7 @@ public class SmsInboundServiceTests
             new SmsOutboundService(
                 Options.Create(new SmsOptions
                 {
-                    KurtAllowlistE164 = allow,
+                    AllowlistE164 = allow,
                     OutboundEnabled = true,
                     MinSecondsBetweenSms = 0,
                     MinSecondsBetweenMms = 0

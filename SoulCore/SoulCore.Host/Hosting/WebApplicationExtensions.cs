@@ -473,7 +473,7 @@ internal static class WebApplicationExtensions
                 waitingOnYou = snap.WaitingOnYou,
                 backend = snap.Backend,
                 updatedAt = snap.UpdatedUtc,
-                note = "Victoria's dedicated Playwright Chromium (not Kurt's Chrome). In-memory stream only — not written to desktop screenshot gallery."
+                note = "Victoria's dedicated Playwright Chromium (not the operator's Chrome). In-memory stream only — not written to desktop screenshot gallery."
             });
         });
 

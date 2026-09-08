@@ -193,7 +193,7 @@ See: `docs/TMPA-Text-Message-Parallel-AI-Architecture-Spec.md` (v3.1)
 
 ### 5.2 In Progress
 
-> **Ground truth (2026-07-22):** Soul_Core is control-plane + **SoulCore greenfield home** (Avenue A â€” see `soulcore-continuous-victoria-redesign.md`). Quarry remains `C:\Users\kurtw\LLMOD\LLMOD-max-master` until cutover (`docs/agents/PRODUCT_ROOT.md`). Week-1: **live endpoint** on quarry stack. TASK-006 / 007 / 008 below are **void template debt**. Role pack path canon: `Agents/`.
+> **Ground truth (2026-07-22):** Soul_Core is control-plane + **SoulCore greenfield home** (Avenue A â€” see `soulcore-continuous-victoria-redesign.md`). Quarry remains `C:\Users\operator\LLMOD\LLMOD-max-master` until cutover (`docs/agents/PRODUCT_ROOT.md`). Week-1: **live endpoint** on quarry stack. TASK-006 / 007 / 008 below are **void template debt**. Role pack path canon: `Agents/`.
 
 | Task | Owner | Status |
 | --- | --- | --- |

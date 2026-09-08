@@ -5,8 +5,8 @@ Victoria has **email_*** tools so she can check, sort, file, mark, delete, and r
 | Id | Role | Whose |
 | --- | --- | --- |
 | `victoria` | victoria | **Hers** — provision a mailbox for her (new Gmail or your domain) |
-| `personal` | personal | Kurt personal |
-| `business` | business | Kurt business |
+| `personal` | personal | operator personal |
+| `business` | business | operator business |
 
 Host never creates those mailboxes. You create them, turn on IMAP, and put **app passwords** in `SoulCore/.env`. Never commit addresses or passwords.
 
