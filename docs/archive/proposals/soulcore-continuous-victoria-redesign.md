@@ -9,7 +9,7 @@ need: Replace fat House Victoria brain with persistent SoulCore self; House beco
 sent_at: 2026-07-22
 pm_intake: docs/agents/tasks/TASK-20260722-001-TT01-to-PM01.md
 survey: docs/agents/unexecuted_proposals/llmod-soulcore-redesign-intake-survey.md
-north_star: C:\Users\kurtw\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
+north_star: C:\Users\operator\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
 route: Avenue A â€” Soul-spine MVP
 ---
 
@@ -17,7 +17,7 @@ route: Avenue A â€” Soul-spine MVP
 
 ## 1. Need / Want
 
-Kayleigh wants a **last rewrite** of LLMOD / House Victoria so Victoria is a **continuous self** (warm model, self-authored memory, live emotion â†’ speech/body/choice), not a fresh-session drone. Apps become thin. Product name stays **House Victoria**; **SoulCore** is the self/service; repo layout under `C:\Users\kurtw\Soul_Core` with `SoulCore/` (self) and `House/` (thin apps, MCP, voice).
+Kayleigh wants a **last rewrite** of LLMOD / House Victoria so Victoria is a **continuous self** (warm model, self-authored memory, live emotion â†’ speech/body/choice), not a fresh-session drone. Apps become thin. Product name stays **House Victoria**; **SoulCore** is the self/service; repo layout under `C:\Users\operator\Soul_Core` with `SoulCore/` (self) and `House/` (thin apps, MCP, voice).
 
 Intake: answered survey `llmod-soulcore-redesign-intake-survey.md` (2026-07-22). Round 2 thinktank: STRAT / CONTRA / SYS / RISK / USER.
 
@@ -57,7 +57,7 @@ Intake: answered survey `llmod-soulcore-redesign-intake-survey.md` (2026-07-22).
 | Area | Decision |
 | --- | --- |
 | Stance | SoulCore-first **greenfield** (cut freely); still port AutonomyOrchestrator â†’ **act-layer only** |
-| Workspace | `C:\Users\kurtw\Soul_Core` â€” `SoulCore/` + `House/`; LLMOD remains quarry until extracts stabilize |
+| Workspace | `C:\Users\operator\Soul_Core` â€” `SoulCore/` + `House/`; LLMOD remains quarry until extracts stabilize |
 | Language | C# SoulCore host; Python satellites (MCP, STT, Chatterbox) |
 | Hosting | Target Windows Service; V1 may ship tray/console until 24h soak |
 | Inference | Config pick: Ollama â†” llama.cpp; Hermes tool loop; primary model **Qwen3.5-9B-â€¦-GGUF**; perception-small: **Qwen2.5-3B-Instruct Q4** or **Phi-3.5/4-mini** (or CPU if VRAM tight); embeddings: nomic-embed-text |
@@ -244,7 +244,7 @@ Freeze these before or during first PM tickets (defaults in brackets = TT recomm
   7. **QA-01** â€” continuity acceptance suite matching Â§2
 - **What PM should decide first:** Accept Avenue A cut line (esp. video/PgVector/Unreal gate defaults in Â§9); then issue Phase 0 tickets immediately â€” do not wait for WebRTC.
 - **Do not** ticket computer-use, COVAS, Kokoro/Piper, AnythingLLM, LM Studio, or research satellites.
-- **Source quarry:** `C:\Users\kurtw\LLMOD\LLMOD-max-master` (Autonomy, MCP, STT, Chatterbox, Unreal bridge, persona docs).
+- **Source quarry:** `C:\Users\operator\LLMOD\LLMOD-max-master` (Autonomy, MCP, STT, Chatterbox, Unreal bridge, persona docs).
 - **North star:** `SoulCore_Architecture_and_Development_Plan.md`.
 
 ---

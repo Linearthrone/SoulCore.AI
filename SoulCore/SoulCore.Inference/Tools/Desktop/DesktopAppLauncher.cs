@@ -71,7 +71,7 @@ public static class DesktopAppLauncher
 
     /// <summary>
     /// Launch on Windows. When <paramref name="backgroundNoActivate"/> is true (default),
-    /// prefer <c>ShellExecuteEx</c> with <c>SW_SHOWNOACTIVATE</c> so Kurt's foreground
+    /// prefer <c>ShellExecuteEx</c> with <c>SW_SHOWNOACTIVATE</c> so the operator's foreground
     /// window is less likely to be stolen (BED-181). Apps may still self-activate.
     /// </summary>
     public static DesktopOpResult Launch(string app, string? args, bool backgroundNoActivate = true)

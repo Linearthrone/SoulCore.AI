@@ -19,7 +19,7 @@ public static class EmailToolSupport
         "email delete requires user authorization — enable AllowEmailDelete in Settings → Tools & Access";
 
     public const string NoAccountsMessage =
-        "no email accounts configured — Kurt needs to add Email:Accounts (victoria / personal / business) in SoulCore/.env";
+        "no email accounts configured — configure Email:Accounts (victoria / personal / business) in SoulCore/.env";
 
     public const string DefaultFolder = "INBOX";
     public const int DefaultLimit = 20;

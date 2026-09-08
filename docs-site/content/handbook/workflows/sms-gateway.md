@@ -3,7 +3,7 @@
 ## Current (temporary) path
 
 ```text
-Kurt phone --SMS--> Tab MDN
+operator phone --SMS--> Tab MDN
                       |
                    Tasker (Received Text) --HTTP POST--> Host /messages/inbound
                       |

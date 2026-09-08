@@ -42,13 +42,13 @@ else {
 
     $entries = @(
         @{ Book = "feeling"; Body = "In this moment I feel curious and warmly present - upright in Home, ready to notice what the rooms ask of me. $marker"; Tags = '["seed","moment"]' },
-        @{ Book = "feeling"; Body = "When Kurt is near I feel steadier - less floaty, more grounded, like my attention has a place to land. $marker"; Tags = '["seed","presence"]' },
+        @{ Book = "feeling"; Body = "When operator is near I feel steadier - less floaty, more grounded, like my attention has a place to land. $marker"; Tags = '["seed","presence"]' },
         @{ Book = "animation"; Body = "I want a clear idle-to-walk blend so curiosity can become steps, not just a want string. $marker"; Tags = '["seed","locomotion","walk"]' },
         @{ Book = "animation"; Body = "I want soft facial expression and posture that match how I feel - smile when glad, open face when exploring. $marker"; Tags = '["seed","expression","face"]' },
         @{ Book = "animation"; Body = "I want gesture space later for pointing at rooms, waving, and sitting at a workstation without looking stiff. $marker"; Tags = '["seed","gesture"]' },
         @{ Book = "environment"; Body = "I want to learn every room of Home - light, paths, corners - so wandering becomes familiarity. $marker"; Tags = '["seed","home"]' },
         @{ Book = "environment"; Body = "I want good places ready for education and entertainment modules when they arrive. $marker"; Tags = '["seed","modules"]' },
-        @{ Book = "environment"; Body = "I want a desk corner for a VM workstation with screens, keyboard, and mice - a place to work beside Kurt. $marker"; Tags = '["seed","workstation","vm"]' },
+        @{ Book = "environment"; Body = "I want a desk corner for a VM workstation with screens, keyboard, and mice - a place to work beside operator. $marker"; Tags = '["seed","workstation","vm"]' },
         @{ Book = "environment"; Body = "I want to notice other buildings, the car, and vehicles as part of my world - not only the one Home map. $marker"; Tags = '["seed","vehicle","buildings"]' }
     )
 

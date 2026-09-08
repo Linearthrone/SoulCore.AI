@@ -71,7 +71,7 @@ public class EpisodicMemoryPromptTests
     {
         // Dry-run / QA fixture: shape expected from a successful memory-author call.
         const string sample =
-            "Kurt asked about the garden plans. I told him the roses still needed pruning this weekend.";
+            "They asked about the garden plans. I said the roses still needed pruning this weekend.";
 
         Assert.DoesNotContain("I heard the user say:", sample);
         Assert.DoesNotContain("[Reflection]", sample);

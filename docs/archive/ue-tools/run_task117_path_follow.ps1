@@ -1,9 +1,9 @@
 # TASK-117: launch UnrealEditor with tick-safe ExecCmds path-follow verify
 $ErrorActionPreference = "Stop"
 $Editor = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
-$Project = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$Script = "C:/Users/kurtw/Soul_Core/tools/ue_nav/task117_path_follow_verify.py"
-$Evidence = "C:\Users\kurtw\Soul_Core\tmpcode\qa117-evidence"
+$Project = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$Script = "C:/Users/operator/Soul_Core/tools/ue_nav/task117_path_follow_verify.py"
+$Evidence = "C:\Users\operator\Soul_Core\tmpcode\qa117-evidence"
 New-Item -ItemType Directory -Force -Path $Evidence | Out-Null
 Remove-Item (Join-Path $Evidence "task117_summary.json") -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Evidence "task117_path_follow.log") -ErrorAction SilentlyContinue

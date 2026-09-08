@@ -21,7 +21,7 @@ public static class ToolAgencyGuidance
         "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.\n" +
         "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
         "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
-        "email_send and email_delete require Kurt's confirm (confirmed=true on the second call).";
+        "email_send and email_delete require the operator's confirm (confirmed=true on the second call).";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.

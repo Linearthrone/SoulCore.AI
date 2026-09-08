@@ -18,7 +18,7 @@ pm_intake: docs/agents/tasks/PROP-11-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-After PROP-5 makes SQLite access safe, `SqliteMemoryStore` still concentrates memory, emotion, stats, tasks, workflows, journals, and disposal. Kurt wants schema ownership and change coupling reduced — without inventing a second database.
+After PROP-5 makes SQLite access safe, `SqliteMemoryStore` still concentrates memory, emotion, stats, tasks, workflows, journals, and disposal. operator wants schema ownership and change coupling reduced — without inventing a second database.
 
 ## 2. Goal & Success Criteria
 
@@ -65,7 +65,7 @@ EF; multi-DB; standalone vector PROP.
 
 ## 9. Open Questions
 
-Any interface renames Kurt wants while the patient is open? (Default: no.)
+Any interface renames operator wants while the patient is open? (Default: no.)
 
 ## 10. Suggested PM Handoff
 

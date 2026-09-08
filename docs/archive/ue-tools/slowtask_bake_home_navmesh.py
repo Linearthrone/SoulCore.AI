@@ -12,9 +12,9 @@ import unreal
 import traceback
 from datetime import datetime
 
-LOG_PATH = r"C:\Users\kurtw\Soul_Core\tools\ue_nav\task116_navmesh_result.log"
+LOG_PATH = r"C:\Users\operator\Soul_Core\tools\ue_nav\task116_navmesh_result.log"
 # Also mirror into project Saved/Logs for convenience
-LOG_PATH_ALT = r"C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
+LOG_PATH_ALT = r"C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\Saved\Logs\task116_navmesh_tick.log"
 
 CAPSULE_RADIUS = 34.0
 CAPSULE_HALF_HEIGHT = 96.0

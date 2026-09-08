@@ -1,4 +1,4 @@
-# REX-191 remote PIE verify — run AFTER Kurt restarts the shadow editor on /Game/Home with Change 20 synced.
+# REX-191 remote PIE verify — run AFTER operator restarts the shadow editor on /Game/Home with Change 20 synced.
 # Confirms HouseGameMode class exists, starts PIE, and reads back the possessed pawn class.
 $ErrorActionPreference = 'Continue'
 $Remote = 'http://house-victoria:30010'

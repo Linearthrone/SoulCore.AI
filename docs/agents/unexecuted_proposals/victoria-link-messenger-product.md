@@ -16,14 +16,14 @@ pm_intake:
 
 ## 1. Need / Want
 
-The current Victoria Link Android app feels like a prototype console: chat **wipes when you leave the screen**, **desktop talk does not appear** on the phone, UI and Settings are **flat/dull**, and **voice / video conversation** is not real. Kurt wants something **professional, post-modern, current** — Messenger-class (including **floating bubbles**), with **depth, texture, and theme options**.
+The current Victoria Link Android app feels like a prototype console: chat **wipes when you leave the screen**, **desktop talk does not appear** on the phone, UI and Settings are **flat/dull**, and **voice / video conversation** is not real. operator wants something **professional, post-modern, current** — Messenger-class (including **floating bubbles**), with **depth, texture, and theme options**.
 
 Open architecture question: **part of SoulCore itself, or another House Victoria Solution project?**
 
 ## 2. Goal & Success Criteria
 
 - Leave Chat / Settings / Call / kill the app → **thread still there**.
-- Same Kurt↔Victoria conversation on **phone and ChatDesktop** (hydrate on open).
+- Same operator↔Victoria conversation on **phone and ChatDesktop** (hydrate on open).
 - Default surface feels like a **person in a thread**, not an ops dashboard.
 - Visual: **tactile / glass / Material You-class** depth; **theme packs** (not system dark/light only).
 - Voice: **in-app conversation** (not PSTN). Video: honest — either **duplex** or labeled as **watch her**, never JPEG-poll sold as a video call.
@@ -63,7 +63,7 @@ Still open — §9.
 
 ### Avenue A — One Victoria Thread (recommended spine)
 
-Canonical **durable transcript on SoulCore.Host** (SQLite table, not episodic memory, not BED-158 RAM). One `conversationId` for Kurt↔Victoria. Desktop + phone **hydrate**; Room/SQLite on device is a **cache**. WS already fans out `chat.done`; add history cursor / `GET …/messages?after=`.
+Canonical **durable transcript on SoulCore.Host** (SQLite table, not episodic memory, not BED-158 RAM). One `conversationId` for operator↔Victoria. Desktop + phone **hydrate**; Room/SQLite on device is a **cache**. WS already fans out `chat.done`; add history cursor / `GET …/messages?after=`.
 
 This is the only path that fixes “clears” and “not on the computer” as **one** bug.
 
@@ -139,7 +139,7 @@ Keep poll as **watch-her** until Unreal can publish a media track. Real duplex =
 
 **Seat dissent**
 
-- USER wants overlay heads **parked**; Kurt named them explicitly — facilitator: **in-thread + Bubbles in Wave 1**, overlay as Wave 2 unless he insists P0.
+- USER wants overlay heads **parked**; operator named them explicitly — facilitator: **in-thread + Bubbles in Wave 1**, overlay as Wave 2 unless he insists P0.
 - SYS: JPEG can stay for near-term Call UX if **labeled**. CONTRA: never call that video.
 
 ## 9. Open Questions for User / PM
@@ -154,4 +154,4 @@ Keep poll as **watch-her** until Unreal can publish a media track. Real duplex =
 - **Environment:** TINA-main when sent.
 - **Likely roles:** BED-01 (Host transcript + conversationId + hydrate API), FED-01 Android (ViewModel, themes, Messenger shell, honest Call), FED-01 desktop (hydrate same API in ChatDesktop), SEC-01 (encrypted cache, backup, overlay/TURN), REX-01 (real call track later), QA-01 (kill app → history; desk message appears on phone).
 - **Order:** BED transcript **before** FED skin. Do not ticket a rewrite. Do not ticket overlay as P0.
-- **PM decide first:** Q1 (one thread) and Q3 (overlay vs bubbles). Architecture (House vs SoulCore) is **already decided in this brief** unless Kurt overrides.
+- **PM decide first:** Q1 (one thread) and Q3 (overlay vs bubbles). Architecture (House vs SoulCore) is **already decided in this brief** unless operator overrides.

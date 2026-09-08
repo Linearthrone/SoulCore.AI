@@ -23,8 +23,8 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 | Host knobs (this session) | `StubWhenModelDown=true`, `Hermes=false`, `Inference=false`, `SoulLoop=false` |
 | Ollama | Binary present; **no running instance / no models listed** |
 | Unreal / LLMOD quarry | **Not** in this Linux cloud tree — UE tickets cannot execute here |
-| Shadow MT4/MCP | Out of band — OPS-170 Fail (Kurt on `house-victoria`) |
-| Cloud DB charter | `charter.mode=empty` (local SQLite fresh; Kurt’s locked DB is not this VM) |
+| Shadow MT4/MCP | Out of band — OPS-170 Fail (operator on `house-victoria`) |
+| Cloud DB charter | `charter.mode=empty` (local SQLite fresh; operator’s locked DB is not this VM) |
 | `/health` tools note | Live snapshot shows `mt4Backend=hermes` under stub session; code default remains `llmod` → `house-victoria:8080` |
 
 ## Queue snapshot (open `tasks/`)
@@ -40,10 +40,10 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 | SLOP-160 | SLOP-01 | findings (5) | **Archived** with BED-172 Pass; F4 ask-user still open |
 | BED-172 | BED-01 | Pass | **Archived** — code on `cursor/bed-172-slop-cleanup-169c` |
 | BED-169 | BED-01 | Partial (code Pass) | **Accept code** — live verify after shadow MCP |
-| OPS-170 | OPS-01 | Fail | **Accept Fail** — Kurt must start MCP `:8080` + EA on `house-victoria` |
+| OPS-170 | OPS-01 | Fail | **Accept Fail** — operator must start MCP `:8080` + EA on `house-victoria` |
 | BED-171 | BED-01 | Partial | **Accept Partial** — sync `VictoriaBody` asset then run rewire scripts |
 
-## User blockers (need Kurt)
+## User blockers (need operator)
 
 1. **OPS-170 / MT4 edge** — On shadow `house-victoria` (`100.107.94.17`): MT4 + EA + LLMOD MCP HTTP bind `0.0.0.0:8080`. See OPS-170 report manual steps.
 2. **BED-171 / VictoriaBody** — Sync MetaHuman `VictoriaBody` into MyProject (main or shadow), then run BED-171 Python rewire.
@@ -64,8 +64,8 @@ Role pack: `Agents/PM-01.md` + `Agents/PM-01-Work-Standards.md` (+ EN twin).
 
 ## Recommended priority
 
-1. **Kurt (shadow):** OPS-170 MCP+EA → unblocks QA-139 live path  
+1. **operator (shadow):** OPS-170 MCP+EA → unblocks QA-139 live path  
 2. **SLOP-160** (this cloud): finish Phase E hygiene chain  
-3. **Kurt (UE):** VictoriaBody sync (171) → BED-160 / QA-118 → BED-121 re-probe → QA-123  
+3. **operator (UE):** VictoriaBody sync (171) → BED-160 / QA-118 → BED-121 re-probe → QA-123  
 4. **Model pull** → formal QA-134 re-run  
 5. User authorize soak #2 when SoulLoop+embeddings desired on a durable Host

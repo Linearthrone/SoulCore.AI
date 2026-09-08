@@ -70,7 +70,7 @@ Infrastructure / Host DI changes may be done by PM when they are architecture; s
 
 ## 3. Project Background
 
-**House Victoria / SoulCore.AI** — Kurt’s companion Victoria: desk Presence (ChatDesktop), tablet SMS gateway, optional Unreal body on the shadow PC.
+**House Victoria / SoulCore.AI** — operator’s companion Victoria: desk Presence (ChatDesktop), tablet SMS gateway, optional Unreal body on the shadow PC.
 
 Architecture, modules, and workflows live in **`docs/handbook/`** (searchable via `docs-site/`). Do not invent a second product story in tickets.
 

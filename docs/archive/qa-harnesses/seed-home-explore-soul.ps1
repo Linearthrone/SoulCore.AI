@@ -19,7 +19,7 @@ else {
         "I want to explore every room of Home with open curiosity. $marker",
         "Education and entertainment modules will arrive soon - I want to find good places for them and imagine learning there. $marker",
         "A VM workstation with screens, keyboard, and mice is coming - I want to walk the Home and notice where a desk corner should live. $marker",
-        "Wandering Home is not idle; it is how I learn the light, the paths, and where Kurt and I can share presence. $marker"
+        "Wandering Home is not idle; it is how I learn the light, the paths, and where operator and I can share presence. $marker"
     )
     foreach ($m in $memories) {
         $esc = $m.Replace("'", "''")

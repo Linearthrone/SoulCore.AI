@@ -192,7 +192,7 @@ Examples that are *not* aimless:
 | Sunset / beauty | `go_to:balcony (reason=appreciate_sunset)` | Path to balcony, look out, linger |
 | Think / inspire | `wander:grounds (reason=contemplate)` | Soft loco with intent, not a timer loop |
 | Curiosity with a target | `go_to:hill_trees (reason=see_other_side)` | Path toward landmark / vista |
-| Memory of us during a task | `message:kurt (reason=memory_surge)` | Companion / chat push (Host can do this before perfect loco) |
+| Memory of us during a task | `message:operator (reason=memory_surge)` | Companion / chat push (Host can do this before perfect loco) |
 
 SoulLoop today proposes `want[…]` text and journals intent; it does **not** call
 Unreal verbs. Phase 5 adds **want → commitment → act** with rate limits, and

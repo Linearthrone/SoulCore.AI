@@ -8,7 +8,7 @@ screenshot + page map + click/type/key/scroll (DOM or Chrome debugger CDP).
 ### 1. Start the bridge
 
 ```powershell
-cd C:\Users\kurtw\Soul_Core
+cd C:\Users\operator\Soul_Core
 .\SoulCore\scripts\start-browser-bridge.ps1
 ```
 
@@ -20,7 +20,7 @@ Verify: `Invoke-RestMethod http://127.0.0.1:17891/health`
 
 **Chrome:** `chrome://extensions` → Developer mode → **Load unpacked** → select
 
-`C:\Users\kurtw\Soul_Core\BrowserCaptureExtension`
+`C:\Users\operator\Soul_Core\BrowserCaptureExtension`
 
 **Edge:** `edge://extensions` → same folder.
 

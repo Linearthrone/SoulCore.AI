@@ -1,10 +1,10 @@
 # Architecture overview
 
-SoulCore.AI is the backend and desk/phone clients for **House Victoria**: Kurt talks to Victoria on the desk (ChatDesktop) and by SMS (tablet gateway). A separate Unreal “body” lives on the shadow PC.
+SoulCore.AI is the backend and desk/phone clients for **House Victoria**: operator talks to Victoria on the desk (ChatDesktop) and by SMS (tablet gateway). A separate Unreal “body” lives on the shadow PC.
 
 ```text
-Kurt phone ──SMS──► Samsung Tab (gateway) ──HTTPS/Tailscale──► SoulCore.Host :7700
-Kurt desk  ──WS/HTTP─────────────────────► SoulCore.Host :7700
+operator phone ──SMS──► Samsung Tab (gateway) ──HTTPS/Tailscale──► SoulCore.Host :7700
+operator desk  ──WS/HTTP─────────────────────► SoulCore.Host :7700
                                               │
                                               ├─ Ollama inference + tools
                                               ├─ SQLite memory / charter

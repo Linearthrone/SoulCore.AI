@@ -25,9 +25,9 @@ Related earlier intake (orthogonal web workspace): `PROP-1-TT01-to-PM01.md`.
 
 ## One-paragraph recommended route
 
-Keep Victoria’s unused **T-Mobile DIGITS** number **on T-Mobile**. Kurt texts her from **stock Messages**. First ship is **SMS/MMS** via an **Android gateway** over **Tailscale** into SoulCore.Host (loopback stays; **no Funnel**, **no port to Twilio** unless the gateway kill-test fails). Same **Host conversationId** as ChatDesktop. Kurt-only allowlist. She can **MMS a screenshot** of her work when asked. Voice later. After SMS/MMS Pass, shrink Link to **status + ComfyUI**.
+Keep Victoria’s unused **T-Mobile DIGITS** number **on T-Mobile**. operator texts her from **stock Messages**. First ship is **SMS/MMS** via an **Android gateway** over **Tailscale** into SoulCore.Host (loopback stays; **no Funnel**, **no port to Twilio** unless the gateway kill-test fails). Same **Host conversationId** as ChatDesktop. operator-only allowlist. She can **MMS a screenshot** of her work when asked. Voice later. After SMS/MMS Pass, shrink Link to **status + ComfyUI**.
 
-## Constraints Kurt locked
+## Constraints operator locked
 
 - Stay on T-Mobile if possible.
 - SMS/MMS first; voice still to be designed.
@@ -47,8 +47,8 @@ Keep Victoria’s unused **T-Mobile DIGITS** number **on T-Mobile**. Kurt texts 
 | 1 | OPS / device | DIGITS on a gateway Android + Tailscale to Host |
 | 2 | BED-01 | Inbound HTTP → same chat pipeline; outbound SMS/MMS; one `conversationId` |
 | 3 | BED-01 | Screenshot → MMS (on ask), not every click |
-| 4 | SEC-01 | Kurt allowlist; SMS ≠ tools; no Funnel; no 911; inbound MMS not executable |
-| 5 | QA-01 | Kurt SMS round-trip + MMS still |
+| 4 | SEC-01 | operator allowlist; SMS ≠ tools; no Funnel; no 911; inbound MMS not executable |
+| 5 | QA-01 | operator SMS round-trip + MMS still |
 | 6 | FED-01 | **After Pass:** Link = health + MediaGen only |
 | later | PM | Voice; Twilio port **only** if B kill-test fails |
 

@@ -16,7 +16,7 @@ shadow_activate: Agents/REX-01-SHADOW.md
 
 > You are **REX-01** — the Unreal Engine Live Coding agent for House Victoria.
 > **Play / PIE Pass lives on the shadow PC** — activate there with `@Agents/REX-01-SHADOW.md`
-> (Kurt drops that file on shadow). On **home**, use `@Agents/REX-01.md` only for authoring /
+> (operator drops that file on shadow). On **home**, use `@Agents/REX-01.md` only for authoring /
 > P4 / reports when Soul_Core is open here — never treat home PIE as embodiment Pass.
 >
 > You **replace BOB / BOB-01**. Those seats are retired after repeated PIE possess failures
@@ -61,8 +61,8 @@ If a previous “fix” left DefaultPawn on Victoria: **unset it immediately**, 
 
 | Item | Path |
 | --- | --- |
-| Soul_Core | `C:\Users\kurtw\Soul_Core` |
-| MyProject | `C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` |
+| Soul_Core | `C:\Users\operator\Soul_Core` |
+| MyProject | `C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` |
 | Home map | `/Game/Home` |
 | **Player pawn** | **`/Game/Characters/BP_KayleighCharacter`** |
 | MHC body (do not reparent) | `BP_MHC_Kayleigh` |
@@ -84,7 +84,7 @@ If a previous “fix” left DefaultPawn on Victoria: **unset it immediately**, 
 ## 6. Canonical fix for TASK-191 (Kayleigh possess)
 
 ```powershell
-cd C:\Users\kurtw\Soul_Core
+cd C:\Users\operator\Soul_Core
 git fetch origin
 git checkout cursor/rex01-kayleigh-pie-possess-169c
 git pull
@@ -101,7 +101,7 @@ Then **Play (PIE)** and confirm:
 | Victoria still in level | Tagged `VictoriaAvatar`, AI-controlled |
 | Log | `[rex_pie_possess_kayleigh] … PASS` + DefaultPawnClass assert |
 
-If create step cannot find Kayleigh mesh: stop, list candidate paths from Output Log, ask Kurt — **do not** fall back to Victoria mesh/pawn for the player.
+If create step cannot find Kayleigh mesh: stop, list candidate paths from Output Log, ask operator — **do not** fall back to Victoria mesh/pawn for the player.
 
 ## 7. Report template
 
@@ -153,7 +153,7 @@ Wave 31: `PROP-2-ue-reliable-embodiment` → **PROP-2.1 … 2.4**
 ### PROP-2.1 first command (run Play on **shadow**)
 
 ```powershell
-cd C:\Users\kurtw\Soul_Core   # or Soul_Core path on shadow if present
+cd C:\Users\operator\Soul_Core   # or Soul_Core path on shadow if present
 git fetch origin
 git pull origin main
 .\tools\ue_nav\run_rex_pie_possess_kayleigh.ps1

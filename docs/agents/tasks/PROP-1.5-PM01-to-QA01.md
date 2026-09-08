@@ -11,7 +11,7 @@ tina_wave_now: 2026-09-05 — reaffirmed by TINA program accept
 created: 2026-08-19
 wave: 31
 phase: phone-digits
-title: QA — Kurt SMS round-trip + MMS screenshot still
+title: QA — operator SMS round-trip + MMS screenshot still
 depends_on: PROP-1.1, PROP-1.2, PROP-1.3, PROP-1.4
 proposal: docs/archive/proposals/victoria-digits-sms-channel.md
 intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
@@ -23,9 +23,9 @@ handoff: 2026-08-19 — WonderWoman (PM-01)
 
 ## Sit-down (not log-only)
 
-1. Kurt texts DIGITS from stock Messages → Victoria reply SMS (Host up).
+1. operator texts DIGITS from stock Messages → Victoria reply SMS (Host up).
 2. Same turn visible in ChatDesktop One Thread.
-3. Kurt asks for a screenshot → MMS still arrives; matches her browser/Presence frame.
+3. operator asks for a screenshot → MMS still arrives; matches her browser/Presence frame.
 4. Unknown number silent (if testable with second SIM / spoof harness).
 5. Host down: **silence** (PM default) — no ghost Victoria SMS.
 

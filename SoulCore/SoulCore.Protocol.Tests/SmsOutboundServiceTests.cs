@@ -12,21 +12,21 @@ namespace SoulCore.Protocol.Tests;
 
 public class SmsOutboundServiceTests
 {
-    private const string Kurt = "+15551234567";
+    private const string AllowlistedPhone = "+15551234567";
 
     [Fact]
     public async Task EnqueueSms_Allowlisted_PendingThenAck()
     {
         var sut = CreateSut();
-        var r = await sut.EnqueueSmsAsync(Kurt, "hello kurt", "test");
+        var r = await sut.EnqueueSmsAsync(AllowlistedPhone, "hello", "test");
         Assert.True(r.Ok);
         Assert.False(string.IsNullOrWhiteSpace(r.JobId));
 
         var pending = sut.ListPending();
         Assert.Single(pending);
         Assert.Equal(SmsOutboundKind.Sms, pending[0].Kind);
-        Assert.Equal(Kurt, pending[0].ToE164);
-        Assert.Equal("hello kurt", pending[0].Text);
+        Assert.Equal(AllowlistedPhone, pending[0].ToE164);
+        Assert.Equal("hello", pending[0].Text);
 
         Assert.True(sut.TryAck(r.JobId!, true));
         Assert.Empty(sut.ListPending());
@@ -47,8 +47,8 @@ public class SmsOutboundServiceTests
     public async Task EnqueueSms_RateMinGap_DropsSecond()
     {
         var sut = CreateSut(minSms: 60);
-        Assert.True((await sut.EnqueueSmsAsync(Kurt, "one")).Ok);
-        var second = await sut.EnqueueSmsAsync(Kurt, "two");
+        Assert.True((await sut.EnqueueSmsAsync(AllowlistedPhone, "one")).Ok);
+        var second = await sut.EnqueueSmsAsync(AllowlistedPhone, "two");
         Assert.False(second.Ok);
         Assert.True(second.RateLimited);
         Assert.Equal("rate_min_gap_sms", second.Error);
@@ -60,7 +60,7 @@ public class SmsOutboundServiceTests
     {
         var sut = CreateSut(minMms: 0);
         var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-        var r = await sut.EnqueueMmsAsync(Kurt, png, "image/png", "cap", "test");
+        var r = await sut.EnqueueMmsAsync(AllowlistedPhone, png, "image/png", "cap", "test");
         Assert.True(r.Ok);
         var job = Assert.Single(sut.ListPending());
         Assert.Equal(SmsOutboundKind.Mms, job.Kind);
@@ -77,7 +77,7 @@ public class SmsOutboundServiceTests
         desk.RecordScreenshot(new byte[] { 1, 2, 3, 4 }, "png", 1, 1, null, DesktopViewHub.SourceDesktop);
 
         var sut = CreateSut(browser: browser, desktop: desk, minMms: 0);
-        var r = await sut.EnqueueScreenshotMmsToKurtAsync("still");
+        var r = await sut.EnqueueScreenshotMmsAsync("still");
         Assert.True(r.Ok);
         var job = Assert.Single(sut.ListPending());
         Assert.Equal("image/jpeg", job.ContentType);
@@ -89,7 +89,7 @@ public class SmsOutboundServiceTests
     public async Task EnqueueScreenshotMms_NoFrame_Fails()
     {
         var sut = CreateSut(minMms: 0);
-        var r = await sut.EnqueueScreenshotMmsToKurtAsync();
+        var r = await sut.EnqueueScreenshotMmsAsync();
         Assert.False(r.Ok);
         Assert.Equal("no_frame", r.Error);
     }
@@ -110,7 +110,7 @@ public class SmsOutboundServiceTests
         var inbound = new SmsInboundService(
             Options.Create(new SmsOptions
             {
-                KurtAllowlistE164 = Kurt,
+                AllowlistE164 = AllowlistedPhone,
                 StubWhenModelDown = false,
                 OutboundEnabled = true,
                 AutoReplySmsEnabled = true,
@@ -127,7 +127,7 @@ public class SmsOutboundServiceTests
             outbound,
             NullLogger<SmsInboundService>.Instance);
 
-        var result = await inbound.HandleAsync(new SmsInboundRequest(Kurt, "hi", null, null));
+        var result = await inbound.HandleAsync(new SmsInboundRequest(AllowlistedPhone, "hi", null, null));
         Assert.True(result.Ok);
         Assert.Equal("hey back", result.ReplyText);
         Assert.False(string.IsNullOrWhiteSpace(result.OutboundSmsJobId));
@@ -145,7 +145,7 @@ public class SmsOutboundServiceTests
         new(
             Options.Create(new SmsOptions
             {
-                KurtAllowlistE164 = Kurt,
+                AllowlistE164 = AllowlistedPhone,
                 OutboundEnabled = true,
                 MinSecondsBetweenSms = minSms,
                 MinSecondsBetweenMms = minMms,

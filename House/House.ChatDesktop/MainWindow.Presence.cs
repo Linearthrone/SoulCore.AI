@@ -44,7 +44,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Kurt default: desktop + browser capture, computer control, soft cursor ON.
+    /// operator default: desktop + browser capture, computer control, soft cursor ON.
     /// Session patch via /settings/tools (coord BED-177 for appsettings seed).
     /// </summary>
     private async Task EnsureDesktopBrowserDefaultsAsync()
@@ -1283,7 +1283,7 @@ public partial class MainWindow
 
     private void AppendInboundUser(SoulCoreFrame frame)
     {
-        // PROP-1.2: SMS/MMS from Kurt mirrored into Presence transcript.
+        // PROP-1.2: SMS/MMS from operator mirrored into Presence transcript.
         var text = ReadPayloadString(frame, "text") ?? string.Empty;
         var hasMedia = ReadPayloadBool(frame, "hasMedia") == true;
         var mediaId = ReadPayloadString(frame, "mediaId");

@@ -19,7 +19,7 @@ public sealed record PresenceActivitySnapshot(
 
 /// <summary>
 /// Prefers recent chat, then recent desktop/tool act from <see cref="Tools.Desktop.IDesktopViewHub"/>,
-/// then a short life line when Kurt is silent.
+/// then a short life line when the operator is silent.
 /// </summary>
 public sealed class PresenceActivityHub : IPresenceActivityHub
 {
@@ -38,7 +38,7 @@ public sealed class PresenceActivityHub : IPresenceActivityHub
     public void NoteChat(string side)
     {
         var phrase = side.Equals("user", StringComparison.OrdinalIgnoreCase)
-            ? "Listening to Kurt"
+            ? "Listening"
             : "In conversation";
         lock (_gate)
         {

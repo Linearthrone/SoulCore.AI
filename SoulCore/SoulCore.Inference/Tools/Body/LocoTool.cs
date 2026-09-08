@@ -23,7 +23,7 @@ public sealed class LocoTool : ITool
         Description:
             "Walk a relative step in Home (cm): forward (+X), right (+Y), up (+Z). " +
             "Default forward=100 when omitted. Use with victoria_eye_capture between steps " +
-            "to look around while exploring (outside, rooms, finding Kurt's avatar).",
+            "to look around while exploring (outside, rooms, finding the operator's avatar).",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

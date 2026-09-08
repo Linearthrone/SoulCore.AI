@@ -6,7 +6,7 @@ tt_id: TT-01
 created: 2026-08-19
 updated: 2026-08-21
 title: "[TINA-main] Victoria SMS/MMS on tablet gateway (was DIGITS)"
-need: Give Victoria an SMS/MMS line Kurt can text from Messages; MMS screenshots of her work; Link shrinks to status + ComfyUI
+need: Give Victoria an SMS/MMS line operator can text from Messages; MMS screenshots of her work; Link shrinks to status + ComfyUI
 sent_at: 2026-08-19
 pm_intake: docs/agents/tasks/TASK-20260819-194-TT01-to-PM01.md
 environment: TINA-main
@@ -24,15 +24,15 @@ pm_note: 2026-08-21 — PROP-1.1 Pass on Samsung SM-X218U native MDN; DIGITS ide
 
 ## 1. Need / Want
 
-Kurt has an unused **T-Mobile DIGITS** line and wants to **keep it on T-Mobile**. He would **text her from Messages**. Victoria Link would then only need **server status** and **ComfyUI**. To see what she is doing, she can **push a screenshot as MMS** — no live phone stream. **Voice stays a later ship.**
+operator has an unused **T-Mobile DIGITS** line and wants to **keep it on T-Mobile**. He would **text her from Messages**. Victoria Link would then only need **server status** and **ComfyUI**. To see what she is doing, she can **push a screenshot as MMS** — no live phone stream. **Voice stays a later ship.**
 
 Prior Link messenger-class brief is **deprioritized** as the daily phone chat UI. ChatDesktop remains the desk room.
 
 ## 2. Goal & Success Criteria
 
-- Kurt texts **her E.164** from stock Messages; replies feel like a person (short, Host-up).
+- operator texts **her E.164** from stock Messages; replies feel like a person (short, Host-up).
 - Same **Host conversationId** as ChatDesktop (car SMS + desk work = one memory).
-- v1: **SMS + MMS**, **Kurt’s number allowlisted**. Unknown inbound silent-drop.
+- v1: **SMS + MMS**, **operator’s number allowlisted**. Unknown inbound silent-drop.
 - **See-her-work on the phone:** Victoria **sends an MMS screenshot** (Playwright/Presence frame), not a live stream in Link.
 - Link **not gutted until** SMS/MMS round-trips work.
 - **No PSTN/voice in this ship.** Voice is a separate later thinktank/ticket.
@@ -43,7 +43,7 @@ Prior Link messenger-class brief is **deprioritized** as the daily phone chat UI
 | Fact | Detail |
 | --- | --- |
 | DIGITS | Consumer **multi-device line**, not a Twilio webhook API. T-Mobile BYON exists for **voice/WebRTC on a subscriber line**, not SMS bots. |
-| SoulCore | No carrier SMS. “SMS” = ChatDesktop metaphor + phrase bank. `chat.send` is **WS only**. Push API is Victoria → Kurt. |
+| SoulCore | No carrier SMS. “SMS” = ChatDesktop metaphor + phrase bank. `chat.send` is **WS only**. Push API is Victoria → operator. |
 | Remote | Tailscale serve; Funnel on Host/chat was a **SEC Fail**. Twilio needs **public HTTPS** ≠ Tailscale serve. |
 | STT/TTS | File Whisper + WAV — **not** PSTN RTP / Media Streams. |
 | Call tab | JPEG Unreal frames — **not** a phone call. |
@@ -78,7 +78,7 @@ Port (Avenue A) only if B cannot send/receive on that MDN after a kill-test.
 
 ### Avenue C — DIGITS SIP / T-Mobile BYON as the SMS bot (parked)
 
-BYON is **voice WebRTC**, not SMS. Consumer DIGITS is not a published SIP trunk. Do not ticket until Kurt has **real SIP/BYON creds**.
+BYON is **voice WebRTC**, not SMS. Consumer DIGITS is not a published SIP trunk. Do not ticket until operator has **real SIP/BYON creds**.
 
 ### Avenue D/E — Email-to-SMS, Google Voice, or a **new** Twilio number
 
@@ -94,7 +94,7 @@ Still valid as a **parked** rich-client path. **Not** the daily phone chat if B 
 
 1. **Kill-test DIGITS inbound/outbound** on a gateway device (days): SMS both ways, then MMS still of a PNG.
 2. **Host One Victoria Thread** — SMS/MMS is an adapter, not the store.
-3. **Kurt-allowlist**, no tools from inbound SMS/MMS, no Funnel, no 911. Inbound MMS from Kurt = image into the thread (not executable). Inbound from others = drop. **Outbound MMS** = her screenshots / Comfy stills.
+3. **operator-allowlist**, no tools from inbound SMS/MMS, no Funnel, no 911. Inbound MMS from operator = image into the thread (not executable). Inbound from others = drop. **Outbound MMS** = her screenshots / Comfy stills.
 4. **Do not shrink Link** until SMS+MMS Pass. Then Link → health + ComfyUI.
 5. **ChatDesktop** remains the live observer (Playwright stream). Phone gets **stills on request** (“send me a screenshot”).
 6. **Voice** = later ticket; not this ship.
@@ -109,7 +109,7 @@ Still valid as a **parked** rich-client path. **Not** the daily phone chat if B 
 
 ## 8. Risks & Kill Criteria
 
-**Must-mitigate:** Kurt-only allowlist; SMS/MMS ≠ tool loop; Tailscale token on gateway POSTs; dedicated DIGITS line not his daily SIM; Host-up policy; redact logs; no SoulLoop spam onto the carrier; no emergency origin; screenshot MMS **opt-in / on ask** (not every tool click); strip EXIF if needed; stills may show secrets — same Presence gallery rules.
+**Must-mitigate:** operator-only allowlist; SMS/MMS ≠ tool loop; Tailscale token on gateway POSTs; dedicated DIGITS line not his daily SIM; Host-up policy; redact logs; no SoulLoop spam onto the carrier; no emergency origin; screenshot MMS **opt-in / on ask** (not every tool click); strip EXIF if needed; stills may show secrets — same Presence gallery rules.
 
 **Kill:** Funnel/bind Host public; auto-reply to strangers; 911; number in git/health; inbound MMS executed as tools; bot on **primary** SMS graph; gut Link before SMS/MMS works; RCS scrape; porting as the *first* attempt while T-Mo still works.
 
@@ -134,6 +134,6 @@ Still open (do not block B kill-test):
 ## 10. Suggested PM Handoff
 
 - **TINA-main** when sent. Do **not** ticket Link Messenger rewrite in the same wave.
-- **Order:** (1) OPS/VBOX-or-device: DIGITS on a gateway Android + Tailscale. (2) BED: inbound HTTP→same chat pipeline + outbound SMS/MMS + `conversationId`. (3) BED: `send_screenshot_mms` (or reuse desktop screenshot → companion media → gateway MMS). (4) SEC: allowlist, no tools from SMS, no Funnel. (5) QA: Kurt SMS round-trip + MMS still. (6) FED Link: **after Pass**, strip to status + MediaGen.
+- **Order:** (1) OPS/VBOX-or-device: DIGITS on a gateway Android + Tailscale. (2) BED: inbound HTTP→same chat pipeline + outbound SMS/MMS + `conversationId`. (3) BED: `send_screenshot_mms` (or reuse desktop screenshot → companion media → gateway MMS). (4) SEC: allowlist, no tools from SMS, no Funnel. (5) QA: operator SMS round-trip + MMS still. (6) FED Link: **after Pass**, strip to status + MediaGen.
 - Voice: **not this ticket.**
 - Port to Twilio: **only** if kill-test shows DIGITS cannot terminate to a gateway.

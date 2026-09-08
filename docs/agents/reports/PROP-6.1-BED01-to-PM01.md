@@ -85,4 +85,4 @@ New tests:
 ## Notes
 
 - Mid-drag cancellation leaves the cursor at the last interpolated position (documented in proposal; prior moves retained, no rollback).
-- Windows foreground drag timing not exercised in Linux CI; covered by source regression + async pattern. Windows validation recommended on Kurt's host.
+- Windows foreground drag timing not exercised in Linux CI; covered by source regression + async pattern. Windows validation recommended on operator's host.

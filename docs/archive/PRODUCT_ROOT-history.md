@@ -12,8 +12,8 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 | Field | Value |
 | --- | --- |
 | Execution route | **Avenue A — Soul-spine MVP** |
-| Code home | `C:\Users\kurtw\Soul_Core` → `SoulCore/` + `House/` |
-| Quarry | `C:\Users\kurtw\LLMOD\LLMOD-max-master` |
+| Code home | `C:\Users\operator\Soul_Core` → `SoulCore/` + `House/` |
+| Quarry | `C:\Users\operator\LLMOD\LLMOD-max-master` |
 | Host | `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws` |
 | UI | `House/House.ChatDesktop` → SoulCore WS only · root `ALLSTART.ps1` / `ALLSTOP.ps1` |
 | Protocol | Shared `SoulCore/SoulCore.Protocol/` |
@@ -64,21 +64,21 @@ updated: 2026-08-06 (TINA: BED-180 fast open-app soft-dispatch)
 ## In flight (PM)
 
 - **PROP numbering (2026-08-19+):** TT intakes use `PROP-{N}-{subject}` / splits `PROP-{N}.{M}` — see `docs/agents/PROP_NUMBERING.md`. Stops collisions with `TASK-###`.
-- **2026-08-21 WonderWoman / BED — PROP-1.2 Pass:** `POST /api/companion/v1/messages/inbound` → `presence-local` One Thread, Kurt E.164 allowlist, MMS as media (no tools). Runbook `docs/runbooks/sms-gateway-inbound.md`. **Next:** PROP-1.3 outbound SMS/MMS + screenshot still.
-- **2026-08-21 WonderWoman — PROP-1.1 Pass:** Gateway = Samsung Tab **SM-X218U** native talk/text MDN (DIGITS line **not** used). Tailscale on; SMS in/out + MMS image Pass (Kurt). Do not commit MDN. Leave tablet on + Tailscale up.
+- **2026-08-21 WonderWoman / BED — PROP-1.2 Pass:** `POST /api/companion/v1/messages/inbound` → `presence-local` One Thread, operator E.164 allowlist, MMS as media (no tools). Runbook `docs/runbooks/sms-gateway-inbound.md`. **Next:** PROP-1.3 outbound SMS/MMS + screenshot still.
+- **2026-08-21 WonderWoman — PROP-1.1 Pass:** Gateway = Samsung Tab **SM-X218U** native talk/text MDN (DIGITS line **not** used). Tailscale on; SMS in/out + MMS image Pass (operator). Do not commit MDN. Leave tablet on + Tailscale up.
 - **2026-08-19 WonderWoman Wave 31 — SMS/MMS (Avenue B):** `PROP-1-digits-sms-channel` → **PROP-1.1..1.6**. Proposal slug kept (`victoria-digits-sms-channel.md`); identity now **tablet MDN**. **Parked:** `PROP-3-link-messenger-product`; PSTN/voice.
 - **2026-08-19 WonderWoman Wave 31 — UE reliability (parallel lane):** `PROP-2-ue-reliable-embodiment` → **PROP-2.1..2.4** (REX 2.1 finishes TASK-191 sit-down; 2.2 loco; 2.3 eye; 2.4 holds TASK-192 out of Presence). **Do not block** Playwright / DIGITS / Host.
 - **2026-08-19 Playwright Wave 30 (parallel, legacy TASK ids):** BED-194..199 on `cursor/bed-194-playwright-workspace-169c` (PR #53) — Victoria dedicated Chromium + `/browser/view`. Pre-PROP numbering; leave as-is.
 - **2026-08-17 TASK-192 → REX-01 + FED-192:** Mobile **Call** tab + Host `/api/companion/v1/call/*`. **Held behind PROP-2.1** (PROP-2.4). Branch `cursor/fed-192-videocall-waistup-169c`.
 - **2026-08-17 TASK-191 → REX-01 (UE LiveCoding, ACTIVE):** PIE must possess **Kayleigh**. Sit-down Pass tracked as **PROP-2.1** on shadow. Seat: `Agents/REX-01.md`. **Shadow drop-in activate:** `Agents/REX-01-SHADOW.md` (copy onto shadow → `@` in Cursor).
 - **2026-08-05 TASK-180 → BOB (SUPERSEDED):** retired after wrong Victoria possess attempts — see TASK-191 / REX-01.
-- **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. Kurt: Ctrl+C stuck ALLSTART → pull → re-run.
+- **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Branch `cursor/ops-179-allstart-hang-169c`. operator: Ctrl+C stuck ALLSTART → pull → re-run.
 - **2026-08-06 TINA:** **BED-180/181 Pass (code)** — fast open + finish-the-ask in background: pre-dispatch `desktop_open_app`, no early-exit on “open and …”, `SoftCursorRestore`+`DesktopBackend=cua`, no-activate launch. PR #32. Host recycle after merge.
 - **2026-08-06 TINA:** **OPS-179 Pass (code)** — ALLSTART hang: timeout `hermes gateway stop` + child WaitForExit; `-SkipHermes`/`-SkipVoice`. Merged #31.
 - **2026-08-06 TINA:** **OPS-178 Pass archived** — `start-hermes.ps1` rewrites MCP `python.exe`→`pythonw.exe`. On main; ForceRestart after rewrite was the ALLSTART hang trigger (OPS-179).
 - **2026-08-06 TINA Wave 29 complete:** **BED-175** + **BED-177** + **FED-176 Pass archived**. Merge order: #26 (proactive) · #27 (tools/identity) · fed-176 SMS UI · Host recycle + relaunch ChatDesktop. Optional follow-up: Host MMS outbound on chat.send. BED-174 PR #24 still open.
 - **2026-08-06 TINA:** F4 **option C** → **BED-173 Pass archived**. Merge order: BED-172 PR #22 then BED-173 `cursor/bed-173-task-persisted-data-169c` (stacked). F4 closed.
-- **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (Kurt/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
+- **2026-08-05 TINA cold-start:** Host **UP** on Linux cloud (`StubWhenModelDown=true`, inference/Hermes/SoulLoop off). Accepted: BED-169 Partial (code), OPS-170 Fail (operator/shadow), BED-171 Partial (asset sync), QA-134 SOFT-PASS. **SLOP-160 + BED-172 archived Pass** (F1–F3/F5). Patrol: `reports/TASK-20260805-PM01-cold-start-patrol.md`.
 - **2026-07-30:** Ticket hygiene pass — archived 118 FAIL pair, 162 Pass pair; removed orphan 140/143 report dupes. Remaining open tasks: 121, 123, 134, 137, 139, BED-160, **BED-169 Partial-Accepted**, **OPS-170 Blocked-User**, **BED-171 Partial-Accepted**.
 - **MT4:** LLMOD-owned; shadow MagicDNS **`house-victoria`** (hyphen). Host default endpoint corrected 2026-07-30. Live blocked until MCP HTTP + EA on shadow.
 - **Real blockers (2 open issues):** ISSUE-006 PIE travel=0 (BED-160); ISSUE-008 Hermes capture timeout (QA-137).

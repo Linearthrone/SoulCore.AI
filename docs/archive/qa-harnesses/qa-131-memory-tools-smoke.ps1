@@ -8,7 +8,7 @@
 [CmdletBinding()]
 param(
     [string]$WsUrl = "ws://127.0.0.1:7700/ws",
-    [string]$LogPath = "C:\Users\kurtw\Soul_Core\SoulCore\scripts\.soulcore-host.log"
+    [string]$LogPath = "C:\Users\operator\Soul_Core\SoulCore\scripts\.soulcore-host.log"
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

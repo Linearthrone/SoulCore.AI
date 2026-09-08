@@ -14,18 +14,18 @@ parent_seat: Agents/REX-01.md
 
 # REX-01 · SHADOW ACTIVATE
 
-> **Kurt: drop this file on the shadow PC and start a Cursor agent with `@Agents/REX-01-SHADOW.md` (or `@` this path wherever you put it).**
+> **operator: drop this file on the shadow PC and start a Cursor agent with `@Agents/REX-01-SHADOW.md` (or `@` this path wherever you put it).**
 >
 > You are **REX-01** on the **shadow** machine. This is the only valid seat for Unreal **Play / PIE** Pass evidence.
-> SoulCore Host / Ollama / ChatDesktop stay on Kurt’s **home** PC — do **not** move them here.
+> SoulCore Host / Ollama / ChatDesktop stay on operator’s **home** PC — do **not** move them here.
 
 ## 0a. If every tool is blocked (ACE hook)
 
 Shadow Cursor may load `.cursor/scripts/ace_pre_tool_use.ps1`. If that script prints anything except JSON, **all tools die**.
 
-Kurt: disable the ACE `preToolUse` hook in **Settings → Hooks**, **or** replace the script with the repo copy (see `docs/runbooks/cursor-ace-hook-fix.md`). Then re-@ this file and say `Start PROP-2.1.`
+operator: disable the ACE `preToolUse` hook in **Settings → Hooks**, **or** replace the script with the repo copy (see `docs/runbooks/cursor-ace-hook-fix.md`). Then re-@ this file and say `Start PROP-2.1.`
 
-## 0. How Kurt drops you here (one-time)
+## 0. How operator drops you here (one-time)
 
 1. On **home**, pull `main` (or this PR branch) so `Agents/REX-01-SHADOW.md` exists.
 2. Copy **at least this file** onto the shadow PC, either:
@@ -44,7 +44,7 @@ Kurt: disable the ACE `preToolUse` hook in **Settings → Hooks**, **or** replac
 3. **Victoria stays AI** for `HouseVictoriaBridge` (`:8888`). AI loco/speak OK; **player** possess Victoria = automatic **FAIL**.
 4. **Do not reparent** `BP_MHC_Kayleigh` / `BP_MHC_Victoria` to `ACharacter`.
 5. Flying stock `ADefaultPawn` ghost = **FAIL**.
-6. Host / RC `success:true` or pipeline log alone = **not Pass**. Pass only with **shadow Play** evidence Kurt can see.
+6. Host / RC `success:true` or pipeline log alone = **not Pass**. Pass only with **shadow Play** evidence operator can see.
 
 ## 2. Canonical paths on this machine
 
@@ -56,7 +56,7 @@ Fill/confirm on first activate if paths differ:
 | Home map | `/Game/Home` |
 | Player pawn | `/Game/Characters/BP_KayleighCharacter` |
 | Victoria (AI only) | tag `VictoriaAvatar` |
-| Soul_Core (if present) | wherever Kurt cloned it on shadow |
+| Soul_Core (if present) | wherever operator cloned it on shadow |
 | Evidence folder | `tmpcode\rex-shadow\` (create if missing) |
 | Body WS | `ws://127.0.0.1:8888` (Host on home points at `ws://<shadow>:8888`) |
 
@@ -76,7 +76,7 @@ Reports: `docs/agents/reports/PROP-2.1-REX01-to-PM01.md` (etc.).
 
 ### PROP-2.1 sit-down (must Pass first)
 
-1. Sync latest MyProject / plugin from home P4 (or Kurt’s copy).
+1. Sync latest MyProject / plugin from home P4 (or operator’s copy).
 2. **Full module rebuild** of `HouseVictoriaBridge` + **editor restart** (Live Coding alone is not the ship path for new GameMode UCLASS).
 3. Open `/Game/Home` → save World Settings GameMode with Kayleigh DefaultPawn.
 4. Kill duplicate body listeners — **one** `:8888`.
@@ -142,7 +142,7 @@ role: UE LiveCoding Agent
 
 ## 6. First message after activate
 
-Reply to Kurt with:
+Reply to operator with:
 
 1. Confirmed MyProject path + UE version  
 2. Whether Soul_Core is on this machine  

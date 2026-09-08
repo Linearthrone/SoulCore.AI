@@ -5,7 +5,7 @@ End-to-end Editor Python for **possessing Kayleigh in PIE**, never Victoria.
 ## Run (Windows)
 
 ```powershell
-cd C:\Users\kurtw\Soul_Core
+cd C:\Users\operator\Soul_Core
 .\tools\ue_nav\run_rex_pie_possess_kayleigh.ps1
 ```
 

@@ -18,8 +18,8 @@ Live A2E API token present in git-tracked quarry files. Treat as compromised if 
 
 ## Evidence
 
-- `C:\Users\kurtw\LLMOD\LLMOD-max-master\HouseVictoria.App\App.config` (A2eApiToken)
-- `C:\Users\kurtw\LLMOD\LLMOD-max-master\tmpcode\build-out-notify\HouseVictoria.App.dll.config` (copy)
+- `C:\Users\operator\LLMOD\LLMOD-max-master\HouseVictoria.App\App.config` (A2eApiToken)
+- `C:\Users\operator\LLMOD\LLMOD-max-master\tmpcode\build-out-notify\HouseVictoria.App.dll.config` (copy)
 
 SEC-004 report: `docs/agents/reports/TASK-20260722-004-SEC01-to-PM01.md`
 

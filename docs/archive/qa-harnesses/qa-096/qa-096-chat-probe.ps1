@@ -6,14 +6,14 @@ param(
 )
 # qa-096-chat-probe.ps1
 # Generic QA-096 chat probe: send -> wait WITHOUT receiving -> drain frames
-# Authoritative proof: host log at c:\Users\kurtw\Soul_Core\SoulCore\scripts\.soulcore-host.log
+# Authoritative proof: host log at c:\Users\operator\Soul_Core\SoulCore\scripts\.soulcore-host.log
 # Pattern derived from QA-087/089/093. UE is NOT connected -- that's OK; verb client logs the dispatch attempt.
 $ErrorActionPreference = 'Stop'
 
 $HostWsUrl   = 'ws://127.0.0.1:7700/ws'
 $HostUrl     = 'http://127.0.0.1:7700'
 $UnrealWsUrl = 'ws://127.0.0.1:8888'
-$HostLogPath = 'c:\Users\kurtw\Soul_Core\SoulCore\scripts\.soulcore-host.log'
+$HostLogPath = 'c:\Users\operator\Soul_Core\SoulCore\scripts\.soulcore-host.log'
 $ProbeStartIso = [DateTimeOffset]::UtcNow.ToString('O')
 
 function Get-HealthR { try { return Invoke-RestMethod -Uri "$HostUrl/health" -TimeoutSec 5 } catch { return $null } }

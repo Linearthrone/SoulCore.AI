@@ -130,7 +130,7 @@ public sealed class BrowserClickTextTool : ITool
 public sealed class BrowserFillTool : ITool
 {
     private static readonly JsonElement Parameters = JsonDocument.Parse(
-        """{"type":"object","properties":{"field":{"type":"string","description":"Field label or placeholder (Email, Username, Search)."},"value":{"type":"string","description":"Text to type. Do not type secrets unless Kurt asked."}},"required":["field","value"]}""")
+        """{"type":"object","properties":{"field":{"type":"string","description":"Field label or placeholder (Email, Username, Search)."},"value":{"type":"string","description":"Text to type. Do not type secrets unless the operator asked."}},"required":["field","value"]}""")
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
@@ -146,7 +146,7 @@ public sealed class BrowserFillTool : ITool
         Name: "browser_fill",
         Description:
             "Click a named input in guest Firefox and type into it (Email, Username, Search). " +
-            "Do not type passwords or secrets unless Kurt explicitly asked.",
+            "Do not type passwords or secrets unless the operator explicitly asked.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

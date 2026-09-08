@@ -1,10 +1,10 @@
-# REX-01 / TASK-191 — live-fix PIE so Kurt possesses BP_KayleighCharacter (never Victoria).
+# REX-01 / TASK-191 — live-fix PIE so operator possesses BP_KayleighCharacter (never Victoria).
 # Requires UE 5.8. Prefer: Editor already open on /Game/Home with Remote Control :30010.
 $ErrorActionPreference = "Stop"
 
 $Editor = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
-$Project = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$RepoRoot = "C:\Users\kurtw\Soul_Core"
+$Project = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$RepoRoot = "C:\Users\operator\Soul_Core"
 $ScriptWin = Join-Path $RepoRoot "tools\ue_nav\kayleigh_player\rex_pie_possess_kayleigh.py"
 $ScriptPy = ($ScriptWin -replace '\\', '/')
 $Evidence = Join-Path $RepoRoot "tmpcode\rex191-kayleigh-pie"

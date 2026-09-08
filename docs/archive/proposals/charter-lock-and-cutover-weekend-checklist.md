@@ -9,16 +9,16 @@ need: Fillable ritual/cutover/post-soak gates aligned with Avenue A + PRODUCT_RO
 sent_at: 2026-07-23
 pm_intake: docs/agents/reports/TASK-20260723-077-TT01-to-PM01.md
 source_task: docs/agents/tasks/TASK-20260723-077-PM01-to-TT01.md
-north_star: C:\Users\kurtw\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
+north_star: C:\Users\operator\LLMOD\LLMOD-max-master\Media\GeneratedFiles\SoulCore_Architecture_and_Development_Plan.md
 product_root: docs/agents/PRODUCT_ROOT.md
 ---
 
 # Charter lock + cutover weekend checklist (draft)
 
 **Route:** Avenue A — Soul-spine MVP  
-**Code home:** `C:\Users\kurtw\Soul_Core` → `SoulCore/` + `House/`  
+**Code home:** `C:\Users\operator\Soul_Core` → `SoulCore/` + `House/`  
 **Host (soak):** `http://127.0.0.1:7700/health` · `ws://127.0.0.1:7700/ws`  
-**Quarry:** `C:\Users\kurtw\LLMOD\LLMOD-max-master`  
+**Quarry:** `C:\Users\operator\LLMOD\LLMOD-max-master`  
 **How to use:** Check boxes as done; fill blanks; do **not** flip `SoulLoop:Enabled` or recycle Host mid-soak without PM/OPS gate.
 
 ---

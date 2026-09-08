@@ -23,7 +23,7 @@ parallel_with: PROP-1, PROP-2, PROP-4, PROP-6
 
 ## 1. Need / Want
 
-Kurt needs Host persistence to be **boring under overlap**: chat, SMS, SoulLoop ticks, tasks/workflows/journals, and charter reads must not flake, error mid-turn, or risk torn writes because several async callers share one long-lived `SqliteConnection` (and charter opens a **second** connection to the same file).
+operator needs Host persistence to be **boring under overlap**: chat, SMS, SoulLoop ticks, tasks/workflows/journals, and charter reads must not flake, error mid-turn, or risk torn writes because several async callers share one long-lived `SqliteConnection` (and charter opens a **second** connection to the same file).
 
 This is a **correctness / ownership** need — not a greenfield storage rewrite, not ChatWebSocketHandler decomposition, not Hermes cleanup.
 
@@ -33,7 +33,7 @@ This is a **correctness / ownership** need — not a greenfield storage rewrite,
 - Charter and memory share **one declared ownership model** for the same DB path; xmldoc matches `Program.cs`.
 - SoulLoop `TickAsync` is single-flight across hosted timer + WS `loop.tick`; tick counter is not racy.
 - Concurrent soak (memory write + charter read + overlapping ticks) stays green; Host still boots; `/health` remains available when DB is open.
-- Kurt-facing success: chat/SMS/loop do not steal the mic from each other; Presence health stops lying about charter/memory under load.
+- operator-facing success: chat/SMS/loop do not steal the mic from each other; Presence health stops lying about charter/memory under load.
 - Explicitly **out of scope for this PROP:** ChatWebSocketHandler god-object split, Program.cs DI module extraction, Hermes retirement, IMAP pooling, vector index, Unreal adapter split, doc-tree merge.
 
 ## 3. Context & Constraints
@@ -57,13 +57,13 @@ Upstream eval ranked this cluster **highest urgency** among Needs Attention; reo
 
 | Q | Locked default (TT synthesis) | Revisit if |
 | --- | --- | --- |
-| Overlapping `TickAsync`: skip / queue / coalesce? | **Skip** (single-flight; second caller no-ops or acks “busy”) | Kurt demands force-tick always runs |
+| Overlapping `TickAsync`: skip / queue / coalesce? | **Skip** (single-flight; second caller no-ops or acks “busy”) | operator demands force-tick always runs |
 | Charter permanently co-located in memory file? | **Yes** for this PROP | OPS later wants a dedicated charter path |
 | MVP = global serialize vs connection-per-op now? | **Serialize-all first** (`SemaphoreSlim(1,1)`), factory later if measured | Soak shows unacceptable queue latency |
 | Hold DB lock across embedding/network I/O? | **Never** | — |
 | Enable SoulLoop before gates land? | **No** — keep fail-closed / skip-if-busy until gates exist | — |
 
-Open Kurt questions (non-blocking for park; ask on send-to-PM if still unknown): which flake hurts most this week (mid-chat error vs missing reflection vs SMS silence vs Presence flicker)?
+Open operator questions (non-blocking for park; ask on send-to-PM if still unknown): which flake hurts most this week (mid-chat error vs missing reflection vs SMS silence vs Presence flicker)?
 
 ## 5. Avenues Explored
 
@@ -155,4 +155,4 @@ Sequence (hard order):
 | `PROP-5.4` | QA-01 | Concurrent soak: chat write + SMS/memory write + dual tick + charter read; dispose-under-load |
 | `PROP-5.5` (later) | BED-01 | Optional Avenue B connection factory — only if 5.2 soak shows queue pain |
 
-**TT recommendation to Kurt:** park here until you say **send to PM-01**.
+**TT recommendation to operator:** park here until you say **send to PM-01**.

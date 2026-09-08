@@ -1,7 +1,7 @@
 # Kayleigh player pawn — Wave 29 setup (MyProject)
 
 **Product decision (2026-08-04):** grounded Kayleigh body — **not** free-fly `ADefaultPawn`.  
-**Project:** `C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` (UE 5.8)  
+**Project:** `C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject` (UE 5.8)  
 **Map:** `/Game/Home`  
 **Tickets:** BED-172 (build) · QA-173 (verify)
 

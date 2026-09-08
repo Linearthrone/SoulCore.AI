@@ -2,7 +2,7 @@
 $ollamaLogPaths = @(
     "$env:LOCALAPPDATA\Ollama\server.log",
     "$env:USERPROFILE\.ollama\logs\server.log",
-    "C:\Users\kurtw\.ollama\logs\server.log",
+    "C:\Users\operator\.ollama\logs\server.log",
     "$env:LOCALAPPDATA\Ollama\app.log"
 )
 foreach ($p in $ollamaLogPaths) {

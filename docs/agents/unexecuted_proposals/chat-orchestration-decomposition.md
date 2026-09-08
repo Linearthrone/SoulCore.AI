@@ -18,7 +18,7 @@ pm_intake: docs/agents/tasks/PROP-8-TT01-to-PM01.md
 
 ## 1. Need / Want
 
-`ChatWebSocketHandler` owns socket lifecycle, frame routing, chat orchestration, emotion, memory authoring, tool-loop, and Unreal side effects. Kurt needs this boundary decomposable so chat behavior can change without 17-field constructor fear — and context assembly should stop being six sequential string patches plus a front-trimmed `List<T>`.
+`ChatWebSocketHandler` owns socket lifecycle, frame routing, chat orchestration, emotion, memory authoring, tool-loop, and Unreal side effects. operator needs this boundary decomposable so chat behavior can change without 17-field constructor fear — and context assembly should stop being six sequential string patches plus a front-trimmed `List<T>`.
 
 ## 2. Goal & Success Criteria
 

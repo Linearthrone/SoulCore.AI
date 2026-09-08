@@ -1,6 +1,6 @@
 # QA-01 F2 git tracking check
 $ErrorActionPreference = 'Stop'
-Set-Location 'C:\Users\kurtw\Soul_Core'
+Set-Location 'C:\Users\operator\Soul_Core'
 
 Write-Output '===== git status of SoulCore/.env ====='
 $tracked = git ls-files --error-unmatch SoulCore/.env 2>&1

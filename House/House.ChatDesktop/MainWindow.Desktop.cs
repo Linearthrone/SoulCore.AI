@@ -75,7 +75,7 @@ public partial class MainWindow
 
         _lastNewestGalleryFileName = newest;
 
-        // When Kurt pinned an older gallery frame, keep meta/path but do not overwrite the image.
+        // When operator pinned an older gallery frame, keep meta/path but do not overwrite the image.
         var showLiveImage = string.IsNullOrWhiteSpace(_pinnedGalleryFileName);
 
         if (showLiveImage)

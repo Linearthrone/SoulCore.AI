@@ -201,7 +201,7 @@ static int ReportSecretsPresence()
         var present = !string.IsNullOrEmpty(value);
         var length = present ? value!.Length : 0;
         allPresent &= present;
-        // Fingerprint only — never print the secret. Lets Kurt compare .env vs Host.
+        // Fingerprint only — never print the secret. Lets the operator compare .env vs Host.
         var fp = present ? ShortFingerprint(value!) : "-";
         Console.WriteLine($"{key}: present={present} length={length} fp={fp}");
     }

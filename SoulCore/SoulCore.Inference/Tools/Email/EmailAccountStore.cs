@@ -191,8 +191,8 @@ public sealed class EmailAccountStore : IEmailAccountStore
                     DisplayName = id switch
                     {
                         EmailOptions.RoleVictoria => "Victoria",
-                        EmailOptions.RolePersonal => "Kurt personal",
-                        EmailOptions.RoleBusiness => "Kurt business",
+                        EmailOptions.RolePersonal => "Personal",
+                        EmailOptions.RoleBusiness => "Business",
                         _ => id
                     },
                     ImapHost = EmailOptions.DefaultImapHost,

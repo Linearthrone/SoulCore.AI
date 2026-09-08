@@ -29,7 +29,7 @@ Waist-up **call_capture** (TASK-192) remains **held** until PROP-2.1 Pass. When 
 
 1. Do not start 192 work that blocks 210–212.
 2. When 210 Pass: reopen 192 with explicit “not Presence sight” constraint.
-3. Short ack report when 210 unlocks (or withdraw if Kurt drops call camera).
+3. Short ack report when 210 unlocks (or withdraw if operator drops call camera).
 
 ## Acceptance
 

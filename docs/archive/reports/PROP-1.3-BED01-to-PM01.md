@@ -33,16 +33,16 @@ role: Backend Engineer
 
 | # | Criterion | Status |
 | --- | --- | --- |
-| 1 | Text reply SMS reaches Kurt via gateway | **Code Pass** — Host enqueues; Kurt runs Termux poller or Tasker Send SMS (ops) |
+| 1 | Text reply SMS reaches operator via gateway | **Code Pass** — Host enqueues; operator runs Termux poller or Tasker Send SMS (ops) |
 | 2 | Explicit screenshot ask → one MMS still | **Code Pass** — SMS keywords + tool; poller saves still + notifies |
 | 3 | No auto-spam; rate limit documented | **Pass** — defaults 12s/30 SMS/h, 60s/6 MMS/h; runbook table |
 | 4 | Tests with mock gateway green | **Pass** — 21 Sms* tests |
 
-## Kurt / OPS to go live
+## operator / OPS to go live
 
 1. Pull + restart Host (`ALLSTART` / RestartHost).
 2. On tablet: `sms-outbound-poll.sh --loop 10` **or** Tasker Send SMS from `replyText` (not both).
-3. Text tablet → expect SMS reply on Kurt’s phone.
+3. Text tablet → expect SMS reply on operator’s phone.
 4. Text `send me a screenshot` → notification + file under `~/storage/downloads/soulcore-mms/` → send in Messages if OEM blocks Termux MMS.
 
 ## Do not

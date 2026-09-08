@@ -12,7 +12,7 @@ Pipeline:
 Hard rules (fail loud):
   - Never set player DefaultPawnClass to Victoria / BP_VictoriaCharacter / VictoriaAvatar
   - Never reparent BP_MHC_Kayleigh (MHC regen) — use Character wrapper only
-  - Victoria stays AI-possessed for the bridge; Kurt possesses Kayleigh in PIE
+  - Victoria stays AI-possessed for the bridge; operator possesses Kayleigh in PIE
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import traceback
 import unreal
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EVIDENCE_DIR = r"C:\Users\kurtw\Soul_Core\tmpcode\rex191-kayleigh-pie"
+EVIDENCE_DIR = r"C:\Users\operator\Soul_Core\tmpcode\rex191-kayleigh-pie"
 LOG_FILE = os.path.join(EVIDENCE_DIR, "rex_pie_possess_kayleigh.log")
 BP_KAYLEIGH = "/Game/Characters/BP_KayleighCharacter"
 GM_PATH = "/Game/Characters/GM_HouseVictoria"

@@ -4,7 +4,7 @@ Thin launchers for Victoria's local ears + voice:
 
 | Service | Port | Quarry |
 |---|---|---|
-| faster-whisper STT | `127.0.0.1:8000` | `C:\Users\kurtw\LLMOD\LLMOD-max-master\STTServer` |
+| faster-whisper STT | `127.0.0.1:8000` | `%USERPROFILE%\LLMOD\LLMOD-max-master\STTServer` |
 | Chatterbox TTS | `127.0.0.1:8881` | `...\ChatterboxServer` + `Media\ChatterboxVoices` |
 
 ## Start
@@ -23,7 +23,7 @@ windows).
 If TTS fails to start:
 
 ```powershell
-V:\Python311\python.exe -m pip install -r C:\Users\kurtw\LLMOD\LLMOD-max-master\ChatterboxServer\requirements.txt
+V:\Python311\python.exe -m pip install -r %USERPROFILE%\LLMOD\LLMOD-max-master\ChatterboxServer\requirements.txt
 ```
 
 (`chatterbox-tts` + `torch` are large; first CUDA start can take minutes.)

@@ -7,7 +7,7 @@ namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// BED-195 Avenue A1: Host Playwright Chromium with Victoria-only user-data-dir.
-/// Never attaches to Kurt's daily Chrome profile.
+/// Never attaches to the operator's daily Chrome profile.
 /// </summary>
 public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 {
@@ -56,7 +56,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var title = _page is null ? "" : await _page.TitleAsync().ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
-                $"playwright ok: Victoria dedicated Chromium (not Kurt's Chrome). url={url} title={title}",
+                $"playwright ok: Victoria dedicated Chromium (not the operator's Chrome). url={url} title={title}",
                 new { backend = BackendId, url, title, profile = ResolveUserDataDir(_opts.Value) });
         }
         catch (Exception ex)
@@ -386,12 +386,12 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 
             var userData = ResolveUserDataDir(_opts.Value);
             Directory.CreateDirectory(userData);
-            // Refuse obvious Kurt Chrome profile paths.
+            // Refuse obvious operator Chrome profile paths.
             if (userData.Contains("Google" + Path.DirectorySeparatorChar + "Chrome", StringComparison.OrdinalIgnoreCase)
                 || userData.Contains("Microsoft" + Path.DirectorySeparatorChar + "Edge", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "PlaywrightUserDataDir must not be Kurt's Chrome/Edge profile. Use SoulCore/victoria-browser.");
+                    "PlaywrightUserDataDir must not be the operator's Chrome/Edge profile. Use SoulCore/victoria-browser.");
             }
 
             _playwright ??= await Playwright.CreateAsync().ConfigureAwait(false);

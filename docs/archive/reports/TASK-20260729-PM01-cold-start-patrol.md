@@ -56,5 +56,5 @@ Callsign **TINA** — *Tactical Intelligence & Navigation Architect*. Role pack:
 
 1. Land BED-140 → hand off BED-141 + QA-142  
 2. Land OPS-143 → unlock BED-135/136/138 (then QA-137/139) + BED-144/QA-145  
-3. When Kurt’s UE machine is available: BED-116 → 117 → QA-118; then QA-123  
+3. When operator’s UE machine is available: BED-116 → 117 → QA-118; then QA-123  
 4. Charter lock + soak #2 remain **user gates**

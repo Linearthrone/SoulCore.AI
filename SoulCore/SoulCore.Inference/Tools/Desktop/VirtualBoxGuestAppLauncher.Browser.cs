@@ -21,7 +21,7 @@ public sealed partial class VirtualBoxGuestAppLauncher
         // BED-194: spawn ≠ loaded/logged-in. action_ok only; goal_complete=false.
         return new DesktopOpResult(
             true,
-            $"Firefox launched toward {target} in the {GuestOpenedMarker} (not Kurt's Windows Chrome). " +
+            $"Firefox launched toward {target} in the {GuestOpenedMarker} (not the operator's Windows Chrome). " +
             "goal_complete=false — page load NOT verified. Call browser_snapshot / browser_click_text before claiming navigated or logged in.",
             BrowserResultHonesty.LaunchOnly(target, "vbox-guest"));
     }

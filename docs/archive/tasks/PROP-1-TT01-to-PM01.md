@@ -23,9 +23,9 @@ TT-01 does not ticket FED/BED/OPS/QA. PM-01 owns execution split.
 
 ## One-paragraph recommended route
 
-Stop using VirtualBox screenshot/AT-SPI as the **web Login** actuator. Give Victoria a **Host Playwright Chromium** with her own `user-data-dir` (not Kurt's Chrome). She navigates with locators (`click("Log in")`, `fill`), may use **her** real-account passwords, and must not claim done until a **page postcondition**. Kurt gets a **live/near-live CDP screencast** of **that** browser in ChatDesktop — not last-PNG-only Presence, not his daily Chrome, not a required-on-top VM window. VirtualBox stays out of the web hot path. **VS IDE is phase 2** (prefer VS Code in the same streamed browser if that counts as "VS").
+Stop using VirtualBox screenshot/AT-SPI as the **web Login** actuator. Give Victoria a **Host Playwright Chromium** with her own `user-data-dir` (not operator's Chrome). She navigates with locators (`click("Log in")`, `fill`), may use **her** real-account passwords, and must not claim done until a **page postcondition**. operator gets a **live/near-live CDP screencast** of **that** browser in ChatDesktop — not last-PNG-only Presence, not his daily Chrome, not a required-on-top VM window. VirtualBox stays out of the web hot path. **VS IDE is phase 2** (prefer VS Code in the same streamed browser if that counts as "VS").
 
-## Constraints Kurt locked
+## Constraints operator locked
 
 - Real accounts, **hers**; she may hold/use those passwords.
 - Cookies **hers** on a dedicated profile.
@@ -35,8 +35,8 @@ Stop using VirtualBox screenshot/AT-SPI as the **web Login** actuator. Give Vict
 ## Open questions (do not block browser MVP)
 
 1. VS flavor: VS Code in her browser vs Windows Visual Studio vs VS Code in the Ubuntu VM?
-2. 2FA: Kurt handles OTP while she waits?
-3. AFK: may she browse when Kurt is away?
+2. 2FA: operator handles OTP while she waits?
+3. AFK: may she browse when operator is away?
 
 ## Suggested next tickets (not binding)
 
@@ -45,14 +45,14 @@ Stop using VirtualBox screenshot/AT-SPI as the **web Login** actuator. Give Vict
 | 1 | BED-01 | Stop false `Success` on Firefox spawn; screenshot-first Login guidance off |
 | 2 | BED-01 | `PlaywrightBrowserBridge` + Victoria profile: navigate / click-by-role / fill / a11y snapshot |
 | 3 | FED-01 | ChatDesktop **Show Victoria's browser** CDP stream + URL/title/last-fail |
-| 4 | SEC-01 | Isolate from Kurt's Chrome; redact fills in logs; no password frames in gallery |
+| 4 | SEC-01 | Isolate from operator's Chrome; redact fills in logs; no password frames in gallery |
 | 5 | OPS-01 | Playwright Chromium + `user-data-dir` location |
-| 6 | QA-01 | Timed login; stream is her tab; Kurt's Chrome untouched |
+| 6 | QA-01 | Timed login; stream is her tab; operator's Chrome untouched |
 | later | PM | VS IDE after flavor decision |
 
 ## Kill criteria (PM must keep)
 
-- No attach to Kurt's daily Chrome.
+- No attach to operator's daily Chrome.
 - No Playwright-via-guestcontrol-per-click.
 - No "logged in" from screenshot success.
 - Stream stays loopback (SEC-004).

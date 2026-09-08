@@ -1,10 +1,10 @@
 # TASK-160: rebuild bridge then PIE visual walk verify
 $ErrorActionPreference = "Stop"
 $Editor = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
-$Project = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$Script = "C:/Users/kurtw/Soul_Core/tools/ue_nav/task160_pie_visual_walk.py"
-$Evidence = "C:\Users\kurtw\Soul_Core\tmpcode\qa160-evidence"
-$BuildPs1 = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\build_bridge.ps1"
+$Project = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$Script = "C:/Users/operator/Soul_Core/tools/ue_nav/task160_pie_visual_walk.py"
+$Evidence = "C:\Users\operator\Soul_Core\tmpcode\qa160-evidence"
+$BuildPs1 = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\build_bridge.ps1"
 
 New-Item -ItemType Directory -Force -Path $Evidence | Out-Null
 Remove-Item (Join-Path $Evidence "task160_summary.json") -ErrorAction SilentlyContinue

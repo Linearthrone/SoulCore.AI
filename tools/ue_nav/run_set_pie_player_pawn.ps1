@@ -1,11 +1,11 @@
-# BED-184: live-fix PIE so Kurt possesses BP_MHC_Kayleigh (not flying DefaultPawn).
+# BED-184: live-fix PIE so operator possesses BP_MHC_Kayleigh (not flying DefaultPawn).
 # Requires UE 5.8. Prefer: Editor already open on /Game/Home with Python enabled.
 # Fallback: launches MyProject + /Game/Home and runs the py script via -ExecCmds.
 $ErrorActionPreference = "Stop"
 
 $Editor = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
-$Project = "C:\Users\kurtw\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
-$RepoRoot = "C:\Users\kurtw\Soul_Core"
+$Project = "C:\Users\operator\OneDrive\Documents\Unreal Projects\MyProject\MyProject.uproject"
+$RepoRoot = "C:\Users\operator\Soul_Core"
 $ScriptWin = Join-Path $RepoRoot "tools\ue_nav\set_pie_player_pawn.py"
 $ScriptPy = ($ScriptWin -replace '\\', '/')
 $Evidence = Join-Path $RepoRoot "tmpcode\bed184-pie-pawn"

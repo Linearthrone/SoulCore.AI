@@ -1,4 +1,4 @@
-$binPath = 'c:\Users\kurtw\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0\appsettings.json'
+$binPath = 'c:\Users\operator\Soul_Core\SoulCore\SoulCore.Host\bin\Debug\net8.0\appsettings.json'
 Write-Output ('=== bin/Debug appsettings.json ===')
 if (Test-Path $binPath) {
     Get-Content $binPath

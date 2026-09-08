@@ -19,7 +19,7 @@ public sealed class QuotedChatTextTests
             "got it — use the second option",
             "here are three options:\n1) A\n2) B");
 
-        Assert.Contains("Kurt is replying to this excerpt", result);
+        Assert.Contains("The operator is replying to this excerpt", result);
         Assert.Contains("> here are three options:", result);
         Assert.Contains("> 1) A", result);
         Assert.EndsWith("got it — use the second option", result);

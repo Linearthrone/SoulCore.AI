@@ -12,7 +12,7 @@ $HostWsUrl   = 'ws://127.0.0.1:7700/ws'
 $HostUrl     = 'http://127.0.0.1:7700'
 $ChatText    = 'hello Victoria'
 $SessionId   = 'qa101-E10-preamble'
-$HostLogPath = 'c:\Users\kurtw\Soul_Core\SoulCore\scripts\.soulcore-host.log'
+$HostLogPath = 'c:\Users\operator\Soul_Core\SoulCore\scripts\.soulcore-host.log'
 $ProbeStartIso = [DateTimeOffset]::UtcNow.ToString('O')
 
 function Get-HealthR { try { return Invoke-RestMethod -Uri "$HostUrl/health" -TimeoutSec 5 } catch { return $null } }

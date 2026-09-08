@@ -260,7 +260,7 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
                 false,
                 $"desktop scope '{_titleContains}': desktop_open_app on the Windows host is BLOCKED. " +
                 "Drive apps inside the VM via Guest Additions (set SOULCORE_VBOX_GUEST_PASS). " +
-                "Do not launch Chrome/Notepad/etc. on Kurt's real desktop.",
+                "Do not launch Chrome/Notepad/etc. on the operator's real desktop.",
                 null);
         }
 

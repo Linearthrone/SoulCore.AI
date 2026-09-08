@@ -4,7 +4,7 @@
 
 | Tree | Owns | Does not own |
 | --- | --- | --- |
-| **Quarry** `C:\Users\kurtw\LLMOD\LLMOD-max-master` | Live Week-1 endpoint + extract patterns until cutover | Must not be the long-term self |
+| **Quarry** `%USERPROFILE%\LLMOD\LLMOD-max-master` | Live Week-1 endpoint + extract patterns until cutover | Must not be the long-term self |
 | **SoulCore/** (`..\SoulCore`) | Continuous self: memory, inference, host loop | Thin UX / MCP / voice satellites |
 | **House/** (this folder) | Thin client apps: chat desktop, later MCP/voice/Unreal bridge | Core memory / LLM orchestration |
 
