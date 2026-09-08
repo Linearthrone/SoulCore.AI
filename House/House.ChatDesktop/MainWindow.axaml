@@ -483,8 +483,10 @@
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowMt4TradeCheck" Content="Allow MT4 trade / close / backtest"
                           Margin="0,0,0,16" Click="ToolsAccessToggle_Click"/>
-                <TextBlock Text="Email gates" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                <CheckBox x:Name="ToolsAllowEmailReadCheck" Content="Allow email read / sort / mark (victoria + personal accounts)"
+                <TextBlock Text="Email" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
+                           Text="Quick switches (same controls live on the Email tab with mailbox setup)."/>
+                <CheckBox x:Name="ToolsAllowEmailReadCheck" Content="Allow email read / sort / mark (victoria + Kurt accounts)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowEmailSendCheck" Content="Allow email send / reply (still asks for confirmation)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
@@ -501,51 +503,100 @@
 
           <TabItem Header="Email">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12" Spacing="6">
-                <TextBlock Text="Email accounts" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"
-                           Text="IMAP/SMTP credentials Victoria uses for victoria / personal / business. Passwords are write-only (leave blank to keep). Runtime file: %LOCALAPPDATA%/SoulCore/email-accounts.runtime.json"/>
-                <TextBlock Text="Account" Foreground="{DynamicResource MutedBrush}"/>
-                <ComboBox x:Name="EmailAccountCombo" Classes="input" Height="36"
-                          SelectionChanged="EmailAccountCombo_SelectionChanged"/>
-                <CheckBox x:Name="EmailEnabledCheck" Content="Enabled" Margin="0,4,0,4"/>
-                <TextBlock Text="Display name" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBox x:Name="EmailDisplayNameBox" Classes="input" Height="34" Padding="8,0"
-                         VerticalContentAlignment="Center"/>
-                <TextBlock Text="Address" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBox x:Name="EmailAddressBox" Classes="input" Height="34" Padding="8,0"
-                         VerticalContentAlignment="Center"/>
-                <TextBlock Text="Username (blank = address)" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBox x:Name="EmailUsernameBox" Classes="input" Height="34" Padding="8,0"
-                         VerticalContentAlignment="Center"/>
-                <TextBlock Text="Password / app password" Foreground="{DynamicResource MutedBrush}"/>
-                <TextBox x:Name="EmailPasswordBox" Classes="input" Height="34" Padding="8,0"
+              <StackPanel Margin="12" Spacing="8">
+                <TextBlock Text="Mailboxes" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
+                           Text="Give Victoria a mailbox she can check, and optionally yours. For Gmail, use an App Password (not your normal login password)."/>
+
+                <TextBlock Text="Which mailbox?" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <ComboBox x:Name="EmailAccountCombo" Classes="input" Height="40"
+                          SelectionChanged="EmailAccountCombo_SelectionChanged">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Spacing="2" Margin="0,4">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Subtitle}" FontSize="11"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Border Classes="carbon" Padding="10,8" Margin="0,4,0,0">
+                  <TextBlock x:Name="EmailReadyBanner" TextWrapping="Wrap" FontSize="12"
+                             Text="Pick a mailbox to see its status."/>
+                </Border>
+
+                <CheckBox x:Name="EmailEnabledCheck" Content="Victoria may use this mailbox"
+                          Margin="0,4,0,0"/>
+
+                <TextBlock Text="Email address" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <TextBox x:Name="EmailAddressBox" Classes="input" Height="36" Padding="10,0"
+                         VerticalContentAlignment="Center"
+                         Watermark="name@gmail.com"/>
+
+                <TextBlock Text="App password" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                           Text="Gmail: Google Account → Security → 2-Step Verification → App passwords → Mail. Paste the 16-character password here. Leave blank if you already saved one and only want to change the address."/>
+                <TextBox x:Name="EmailPasswordBox" Classes="input" Height="36" Padding="10,0"
                          PasswordChar="•" VerticalContentAlignment="Center"
-                         Watermark="Leave blank to keep current"/>
+                         Watermark="Paste app password (leave blank to keep)"/>
                 <TextBlock x:Name="EmailPasswordHint" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           Text="Password status: —"/>
-                <TextBlock Text="IMAP host / port" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
-                <DockPanel>
-                  <TextBox x:Name="EmailImapPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
-                           Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="993" Margin="8,0,0,0"/>
-                  <TextBox x:Name="EmailImapHostBox" Classes="input" Height="34" Padding="8,0"
-                           VerticalContentAlignment="Center" Text="imap.gmail.com"/>
-                </DockPanel>
-                <CheckBox x:Name="EmailImapSslCheck" Content="IMAP SSL" IsChecked="True"/>
-                <TextBlock Text="SMTP host / port" Foreground="{DynamicResource MutedBrush}"/>
-                <DockPanel>
-                  <TextBox x:Name="EmailSmtpPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
-                           Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="587" Margin="8,0,0,0"/>
-                  <TextBox x:Name="EmailSmtpHostBox" Classes="input" Height="34" Padding="8,0"
-                           VerticalContentAlignment="Center" Text="smtp.gmail.com"/>
-                </DockPanel>
-                <CheckBox x:Name="EmailSmtpSslCheck" Content="SMTP implicit TLS (465); off = STARTTLS on 587"/>
+                           Text="No password saved yet"/>
+
+                <TextBlock Text="Name on outgoing mail" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <TextBox x:Name="EmailDisplayNameBox" Classes="input" Height="36" Padding="10,0"
+                         VerticalContentAlignment="Center"
+                         Watermark="e.g. Victoria or Kurt"/>
+
+                <!-- Username kept for non-Gmail; auto-filled from address when blank -->
+                <TextBox x:Name="EmailUsernameBox" IsVisible="False"/>
+
+                <Expander x:Name="EmailAdvancedExpander" Header="Advanced server settings (usually leave alone)"
+                          Margin="0,8,0,0" IsExpanded="False">
+                  <StackPanel Margin="0,8,0,0" Spacing="6">
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                               Text="Defaults are already set for Gmail. Only change these if your provider gave you different incoming/outgoing servers."/>
+                    <Button Classes="ghost" Content="Reset to Gmail defaults" HorizontalAlignment="Left"
+                            Click="EmailGmailDefaults_Click" Margin="0,0,0,6"/>
+                    <TextBlock Text="Incoming mail server (IMAP)" Foreground="{DynamicResource MutedBrush}"/>
+                    <DockPanel>
+                      <TextBox x:Name="EmailImapPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                               Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="993" Margin="8,0,0,0"/>
+                      <TextBox x:Name="EmailImapHostBox" Classes="input" Height="34" Padding="8,0"
+                               VerticalContentAlignment="Center" Text="imap.gmail.com"/>
+                    </DockPanel>
+                    <CheckBox x:Name="EmailImapSslCheck" Content="Incoming connection is encrypted (SSL)" IsChecked="True"/>
+                    <TextBlock Text="Outgoing mail server (SMTP)" Foreground="{DynamicResource MutedBrush}"/>
+                    <DockPanel>
+                      <TextBox x:Name="EmailSmtpPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                               Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="587" Margin="8,0,0,0"/>
+                      <TextBox x:Name="EmailSmtpHostBox" Classes="input" Height="34" Padding="8,0"
+                               VerticalContentAlignment="Center" Text="smtp.gmail.com"/>
+                    </DockPanel>
+                    <CheckBox x:Name="EmailSmtpSslCheck"
+                              Content="Outgoing uses port 465 (rare). Leave off for normal Gmail (port 587)."/>
+                  </StackPanel>
+                </Expander>
+
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                  <Button Classes="primary" Content="Save account" Click="EmailAccountSave_Click"/>
-                  <Button Classes="ghost" Content="Refresh" Click="EmailAccountsRefresh_Click"/>
+                  <Button Classes="primary" Content="Save this mailbox" Click="EmailAccountSave_Click"/>
+                  <Button Classes="ghost" Content="Reload" Click="EmailAccountsRefresh_Click"/>
                   <TextBlock x:Name="EmailSettingsStatusText" Foreground="{DynamicResource MutedBrush}"
                              VerticalAlignment="Center" FontSize="11"/>
                 </StackPanel>
+
+                <TextBlock Text="What she is allowed to do" FontWeight="SemiBold" Margin="0,20,0,4"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"
+                           Text="Even with a mailbox saved, these switches must be on before she can touch mail. Send and delete always ask you first."/>
+                <CheckBox x:Name="EmailGateReadCheck" Content="She may read, search, and file mail"
+                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
+                <CheckBox x:Name="EmailGateSendCheck" Content="She may send or reply (asks you to confirm)"
+                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
+                <CheckBox x:Name="EmailGateDeleteCheck" Content="She may delete mail (asks you to confirm)"
+                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
+                <TextBlock x:Name="EmailGateStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                           Text=""/>
               </StackPanel>
             </ScrollViewer>
           </TabItem>

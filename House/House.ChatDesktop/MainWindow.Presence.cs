@@ -516,16 +516,43 @@ public partial class MainWindow
     private async void EmailAccountsRefresh_Click(object? sender, RoutedEventArgs e) =>
         await RefreshEmailAccountsAsync();
 
+    private void EmailGmailDefaults_Click(object? sender, RoutedEventArgs e)
+    {
+        if (EmailImapHostBox is not null) EmailImapHostBox.Text = "imap.gmail.com";
+        if (EmailImapPortBox is not null) EmailImapPortBox.Text = "993";
+        if (EmailImapSslCheck is not null) EmailImapSslCheck.IsChecked = true;
+        if (EmailSmtpHostBox is not null) EmailSmtpHostBox.Text = "smtp.gmail.com";
+        if (EmailSmtpPortBox is not null) EmailSmtpPortBox.Text = "587";
+        if (EmailSmtpSslCheck is not null) EmailSmtpSslCheck.IsChecked = false;
+        if (EmailSettingsStatusText is not null)
+        {
+            EmailSettingsStatusText.Text = "Gmail defaults filled in — click Save this mailbox when ready";
+            EmailSettingsStatusText.Foreground = Res("MutedBrush");
+        }
+    }
+
     private async void EmailAccountSave_Click(object? sender, RoutedEventArgs e)
     {
-        var id = EmailAccountCombo?.SelectedItem as string;
+        var id = ResolveSelectedMailboxId();
         if (string.IsNullOrWhiteSpace(id))
         {
-            if (EmailSettingsStatusText is not null)
-            {
-                EmailSettingsStatusText.Text = "Pick an account slot first";
-                EmailSettingsStatusText.Foreground = _badBrush;
-            }
+            SetEmailStatus("Pick a mailbox first", bad: true);
+            return;
+        }
+
+        var address = (EmailAddressBox?.Text ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(address) || !address.Contains('@'))
+        {
+            SetEmailStatus("Enter a full email address (like name@gmail.com)", bad: true);
+            return;
+        }
+
+        var password = EmailPasswordBox?.Text;
+        var existing = _emailAccounts.FirstOrDefault(a =>
+            string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(password) && existing is not { HasPassword: true })
+        {
+            SetEmailStatus("Paste an App Password once so she can sign in", bad: true);
             return;
         }
 
@@ -536,14 +563,17 @@ public partial class MainWindow
         if (int.TryParse((EmailSmtpPortBox?.Text ?? "").Trim(), out var sp) && sp > 0)
             smtpPort = sp;
 
-        var password = EmailPasswordBox?.Text;
+        var username = (EmailUsernameBox?.Text ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(username))
+            username = address;
+
         var write = new SoulCoreEmailSettingsClient.EmailAccountWriteDto
         {
             Id = id,
             Role = id,
             DisplayName = EmailDisplayNameBox?.Text,
-            Address = EmailAddressBox?.Text,
-            Username = EmailUsernameBox?.Text,
+            Address = address,
+            Username = username,
             Password = string.IsNullOrWhiteSpace(password) ? null : password,
             ImapHost = EmailImapHostBox?.Text,
             ImapPort = imapPort,
@@ -554,6 +584,7 @@ public partial class MainWindow
             Enabled = EmailEnabledCheck?.IsChecked == true
         };
 
+        SetEmailStatus("Saving…", bad: false);
         var snap = await _emailSettings.UpsertAsync(write).ConfigureAwait(true);
         ApplyEmailSettingsSnapshot(snap, saved: true, preferId: id);
         if (EmailPasswordBox is not null)
@@ -563,18 +594,60 @@ public partial class MainWindow
     private void EmailAccountCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_emailAccountsHydrating) return;
-        var id = EmailAccountCombo?.SelectedItem as string;
+        var id = ResolveSelectedMailboxId();
         if (string.IsNullOrWhiteSpace(id)) return;
         var account = _emailAccounts.FirstOrDefault(a =>
             string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase));
         if (account is not null)
             FillEmailEditor(account);
+        else
+            FillEmailEditor(new EmailAccountSnapshot
+            {
+                Id = id,
+                Role = id,
+                Enabled = true,
+                ImapPort = 993,
+                SmtpPort = 587,
+                ImapUseSsl = true,
+                ImapHost = "imap.gmail.com",
+                SmtpHost = "smtp.gmail.com"
+            });
+    }
+
+    private async void EmailGateToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_toolsAccessHydrating) return;
+        if (EmailGateReadCheck is null || EmailGateSendCheck is null || EmailGateDeleteCheck is null)
+            return;
+
+        // Keep Tools & Access checkboxes in sync when present.
+        if (ToolsAllowEmailReadCheck is not null)
+            ToolsAllowEmailReadCheck.IsChecked = EmailGateReadCheck.IsChecked;
+        if (ToolsAllowEmailSendCheck is not null)
+            ToolsAllowEmailSendCheck.IsChecked = EmailGateSendCheck.IsChecked;
+        if (ToolsAllowEmailDeleteCheck is not null)
+            ToolsAllowEmailDeleteCheck.IsChecked = EmailGateDeleteCheck.IsChecked;
+
+        if (EmailGateStatusText is not null)
+            EmailGateStatusText.Text = "Saving permissions…";
+
+        var snap = await _toolsSettings.PatchAsync(
+            allowEmailRead: EmailGateReadCheck.IsChecked == true,
+            allowEmailSend: EmailGateSendCheck.IsChecked == true,
+            allowEmailDelete: EmailGateDeleteCheck.IsChecked == true).ConfigureAwait(true);
+
+        ApplyToolsAccess(snap, saved: true);
+        SyncEmailGateChecks(snap);
     }
 
     private async Task RefreshEmailAccountsAsync()
     {
+        var prefer = ResolveSelectedMailboxId();
         var snap = await _emailSettings.GetAsync().ConfigureAwait(true);
-        ApplyEmailSettingsSnapshot(snap, saved: false, preferId: EmailAccountCombo?.SelectedItem as string);
+        ApplyEmailSettingsSnapshot(snap, saved: false, preferId: prefer);
+        // Permissions live on tools settings — refresh those for the Email tab too.
+        var tools = await _toolsSettings.GetAsync().ConfigureAwait(true);
+        SyncEmailGateChecks(tools);
     }
 
     private void ApplyEmailSettingsSnapshot(EmailSettingsSnapshot snap, bool saved, string? preferId)
@@ -585,20 +658,32 @@ public partial class MainWindow
         {
             if (EmailAccountCombo is not null)
             {
-                var ids = _emailAccounts.Select(a => a.Id).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-                if (ids.Count == 0)
-                    ids = ["victoria", "personal", "business"];
-                EmailAccountCombo.ItemsSource = ids;
-                var pick = preferId is not null && ids.Contains(preferId, StringComparer.OrdinalIgnoreCase)
-                    ? ids.First(i => string.Equals(i, preferId, StringComparison.OrdinalIgnoreCase))
-                    : ids[0];
-                EmailAccountCombo.SelectedItem = pick;
+                var choices = EmailMailboxChoice.BuildList(_emailAccounts);
+                EmailAccountCombo.ItemsSource = choices;
+                var pickId = preferId;
+                if (string.IsNullOrWhiteSpace(pickId))
+                    pickId = choices[0].Id;
+                var selected = choices.FirstOrDefault(c =>
+                    string.Equals(c.Id, pickId, StringComparison.OrdinalIgnoreCase)) ?? choices[0];
+                EmailAccountCombo.SelectedItem = selected;
+
                 var account = _emailAccounts.FirstOrDefault(a =>
-                    string.Equals(a.Id, pick, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(a.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
                 if (account is not null)
                     FillEmailEditor(account);
                 else
-                    FillEmailEditor(new EmailAccountSnapshot { Id = pick, Role = pick, Enabled = true, ImapPort = 993, SmtpPort = 587, ImapUseSsl = true });
+                    FillEmailEditor(new EmailAccountSnapshot
+                    {
+                        Id = selected.Id,
+                        Role = selected.Id,
+                        Enabled = true,
+                        ImapPort = 993,
+                        SmtpPort = 587,
+                        ImapUseSsl = true,
+                        ImapHost = "imap.gmail.com",
+                        SmtpHost = "smtp.gmail.com",
+                        DisplayName = selected.DefaultDisplayName
+                    });
             }
         }
         finally
@@ -606,11 +691,9 @@ public partial class MainWindow
             _emailAccountsHydrating = false;
         }
 
-        if (EmailSettingsStatusText is null) return;
         if (!snap.Reachable)
         {
-            EmailSettingsStatusText.Text = snap.Detail ?? "Host unreachable";
-            EmailSettingsStatusText.Foreground = _badBrush;
+            SetEmailStatus(snap.Detail ?? "Can't reach Host — is SoulCore running?", bad: true);
             return;
         }
 
@@ -618,35 +701,123 @@ public partial class MainWindow
             (snap.Detail.StartsWith("HTTP", StringComparison.Ordinal) ||
              snap.Detail.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
         {
-            EmailSettingsStatusText.Text = snap.Detail;
-            EmailSettingsStatusText.Foreground = _badBrush;
+            SetEmailStatus(snap.Detail, bad: true);
             return;
         }
 
-        EmailSettingsStatusText.Text = saved
-            ? $"Saved · {DateTimeOffset.Now:h:mm tt}"
-            : $"Loaded · {_emailAccounts.Count} slot(s) · {DateTimeOffset.Now:h:mm tt}";
-        EmailSettingsStatusText.Foreground = Res("MutedBrush");
+        SetEmailStatus(
+            saved
+                ? $"Saved · {DateTimeOffset.Now:h:mm tt}"
+                : $"Loaded · {DateTimeOffset.Now:h:mm tt}",
+            bad: false);
     }
 
     private void FillEmailEditor(EmailAccountSnapshot account)
     {
         if (EmailEnabledCheck is not null) EmailEnabledCheck.IsChecked = account.Enabled;
-        if (EmailDisplayNameBox is not null) EmailDisplayNameBox.Text = account.DisplayName;
+        if (EmailDisplayNameBox is not null)
+        {
+            EmailDisplayNameBox.Text = string.IsNullOrWhiteSpace(account.DisplayName)
+                ? EmailMailboxChoice.DefaultDisplayNameFor(account.Id)
+                : account.DisplayName;
+        }
         if (EmailAddressBox is not null) EmailAddressBox.Text = account.Address;
         if (EmailUsernameBox is not null) EmailUsernameBox.Text = account.Username;
-        if (EmailImapHostBox is not null) EmailImapHostBox.Text = string.IsNullOrWhiteSpace(account.ImapHost) ? "imap.gmail.com" : account.ImapHost;
-        if (EmailImapPortBox is not null) EmailImapPortBox.Text = (account.ImapPort > 0 ? account.ImapPort : 993).ToString();
+        if (EmailImapHostBox is not null)
+            EmailImapHostBox.Text = string.IsNullOrWhiteSpace(account.ImapHost) ? "imap.gmail.com" : account.ImapHost;
+        if (EmailImapPortBox is not null)
+            EmailImapPortBox.Text = (account.ImapPort > 0 ? account.ImapPort : 993).ToString();
         if (EmailImapSslCheck is not null) EmailImapSslCheck.IsChecked = account.ImapUseSsl;
-        if (EmailSmtpHostBox is not null) EmailSmtpHostBox.Text = string.IsNullOrWhiteSpace(account.SmtpHost) ? "smtp.gmail.com" : account.SmtpHost;
-        if (EmailSmtpPortBox is not null) EmailSmtpPortBox.Text = (account.SmtpPort > 0 ? account.SmtpPort : 587).ToString();
+        if (EmailSmtpHostBox is not null)
+            EmailSmtpHostBox.Text = string.IsNullOrWhiteSpace(account.SmtpHost) ? "smtp.gmail.com" : account.SmtpHost;
+        if (EmailSmtpPortBox is not null)
+            EmailSmtpPortBox.Text = (account.SmtpPort > 0 ? account.SmtpPort : 587).ToString();
         if (EmailSmtpSslCheck is not null) EmailSmtpSslCheck.IsChecked = account.SmtpUseSsl;
+
         if (EmailPasswordHint is not null)
         {
             EmailPasswordHint.Text = account.HasPassword
-                ? (account.IsConfigured ? "Password status: set · configured" : "Password status: set · incomplete fields")
-                : "Password status: not set";
+                ? "App password already saved (won't show again — paste a new one only to replace it)"
+                : "No app password saved yet";
         }
+
+        UpdateEmailReadyBanner(account);
+    }
+
+    private void UpdateEmailReadyBanner(EmailAccountSnapshot account)
+    {
+        if (EmailReadyBanner is null) return;
+        var title = EmailMailboxChoice.TitleFor(account.Id);
+        if (!account.Enabled)
+        {
+            EmailReadyBanner.Text = $"{title}: turned off — Victoria will skip this mailbox.";
+            EmailReadyBanner.Foreground = Res("WarnBrush");
+            return;
+        }
+
+        if (account.IsConfigured)
+        {
+            EmailReadyBanner.Text = $"{title}: ready — {account.Address}";
+            EmailReadyBanner.Foreground = Res("OkBrush");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(account.Address) && !account.HasPassword)
+        {
+            EmailReadyBanner.Text = $"{title}: not set up yet — add the email address and an App Password, then Save.";
+            EmailReadyBanner.Foreground = Res("MutedBrush");
+            return;
+        }
+
+        if (!account.HasPassword)
+        {
+            EmailReadyBanner.Text = $"{title}: needs an App Password before she can sign in.";
+            EmailReadyBanner.Foreground = Res("WarnBrush");
+            return;
+        }
+
+        EmailReadyBanner.Text = $"{title}: almost ready — check the email address and Save again.";
+        EmailReadyBanner.Foreground = Res("WarnBrush");
+    }
+
+    private void SyncEmailGateChecks(ToolsAccessSnapshot snap)
+    {
+        _toolsAccessHydrating = true;
+        try
+        {
+            if (EmailGateReadCheck is not null) EmailGateReadCheck.IsChecked = snap.AllowEmailRead;
+            if (EmailGateSendCheck is not null) EmailGateSendCheck.IsChecked = snap.AllowEmailSend;
+            if (EmailGateDeleteCheck is not null) EmailGateDeleteCheck.IsChecked = snap.AllowEmailDelete;
+            if (EmailGateStatusText is not null)
+            {
+                EmailGateStatusText.Text = snap.Reachable
+                    ? (snap.AllowEmailRead || snap.AllowEmailSend || snap.AllowEmailDelete
+                        ? "Permissions saved for this Host session"
+                        : "All mail actions are off until you turn one on")
+                    : (snap.Detail ?? "Host unreachable");
+            }
+        }
+        finally
+        {
+            _toolsAccessHydrating = false;
+        }
+    }
+
+    private string? ResolveSelectedMailboxId()
+    {
+        return EmailAccountCombo?.SelectedItem switch
+        {
+            EmailMailboxChoice choice => choice.Id,
+            string id => id,
+            _ => null
+        };
+    }
+
+    private void SetEmailStatus(string text, bool bad)
+    {
+        if (EmailSettingsStatusText is null) return;
+        EmailSettingsStatusText.Text = text;
+        EmailSettingsStatusText.Foreground = bad ? _badBrush : Res("MutedBrush");
     }
 
     private async void ToolsAccessToggle_Click(object? sender, RoutedEventArgs e)
@@ -718,6 +889,18 @@ public partial class MainWindow
             ToolsAllowEmailReadCheck.IsChecked = snap.AllowEmailRead;
             ToolsAllowEmailSendCheck.IsChecked = snap.AllowEmailSend;
             ToolsAllowEmailDeleteCheck.IsChecked = snap.AllowEmailDelete;
+
+            if (EmailGateReadCheck is not null) EmailGateReadCheck.IsChecked = snap.AllowEmailRead;
+            if (EmailGateSendCheck is not null) EmailGateSendCheck.IsChecked = snap.AllowEmailSend;
+            if (EmailGateDeleteCheck is not null) EmailGateDeleteCheck.IsChecked = snap.AllowEmailDelete;
+            if (EmailGateStatusText is not null)
+            {
+                EmailGateStatusText.Text = snap.Reachable
+                    ? (snap.AllowEmailRead || snap.AllowEmailSend || snap.AllowEmailDelete
+                        ? "Permissions loaded"
+                        : "All mail actions are off until you turn one on")
+                    : (snap.Detail ?? "Host unreachable");
+            }
 
             if (ToolsDesktopBackendBox is not null)
                 ToolsDesktopBackendBox.Text = snap.DesktopBackend ?? "—";
