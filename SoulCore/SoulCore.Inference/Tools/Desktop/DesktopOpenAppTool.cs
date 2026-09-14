@@ -38,9 +38,9 @@ public sealed class DesktopOpenAppTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_open_app",
         Description:
-            "Launch an allowlisted local desktop app (chrome, edge, firefox, notepad, explorer, cmd, powershell). " +
-            "Use this to open Google Chrome / Edge / Notepad — do not invent terminal or browser_navigate tools. " +
-            "Optional args: a URL for browsers (e.g. https://google.com). Requires AllowComputerControl.",
+            "Launch an allowlisted local desktop app (notepad, explorer, cmd, powershell, or guest Firefox when explicitly asked). " +
+            "For websites / Chrome / Edge / 'open the browser', use browser_navigate (Playwright) — not this tool. " +
+            "Optional args: a URL when opening a guest browser. Requires AllowComputerControl.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

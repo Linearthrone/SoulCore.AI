@@ -437,11 +437,11 @@ public sealed class ChatSendHandler
             return new ToolLoopOptions { ForceToolName = caIntent.ToolName };
         }
 
-        if (DesktopToolIntent.TryMatch(text, out var desktopIntent))
+        if (DesktopToolIntent.TryMatch(text, _toolsAccess.BrowserBackend, out var desktopIntent))
         {
             _logger.LogInformation(
-                "Desktop NL intent matched: intent={Intent} forceTool={Tool}",
-                desktopIntent.Intent, desktopIntent.ToolName);
+                "Desktop NL intent matched: intent={Intent} forceTool={Tool} browserBackend={Backend}",
+                desktopIntent.Intent, desktopIntent.ToolName, _toolsAccess.BrowserBackend);
             return new ToolLoopOptions { ForceToolName = desktopIntent.ToolName };
         }
 

@@ -220,4 +220,28 @@ public class DesktopToolIntentTests
                 "https://example.com",
                 "Opened firefox in the Ubuntu VM via guestcontrol"));
     }
+
+    [Theory]
+    [InlineData("open Google Chrome", "browser_navigate")]
+    [InlineData("open the browser", "browser_navigate")]
+    [InlineData("launch chrome", "browser_navigate")]
+    [InlineData("open chrome to https://example.com", "browser_navigate")]
+    [InlineData("open edge", "browser_navigate")]
+    [InlineData("start notepad", "desktop_open_app")]
+    [InlineData("open firefox in the vm", "desktop_open_app")]
+    [InlineData("open chrome in virtualbox", "desktop_open_app")]
+    public void TryMatch_PlaywrightBackend_RoutesBrowserToNavigate(string text, string expectedTool)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, "playwright", out var match));
+        Assert.Equal(expectedTool, match.ToolName);
+    }
+
+    [Fact]
+    public void TryMatch_PlaywrightBackend_OpenChrome_IsBrowserNavigate_NotOpenApp()
+    {
+        Assert.True(DesktopToolIntent.TryMatch("open Google Chrome", "playwright", out var match));
+        Assert.Equal(DesktopToolIntent.Kind.BrowserNavigate, match.Intent);
+        Assert.Equal("browser_navigate", match.ToolName);
+    }
+
 }
