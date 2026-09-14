@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Direct Hermes MCP tool invocation (BED-144). Distinct from the agent-loop

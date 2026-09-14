@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Tooling;
 
 /// <summary>
 /// Per-tool contract. Each concrete tool (BED-131+) is a small class

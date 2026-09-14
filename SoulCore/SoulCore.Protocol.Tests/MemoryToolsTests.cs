@@ -1,5 +1,6 @@
 using System.Text.Json;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools;
 using SoulCore.Memory;
 
