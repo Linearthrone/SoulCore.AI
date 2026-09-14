@@ -2,7 +2,8 @@ using Microsoft.Extensions.Logging;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Host.Ws;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Memory;
 
 namespace SoulCore.Protocol.Tests;
