@@ -4,8 +4,10 @@ prop_id: PROP-4
 from: TT-01
 to: PM-01
 priority: P1
-status: Intake — TINA-main ticketing
+status: Ticketed — PROP-4.1 FED / PROP-4.2 OPS; kept active while those lanes are open
 created: 2026-08-19
+updated: 2026-09-15
+pm_tickets: docs/agents/tasks/PROP-4.1-PM01-to-FED01.md, docs/agents/tasks/PROP-4.2-PM01-to-OPS01.md
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Presence House drawer + installer/icon/updates"
