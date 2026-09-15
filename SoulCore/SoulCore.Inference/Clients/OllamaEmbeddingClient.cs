@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 
-namespace SoulCore.Inference;
+namespace SoulCore.Inference.Clients;
 
 /// <summary>
 /// Ollama embedding client via <c>POST /api/embeddings</c> (<c>{ model, prompt }</c> → <c>embedding</c>).

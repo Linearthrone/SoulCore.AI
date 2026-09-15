@@ -1,7 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using SoulCore.Inference;
+using SoulCore.Inference.Clients;
+using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
 using SoulCore.Memory.Repositories;
