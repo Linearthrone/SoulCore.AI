@@ -57,7 +57,8 @@ public class PlaywrightBrowserBridgeTests
         Assert.Contains("not set up yet", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("install-playwright.ps1", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("powershell", msg, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("victoria-browser", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ms-playwright", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".\\ALLSTART.ps1 -RestartHost", msg, StringComparison.Ordinal);
         Assert.True(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
     }
 

@@ -335,26 +335,39 @@ Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
 
 # OPS-198: ensure Playwright Chromium for BrowserBackend=playwright (soft-fail Host start,
 # but print a loud fix line so Kurt/Victoria know browser_* will fail until installed).
+# First download often exceeds 3 minutes — verify quickly, then allow up to 10 minutes to install.
 $InstallPlaywright = Join-Path $RepoRoot "SoulCore\scripts\install-playwright.ps1"
 if (Test-Path -LiteralPath $InstallPlaywright) {
     Write-Host "=== ALLSTART: Playwright Chromium (OPS-198, soft-fail) ==="
     try {
-        $pwArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright)
-        $pwResult = Invoke-ScriptWithTimeout `
-            -Label "install-playwright" `
-            -ArgumentList $pwArgs `
+        $verifyArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright,"-VerifyOnly")
+        $verifyResult = Invoke-ScriptWithTimeout `
+            -Label "install-playwright-verify" `
+            -ArgumentList $verifyArgs `
             -WorkingDirectory $RepoRoot `
-            -TimeoutSec 180
-        if ($pwResult.TimedOut) {
-            Write-Warning "install-playwright timed out - continuing (browser_* may fail until Chromium is installed)"
-            Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
-            Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost   (or restart Host from Presence lamps)" -ForegroundColor Yellow
-        } elseif ($pwResult.ExitCode -ne 0) {
-            Write-Warning "install-playwright exited $($pwResult.ExitCode) - continuing (set BrowserBackend=native to use Chrome extension)"
-            Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
-            Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost   (BrowserBackend=playwright needs Chromium once)" -ForegroundColor Yellow
+            -TimeoutSec 45
+        if (-not $verifyResult.TimedOut -and $verifyResult.ExitCode -eq 0) {
+            Write-Host "Playwright Chromium OK (binaries under %LOCALAPPDATA%\ms-playwright)"
         } else {
-            Write-Host "Playwright Chromium OK (Victoria profile under LocalAppData\SoulCore\victoria-browser)"
+            Write-Host "Chromium missing or verify inconclusive — running full install (up to 10 min) ..."
+            $pwArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright)
+            $pwResult = Invoke-ScriptWithTimeout `
+                -Label "install-playwright" `
+                -ArgumentList $pwArgs `
+                -WorkingDirectory $RepoRoot `
+                -TimeoutSec 600
+            if ($pwResult.TimedOut) {
+                Write-Warning "install-playwright timed out after 10 min - continuing (browser_* may fail until Chromium is installed)"
+                Write-Host ">>> FIX: open a NEW PowerShell at the repo root and let this finish (no timeout):" -ForegroundColor Yellow
+                Write-Host ">>>   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+                Write-Host ">>> Wait for FOUND chrome.exe, then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
+            } elseif ($pwResult.ExitCode -ne 0) {
+                Write-Warning "install-playwright exited $($pwResult.ExitCode) - continuing (set BrowserBackend=native to use Chrome extension)"
+                Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+                Write-Host ">>> Wait for FOUND chrome.exe, then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
+            } else {
+                Write-Host "Playwright Chromium OK (binaries under %LOCALAPPDATA%\ms-playwright)"
+            }
         }
     } catch {
         Write-Warning "install-playwright failed: $($_.Exception.Message) - continuing"
