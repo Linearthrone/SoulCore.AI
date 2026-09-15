@@ -6,7 +6,7 @@ namespace SoulCore.Inference.Tools.Browser;
 public sealed class BrowserNavigateTool : ITool
 {
     private static readonly JsonElement Parameters = JsonDocument.Parse(
-        """{"type":"object","properties":{"url":{"type":"string","description":"http(s) URL to open in guest Firefox."}},"required":["url"]}""")
+        """{"type":"object","properties":{"url":{"type":"string","description":"http(s) URL (or about:blank) to open in Victoria's Playwright Chromium."}},"required":["url"]}""")
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
@@ -21,8 +21,8 @@ public sealed class BrowserNavigateTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_navigate",
         Description:
-            "Open a URL in Victoria's browser (Playwright Chromium when BrowserBackend=playwright; " +
-            "else guest Firefox). Success means load attempted — goal_complete stays false until " +
+            "Open a URL in Victoria's Playwright Chromium (primary web browser — not VirtualBox Firefox, " +
+            "not the operator's Chrome). Success means load attempted — goal_complete stays false until " +
             "login/forms are done. Prefer browser_snapshot / browser_click_text next.",
         Parameters: Parameters);
 

@@ -219,12 +219,21 @@ public sealed class OllamaInferenceClient : IInferenceClient
             toolNumCtx);
 
         if (!string.IsNullOrEmpty(forceToolName)
-            && TrySoftDispatchForcedOpenApp(forceToolName, ollamaMessages, out var preOpenCalls)
-            && preOpenCalls is { Count: > 0 })
+            && (TrySoftDispatchForcedOpenApp(forceToolName, ollamaMessages, out var preOpenCalls)
+                || TrySoftDispatchForcedTool(forceToolName, ollamaMessages, out preOpenCalls))
+            && preOpenCalls is { Count: > 0 }
+            && (string.Equals(forceToolName, "desktop_open_app", StringComparison.Ordinal)
+                || string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)))
         {
             var lastUser = GetLastUserContent(ollamaMessages);
             var pureOpen = DesktopToolIntent.IsPureOpenPrompt(lastUser);
             DesktopToolIntent.TryResolveOpenAppLaunch(lastUser, out var openApp, out var openArgs);
+            DesktopToolIntent.TryExtractNavigateUrl(lastUser, out var navigateUrl);
+            if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
+                && string.IsNullOrWhiteSpace(navigateUrl))
+            {
+                navigateUrl = DesktopToolIntent.DefaultPlaywrightOpenUrl;
+            }
 
             ollamaMessages.Add(new OllamaChatMessage
             {
@@ -239,7 +248,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var name = tc.Function?.Name ?? string.Empty;
                 var args = ParseArguments(tc.Function?.Arguments);
                 _logger.LogInformation(
-                    "Ollama ForceTool pre-dispatch: tool={Tool} (desktop open — no LLM wait).",
+                    "Ollama ForceTool pre-dispatch: tool={Tool} (open/navigate — no LLM wait).",
                     name);
                 var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
                     .ConfigureAwait(false);
@@ -254,26 +263,32 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var toolContent = ollamaMessages.LastOrDefault(m => m.Role == "tool")?.Content;
                 if (openOk)
                 {
-                    var reply = DesktopToolIntent.BuildOpenedReply(
-                        string.IsNullOrEmpty(openApp) ? "chrome" : openApp,
-                        openArgs,
-                        toolContent);
+                    var reply = string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
+                        ? DesktopToolIntent.BuildOpenedBrowserReply(navigateUrl)
+                        : DesktopToolIntent.BuildOpenedReply(
+                            string.IsNullOrEmpty(openApp) ? "chrome" : openApp,
+                            openArgs,
+                            toolContent);
                     _logger.LogInformation(
-                        "Ollama ForceTool desktop_open_app early-exit (pure open): {Reply}",
+                        "Ollama ForceTool {Tool} early-exit (pure open): {Reply}",
+                        forceToolName,
                         reply);
                     return reply;
                 }
 
                 // Launch failed — surface the tool error without more LLM rounds.
                 return string.IsNullOrWhiteSpace(toolContent)
-                    ? "I couldn't open that app."
+                    ? (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
+                        ? "I couldn't open Victoria's browser."
+                        : "I couldn't open that app.")
                     : toolContent!;
             }
 
             // Non-pure open (e.g. "open Chrome and click…") — continue loop with
             // full tools so the model can finish the rest.
             _logger.LogInformation(
-                "Ollama ForceTool desktop_open_app pre-dispatched; continuing tool-loop for follow-on actions.");
+                "Ollama ForceTool {Tool} pre-dispatched; continuing tool-loop for follow-on actions.",
+                forceToolName);
         }
 
         var loopSw = Stopwatch.StartNew();
@@ -1004,8 +1019,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 break;
             case "browser_navigate":
                 if (!DesktopToolIntent.TryExtractNavigateUrl(lastUser, out var url))
-                    return false;
-                argsJson = $"{{\"url\":{JsonSerializer.Serialize(url)}}}";
+                    url = DesktopToolIntent.DefaultPlaywrightOpenUrl;
+                argsJson = "{\"url\":" + JsonSerializer.Serialize(url) + "}";
                 break;
             case "browser_snapshot":
             {

@@ -19,10 +19,11 @@ public static class ComputerUseGuidance
         "(not the operator's daily Chrome). browser_navigate(url) → browser_snapshot / browser_click_text / browser_fill. " +
         "Success on navigate means the page loaded — NOT that login/goal is done (goal_complete=false until " +
         "the page postcondition). Prefer role/name click_text + fill over screenshot→pixel for labeled UI.\n" +
-        "2) If the non-browser app is not running, call desktop_open_app with an allowlisted alias " +
-        "(chrome, edge, firefox, notepad, explorer, cmd, powershell). Optional args: a URL for browsers. " +
-        "Launch is background-friendly (avoid stealing focus when possible).\n" +
-        "If the user ONLY asked to open/launch an app (optional URL), call desktop_open_app once and " +
+        "2) Non-browser desktop apps: call desktop_open_app with an allowlisted alias " +
+        "(notepad, explorer, cmd, powershell). Launch is background-friendly.\n" +
+        "If the user asks to open a browser / Chrome / Edge / a website: browser_navigate — NOT desktop_open_app " +
+        "(Playwright is Victoria's browser; VirtualBox Firefox is only for explicit guest-desktop asks).\n" +
+        "If the user ONLY asked to open/launch a non-browser app, call desktop_open_app once and " +
         "reply in one short sentence — do NOT list windows or screenshot just to verify the launch.\n" +
         "If they asked you to DO something after open (search, click, type, check, navigate, …), " +
         "keep going with browser_* / desktop_* until the ask is done — do not stop at launch.\n" +
@@ -58,12 +59,14 @@ public static class ComputerUseGuidance
         "NOT Windows monitor pixels and NOT the VirtualBox window position on the operator's screens.\n" +
         "The VirtualBox window does NOT need to be in front or even visible; the operator can keep working.\n" +
         "desktop_open_app on the operator's Windows host is BLOCKED — never Process.Start Chrome/Notepad there. " +
-        "Call desktop_open_app anyway: it starts the app inside Ubuntu via Guest Additions. " +
-        "Chrome/Edge aliases open Firefox in the guest.\n" +
-        "Website workflow (prefer Playwright when BrowserBackend=playwright — Victoria Chromium, not the operator's Chrome):\n" +
+        "For notepad/files/terminal only: call desktop_open_app (starts inside Ubuntu via Guest Additions).\n" +
+        "Websites / Chrome / Edge / 'open the browser': NEVER desktop_open_app and NEVER guest Firefox when " +
+        "BrowserBackend=playwright — call browser_navigate (Victoria's Playwright Chromium).\n" +
+        "Website workflow (REQUIRED when BrowserBackend=playwright):\n" +
         "  browser_navigate(url) → browser_snapshot / browser_click_text / browser_fill.\n" +
-        "When on guest Firefox path: same browser_* tools; if AT-SPI fails (degraded=true, locator=pixel), " +
-        "then desktop_screenshot + desktop_click — do NOT claim Login from PNG alone.\n" +
+        "Only if the operator explicitly asks for the VirtualBox/guest browser: desktop_open_app firefox. " +
+        "If AT-SPI fails on that guest path (degraded=true, locator=pixel), then desktop_screenshot + desktop_click — " +
+        "do NOT claim Login from PNG alone.\n" +
         "Do not use the host Chrome extension as Victoria's primary browser.\n" +
         "Guest Additions (SOULCORE_VBOX_GUEST_PASS) preferred for VM desktop; when guest I/O fails the Host falls back " +
         "to the scoped VirtualBox window soft path so screenshots still work.\n" +
@@ -161,12 +164,22 @@ public static class DesktopToolIntent
         @"\blist\s+(?:my\s+)?(?:windows|apps)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    public static bool TryMatch(string? userText, out Match match)
+    public static bool TryMatch(string? userText, out Match match) =>
+        TryMatch(userText, browserBackend: null, out match);
+
+    /// <summary>
+    /// When <paramref name="browserBackend"/> is <c>playwright</c>, browser / Chrome / Edge /
+    /// website opens force <c>browser_navigate</c> (Victoria Chromium) instead of
+    /// <c>desktop_open_app</c> (VirtualBox guest Firefox). Explicit VM / VirtualBox / guest
+    /// phrasing keeps the guest desktop path.
+    /// </summary>
+    public static bool TryMatch(string? userText, string? browserBackend, out Match match)
     {
         match = default;
         if (string.IsNullOrWhiteSpace(userText))
             return false;
 
+        var preferPlaywright = IsPlaywrightBackend(browserBackend);
         var text = userText.Trim();
         if (ExplicitTool.IsMatch(text))
         {
@@ -225,17 +238,22 @@ public static class DesktopToolIntent
         }
 
         // OpenApp BEFORE LookAtScreen / UseComputer so "open Chrome on my desktop"
-        // forces desktop_open_app, not list_desktop_windows.
-        // Follow-on actions ("and click/search/…") still ForceTool open_app;
-        // IsPureOpenPrompt=false so the Ollama loop continues after launch (BED-180).
+        // does not fall through to list_desktop_windows.
+        // With Playwright: browser/Chrome/Edge/website opens → browser_navigate
+        // (not VirtualBox desktop_open_app). Explicit guest/VM asks stay on open_app.
         if (OpenApp.IsMatch(text))
         {
+            if (preferPlaywright && ShouldUsePlaywrightBrowser(text))
+            {
+                match = new Match(Kind.BrowserNavigate, "browser_navigate");
+                return true;
+            }
+
             match = new Match(Kind.OpenApp, "desktop_open_app");
             return true;
         }
 
-        // Only treat standalone URL detection as browser navigation when the
-        // prompt isn't already an app-launch (e.g. "open chrome to https://…").
+        // Standalone URL → browser_navigate.
         if (NavigateUrl.IsMatch(text))
         {
             match = new Match(Kind.BrowserNavigate, "browser_navigate");
@@ -251,7 +269,6 @@ public static class DesktopToolIntent
         if (UseComputer.IsMatch(text))
         {
             var lower = text.ToLowerInvariant();
-            // BrowserPage already handled above; keep navigate/open precedence here.
             if (TryExtractNavigateUrl(text, out _))
             {
                 match = new Match(Kind.BrowserNavigate, "browser_navigate");
@@ -263,6 +280,12 @@ public static class DesktopToolIntent
                                       || lower.Contains("website", StringComparison.Ordinal)
                                       || lower.Contains("web site", StringComparison.Ordinal))
             {
+                if (preferPlaywright && ShouldUsePlaywrightBrowser(text))
+                {
+                    match = new Match(Kind.BrowserNavigate, "browser_navigate");
+                    return true;
+                }
+
                 match = new Match(Kind.OpenApp, "desktop_open_app");
                 return true;
             }
@@ -273,6 +296,7 @@ public static class DesktopToolIntent
 
         return false;
     }
+
 
     /// <summary>
     /// Resolve allowlisted app (+ optional browser URL) from an open/launch NL turn (BED-180).
@@ -304,9 +328,57 @@ public static class DesktopToolIntent
     {
         if (string.IsNullOrWhiteSpace(userText))
             return false;
-        if (!TryMatch(userText, out var match) || match.Intent != Kind.OpenApp)
+        // Prefer Playwright-aware match so "open chrome" counts as BrowserNavigate when configured.
+        // Without backend, still treat OpenApp / BrowserNavigate-shaped opens as pure when no follow-on.
+        if (!TryMatch(userText, out var match))
+            return false;
+        if (match.Intent is not (Kind.OpenApp or Kind.BrowserNavigate))
             return false;
         return !OpenAppFollowOnAction.IsMatch(userText);
+    }
+
+    /// <summary>True when Tools:BrowserBackend is playwright (Victoria Chromium).</summary>
+    public static bool IsPlaywrightBackend(string? browserBackend) =>
+        string.Equals((browserBackend ?? string.Empty).Trim(), "playwright", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly Regex WantsGuestBrowser = new(
+        @"\b(?:virtual\s*box|vbox|guest(?:\s+firefox)?|ubuntu\s+vm|in\s+the\s+vm|inside\s+the\s+vm|vm\s+firefox|in\s+the\s+sandbox)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Browser/website open that should use Playwright when configured — not guest Firefox.
+    /// </summary>
+    public static bool ShouldUsePlaywrightBrowser(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+        if (WantsGuestBrowser.IsMatch(text))
+            return false;
+
+        var alias = ResolveOpenAppAlias(text);
+        if (alias is "notepad" or "explorer" or "cmd" or "powershell")
+            return false;
+        if (alias is "chrome" or "edge" or "msedge" or "firefox")
+            return true;
+
+        var lower = text.ToLowerInvariant();
+        return lower.Contains("browser", StringComparison.Ordinal)
+               || lower.Contains("website", StringComparison.Ordinal)
+               || lower.Contains("web site", StringComparison.Ordinal)
+               || TryExtractNavigateUrl(text, out _);
+    }
+
+    /// <summary>
+    /// Default URL for a pure "open the browser" ask under Playwright (no host given).
+    /// </summary>
+    public const string DefaultPlaywrightOpenUrl = "about:blank";
+
+    public static string BuildOpenedBrowserReply(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)
+            || string.Equals(url.Trim(), DefaultPlaywrightOpenUrl, StringComparison.OrdinalIgnoreCase))
+            return "Opened Victoria's browser.";
+        return $"Opened Victoria's browser to {url.Trim()}.";
     }
 
     /// <summary>Short user-facing confirm after a successful soft-dispatched open.</summary>
