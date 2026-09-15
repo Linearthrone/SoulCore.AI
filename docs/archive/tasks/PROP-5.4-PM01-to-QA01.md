@@ -12,6 +12,7 @@ title: Concurrent soak — chat write + memory/SMS + dual tick + charter read
 depends_on: PROP-5.1, PROP-5.2, PROP-5.3
 proposal: docs/archive/proposals/host-sqlite-concurrency-ownership.md
 report: docs/agents/reports/PROP-5.4-QA01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-5.4-PM01-accept.md
 ---
 
 # PROP-5.4 — Concurrent soak gate
