@@ -5,14 +5,17 @@ prop_full: PROP-10-inference-clients-tools-split
 from: TT-01
 to: PM-01
 priority: P2
-status: Intake — TINA-main ticketing
+status: Closed — shipped report-only (no PROP-10.1 ticket; see gated-hold exception), Pass; landed on main via PR #86
+archived: 2026-09-15
+report: docs/agents/reports/PROP-10.1-BED01-to-PM01.md
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Inference clients vs tools split"
-proposal: docs/agents/unexecuted_proposals/inference-clients-tools-split.md
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+proposal: docs/archive/proposals/inference-clients-tools-split.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 program: PROP-5..11 architecture-eval wipeout (sent together)
 assignee_role: PM-01 (TINA)
 blocked_by: PROP-7
@@ -21,7 +24,7 @@ blocked_by: PROP-7
 # PROP-10 : [TINA-main] Inference clients vs tools split
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
-**Proposal:** `docs/agents/unexecuted_proposals/inference-clients-tools-split.md`  
+**Proposal:** `docs/archive/proposals/inference-clients-tools-split.md`  
 **Gate:** after **PROP-7**. May parallel PROP-9 / PROP-11 if Host/Memory fences held.
 
 ## One-paragraph recommended route

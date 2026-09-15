@@ -10,7 +10,7 @@ created: 2026-09-05
 wave: wipeout-now
 title: Concurrent soak — chat write + memory/SMS + dual tick + charter read
 depends_on: PROP-5.1, PROP-5.2, PROP-5.3
-proposal: docs/agents/unexecuted_proposals/host-sqlite-concurrency-ownership.md
+proposal: docs/archive/proposals/host-sqlite-concurrency-ownership.md
 report: docs/agents/reports/PROP-5.4-QA01-to-PM01.md
 ---
 

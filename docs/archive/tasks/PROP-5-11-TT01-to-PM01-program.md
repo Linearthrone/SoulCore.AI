@@ -4,14 +4,16 @@ prop_range: PROP-5..PROP-11
 from: TT-01
 to: PM-01
 priority: P0
-status: Accepted — TINA Wave NOW staffed 2026-09-05
-pm_accept: docs/agents/tasks/PROP-5-11-PM01-program-accept.md
+status: Closed — program complete; PROP-5..11 all Pass and on main
+archived: 2026-09-15
+pm_accept: docs/archive/tasks/PROP-5-11-PM01-program-accept.md
+scoreboard: docs/agents/reports/PROP-5-11-TINA-wipeout-final.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Architecture-eval wipeout program (PROP-5..11)"
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 assignee_role: PM-01 (TINA)
 ---
 
@@ -32,7 +34,7 @@ operator directed: **send it all to TINA**.
 | PROP-10 | `PROP-10-TT01-to-PM01.md` | After PROP-7 |
 | PROP-11 | `PROP-11-TT01-to-PM01.md` | After PROP-5 |
 
-**Map:** `docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md`
+**Map:** `docs/archive/proposals/architecture-eval-backlog-cluster-map.md`
 
 ## Hard fences for PM
 
