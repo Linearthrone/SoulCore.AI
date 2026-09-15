@@ -1,18 +1,37 @@
 ---
 type: tt-cluster-map
-status: sent-to-pm
+status: closed — PROP-5..11 program complete; PROP-1/2/4 lanes tracked in the registry
 tt_id: TT-01
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-15
 sent_at: 2026-09-05
+archived: 2026-09-15
 environment: TINA-main
 title: Architecture eval vs live backlog — parallel cluster map
 source_eval: architecture review 2026-09-05 (Good→Great / Needs Attention / Restructure / Better-if)
+program_accept: docs/archive/tasks/PROP-5-11-PM01-program-accept.md
+scoreboard: docs/agents/reports/PROP-5-11-TINA-wipeout-final.md
+registry: docs/agents/PROP_NUMBERING.md
 ---
 
 # Architecture eval vs live backlog — parallel cluster map
 
 TT-01 facilitator map. **Not an execution ticket.** Proposals for new clusters: PROP-5…PROP-11.
+
+## Disposition — closed 2026-09-15
+
+This map did its job and is archived. Everything below is a **2026-09-05 snapshot**; do not read
+the status columns as current. Current truth: `docs/agents/PROP_NUMBERING.md`.
+
+| Cluster the map created | Outcome |
+| --- | --- |
+| PROP-5 … PROP-11 (§2, §6) | All **Pass** and on `main`. PROP-7..11 shipped report-only under the exception in `docs/archive/tasks/PROP-7-11-PM01-gated-hold.md` |
+| Wave lanes / conflict fences (§3) | Retired — the one-Host-lane-at-a-time constraint held through execution; no fence remains to enforce |
+| Explicitly-parked items (§4) | Still parked, still unticketed: IMAP connection pool, full `docs/handbook` ↔ `docs-site` merge epic, standalone vector DB, standalone Unreal adapter |
+| Kill criteria (§5) | None were tripped (per the scoreboard) |
+
+Pre-existing lanes this map only referenced (§1) are **not** closed by it — PROP-1.5/1.6,
+PROP-2.1–2.4, PROP-4.1/4.2 remain open under `docs/agents/tasks/`, and PROP-3 stays parked.
 
 ## 1. Live backlog (before this wave)
 

@@ -10,9 +10,10 @@ created: 2026-09-05
 wave: wipeout-now
 title: SqliteMemoryStore async command serialization + busy_timeout
 depends_on: PROP-5.1 preferred first (same PR OK)
-proposal: docs/agents/unexecuted_proposals/host-sqlite-concurrency-ownership.md
-intake: docs/agents/tasks/PROP-5-TT01-to-PM01.md
-report: docs/agents/reports/PROP-5.2-BED01-to-PM01.md
+proposal: docs/archive/proposals/host-sqlite-concurrency-ownership.md
+intake: docs/archive/tasks/PROP-5-TT01-to-PM01.md
+report: docs/agents/reports/PROP-5.1-5.3-BED01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-5.1-5.3-PM01-accept.md
 ---
 
 # PROP-5.2 — Serialize SqliteMemoryStore DB work

@@ -1,9 +1,13 @@
 ---
 type: proposal
 prop_id: PROP-6-desktop-drag-async-delay
-status: accepted-pm-ticketed
+status: accepted-shipped
+verdict: Pass
+landed_on_main: 2026-09-14
+archived: 2026-09-15
+report: docs/agents/reports/PROP-6.1-BED01-to-PM01.md
 pm_tickets:
-  - docs/agents/tasks/PROP-6.1-PM01-to-BED01.md
+  - docs/archive/tasks/PROP-6.1-PM01-to-BED01.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -11,9 +15,9 @@ title: Desktop drag — replace Thread.Sleep with async delay
 need: Stop NativeDesktopControlBackend drag interpolation from blocking a thread ~300ms via Thread.Sleep while pretending to be async
 parallel_with: PROP-1, PROP-2, PROP-4, PROP-5
 blocked_by: none
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 sent_at: 2026-09-05
-pm_intake: docs/agents/tasks/PROP-6-TT01-to-PM01.md
+pm_intake: docs/archive/tasks/PROP-6-TT01-to-PM01.md
 ---
 
 # Desktop drag — async delay

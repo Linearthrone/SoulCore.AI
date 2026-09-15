@@ -1,21 +1,25 @@
 ---
 type: proposal
 prop_id: PROP-5-host-sqlite-concurrency-ownership
-status: accepted-pm-ticketed
+status: accepted-shipped
+verdict: Pass
+landed_on_main: 2026-09-14
+archived: 2026-09-15
+report: docs/agents/reports/PROP-5.1-5.3-BED01-to-PM01.md, docs/agents/reports/PROP-5.4-QA01-to-PM01.md
 pm_tickets:
-  - docs/agents/tasks/PROP-5.1-PM01-to-BED01.md
-  - docs/agents/tasks/PROP-5.2-PM01-to-BED01.md
-  - docs/agents/tasks/PROP-5.3-PM01-to-BED01.md
-  - docs/agents/tasks/PROP-5.4-PM01-to-QA01.md
+  - docs/archive/tasks/PROP-5.1-PM01-to-BED01.md
+  - docs/archive/tasks/PROP-5.2-PM01-to-BED01.md
+  - docs/archive/tasks/PROP-5.3-PM01-to-BED01.md
+  - docs/archive/tasks/PROP-5.4-PM01-to-QA01.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
 title: Host SQLite concurrency + charter ownership + SoulLoop single-flight
 need: Stop concurrent chat/SMS/SoulLoop/tool paths from racing one SqliteConnection (and a second Charter opener on the same file) so continuity stays boringly reliable
 sent_at: 2026-09-05
-pm_intake: docs/agents/tasks/PROP-5-TT01-to-PM01.md
+pm_intake: docs/archive/tasks/PROP-5-TT01-to-PM01.md
 source_eval: architecture review 2026-09-05 (Good-to-Great / Needs Attention / Reorg / Better-if)
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 parallel_with: PROP-1, PROP-2, PROP-4, PROP-6
 ---
 

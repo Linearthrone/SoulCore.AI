@@ -4,12 +4,15 @@ prop_range: PROP-5..PROP-11
 from: PM-01
 to: TT-01
 cc: user
-status: Accepted
+status: Closed — accepted 2026-09-05; program complete, PROP-5..11 all Pass and on main
+archived: 2026-09-15
 created: 2026-09-05
 environment: TINA-main
 title: "[TINA] Accept architecture-eval wipeout — Wave NOW staffing"
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
-program_intake: docs/agents/tasks/PROP-5-11-TT01-to-PM01-program.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
+program_intake: docs/archive/tasks/PROP-5-11-TT01-to-PM01-program.md
+scoreboard: docs/agents/reports/PROP-5-11-TINA-wipeout-final.md
+gated_hold_discharge: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 ---
 
 # PROP-5..11 Accepted — TINA program control
@@ -49,3 +52,18 @@ program_intake: docs/agents/tasks/PROP-5-11-TT01-to-PM01-program.md
 IMAP pool · full docs-site merge · standalone vector · Unreal adapter (stays under PROP-2)
 
 TT-01: program accepted. Further TT only on unblock evals.
+
+## Closeout (2026-09-15 registry reconcile)
+
+The "Gated (accepted, not started)" table above is resolved — all five gates cleared and all five
+shipped. They were executed **without** `PROP-7.1`..`PROP-11.1` tickets; that is recorded as the
+approved exception in `docs/archive/tasks/PROP-7-11-PM01-gated-hold.md`.
+
+Seats A and B closed (`PROP-5.1`–`5.4`, `PROP-6.1` all Completed, archived beside this file).
+Seats C, D, E are **still open** and stay in `docs/agents/tasks/`:
+
+| Seat | Open items |
+| --- | --- |
+| C SMS | `PROP-1.5` QA (Pending), `PROP-1.6` FED (Pending). `PROP-1.4` SEC = Completed — Partial |
+| D UE | `PROP-2.1`–`2.3` Pending, `PROP-2.4` Held |
+| E Presence | `PROP-4.1` Partial, `PROP-4.2` Pending |

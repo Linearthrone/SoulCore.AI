@@ -10,10 +10,11 @@ created: 2026-09-05
 wave: wipeout-now
 title: SoulLoop TickAsync single-flight + atomic tick counter
 depends_on: none
-proposal: docs/agents/unexecuted_proposals/host-sqlite-concurrency-ownership.md
-intake: docs/agents/tasks/PROP-5-TT01-to-PM01.md
-program: docs/agents/tasks/PROP-5-11-PM01-program-accept.md
-report: docs/agents/reports/PROP-5.1-BED01-to-PM01.md
+proposal: docs/archive/proposals/host-sqlite-concurrency-ownership.md
+intake: docs/archive/tasks/PROP-5-TT01-to-PM01.md
+program: docs/archive/tasks/PROP-5-11-PM01-program-accept.md
+report: docs/agents/reports/PROP-5.1-5.3-BED01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-5.1-5.3-PM01-accept.md
 ---
 
 # PROP-5.1 — SoulLoop single-flight

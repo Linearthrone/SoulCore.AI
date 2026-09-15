@@ -14,7 +14,7 @@ phase: ue-reliability
 title: Shadow PIE sit-down — 1P Kayleigh possess (finish TASK-191)
 depends_on: none
 proposal: docs/archive/proposals/victoria-ue-reliable-embodiment.md
-intake: docs/agents/tasks/PROP-2.0-PM01-to-TT01.md
+intake: docs/archive/tasks/PROP-2.0-PM01-to-TT01.md
 prior: docs/agents/tasks/TASK-20260817-191-PM01-to-REX01.md
 report: docs/agents/reports/PROP-2.1-REX01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)

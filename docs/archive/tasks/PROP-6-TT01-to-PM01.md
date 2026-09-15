@@ -5,14 +5,16 @@ prop_full: PROP-6-desktop-drag-async-delay
 from: TT-01
 to: PM-01
 priority: P1
-status: Intake — TINA-main ticketing
+status: Closed — ticketed 6.1, Pass; code on main
+archived: 2026-09-15
+report: docs/agents/reports/PROP-6.1-BED01-to-PM01.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Desktop drag — Thread.Sleep → async delay"
-proposal: docs/agents/unexecuted_proposals/desktop-drag-async-delay.md
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+proposal: docs/archive/proposals/desktop-drag-async-delay.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 program: PROP-5..11 architecture-eval wipeout (sent together)
 assignee_role: PM-01 (TINA)
 ---
@@ -20,7 +22,7 @@ assignee_role: PM-01 (TINA)
 # PROP-6 : [TINA-main] Desktop drag — async delay
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
-**Proposal:** `docs/agents/unexecuted_proposals/desktop-drag-async-delay.md`
+**Proposal:** `docs/archive/proposals/desktop-drag-async-delay.md`
 
 ## One-paragraph recommended route
 

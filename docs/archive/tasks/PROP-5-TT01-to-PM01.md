@@ -5,14 +5,16 @@ prop_full: PROP-5-host-sqlite-concurrency-ownership
 from: TT-01
 to: PM-01
 priority: P0
-status: Intake — TINA-main ticketing
+status: Closed — ticketed 5.1–5.4, all Pass; code on main
+archived: 2026-09-15
+report: docs/agents/reports/PROP-5.1-5.3-BED01-to-PM01.md, docs/agents/reports/PROP-5.4-QA01-to-PM01.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Host SQLite concurrency + charter ownership + SoulLoop single-flight"
-proposal: docs/agents/unexecuted_proposals/host-sqlite-concurrency-ownership.md
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+proposal: docs/archive/proposals/host-sqlite-concurrency-ownership.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 program: PROP-5..11 architecture-eval wipeout (sent together)
 assignee_role: PM-01 (TINA)
 ---
@@ -20,8 +22,8 @@ assignee_role: PM-01 (TINA)
 # PROP-5 : [TINA-main] Host SQLite concurrency + charter ownership + SoulLoop single-flight
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
-**Proposal:** `docs/agents/unexecuted_proposals/host-sqlite-concurrency-ownership.md`  
-**Program map:** `docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md`
+**Proposal:** `docs/archive/proposals/host-sqlite-concurrency-ownership.md`  
+**Program map:** `docs/archive/proposals/architecture-eval-backlog-cluster-map.md`
 
 This is the **lead Host lane** of the architecture-eval wipeout (PROP-5..11 sent together). Keep ≤1 open PR editing `Program.cs` / `ChatWebSocketHandler`.
 

@@ -44,8 +44,12 @@ If a slug exists, append `-2`, `-3`, … — do not overwrite without confirmati
 | `unexecuted` | Parked; thinktank done, not sent to PM |
 | `sent-to-pm` | User opted to hand off; see `pm_intake` / `prop_id` |
 | `accepted-pm-ticketed` | PM accepted; splits live as `PROP-N.M` |
+| `accepted-shipped` | Accepted **and** executed; code on `main`. Requires `verdict` + `report`. Move to `docs/archive/proposals/` |
 | `parked-pending-digits-pass` | Explicit hold (e.g. Link rewrite) |
 | `withdrawn` | Explicitly abandoned |
+
+`accepted-gated` (a PM hold pending another PROP's Pass) was used for PROP-7…11 and is retired —
+those are now `accepted-shipped`. Use `accepted-pm-ticketed` plus a `blocked_by:` field instead.
 
 ## Who writes here
 
