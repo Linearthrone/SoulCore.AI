@@ -62,11 +62,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         catch (Exception ex)
         {
             _log?.LogWarning(ex, "Playwright health failed");
-            return new BrowserBridgeResult(
-                false,
-                "playwright not ready: " + ex.Message +
-                ". Run: pwsh SoulCore/scripts/install-playwright.ps1 (or `playwright install chromium`).",
-                null);
+            return new BrowserBridgeResult(false, FormatPlaywrightError("health", ex), null);
         }
     }
 
@@ -429,7 +425,48 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
     }
 
     private static BrowserBridgeResult Fail(string op, Exception ex) =>
-        new(false, $"playwright {op} failed: {ex.Message}", new { action_ok = false, goal_complete = false, backend = BackendId });
+        new(false, FormatPlaywrightError(op, ex), new { action_ok = false, goal_complete = false, backend = BackendId, setup_needed = LooksLikeMissingBrowser(ex) });
+
+    /// <summary>
+    /// People-friendly error Victoria can relay to Kurt. Always includes the install
+    /// recipe when Chromium is missing (navigate/click used to omit it).
+    /// </summary>
+    public static string FormatPlaywrightError(string op, Exception ex)
+    {
+        var detail = (ex.Message ?? "").Trim();
+        if (LooksLikeMissingBrowser(ex))
+        {
+            return
+                $"Victoria's browser is not set up yet ({op}). " +
+                "Kurt: from the Soul_Core repo root run " +
+                "`powershell -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
+                "and wait until it prints FOUND chrome.exe (first download can take 5–10 minutes — do not cancel), " +
+                "then `.\\ALLSTART.ps1 -RestartHost`. " +
+                "Chromium binaries go to %LOCALAPPDATA%\\ms-playwright\\ " +
+                "(Victoria's profile is separate: %LOCALAPPDATA%\\SoulCore\\victoria-browser). " +
+                (string.IsNullOrWhiteSpace(detail) ? "" : $"Detail: {detail}");
+        }
+
+        return $"playwright {op} failed: {detail}";
+    }
+
+    public static bool LooksLikeMissingBrowser(Exception ex)
+    {
+        for (var cur = ex; cur is not null; cur = cur.InnerException)
+        {
+            var m = cur.Message ?? "";
+            if (m.Contains("Executable doesn't exist", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("Please run the following command to download new browsers", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("browserType.launch", StringComparison.OrdinalIgnoreCase)
+                    && m.Contains("chromium", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("playwright install", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public async ValueTask DisposeAsync()
     {

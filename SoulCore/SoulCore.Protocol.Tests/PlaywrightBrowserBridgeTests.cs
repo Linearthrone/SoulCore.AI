@@ -47,4 +47,28 @@ public class PlaywrightBrowserBridgeTests
         var dir = PlaywrightBrowserBridge.ResolveUserDataDir(new ToolsOptions());
         Assert.Contains("victoria-browser", dir, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void FormatPlaywrightError_MissingBrowser_IncludesInstallRecipe()
+    {
+        var ex = new InvalidOperationException(
+            "Executable doesn't exist at C:\\Users\\kurt\\.cache\\ms-playwright\\chromium-1148\\chrome-win\\chrome.exe");
+        var msg = PlaywrightBrowserBridge.FormatPlaywrightError("navigate", ex);
+        Assert.Contains("not set up yet", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("install-playwright.ps1", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("powershell", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ms-playwright", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".\\ALLSTART.ps1 -RestartHost", msg, StringComparison.Ordinal);
+        Assert.True(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
+    }
+
+    [Fact]
+    public void FormatPlaywrightError_OtherFailure_KeepsShortForm()
+    {
+        var ex = new InvalidOperationException("net::ERR_NAME_NOT_RESOLVED");
+        var msg = PlaywrightBrowserBridge.FormatPlaywrightError("navigate", ex);
+        Assert.StartsWith("playwright navigate failed:", msg);
+        Assert.DoesNotContain("install-playwright.ps1", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.False(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
+    }
 }
