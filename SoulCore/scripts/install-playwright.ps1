@@ -1,9 +1,10 @@
 # Install Playwright Chromium for SoulCore Host (BED-195 / OPS-198).
 # Soft-fail friendly: ALLSTART calls this and continues if it fails.
 #
-# Usage:
-#   pwsh SoulCore/scripts/install-playwright.ps1
-#   pwsh SoulCore/scripts/install-playwright.ps1 -SkipBrowserDownload  # restore only
+# Usage (Windows PowerShell 5.1 is enough — pwsh/PowerShell 7 not required):
+#   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1
+#   .\SoulCore\scripts\install-playwright.ps1   # if already in a PowerShell terminal
+#   .\SoulCore\scripts\install-playwright.ps1 -SkipBrowserDownload  # restore only
 
 param(
     [switch]$SkipBrowserDownload
@@ -32,7 +33,7 @@ if (-not $playwrightDll) {
         Sort-Object FullName -Descending |
         Select-Object -First 1
     if (-not $pwshCli) {
-        Write-Warning "playwright.ps1 not found under NuGet packages. Manual: pwsh -c \"dotnet build; & `$HOME/.nuget/packages/microsoft.playwright/*/lib/net*/playwright.ps1 install chromium\""
+        Write-Warning "playwright.ps1 not found under NuGet packages. Manual: powershell -c `"dotnet build; & `$env:USERPROFILE\.nuget\packages\microsoft.playwright\*\lib\net*\playwright.ps1 install chromium`""
         exit 1
     }
     $playwrightDll = $pwshCli

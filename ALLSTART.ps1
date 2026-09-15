@@ -347,18 +347,18 @@ if (Test-Path -LiteralPath $InstallPlaywright) {
             -TimeoutSec 180
         if ($pwResult.TimedOut) {
             Write-Warning "install-playwright timed out - continuing (browser_* may fail until Chromium is installed)"
-            Write-Host ">>> FIX Victoria's browser: pwsh -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+            Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
             Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost   (or restart Host from Presence lamps)" -ForegroundColor Yellow
         } elseif ($pwResult.ExitCode -ne 0) {
             Write-Warning "install-playwright exited $($pwResult.ExitCode) - continuing (set BrowserBackend=native to use Chrome extension)"
-            Write-Host ">>> FIX Victoria's browser: pwsh -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+            Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
             Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost   (BrowserBackend=playwright needs Chromium once)" -ForegroundColor Yellow
         } else {
             Write-Host "Playwright Chromium OK (Victoria profile under LocalAppData\SoulCore\victoria-browser)"
         }
     } catch {
         Write-Warning "install-playwright failed: $($_.Exception.Message) - continuing"
-        Write-Host ">>> FIX Victoria's browser: pwsh -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+        Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
     }
 } else {
     Write-Warning "install-playwright.ps1 missing - skip Playwright bootstrap"

@@ -439,7 +439,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             return
                 $"Victoria's browser is not set up yet ({op}). " +
                 "Kurt: from the Soul_Core repo root run " +
-                "`pwsh -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
+                "`powershell -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
                 "then restart Host (ALLSTART -RestartHost). " +
                 "That downloads Chromium once into her dedicated profile " +
                 "(%LOCALAPPDATA%\\SoulCore\\victoria-browser) — not your daily Chrome. " +
