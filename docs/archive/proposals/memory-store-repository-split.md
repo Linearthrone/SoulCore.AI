@@ -1,7 +1,13 @@
 ---
 type: proposal
 prop_id: PROP-11-memory-store-repository-split
-status: accepted-gated
+status: accepted-shipped
+verdict: Pass
+landed_on_main: 2026-09-14
+archived: 2026-09-15
+report: docs/agents/reports/PROP-11.1-BED01-to-PM01.md
+pm_tickets: none — shipped report-only under the gated-hold exception
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -9,9 +15,9 @@ title: Memory store repository split — after concurrency is safe
 need: Split SqliteMemoryStore god-object into repositories behind existing interfaces once connection ownership/serialization is proven
 parallel_with: PROP-7 (Host Hermes), PROP-10 (Inference folders), PROP-1/2/4
 blocked_by: PROP-5
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 sent_at: 2026-09-05
-pm_intake: docs/agents/tasks/PROP-11-TT01-to-PM01.md
+pm_intake: docs/archive/tasks/PROP-11-TT01-to-PM01.md
 ---
 
 # Memory store repository split
