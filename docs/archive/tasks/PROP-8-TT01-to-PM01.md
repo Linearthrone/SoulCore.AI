@@ -5,14 +5,17 @@ prop_full: PROP-8-chat-orchestration-decomposition
 from: TT-01
 to: PM-01
 priority: P1
-status: Intake — TINA-main ticketing
+status: Closed — shipped report-only (no PROP-8.1 ticket; see gated-hold exception), Pass; code on main
+archived: 2026-09-15
+report: docs/agents/reports/PROP-8.1-BED01-to-PM01.md
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Chat orchestration decomposition"
-proposal: docs/agents/unexecuted_proposals/chat-orchestration-decomposition.md
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+proposal: docs/archive/proposals/chat-orchestration-decomposition.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 program: PROP-5..11 architecture-eval wipeout (sent together)
 assignee_role: PM-01 (TINA)
 blocked_by: PROP-5
@@ -22,7 +25,7 @@ prefer_after: PROP-9
 # PROP-8 : [TINA-main] Chat orchestration decomposition
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
-**Proposal:** `docs/agents/unexecuted_proposals/chat-orchestration-decomposition.md`  
+**Proposal:** `docs/archive/proposals/chat-orchestration-decomposition.md`  
 **Gate:** after **PROP-5**; **prefer after PROP-9**. Sole Host lane while open.
 
 ## One-paragraph recommended route

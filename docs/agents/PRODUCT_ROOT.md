@@ -1,6 +1,6 @@
 ---
 type: config
-updated: 2026-09-05
+updated: 2026-09-15
 ---
 
 # Product Root (pointer)
@@ -22,14 +22,17 @@ updated: 2026-09-05
 
 ## Active work (see PROP registry)
 
-- **PROP-1** SMS/MMS — 1.1–1.3 Pass; **1.4 SEC / 1.5 QA / 1.6 FED** open (Wave NOW seat C)
-- **PROP-2** UE reliability — **2.1–2.4 REX** (Wave NOW seat D; shadow PIE)
+- **PROP-1** SMS/MMS — 1.1–1.3 Pass; **1.4 SEC Partial** (code + tests on `main`); **1.5 QA / 1.6 FED** open
+- **PROP-2** UE reliability — **2.1–2.4 REX** open (shadow PIE; human-gated)
 - **PROP-3** Link rewrite — parked until SMS QA Pass
-- **PROP-4** Presence HUD — **4.1 FED / 4.2 OPS** ticketed (Wave NOW seat E)
-- **PROP-5..11** architecture-eval wipeout — **TINA COMPLETE 2026-09-05** (all Pass)
+- **PROP-4** Presence HUD — **4.1 FED Partial** (branch slice unlanded + Windows visual QA); **4.2 OPS** not started
+- **PROP-5..11** architecture-eval wipeout — **complete; all Pass and on `main`** (2026-09-14)
   - Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
-  - Integrate tip: `cursor/tina-wipeout-integrate-8a1f`
-  - Human left: merge PRs · Presence Windows QA · SMS tablet · UE shadow
+  - PROP-7..11 shipped report-only — exception: `docs/archive/tasks/PROP-7-11-PM01-gated-hold.md`
+  - Paperwork archived to `docs/archive/tasks/` + `docs/archive/proposals/` (2026-09-15)
 - **TASK-191 / 192** — REX Kayleigh possess + call capture (192 held)
+
+Human gates still open: Presence Windows visual QA (4.1) · tablet SMS round-trip (1.5) ·
+shadow UE possess (2.1).
 
 Do not treat this file as architecture documentation. Edit the handbook instead.

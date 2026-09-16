@@ -40,3 +40,20 @@ title: Architecture-eval wipeout — final scoreboard
 4. Shadow UE possess (2.1)
 
 TT kill criteria not violated: one Host lane at a time during execution; no IMAP/vector/docs-merge minting.
+
+## Landing addendum (2026-09-15 registry reconcile)
+
+Gate 1 above is **closed** — all seven wipeout PROPs are merged and on `main`. The branch column
+is the source branch, not where the code lives now; `cursor/tina-wipeout-integrate-8a1f` is spent.
+
+Two corrections to the tables above:
+
+- **PROP-10** landed via PR #86 from `cursor/prop10-inference-split-land-9d6e`. The listed
+  `cursor/prop10-inference-split-8a1f` is the orphan branch it supersedes.
+- **PROP-1.4** and **PROP-4.1** are on `main`; their reports were rescued docs-only via PR #87.
+  Both stay **Partial** — PROP-4.1 still has an unlanded slice on
+  `cursor/prop4-presence-drawer-8a1f` (honesty tests, `InternalsVisibleTo`, the Avalonia
+  `RadiusX`/`RadiusY` fix).
+
+Gates 2–4 remain open and are human-gated. PROP-7..11 shipped without `PROP-N.M` tickets; that is
+the approved exception recorded in `docs/archive/tasks/PROP-7-11-PM01-gated-hold.md`.

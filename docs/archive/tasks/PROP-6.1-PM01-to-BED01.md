@@ -5,15 +5,19 @@ prop_root: PROP-6-desktop-drag-async-delay
 from: PM-01
 to: BED-01
 priority: P1
-status: Pending
+status: Completed
 created: 2026-09-05
+completed: 2026-09-05
 wave: wipeout-now
 title: NativeDesktopControlBackend — Thread.Sleep → Task.Delay
 depends_on: none
 parallel_with: PROP-5.*
-proposal: docs/agents/unexecuted_proposals/desktop-drag-async-delay.md
-intake: docs/agents/tasks/PROP-6-TT01-to-PM01.md
+proposal: docs/archive/proposals/desktop-drag-async-delay.md
+intake: docs/archive/tasks/PROP-6-TT01-to-PM01.md
 report: docs/agents/reports/PROP-6.1-BED01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-6.1-PM01-accept.md
+verdict: Pass
+branch: cursor/prop6-desktop-delay-8a1f
 ---
 
 # PROP-6.1 — Desktop drag async delay
@@ -41,3 +45,11 @@ report: docs/agents/reports/PROP-6.1-BED01-to-PM01.md
 ## Parallel
 
 Safe beside PROP-5 (different project). Separate PR from Host work.
+
+## Closeout (2026-09-15 registry reconcile)
+
+Status was still `Pending` after the work shipped. Corrected to `Completed`:
+
+- Report: `docs/agents/reports/PROP-6.1-BED01-to-PM01.md` (Completed)
+- PM accept: `docs/agents/reports/PROP-6.1-PM01-accept.md` (Accepted, verdict **Pass**)
+- On `main`: no `Thread.Sleep` remains under `SoulCore/SoulCore.Inference/Tools/Desktop/`

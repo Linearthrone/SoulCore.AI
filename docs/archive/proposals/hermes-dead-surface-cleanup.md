@@ -1,7 +1,13 @@
 ---
 type: proposal
 prop_id: PROP-7-hermes-dead-surface-cleanup
-status: accepted-gated
+status: accepted-shipped
+verdict: Pass
+landed_on_main: 2026-09-14
+archived: 2026-09-15
+report: docs/agents/reports/PROP-7.1-BED01-to-PM01.md
+pm_tickets: none — shipped report-only under the gated-hold exception
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -9,9 +15,9 @@ title: Hermes dead-surface cleanup — contracts, config, DI, docs honesty
 need: Remove retired Hermes from live Host contracts/config so Ollama is the unambiguous inference boundary (NullHermesClient era ends)
 parallel_with: PROP-11 (Memory-only), PROP-1/2/4
 blocked_by: PROP-5 (sole Host lane until Pass)
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 sent_at: 2026-09-05
-pm_intake: docs/agents/tasks/PROP-7-TT01-to-PM01.md
+pm_intake: docs/archive/tasks/PROP-7-TT01-to-PM01.md
 ---
 
 # Hermes dead-surface cleanup

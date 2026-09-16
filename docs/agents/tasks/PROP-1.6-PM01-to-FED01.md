@@ -13,7 +13,7 @@ phase: phone-digits
 title: Link shrink — status + ComfyUI only (after DIGITS Pass)
 depends_on: PROP-1.5
 proposal: docs/archive/proposals/victoria-digits-sms-channel.md
-intake: docs/agents/tasks/PROP-1.0-PM01-to-TT01.md
+intake: docs/archive/tasks/PROP-1.0-PM01-to-TT01.md
 report: docs/agents/reports/PROP-1.6-FED01-to-PM01.md
 handoff: 2026-08-19 — WonderWoman (PM-01)
 ---

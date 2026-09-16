@@ -1,7 +1,13 @@
 ---
 type: proposal
 prop_id: PROP-8-chat-orchestration-decomposition
-status: accepted-gated
+status: accepted-shipped
+verdict: Pass
+landed_on_main: 2026-09-14
+archived: 2026-09-15
+report: docs/agents/reports/PROP-8.1-BED01-to-PM01.md
+pm_tickets: none — shipped report-only under the gated-hold exception
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 tt_id: TT-01
 created: 2026-09-05
 updated: 2026-09-05
@@ -9,9 +15,9 @@ title: Chat orchestration decomposition — handler, prompt builder, history, ga
 need: Break ChatWebSocketHandler (~1.6k lines) into testable command/session pieces; one prompt owner; bounded history; parallel context reads only after SQLite is safe
 parallel_with: PROP-10 (Inference-only), PROP-1/2/4
 blocked_by: PROP-5; prefer also after PROP-9
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 sent_at: 2026-09-05
-pm_intake: docs/agents/tasks/PROP-8-TT01-to-PM01.md
+pm_intake: docs/archive/tasks/PROP-8-TT01-to-PM01.md
 ---
 
 # Chat orchestration decomposition

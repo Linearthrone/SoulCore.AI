@@ -5,14 +5,17 @@ prop_full: PROP-9-host-di-composition-modules
 from: TT-01
 to: PM-01
 priority: P2
-status: Intake — TINA-main ticketing
+status: Closed — shipped report-only (no PROP-9.1 ticket; see gated-hold exception), Pass; code on main
+archived: 2026-09-15
+report: docs/agents/reports/PROP-9.1-BED01-to-PM01.md
+exception: docs/archive/tasks/PROP-7-11-PM01-gated-hold.md
 created: 2026-09-05
 sent_at: 2026-09-05
 environment: TINA-main
 mode: idea
 title: "[TINA-main] Host DI composition modules"
-proposal: docs/agents/unexecuted_proposals/host-di-composition-modules.md
-cluster_map: docs/agents/unexecuted_proposals/architecture-eval-backlog-cluster-map.md
+proposal: docs/archive/proposals/host-di-composition-modules.md
+cluster_map: docs/archive/proposals/architecture-eval-backlog-cluster-map.md
 program: PROP-5..11 architecture-eval wipeout (sent together)
 assignee_role: PM-01 (TINA)
 blocked_by: PROP-5, PROP-7
@@ -21,7 +24,7 @@ blocked_by: PROP-5, PROP-7
 # PROP-9 : [TINA-main] Host DI composition modules
 
 **For:** **TINA-main** PM-01. **From:** TT-01. **Mode:** `idea`.  
-**Proposal:** `docs/agents/unexecuted_proposals/host-di-composition-modules.md`  
+**Proposal:** `docs/archive/proposals/host-di-composition-modules.md`  
 **Gate:** after **PROP-5** + **PROP-7**. Sole Host lane; do not parallel with PROP-8.
 
 ## One-paragraph recommended route
