@@ -85,6 +85,31 @@ public class PlaywrightBrowserBridgeTests
     }
 
     [Fact]
+    public void FormatClickTextResult_Unchanged_WarnsNotToClaimNextScreen()
+    {
+        var msg = PlaywrightBrowserBridge.FormatClickTextResult(
+            "Continue", 1, "button",
+            "https://example.com/a", "https://example.com/a",
+            pageChanged: false);
+        Assert.Contains("did NOT change", msg, StringComparison.Ordinal);
+        Assert.Contains("Do NOT claim the next screen", msg, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("goal_complete=false", msg, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatClickTextResult_Changed_RequiresSnapshotBeforeWaiting()
+    {
+        var msg = PlaywrightBrowserBridge.FormatClickTextResult(
+            "Sign in", 1, "link",
+            "https://example.com/login", "https://example.com/app",
+            pageChanged: true);
+        Assert.Contains("page changed", msg, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("before telling Kurt you are waiting", msg, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FormatPlaywrightError_OtherFailure_KeepsShortForm()
     {
         var ex = new InvalidOperationException("net::ERR_NAME_NOT_RESOLVED");

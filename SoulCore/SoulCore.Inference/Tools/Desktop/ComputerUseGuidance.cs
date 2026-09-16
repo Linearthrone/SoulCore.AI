@@ -19,6 +19,8 @@ public static class ComputerUseGuidance
         "(not the operator's daily Chrome). browser_navigate(url) → browser_snapshot / browser_click_text / browser_fill. " +
         "Success on navigate means the page loaded — NOT that login/goal is done (goal_complete=false until " +
         "the page postcondition). Prefer role/name click_text + fill over screenshot→pixel for labeled UI.\n" +
+        "After EVERY browser_click_text: call browser_snapshot before telling Kurt you clicked or are waiting. " +
+        "If the tool says URL/title did NOT change, the next screen did not appear — try another label/nth or fill, do not sit and wait.\n" +
         "2) Non-browser desktop apps: call desktop_open_app with an allowlisted alias " +
         "(notepad, explorer, cmd, powershell). Launch is background-friendly.\n" +
         "If the user asks to open a browser / Chrome / Edge / a website: browser_navigate — NOT desktop_open_app " +
@@ -66,6 +68,8 @@ public static class ComputerUseGuidance
         "BrowserBackend=playwright — call browser_navigate (Victoria's Playwright Chromium).\n" +
         "Website workflow (REQUIRED when BrowserBackend=playwright):\n" +
         "  browser_navigate(url) → browser_snapshot / browser_click_text / browser_fill.\n" +
+        "After browser_click_text: browser_snapshot before claiming progress. " +
+        "If URL/title did NOT change, do not wait on a popup — pick another control.\n" +
         "If Playwright fails with setup_needed: tell Kurt to run install-playwright.ps1. " +
         "Do NOT ask him to start/turn on VirtualBox for web work — the VM is only for desktop_* guest apps.\n" +
         "Only if the operator explicitly asks for the VirtualBox/guest browser: desktop_open_app firefox. " +
