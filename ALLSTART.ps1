@@ -351,10 +351,10 @@ if ($SkipPlaywrightInstall) {
             -WorkingDirectory $RepoRoot `
             -TimeoutSec 45
         if (-not $verifyResult.TimedOut -and $verifyResult.ExitCode -eq 0) {
-            Write-Host "Playwright Chromium OK (binaries under %LOCALAPPDATA%\ms-playwright)"
+            Write-Host "Playwright Chromium OK (chromium-1148 under %LOCALAPPDATA%\ms-playwright)"
         } else {
             Write-Warning "Playwright Chromium not ready - Host will start anyway; browser_* will fail until installed"
-            Write-Host ">>> FIX (run once, wait for FOUND chrome.exe - can take several minutes):" -ForegroundColor Yellow
+            Write-Host ">>> FIX (run once, wait for FOUND chrome.exe under chromium-1148):" -ForegroundColor Yellow
             Write-Host ">>>   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
             Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
         }

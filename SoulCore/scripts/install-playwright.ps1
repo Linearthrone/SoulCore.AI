@@ -1,13 +1,14 @@
 # Install Playwright Chromium for SoulCore Host (BED-195 / OPS-198).
-# Soft-fail friendly: ALLSTART calls this and continues if it fails.
+# Soft-fail friendly: ALLSTART only verifies; Kurt runs this once for the download.
 #
 # Usage (Windows PowerShell 5.1 is enough - PowerShell 7 / pwsh NOT required):
 #   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1
 #   .\SoulCore\scripts\install-playwright.ps1
 #   .\SoulCore\scripts\install-playwright.ps1 -VerifyOnly
 #
-# Chromium binaries land in:  %LOCALAPPDATA%\ms-playwright\
-# Victoria's profile (cookies/tabs) is separate:  %LOCALAPPDATA%\SoulCore\victoria-browser\
+# Host uses Microsoft.Playwright 1.49.0 -> Chromium revision 1148.
+# Binaries:  %LOCALAPPDATA%\ms-playwright\chromium-1148\chrome-win\chrome.exe
+# Profile:   %LOCALAPPDATA%\SoulCore\victoria-browser\   (cookies/tabs - NOT the browser binary)
 
 param(
     [switch]$SkipBrowserDownload,
@@ -20,39 +21,70 @@ $HostProj = Join-Path $RepoRoot "SoulCore\SoulCore.Host\SoulCore.Host.csproj"
 $InferenceProj = Join-Path $RepoRoot "SoulCore\SoulCore.Inference\SoulCore.Inference.csproj"
 $MsPlaywrightDir = Join-Path $env:LOCALAPPDATA "ms-playwright"
 $VictoriaProfile = Join-Path $env:LOCALAPPDATA "SoulCore\victoria-browser"
+# Must match SoulCore.Inference Microsoft.Playwright package browsers.json (1.49.0 = 1148).
+$ChromiumRevision = "1148"
+
+function Get-ExpectedChromePaths {
+    $roots = @($MsPlaywrightDir)
+    $cacheAlt = Join-Path $env:USERPROFILE ".cache\ms-playwright"
+    if ($cacheAlt -ne $MsPlaywrightDir) { $roots += $cacheAlt }
+
+    $paths = @()
+    foreach ($root in $roots) {
+        $paths += (Join-Path $root "chromium-$ChromiumRevision\chrome-win\chrome.exe")
+        $paths += (Join-Path $root "chromium-$ChromiumRevision\chrome-win64\chrome.exe")
+    }
+    return $paths
+}
+
+function Get-InstalledChromePath {
+    foreach ($p in Get-ExpectedChromePaths) {
+        if (Test-Path -LiteralPath $p) { return $p }
+    }
+    return $null
+}
 
 function Test-ChromiumInstalled {
-    if (-not (Test-Path -LiteralPath $MsPlaywrightDir)) { return $false }
-    $chrome = Get-ChildItem -Path $MsPlaywrightDir -Recurse -Filter "chrome.exe" -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match 'chromium' } |
-        Select-Object -First 1
-    return $null -ne $chrome
+    return $null -ne (Get-InstalledChromePath)
 }
 
 function Show-ChromiumStatus {
-    Write-Host "Browser cache: $MsPlaywrightDir"
+    Write-Host "Browser cache (expected): $MsPlaywrightDir\chromium-$ChromiumRevision\"
     Write-Host "Victoria profile (not the Chromium binary): $VictoriaProfile"
-    if (Test-ChromiumInstalled) {
-        $chrome = Get-ChildItem -Path $MsPlaywrightDir -Recurse -Filter "chrome.exe" -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match 'chromium' } |
-            Select-Object -First 1
-        Write-Host "FOUND: $($chrome.FullName)" -ForegroundColor Green
+    $chrome = Get-InstalledChromePath
+    if ($chrome) {
+        Write-Host "FOUND: $chrome" -ForegroundColor Green
         return $true
     }
-    Write-Host "MISSING: no chromium chrome.exe under $MsPlaywrightDir" -ForegroundColor Yellow
+
+    Write-Host "MISSING: chromium-$ChromiumRevision chrome.exe (Host needs this exact revision)" -ForegroundColor Yellow
+    # Helpful: show stray chromium folders so Kurt can see version mismatch.
+    if (Test-Path -LiteralPath $MsPlaywrightDir) {
+        $dirs = Get-ChildItem -Path $MsPlaywrightDir -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'chromium*' } |
+            Select-Object -ExpandProperty Name
+        if ($dirs) {
+            Write-Host "Present under ms-playwright: $($dirs -join ', ')" -ForegroundColor Yellow
+            Write-Host "(ALLSTART can say OK only when chromium-$ChromiumRevision chrome.exe exists.)"
+        }
+    }
+    $cacheAlt = Join-Path $env:USERPROFILE ".cache\ms-playwright"
+    if (Test-Path -LiteralPath $cacheAlt) {
+        Write-Host "Note: also saw $cacheAlt - Host looks in %LOCALAPPDATA%\ms-playwright by default." -ForegroundColor Yellow
+    }
     return $false
 }
 
 if ($VerifyOnly) {
-    Write-Host "=== install-playwright: verify only ==="
+    Write-Host "=== install-playwright: verify only (revision $ChromiumRevision) ==="
     if (Show-ChromiumStatus) { exit 0 }
-    Write-Warning "Chromium not installed. Re-run without -VerifyOnly."
+    Write-Warning "Chromium $ChromiumRevision not installed. Re-run without -VerifyOnly."
     exit 1
 }
 
-# Fast path: already installed - do not rebuild or re-download.
+# Fast path: correct revision already installed.
 if (Test-ChromiumInstalled) {
-    Write-Host "=== install-playwright: Chromium already present ==="
+    Write-Host "=== install-playwright: Chromium $ChromiumRevision already present ==="
     [void](Show-ChromiumStatus)
     Write-Host "Playwright Chromium ready." -ForegroundColor Green
     exit 0
@@ -70,8 +102,7 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
-# Prefer the Host Release CLI (same bits the running Host uses). Never pick a random
-# first hit under SoulCore/ - that used to grab Debug/Hermes copies unpredictably.
+# Prefer the Host Release CLI (same bits the running Host uses).
 $candidates = @(
     (Join-Path $RepoRoot "SoulCore\SoulCore.Host\bin\Release\net8.0\playwright.ps1"),
     (Join-Path $RepoRoot "SoulCore\SoulCore.Inference\bin\Release\net8.0\playwright.ps1"),
@@ -110,12 +141,10 @@ if ($SkipBrowserDownload) {
     exit 0
 }
 
-Write-Host "=== install-playwright: download Chromium (this can take several minutes) ==="
-Write-Host "Target cache: $MsPlaywrightDir"
-Write-Host "Do NOT cancel - ALLSTART used to kill this at 3 minutes; leave it running."
-# Invoke via powershell.exe so Windows PowerShell 5.1 captures a real process exit code
-# (nested `exit` from `& script.ps1` is unreliable on PS 5.1).
-# Pass install args AFTER -File so they land in $args for Microsoft.Playwright.Program.Main.
+Write-Host "=== install-playwright: download Chromium $ChromiumRevision (this can take several minutes) ==="
+Write-Host "Target: $MsPlaywrightDir\chromium-$ChromiumRevision\"
+Write-Host "Do NOT cancel - leave it running until FOUND."
+# Channel=chromium on Host uses chrome.exe; still install default chromium package (includes shell).
 $install = Start-Process -FilePath "powershell.exe" `
     -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $playwrightCli, "install", "chromium") `
     -WorkingDirectory (Split-Path -Parent $playwrightCli) `
@@ -129,11 +158,11 @@ if ($exit -ne 0) {
 }
 
 if (-not (Show-ChromiumStatus)) {
-    Write-Warning "Install reported success but chrome.exe was not found under $MsPlaywrightDir"
+    Write-Warning "Install reported success but chromium-$ChromiumRevision chrome.exe was not found"
     Write-Host "Check PLAYWRIGHT_BROWSERS_PATH if set: '$env:PLAYWRIGHT_BROWSERS_PATH'"
     exit 2
 }
 
 Write-Host "Playwright Chromium ready." -ForegroundColor Green
-Write-Host "Next: .\ALLSTART.ps1 -RestartHost   then ask Victoria to open a site (or browser_health)."
+Write-Host "Next: .\ALLSTART.ps1 -RestartHost   then ask Victoria to open https://example.com"
 exit 0

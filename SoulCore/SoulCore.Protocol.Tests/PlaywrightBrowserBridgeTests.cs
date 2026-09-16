@@ -63,6 +63,17 @@ public class PlaywrightBrowserBridgeTests
     }
 
     [Fact]
+    public void FormatPlaywrightError_MissingHeadlessShell_IncludesInstallRecipe()
+    {
+        var ex = new InvalidOperationException(
+            "Executable doesn't exist at C:\\Users\\kurtw\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1148\\chrome-win\\headless_shell.exe");
+        var msg = PlaywrightBrowserBridge.FormatPlaywrightError("health", ex);
+        Assert.Contains("not set up yet", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("install-playwright.ps1", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.True(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
+    }
+
+    [Fact]
     public void FormatPlaywrightError_OtherFailure_KeepsShortForm()
     {
         var ex = new InvalidOperationException("net::ERR_NAME_NOT_RESOLVED");

@@ -392,8 +392,11 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 
             _playwright ??= await Playwright.CreateAsync().ConfigureAwait(false);
             var headed = _opts.Value.PlaywrightHeaded;
+            // Playwright 1.49+ defaults headless to chromium-headless-shell. Channel=chromium
+            // keeps Host on the same chrome.exe that install-playwright.ps1 verifies (chromium-1148).
             _context = await _playwright.Chromium.LaunchPersistentContextAsync(userData, new BrowserTypeLaunchPersistentContextOptions
             {
+                Channel = "chromium",
                 Headless = !headed,
                 ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
                 Args = new[] { "--disable-blink-features=AutomationControlled" }
@@ -440,9 +443,9 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                 $"Victoria's browser is not set up yet ({op}). " +
                 "Kurt: from the Soul_Core repo root run " +
                 "`powershell -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
-                "and wait until it prints FOUND chrome.exe (first download can take 5-10 minutes - do not cancel), " +
+                "and wait until it prints FOUND chrome.exe under chromium-1148 (first download can take 5-10 minutes - do not cancel), " +
                 "then `.\\ALLSTART.ps1 -RestartHost`. " +
-                "Chromium binaries go to %LOCALAPPDATA%\\ms-playwright\\ " +
+                "Need: %LOCALAPPDATA%\\ms-playwright\\chromium-1148\\chrome-win\\chrome.exe " +
                 "(Victoria's profile is separate: %LOCALAPPDATA%\\SoulCore\\victoria-browser). " +
                 (string.IsNullOrWhiteSpace(detail) ? "" : $"Detail: {detail}");
         }
