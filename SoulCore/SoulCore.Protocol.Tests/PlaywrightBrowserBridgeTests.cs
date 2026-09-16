@@ -1,4 +1,7 @@
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 using SoulCore.Config;
 using SoulCore.Inference.Tools.Browser;
 
@@ -107,6 +110,25 @@ public class PlaywrightBrowserBridgeTests
         Assert.Contains("page changed", msg, StringComparison.Ordinal);
         Assert.Contains("browser_snapshot", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("before telling Kurt you are waiting", msg, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BurnInMarker_DrawsCrosshair_KeepsValidJpeg()
+    {
+        using var img = new Image<Rgba32>(80, 60, new Rgba32(20, 20, 20));
+        using var ms = new MemoryStream();
+        img.Save(ms, new JpegEncoder { Quality = 80 });
+        var original = ms.ToArray();
+
+        var marked = PlaywrightClickCursor.BurnInMarker(original, 40, 30);
+        Assert.True(marked.Length > 100);
+        using var loaded = Image.Load<Rgba32>(marked);
+        Assert.Equal(80, loaded.Width);
+        Assert.Equal(60, loaded.Height);
+        // Center / ring should no longer be flat dark gray after burn-in.
+        var sample = loaded[40, 30 - 15];
+        Assert.True(sample.R > 100 || sample.B > 40 || sample.G > 40,
+            $"expected accent/white on ring, got {sample}");
     }
 
     [Fact]
