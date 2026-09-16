@@ -59,7 +59,29 @@ public class PlaywrightBrowserBridgeTests
         Assert.Contains("powershell", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ms-playwright", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(".\\ALLSTART.ps1 -RestartHost", msg, StringComparison.Ordinal);
+        Assert.Contains("VirtualBox is NOT required", msg, StringComparison.Ordinal);
         Assert.True(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
+    }
+
+    [Fact]
+    public void FormatPlaywrightError_MissingHeadlessShell_IncludesInstallRecipe()
+    {
+        var ex = new InvalidOperationException(
+            "Executable doesn't exist at C:\\Users\\kurtw\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1148\\chrome-win\\headless_shell.exe");
+        var msg = PlaywrightBrowserBridge.FormatPlaywrightError("health", ex);
+        Assert.Contains("not set up yet", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("install-playwright.ps1", msg, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VirtualBox is NOT required", msg, StringComparison.Ordinal);
+        Assert.True(PlaywrightBrowserBridge.LooksLikeMissingBrowser(ex));
+    }
+
+    [Fact]
+    public void ExpectedChromiumPaths_IncludeRevision1148()
+    {
+        var paths = PlaywrightBrowserBridge.ExpectedChromiumExecutablePaths().ToList();
+        Assert.NotEmpty(paths);
+        Assert.All(paths, p => Assert.Contains("chromium-1148", p, StringComparison.OrdinalIgnoreCase));
+        Assert.All(paths, p => Assert.Contains("chrome.exe", p, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
