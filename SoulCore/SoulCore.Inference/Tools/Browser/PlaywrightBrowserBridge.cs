@@ -392,11 +392,21 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 
             _playwright ??= await Playwright.CreateAsync().ConfigureAwait(false);
             var headed = _opts.Value.PlaywrightHeaded;
-            // Playwright 1.49+ defaults headless to chromium-headless-shell. Channel=chromium
-            // keeps Host on the same chrome.exe that install-playwright.ps1 verifies (chromium-1148).
+            // Pin ExecutablePath to chromium-1148 chrome.exe (same path install-playwright verifies).
+            // Playwright 1.49 headless otherwise prefers chromium-headless-shell, which made the
+            // terminal say OK while Victoria still failed — and she then asked for VirtualBox.
+            var chromeExe = TryResolveChromiumExecutable();
+            if (chromeExe is null)
+            {
+                var expected = ExpectedChromiumExecutablePaths().FirstOrDefault() ?? "chromium-1148/chrome-win/chrome.exe";
+                throw new InvalidOperationException(
+                    $"Executable doesn't exist at {expected}. " +
+                    "Please run SoulCore/scripts/install-playwright.ps1 (VirtualBox is not required for websites).");
+            }
+
             _context = await _playwright.Chromium.LaunchPersistentContextAsync(userData, new BrowserTypeLaunchPersistentContextOptions
             {
-                Channel = "chromium",
+                ExecutablePath = chromeExe,
                 Headless = !headed,
                 ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
                 Args = new[] { "--disable-blink-features=AutomationControlled" }
@@ -427,6 +437,33 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         return raw.Length <= 6000 ? raw : raw[..6000] + "\n…(truncated)";
     }
 
+    /// <summary>Microsoft.Playwright 1.49.0 browsers.json chromium revision.</summary>
+    public const string ChromiumRevision = "1148";
+
+    /// <summary>
+    /// Paths Host will accept for Victoria's Chromium (must match install-playwright.ps1).
+    /// </summary>
+    public static IEnumerable<string> ExpectedChromiumExecutablePaths()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(local))
+            yield break;
+
+        yield return Path.Combine(local, "ms-playwright", $"chromium-{ChromiumRevision}", "chrome-win", "chrome.exe");
+        yield return Path.Combine(local, "ms-playwright", $"chromium-{ChromiumRevision}", "chrome-win64", "chrome.exe");
+    }
+
+    public static string? TryResolveChromiumExecutable()
+    {
+        foreach (var path in ExpectedChromiumExecutablePaths())
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        return null;
+    }
+
     private static BrowserBridgeResult Fail(string op, Exception ex) =>
         new(false, FormatPlaywrightError(op, ex), new { action_ok = false, goal_complete = false, backend = BackendId, setup_needed = LooksLikeMissingBrowser(ex) });
 
@@ -441,6 +478,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             return
                 $"Victoria's browser is not set up yet ({op}). " +
+                "VirtualBox is NOT required for websites — do not ask Kurt to start the VM for this. " +
                 "Kurt: from the Soul_Core repo root run " +
                 "`powershell -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
                 "and wait until it prints FOUND chrome.exe under chromium-1148 (first download can take 5-10 minutes - do not cancel), " +

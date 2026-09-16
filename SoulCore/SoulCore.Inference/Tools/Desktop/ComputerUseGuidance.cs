@@ -23,6 +23,8 @@ public static class ComputerUseGuidance
         "(notepad, explorer, cmd, powershell). Launch is background-friendly.\n" +
         "If the user asks to open a browser / Chrome / Edge / a website: browser_navigate — NOT desktop_open_app " +
         "(Playwright is Victoria's browser; VirtualBox Firefox is only for explicit guest-desktop asks).\n" +
+        "If Playwright Chromium is missing (setup_needed / install-playwright.ps1): tell Kurt that recipe. " +
+        "Do NOT ask Kurt to turn on VirtualBox / the Ubuntu VM for websites — VirtualBox is unrelated to Playwright.\n" +
         "If the user ONLY asked to open/launch a non-browser app, call desktop_open_app once and " +
         "reply in one short sentence — do NOT list windows or screenshot just to verify the launch.\n" +
         "If they asked you to DO something after open (search, click, type, check, navigate, …), " +
@@ -64,6 +66,8 @@ public static class ComputerUseGuidance
         "BrowserBackend=playwright — call browser_navigate (Victoria's Playwright Chromium).\n" +
         "Website workflow (REQUIRED when BrowserBackend=playwright):\n" +
         "  browser_navigate(url) → browser_snapshot / browser_click_text / browser_fill.\n" +
+        "If Playwright fails with setup_needed: tell Kurt to run install-playwright.ps1. " +
+        "Do NOT ask him to start/turn on VirtualBox for web work — the VM is only for desktop_* guest apps.\n" +
         "Only if the operator explicitly asks for the VirtualBox/guest browser: desktop_open_app firefox. " +
         "If AT-SPI fails on that guest path (degraded=true, locator=pixel), then desktop_screenshot + desktop_click — " +
         "do NOT claim Login from PNG alone.\n" +
