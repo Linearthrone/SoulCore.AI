@@ -48,6 +48,7 @@ Reconciled against `main` on **2026-09-15**. `Pass` = accepted **and** the code 
 | PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **Pass** — 9.1 Accepted 2026-09-05 (`cursor/prop9-di-modules-8a1f`); on `main` | — (report-only) |
 | PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **Pass** — 10.1 Accepted 2026-09-05; landed on `main` 2026-09-14 via PR #86 (`cursor/prop10-inference-split-land-9d6e`; supersedes orphan `cursor/prop10-inference-split-8a1f`) | — (report-only) |
 | PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **Pass** — 11.1 Accepted 2026-09-05 (`cursor/prop11-memory-repos-8a1f`); on `main` | — (report-only) |
+| PROP-12-presence-resizable-shell | Presence frameless resize + adjustable chat/browser/sight panes | **Open** — 12.1 FED **Partial** (build+unit tests; Windows visual QA) | 12.1 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -58,7 +59,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **12**.
+Next free `N`: **13**.
 
 ## Open items (not on `main`)
 
@@ -70,6 +71,7 @@ Next free `N`: **12**.
 | **PROP-2.4** | REX-01 | Held until PROP-2.1 Pass |
 | **PROP-4.1** | FED-01 | **Partial.** Landed slice is on `main`. Still only on `cursor/prop4-presence-drawer-8a1f`: `PresenceHonestyTests.cs`, `Properties/AssemblyInfo.cs` (`InternalsVisibleTo`), and the Avalonia `RadialGradientBrush` `Radius` → `RadiusX`/`RadiusY` fix in `MainWindow.Presence.cs`. Needs its own PR, then Windows visual QA |
 | **PROP-4.2** | OPS-01 | Presence installer + Start shortcut + Velopack update toast — not started |
+| **PROP-12.1** | FED-01 | **Partial** on `cursor/presence-resizable-panes-9531` — needs Windows smoke (resize / maximize / splitters / restore) |
 | **PROP-3** | — | Parked until SMS QA Pass |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),

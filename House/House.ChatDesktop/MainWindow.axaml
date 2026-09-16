@@ -22,7 +22,8 @@
       <DockPanel Margin="0">
         <!-- Title / identity frame strip (drag region) -->
         <Border x:Name="TitleDragRegion" DockPanel.Dock="Top" Padding="16,12,12,8"
-                Background="Transparent" PointerPressed="TitleDragRegion_PointerPressed">
+                Background="Transparent" PointerPressed="TitleDragRegion_PointerPressed"
+                DoubleTapped="TitleDragRegion_DoubleTapped">
           <Grid ColumnDefinitions="*,Auto,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <Border Width="36" Height="36" CornerRadius="8" Background="#1A1C20"
@@ -74,8 +75,12 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-              <Button Classes="window-chrome" Content="─" Click="Minimize_Click"/>
-              <Button Classes="window-chrome close" Content="✕" Click="Close_Click"/>
+              <Button Classes="window-chrome" Content="─" Click="Minimize_Click"
+                      ToolTip.Tip="Minimize"/>
+              <Button x:Name="MaximizeButton" Classes="window-chrome" Content="□" Click="Maximize_Click"
+                      ToolTip.Tip="Maximize"/>
+              <Button Classes="window-chrome close" Content="✕" Click="Close_Click"
+                      ToolTip.Tip="Close"/>
             </StackPanel>
           </Grid>
         </Border>
@@ -120,8 +125,8 @@
         </Border>
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
-      <Grid Grid.Row="0" ColumnDefinitions="*,260" ColumnSpacing="10">
-        <Border x:Name="ChatPanel" Classes="metal glass" Padding="8">
+      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,260">
+        <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
@@ -200,8 +205,15 @@
           </Grid>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="*,Auto" RowSpacing="10">
-          <Border x:Name="VictoriaBrowserPanel" Classes="metal glass" Padding="8">
+        <GridSplitter x:Name="PresenceColumnSplitter" Grid.Column="1" Width="4"
+                      ResizeDirection="Columns" ShowsPreview="False"
+                      Background="#33FFFFFF" MinWidth="4"
+                      ToolTip.Tip="Drag to resize chat vs Her browser"/>
+
+        <Grid x:Name="PresenceSideSplit" Grid.Column="2" MinWidth="200"
+              RowDefinitions="*,4,200">
+          <!-- row 2 height restored from LocalUiSettings; GridSplitter adjusts vs Her browser -->
+          <Border x:Name="VictoriaBrowserPanel" Classes="metal glass" Padding="8" MinHeight="120">
             <Grid RowDefinitions="Auto,*,Auto">
               <TextBlock Text="Her browser" FontWeight="SemiBold" Margin="0,0,0,6"/>
               <Border Grid.Row="1" Classes="carbon inset" ClipToBounds="True" MinHeight="90">
@@ -226,8 +238,14 @@
             </Grid>
           </Border>
 
-          <!-- PROP-4 sight: frame + stamp + folder only -->
-          <Border x:Name="ScreenPanel" Grid.Row="1" Classes="metal glass" Padding="8" Height="200">
+          <GridSplitter x:Name="PresenceRowSplitter" Grid.Row="1" Height="4"
+                        ResizeDirection="Rows" ShowsPreview="False"
+                        Background="#33FFFFFF" MinHeight="4"
+                        HorizontalAlignment="Stretch"
+                        ToolTip.Tip="Drag to resize Her browser vs What she saw"/>
+
+          <!-- PROP-4 sight: frame + stamp + folder only (PROP-12.1: height via splitter) -->
+          <Border x:Name="ScreenPanel" Grid.Row="2" Classes="metal glass" Padding="8" MinHeight="120">
             <Grid RowDefinitions="Auto,*,Auto">
               <DockPanel Margin="0,0,0,6">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
@@ -686,6 +704,24 @@
       </Border>
     </Grid>
       </DockPanel>
+
+      <!-- PROP-12.1: frameless edge/corner resize (BeginResizeDrag). Z-order above content rim. -->
+      <Border x:Name="ResizeWest" Width="6" HorizontalAlignment="Left" Background="Transparent"
+              Cursor="SizeWestEast" PointerPressed="ResizeEdge_PointerPressed" Tag="West"/>
+      <Border x:Name="ResizeEast" Width="6" HorizontalAlignment="Right" Background="Transparent"
+              Cursor="SizeWestEast" PointerPressed="ResizeEdge_PointerPressed" Tag="East"/>
+      <Border x:Name="ResizeNorth" Height="6" VerticalAlignment="Top" Background="Transparent"
+              Cursor="SizeNorthSouth" PointerPressed="ResizeEdge_PointerPressed" Tag="North"/>
+      <Border x:Name="ResizeSouth" Height="6" VerticalAlignment="Bottom" Background="Transparent"
+              Cursor="SizeNorthSouth" PointerPressed="ResizeEdge_PointerPressed" Tag="South"/>
+      <Border x:Name="ResizeNorthWest" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top"
+              Background="Transparent" Cursor="TopLeftCorner" PointerPressed="ResizeEdge_PointerPressed" Tag="NorthWest"/>
+      <Border x:Name="ResizeNorthEast" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top"
+              Background="Transparent" Cursor="TopRightCorner" PointerPressed="ResizeEdge_PointerPressed" Tag="NorthEast"/>
+      <Border x:Name="ResizeSouthWest" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+              Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="ResizeEdge_PointerPressed" Tag="SouthWest"/>
+      <Border x:Name="ResizeSouthEast" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+              Background="Transparent" Cursor="BottomRightCorner" PointerPressed="ResizeEdge_PointerPressed" Tag="SouthEast"/>
     </Grid>
   </Border>
   </Border>
