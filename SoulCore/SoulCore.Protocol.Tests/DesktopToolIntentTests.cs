@@ -32,6 +32,7 @@ public class DesktopToolIntentTests
     {
         Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("goal_complete=false", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("After EVERY browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.DoesNotContain("call desktop_screenshot first and click from the PNG", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("Pixel clicks are a FALLBACK", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }

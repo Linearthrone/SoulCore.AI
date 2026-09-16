@@ -102,7 +102,9 @@ public sealed class BrowserClickTextTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_click_text",
         Description:
-            "Click a control by visible text (Login, Sign in, a link). Prefer this over desktop_click pixel guesses.",
+            "Click a button/link by visible text (Login, Sign in, Next, Continue). Prefer this over pixel clicks. " +
+            "After click, ALWAYS call browser_snapshot — Success does not mean the next screen appeared " +
+            "(check page_changed / URL in the tool result).",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -145,7 +147,7 @@ public sealed class BrowserFillTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_fill",
         Description:
-            "Click a named input in guest Firefox and type into it (Email, Username, Search). " +
+            "Fill a named input in Victoria's Playwright Chromium (Email, Username, Search). " +
             "Do not type passwords or secrets unless the operator explicitly asked.",
         Parameters: Parameters);
 

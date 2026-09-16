@@ -224,31 +224,127 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         try
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
+            var label = text.Trim();
             var n = Math.Max(1, nth);
-            var role = page.GetByRole(AriaRole.Button, new() { Name = text.Trim() });
-            var count = await role.CountAsync().ConfigureAwait(false);
-            ILocator target;
-            if (count >= n)
-                target = role.Nth(n - 1);
-            else
+            var resolved = await ResolveClickableAsync(page, label, n).ConfigureAwait(false);
+            if (resolved is null)
             {
-                var byText = page.GetByText(text.Trim(), new() { Exact = false });
-                if (await byText.CountAsync().ConfigureAwait(false) < n)
-                    return new BrowserBridgeResult(false, $"no control matching '{text}' (nth={n}).", null);
-                target = byText.Nth(n - 1);
+                return new BrowserBridgeResult(
+                    false,
+                    $"no clickable control matching '{label}' (nth={n}). Call browser_snapshot to list buttons/links.",
+                    new { text = label, nth = n, action_ok = false, goal_complete = false, backend = BackendId });
             }
 
+            var (target, how) = resolved.Value;
+            var urlBefore = page.Url;
+            var titleBefore = await page.TitleAsync().ConfigureAwait(false);
+
+            await target.ScrollIntoViewIfNeededAsync(new() { Timeout = 5_000 }).ConfigureAwait(false);
             await target.ClickAsync(new LocatorClickOptions { Timeout = 15_000 }).ConfigureAwait(false);
-            await PublishFrameAsync(page, $"click_text '{text}'", ct).ConfigureAwait(false);
+
+            // SPA/nav may not fire; settle briefly then compare URL/title so we don't pretend the next screen arrived.
+            try
+            {
+                await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded, new() { Timeout = 5_000 })
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                // Click may open a dialog without navigation — still re-snapshot.
+            }
+
+            try
+            {
+                await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new() { Timeout = 3_000 })
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                // Long-polling pages never idle — ignore.
+            }
+
+            await page.WaitForTimeoutAsync(400).ConfigureAwait(false);
+
+            var urlAfter = page.Url;
+            var titleAfter = await page.TitleAsync().ConfigureAwait(false);
+            var pageChanged = !string.Equals(urlBefore, urlAfter, StringComparison.Ordinal)
+                || !string.Equals(titleBefore ?? "", titleAfter ?? "", StringComparison.Ordinal);
+
+            await PublishFrameAsync(page, $"click_text '{label}' via {how}", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
-                $"playwright clicked '{text}' (nth={n}). url={page.Url}. goal_complete=false until page postcondition.",
-                new { text, nth = n, url = page.Url, backend = BackendId, action_ok = true, goal_complete = false });
+                FormatClickTextResult(label, n, how, urlBefore, urlAfter, pageChanged),
+                new
+                {
+                    text = label,
+                    nth = n,
+                    matched_as = how,
+                    url_before = urlBefore,
+                    url = urlAfter,
+                    title = titleAfter,
+                    page_changed = pageChanged,
+                    backend = BackendId,
+                    action_ok = true,
+                    goal_complete = false
+                });
         }
         catch (Exception ex)
         {
             return Fail("click_text", ex);
         }
+    }
+
+    /// <summary>
+    /// Prefer real controls (button/link) over raw text nodes so clicks actually activate UI.
+    /// </summary>
+    internal static async Task<(ILocator Target, string How)?> ResolveClickableAsync(IPage page, string label, int nth)
+    {
+        var n = Math.Max(1, nth);
+        var roles = new[]
+        {
+            (AriaRole.Button, "button"),
+            (AriaRole.Link, "link"),
+            (AriaRole.Tab, "tab"),
+            (AriaRole.Menuitem, "menuitem"),
+        };
+
+        foreach (var (role, how) in roles)
+        {
+            var loc = page.GetByRole(role, new() { Name = label, Exact = false });
+            var count = await loc.CountAsync().ConfigureAwait(false);
+            if (count >= n)
+                return (loc.Nth(n - 1), how);
+        }
+
+        // Clickable elements only — bare GetByText used to hit headings/labels and "succeed" with no UI change.
+        var clickable = page.Locator("button, a, [role='button'], [role='link'], input[type='submit'], input[type='button'], summary")
+            .Filter(new() { HasTextString = label });
+        var clickableCount = await clickable.CountAsync().ConfigureAwait(false);
+        if (clickableCount >= n)
+            return (clickable.Nth(n - 1), "clickable");
+
+        return null;
+    }
+
+    public static string FormatClickTextResult(
+        string label,
+        int nth,
+        string how,
+        string urlBefore,
+        string urlAfter,
+        bool pageChanged)
+    {
+        if (pageChanged)
+        {
+            return
+                $"playwright clicked '{label}' (nth={nth}, as {how}). page changed {urlBefore} -> {urlAfter}. " +
+                "goal_complete=false. Call browser_snapshot now to confirm the next screen before telling Kurt you are waiting.";
+        }
+
+        return
+            $"playwright clicked '{label}' (nth={nth}, as {how}) but URL/title did NOT change ({urlAfter}). " +
+            "Do NOT claim the next screen appeared or that you are waiting on a popup — call browser_snapshot now. " +
+            "If the control is still there, try a different label, nth=2, or browser_fill first. goal_complete=false.";
     }
 
     public async Task<BrowserBridgeResult> FillAsync(string field, string value, CancellationToken ct = default)
