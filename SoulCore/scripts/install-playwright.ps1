@@ -1,7 +1,7 @@
 # Install Playwright Chromium for SoulCore Host (BED-195 / OPS-198).
 # Soft-fail friendly: ALLSTART calls this and continues if it fails.
 #
-# Usage (Windows PowerShell 5.1 is enough — PowerShell 7 / pwsh NOT required):
+# Usage (Windows PowerShell 5.1 is enough - PowerShell 7 / pwsh NOT required):
 #   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1
 #   .\SoulCore\scripts\install-playwright.ps1
 #   .\SoulCore\scripts\install-playwright.ps1 -VerifyOnly
@@ -50,7 +50,7 @@ if ($VerifyOnly) {
     exit 1
 }
 
-# Fast path: already installed — do not rebuild or re-download (keeps ALLSTART under timeout).
+# Fast path: already installed - do not rebuild or re-download.
 if (Test-ChromiumInstalled) {
     Write-Host "=== install-playwright: Chromium already present ==="
     [void](Show-ChromiumStatus)
@@ -61,7 +61,7 @@ if (Test-ChromiumInstalled) {
 Write-Host "=== install-playwright: build Host (Release) so playwright.ps1 matches runtime ==="
 dotnet build $HostProj -c Release
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "dotnet build Host failed (exit $LASTEXITCODE) — trying Inference restore/build"
+    Write-Warning "dotnet build Host failed (exit $LASTEXITCODE) - trying Inference restore/build"
     dotnet restore $InferenceProj
     dotnet build $InferenceProj -c Release
     if ($LASTEXITCODE -ne 0) {
@@ -71,7 +71,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Prefer the Host Release CLI (same bits the running Host uses). Never pick a random
-# first hit under SoulCore/ — that used to grab Debug/Hermes copies unpredictably.
+# first hit under SoulCore/ - that used to grab Debug/Hermes copies unpredictably.
 $candidates = @(
     (Join-Path $RepoRoot "SoulCore\SoulCore.Host\bin\Release\net8.0\playwright.ps1"),
     (Join-Path $RepoRoot "SoulCore\SoulCore.Inference\bin\Release\net8.0\playwright.ps1"),
@@ -106,13 +106,13 @@ if (-not $playwrightCli) {
 
 Write-Host "Using CLI: $playwrightCli"
 if ($SkipBrowserDownload) {
-    Write-Host "SkipBrowserDownload set — package/build only."
+    Write-Host "SkipBrowserDownload set - package/build only."
     exit 0
 }
 
 Write-Host "=== install-playwright: download Chromium (this can take several minutes) ==="
 Write-Host "Target cache: $MsPlaywrightDir"
-Write-Host "Do NOT cancel — ALLSTART used to kill this at 3 minutes; leave it running."
+Write-Host "Do NOT cancel - ALLSTART used to kill this at 3 minutes; leave it running."
 # Invoke via powershell.exe so Windows PowerShell 5.1 captures a real process exit code
 # (nested `exit` from `& script.ps1` is unreliable on PS 5.1).
 # Pass install args AFTER -File so they land in $args for Microsoft.Playwright.Program.Main.
