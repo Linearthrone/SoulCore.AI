@@ -227,6 +227,17 @@ public sealed class OllamaInferenceClient : IInferenceClient
         {
             var lastUser = GetLastUserContent(ollamaMessages);
             var pureOpen = DesktopToolIntent.IsPureOpenPrompt(lastUser);
+            // Complex "open URL and …" prompts: do NOT pre-consume ForceTool.
+            // Keep exclusive force + companions (browser_health/snapshot) so the
+            // model can health-check then navigate without a refused tool stall.
+            if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
+                && !pureOpen)
+            {
+                _logger.LogInformation(
+                    "Ollama ForceTool browser_navigate deferred pre-dispatch (follow-on actions in prompt).");
+            }
+            else
+            {
             DesktopToolIntent.TryResolveOpenAppLaunch(lastUser, out var openApp, out var openArgs);
             DesktopToolIntent.TryExtractNavigateUrl(lastUser, out var navigateUrl);
             if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
@@ -289,6 +300,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
             _logger.LogInformation(
                 "Ollama ForceTool {Tool} pre-dispatched; continuing tool-loop for follow-on actions.",
                 forceToolName);
+            }
         }
 
         var loopSw = Stopwatch.StartNew();
@@ -1125,9 +1137,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// </summary>
     private static bool IsForceBootstrapTool(string? forceToolName, string toolName) =>
         !string.IsNullOrWhiteSpace(forceToolName)
-        && ((string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
+        && ((string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal)
+             && (string.Equals(toolName, "browser_health", StringComparison.Ordinal)
+                 || string.Equals(toolName, "browser_snapshot", StringComparison.Ordinal)
+                 || string.Equals(toolName, "browser_tabs", StringComparison.Ordinal)))
+            || (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal)
              && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
                  || string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
+                 || string.Equals(toolName, "browser_health", StringComparison.Ordinal)
                  || string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal)))
             || (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal)
                 && (string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal)
@@ -1158,11 +1175,20 @@ public sealed class OllamaInferenceClient : IInferenceClient
 
     private static IEnumerable<string> ForceToolCompanions(string forceToolName)
     {
-        if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
+        if (string.Equals(forceToolName, "browser_navigate", StringComparison.Ordinal))
+        {
+            // Health/snapshot before navigate is normal model hygiene; do not
+            // exclusivity-refuse them (PM-01 2026-09-16 CUA/Playwright unblock).
+            yield return "browser_health";
+            yield return "browser_snapshot";
+            yield return "browser_tabs";
+        }
+        else if (string.Equals(forceToolName, "browser_snapshot", StringComparison.Ordinal))
         {
             yield return "desktop_screenshot";
             yield return "desktop_open_app";
             yield return "browser_navigate";
+            yield return "browser_health";
         }
         else if (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal))
         {

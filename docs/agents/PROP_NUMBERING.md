@@ -48,6 +48,7 @@ Reconciled against `main` on **2026-09-15**. `Pass` = accepted **and** the code 
 | PROP-9-host-di-composition-modules | Extract Program.cs DI into Add* modules | **Pass** — 9.1 Accepted 2026-09-05 (`cursor/prop9-di-modules-8a1f`); on `main` | — (report-only) |
 | PROP-10-inference-clients-tools-split | Inference Clients vs Tools boundary | **Pass** — 10.1 Accepted 2026-09-05; landed on `main` 2026-09-14 via PR #86 (`cursor/prop10-inference-split-land-9d6e`; supersedes orphan `cursor/prop10-inference-split-8a1f`) | — (report-only) |
 | PROP-11-memory-store-repository-split | Split SqliteMemoryStore into repos (one DB file) | **Pass** — 11.1 Accepted 2026-09-05 (`cursor/prop11-memory-repos-8a1f`); on `main` | — (report-only) |
+| PROP-12-cua-playwright-resolution | Lock web=Playwright / desktop=CUA+VM; ForceTool health companion | **Decided 2026-09-16** — emergency ship; see `docs/agents/reports/PROP-12-PM01-cua-playwright-decision.md` | emergency |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -58,7 +59,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **12**.
+Next free `N`: **13**.
 
 ## Open items (not on `main`)
 

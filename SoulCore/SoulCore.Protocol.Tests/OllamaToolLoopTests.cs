@@ -494,6 +494,20 @@ public class OllamaToolLoopTests
             """{"type":"object","properties":{"query":{"type":"string"}},"additionalProperties":true}""")
         .RootElement.Clone());
 
+    private static ToolDefinition BrowserNavigateToolDef() => new(
+        "browser_navigate",
+        "Navigate Victoria's Playwright Chromium to a URL.",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{"url":{"type":"string"}},"additionalProperties":true}""")
+        .RootElement.Clone());
+
+    private static ToolDefinition BrowserHealthToolDef() => new(
+        "browser_health",
+        "Check Victoria Playwright browser health.",
+        JsonDocument.Parse(
+            """{"type":"object","properties":{},"additionalProperties":true}""")
+        .RootElement.Clone());
+
     private static ToolDefinition DesktopScreenshotToolDef() => new(
         "desktop_screenshot",
         "Capture the desktop / VM framebuffer as a PNG.",
@@ -556,6 +570,55 @@ public class OllamaToolLoopTests
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[0].Path, StringComparison.Ordinal);
         Assert.Contains("v1/chat/completions", handler.CapturedRequests[1].Path, StringComparison.Ordinal);
         Assert.Contains("api/chat", handler.CapturedRequests[2].Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForceToolName_BrowserNavigate_AllowsBootstrapBrowserHealth()
+    {
+        // Model often calls browser_health before browser_navigate. Under exclusive
+        // ForceTool=browser_navigate that must execute, not refuse (PM-01 2026-09-16).
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "browser_health", arguments = new { } }
+                        }
+                    }),
+                OpenAiChatResponseJson(
+                    content: "",
+                    toolCalls: new[]
+                    {
+                        new
+                        {
+                            function = new { name = "browser_navigate", arguments = new { url = "https://example.com" } }
+                        }
+                    }),
+                ChatResponseJson(content: "opened example.com", toolCalls: null)
+            });
+
+        var registry = new ScriptedRegistry(
+            ("browser_health", _ => new ToolResult(true, "playwright ok", null)),
+            ("browser_navigate", _ => new ToolResult(true, "navigated example.com goal_complete=false", null)));
+
+        var client = MakeClient(handler, registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new() { Role = "user", Content = "open https://example.com and confirm browser health first" }
+            },
+            new[] { BrowserHealthToolDef(), BrowserNavigateToolDef(), EchoToolDef() },
+            registry,
+            loopOptions: new ToolLoopOptions { ForceToolName = "browser_navigate" });
+
+        Assert.Equal("opened example.com", result);
+        Assert.Contains(registry.Calls, c => c.Name == "browser_health");
+        Assert.Contains(registry.Calls, c => c.Name == "browser_navigate");
     }
 
     [Fact]
