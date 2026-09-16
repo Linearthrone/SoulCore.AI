@@ -99,6 +99,7 @@ public partial class MainWindow : Window
         TranscriptList.ItemsSource = _messages;
         EndpointText.Text = ConnectionDefaults.DisplayEndpoint;
         DisplayNameBox.Text = _uiSettings.DisplayName;
+        InitLayoutChrome();
 
         _okBrush = Res("OkBrush");
         _warnBrush = Res("WarnBrush");
@@ -255,8 +256,12 @@ public partial class MainWindow : Window
 
     private void TitleDragRegion_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+        // Frameless: drag to move when restored. When maximized, ignore (use Restore / double-click).
+        if (WindowState == WindowState.Maximized)
+            return;
+        BeginMoveDrag(e);
     }
 
     private void Minimize_Click(object? sender, RoutedEventArgs e) =>
