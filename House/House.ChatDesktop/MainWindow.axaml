@@ -207,7 +207,7 @@
               <Border Grid.Row="1" Classes="carbon inset" ClipToBounds="True" MinHeight="90">
                 <Grid>
                   <TextBlock x:Name="VictoriaBrowserEmptyText"
-                             Text="No Playwright frame yet"
+                             Text="No Playwright frame yet — clicks show a pink crosshair here"
                              Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
                              Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                   <Image x:Name="VictoriaBrowserImage" Stretch="Uniform" IsVisible="False"/>

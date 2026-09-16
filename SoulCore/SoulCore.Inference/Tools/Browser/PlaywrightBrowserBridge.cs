@@ -77,8 +77,8 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         try
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
-            await page.Mouse.ClickAsync(x, y).ConfigureAwait(false);
-            await PublishFrameAsync(page, $"click ({x},{y})", ct).ConfigureAwait(false);
+            await ClickWithVisibleCursorAsync(page, x, y, ct).ConfigureAwait(false);
+            await PublishFrameAsync(page, $"click ({x},{y})", ct, clickX: x, clickY: y).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright click at ({x},{y}). url={page.Url}",
@@ -240,7 +240,20 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var titleBefore = await page.TitleAsync().ConfigureAwait(false);
 
             await target.ScrollIntoViewIfNeededAsync(new() { Timeout = 5_000 }).ConfigureAwait(false);
-            await target.ClickAsync(new LocatorClickOptions { Timeout = 15_000 }).ConfigureAwait(false);
+            var box = await target.BoundingBoxAsync().ConfigureAwait(false);
+            int? clickX = null;
+            int? clickY = null;
+            if (box is not null)
+            {
+                clickX = (int)Math.Round(box.X + box.Width / 2);
+                clickY = (int)Math.Round(box.Y + box.Height / 2);
+                await ClickWithVisibleCursorAsync(page, clickX.Value, clickY.Value, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await EnsureClickCursorAsync(page).ConfigureAwait(false);
+                await target.ClickAsync(new LocatorClickOptions { Timeout = 15_000 }).ConfigureAwait(false);
+            }
 
             // SPA/nav may not fire; settle briefly then compare URL/title so we don't pretend the next screen arrived.
             try
@@ -270,7 +283,10 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var pageChanged = !string.Equals(urlBefore, urlAfter, StringComparison.Ordinal)
                 || !string.Equals(titleBefore ?? "", titleAfter ?? "", StringComparison.Ordinal);
 
-            await PublishFrameAsync(page, $"click_text '{label}' via {how}", ct).ConfigureAwait(false);
+            var action = clickX is int cx && clickY is int cy
+                ? $"click_text '{label}' via {how} @({cx},{cy})"
+                : $"click_text '{label}' via {how}";
+            await PublishFrameAsync(page, action, ct, clickX, clickY).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 FormatClickTextResult(label, n, how, urlBefore, urlAfter, pageChanged),
@@ -279,6 +295,8 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                     text = label,
                     nth = n,
                     matched_as = how,
+                    x = clickX,
+                    y = clickY,
                     url_before = urlBefore,
                     url = urlAfter,
                     title = titleAfter,
@@ -451,7 +469,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         }
     }
 
-    private async Task PublishFrameAsync(IPage page, string action, CancellationToken ct)
+    private async Task PublishFrameAsync(IPage page, string action, CancellationToken ct, int? clickX = null, int? clickY = null)
     {
         if (_view is null)
             return;
@@ -459,6 +477,8 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var bytes = await page.ScreenshotAsync(new PageScreenshotOptions { Type = ScreenshotType.Jpeg, Quality = 55 })
                 .ConfigureAwait(false);
+            if (clickX is int x && clickY is int y)
+                bytes = PlaywrightClickCursor.BurnInMarker(bytes, x, y);
             var title = await page.TitleAsync().ConfigureAwait(false);
             _view.Publish(bytes, page.Url, title, action);
         }
@@ -466,6 +486,40 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             _log?.LogDebug(ex, "Playwright frame publish failed");
         }
+    }
+
+    private async Task EnsureClickCursorAsync(IPage page)
+    {
+        try
+        {
+            await page.EvaluateAsync(PlaywrightClickCursor.InitScript).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "Playwright click cursor inject failed");
+        }
+    }
+
+    private async Task ClickWithVisibleCursorAsync(IPage page, int x, int y, CancellationToken ct)
+    {
+        _ = ct;
+        await EnsureClickCursorAsync(page).ConfigureAwait(false);
+        await page.Mouse.MoveAsync(x, y).ConfigureAwait(false);
+        try
+        {
+            await page.EvaluateAsync(
+                @"([x, y]) => { if (window.__scShowClick) window.__scShowClick(x, y); }",
+                new[] { x, y }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "Playwright click cursor move failed");
+        }
+
+        // Brief pause so Presence / headed window can show the aim point before the click.
+        await page.WaitForTimeoutAsync(140).ConfigureAwait(false);
+        await page.Mouse.ClickAsync(x, y).ConfigureAwait(false);
+        await page.WaitForTimeoutAsync(80).ConfigureAwait(false);
     }
 
     private async Task<IPage> EnsurePageAsync(CancellationToken ct)
@@ -508,7 +562,10 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                 Args = new[] { "--disable-blink-features=AutomationControlled" }
             }).ConfigureAwait(false);
 
+            await _context.AddInitScriptAsync(PlaywrightClickCursor.InitScript).ConfigureAwait(false);
+
             _page = _context.Pages.Count > 0 ? _context.Pages[0] : await _context.NewPageAsync().ConfigureAwait(false);
+            await EnsureClickCursorAsync(_page).ConfigureAwait(false);
             return _page;
         }
         finally
