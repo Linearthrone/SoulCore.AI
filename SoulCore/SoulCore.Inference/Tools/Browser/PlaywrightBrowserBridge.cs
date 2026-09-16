@@ -192,7 +192,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         try
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
-            // Prefer AriaSnapshot (string) — Accessibility.SnapshotAsync is deprecated.
+            // Prefer AriaSnapshot (string) - Accessibility.SnapshotAsync is deprecated.
             var raw = await page.Locator("body").AriaSnapshotAsync().ConfigureAwait(false);
             var text = FormatA11yText(raw, query);
             await PublishFrameAsync(page, "snapshot", ct).ConfigureAwait(false);
@@ -440,7 +440,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                 $"Victoria's browser is not set up yet ({op}). " +
                 "Kurt: from the Soul_Core repo root run " +
                 "`powershell -NoProfile -ExecutionPolicy Bypass -File .\\SoulCore\\scripts\\install-playwright.ps1` " +
-                "and wait until it prints FOUND chrome.exe (first download can take 5–10 minutes — do not cancel), " +
+                "and wait until it prints FOUND chrome.exe (first download can take 5-10 minutes - do not cancel), " +
                 "then `.\\ALLSTART.ps1 -RestartHost`. " +
                 "Chromium binaries go to %LOCALAPPDATA%\\ms-playwright\\ " +
                 "(Victoria's profile is separate: %LOCALAPPDATA%\\SoulCore\\victoria-browser). " +

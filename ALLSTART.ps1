@@ -13,6 +13,7 @@
   .\ALLSTART.ps1
   .\ALLSTART.ps1 -SkipPreflight
   .\ALLSTART.ps1 -SkipVoice
+  .\ALLSTART.ps1 -SkipPlaywrightInstall
   .\ALLSTART.ps1 -Configuration Debug
   .\ALLSTART.ps1 -RestartHost
 #>
@@ -33,7 +34,9 @@ param(
     [int]$VoiceTimeoutSec = 45,
     [int]$BrowserBridgeTimeoutSec = 45,
     # Kill existing local Host and start fresh (reloads SoulCore/.env guest password).
-    [switch]$RestartHost
+    [switch]$RestartHost,
+    # Skip the quick Playwright Chromium verify (OPS-198). Full install is never run from ALLSTART.
+    [switch]$SkipPlaywrightInstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -333,12 +336,13 @@ $env:HOUSE_SOULCORE_HOST = "127.0.0.1"
 $env:HOUSE_SOULCORE_PORT = "$chosenPort"
 Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
 
-# OPS-198: ensure Playwright Chromium for BrowserBackend=playwright (soft-fail Host start,
-# but print a loud fix line so Kurt/Victoria know browser_* will fail until installed).
-# First download often exceeds 3 minutes — verify quickly, then allow up to 10 minutes to install.
+# OPS-198: quick Playwright Chromium check only (soft-fail). Never download browsers here -
+# a multi-minute install inside ALLSTART blocks Host/GUI startup. Install once separately.
 $InstallPlaywright = Join-Path $RepoRoot "SoulCore\scripts\install-playwright.ps1"
-if (Test-Path -LiteralPath $InstallPlaywright) {
-    Write-Host "=== ALLSTART: Playwright Chromium (OPS-198, soft-fail) ==="
+if ($SkipPlaywrightInstall) {
+    Write-Host "=== ALLSTART: Playwright verify skipped (-SkipPlaywrightInstall) ==="
+} elseif (Test-Path -LiteralPath $InstallPlaywright) {
+    Write-Host "=== ALLSTART: Playwright Chromium verify (OPS-198, soft-fail) ==="
     try {
         $verifyArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright,"-VerifyOnly")
         $verifyResult = Invoke-ScriptWithTimeout `
@@ -349,32 +353,17 @@ if (Test-Path -LiteralPath $InstallPlaywright) {
         if (-not $verifyResult.TimedOut -and $verifyResult.ExitCode -eq 0) {
             Write-Host "Playwright Chromium OK (binaries under %LOCALAPPDATA%\ms-playwright)"
         } else {
-            Write-Host "Chromium missing or verify inconclusive — running full install (up to 10 min) ..."
-            $pwArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$InstallPlaywright)
-            $pwResult = Invoke-ScriptWithTimeout `
-                -Label "install-playwright" `
-                -ArgumentList $pwArgs `
-                -WorkingDirectory $RepoRoot `
-                -TimeoutSec 600
-            if ($pwResult.TimedOut) {
-                Write-Warning "install-playwright timed out after 10 min - continuing (browser_* may fail until Chromium is installed)"
-                Write-Host ">>> FIX: open a NEW PowerShell at the repo root and let this finish (no timeout):" -ForegroundColor Yellow
-                Write-Host ">>>   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
-                Write-Host ">>> Wait for FOUND chrome.exe, then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
-            } elseif ($pwResult.ExitCode -ne 0) {
-                Write-Warning "install-playwright exited $($pwResult.ExitCode) - continuing (set BrowserBackend=native to use Chrome extension)"
-                Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
-                Write-Host ">>> Wait for FOUND chrome.exe, then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
-            } else {
-                Write-Host "Playwright Chromium OK (binaries under %LOCALAPPDATA%\ms-playwright)"
-            }
+            Write-Warning "Playwright Chromium not ready - Host will start anyway; browser_* will fail until installed"
+            Write-Host ">>> FIX (run once, wait for FOUND chrome.exe - can take several minutes):" -ForegroundColor Yellow
+            Write-Host ">>>   powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+            Write-Host ">>> Then: .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
         }
     } catch {
-        Write-Warning "install-playwright failed: $($_.Exception.Message) - continuing"
-        Write-Host ">>> FIX Victoria's browser: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
+        Write-Warning "install-playwright verify failed: $($_.Exception.Message) - continuing"
+        Write-Host ">>> FIX: powershell -NoProfile -ExecutionPolicy Bypass -File .\SoulCore\scripts\install-playwright.ps1" -ForegroundColor Yellow
     }
 } else {
-    Write-Warning "install-playwright.ps1 missing - skip Playwright bootstrap"
+    Write-Warning "install-playwright.ps1 missing - skip Playwright verify"
 }
 
 # --- Tailscale serve: enable proxies now that Host is healthy ---
