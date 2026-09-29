@@ -1,4 +1,4 @@
-# PROP-4.2 — pack House Victoria Presence as a Velopack Windows installer.
+# PROP-4.2 - pack House Victoria Presence as a Velopack Windows installer.
 #
 # Prerequisites (Windows):
 #   dotnet tool install -g vpk
@@ -37,14 +37,14 @@ $publishDir = Join-Path $repo 'House\artifacts\presence-publish'
 $releaseDir = Join-Path $repo 'House\artifacts\presence-releases'
 $ico = Join-Path $repo 'House\House.ChatDesktop\Assets\house-victoria.ico'
 
-Write-Host "Publishing Presence $Version …"
+Write-Host "Publishing Presence $Version ..."
 if (Test-Path $publishDir) { Remove-Item -Recurse -Force $publishDir }
 dotnet publish $csproj -c Release -r win-x64 --self-contained true -o $publishDir /p:Version=$Version /p:InformationalVersion=$Version
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
 
 $vpk = Get-Command vpk -ErrorAction SilentlyContinue
 if (-not $vpk) {
-  Write-Host 'Installing vpk global tool…'
+  Write-Host 'Installing vpk global tool...'
   dotnet tool install -g vpk
   $vpk = Get-Command vpk -ErrorAction SilentlyContinue
 }
@@ -71,5 +71,5 @@ if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed' }
 
 Write-Host ''
 Write-Host "Done. Installer folder: $releaseDir"
-Write-Host 'Run Setup.exe on the target PC. Then Presence Settings → Updates (or title Update) to check for newer releases.'
+Write-Host 'Run Setup.exe on the target PC. Then Presence Settings > Updates (or title Update) to check for newer releases.'
 Write-Host 'Publish tip: attach the release files to a GitHub Release so GithubSource can find them.'
