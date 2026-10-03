@@ -538,7 +538,10 @@
                 <CheckBox x:Name="ToolsAllowComputerControlCheck" Content="Allow computer control (click / type / key)"
                           IsChecked="True" FontWeight="SemiBold" Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsSoftCursorRestoreCheck" Content="Agent cursor — don't move my mouse"
-                          IsChecked="True" Margin="0,0,0,16" Click="ToolsAccessToggle_Click"/>
+                          IsChecked="True" Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
+                <CheckBox x:Name="ToolsVmEmbedPaneCheck" Content="Embed VirtualBox (victoria-sandbox) in Her screen"
+                          IsChecked="True" FontWeight="SemiBold" Margin="0,0,0,16" Click="ToolsAccessToggle_Click"
+                          ToolTip.Tip="SetParent the running VM window into Her screen. Keep victoria-sandbox visible (not minimized)."/>
                 <TextBlock Text="Trading (MT4)" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <CheckBox x:Name="ToolsAllowMt4ReadCheck" Content="Allow MT4 read (status, symbols, positions)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>

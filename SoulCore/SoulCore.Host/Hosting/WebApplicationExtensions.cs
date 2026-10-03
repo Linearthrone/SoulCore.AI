@@ -242,6 +242,8 @@ internal static class WebApplicationExtensions
                 access.SetAllowComputerControl(control);
             if (ReadBool(root, "softCursorRestore") is { } soft)
                 access.SetSoftCursorRestore(soft);
+            if (ReadBool(root, "vmEmbedPane") is { } vmEmbed)
+                access.SetVmEmbedPane(vmEmbed);
             if (ReadBool(root, "allowMt4Read") is { } mt4Read)
                 access.SetAllowMt4Read(mt4Read);
             if (ReadBool(root, "allowMt4Trade") is { } mt4Trade)
@@ -462,12 +464,15 @@ internal static class WebApplicationExtensions
         });
 
         // FED-196: near-live Victoria screen (Playwright Chromium or VirtualBox guest / HWND embed).
-        app.MapGet("/browser/view", (IVictoriaBrowserViewHub view, IOptions<ToolsOptions> tools) =>
+        app.MapGet("/browser/view", (IVictoriaBrowserViewHub view, IOptions<ToolsOptions> tools, IToolsAccessSettings access) =>
         {
             var snap = view.GetSnapshot();
             var opts = tools.Value;
-            var embed = opts.VmEmbedPane || opts.PlaywrightEmbedPane;
-            var embedSurface = opts.VmEmbedPane ? "vm" : opts.PlaywrightEmbedPane ? "playwright" : "none";
+            // Session VmEmbedPane (Presence Settings) wins over appsettings seed.
+            var vmEmbed = access.VmEmbedPane;
+            var playwrightEmbed = !vmEmbed && opts.PlaywrightEmbedPane;
+            var embed = vmEmbed || playwrightEmbed;
+            var embedSurface = vmEmbed ? "vm" : playwrightEmbed ? "playwright" : "none";
             var softCursor = VictoriaBrowserViewHub.WantsPresenceSoftCursor(snap.Backend, embedSurface);
             return Results.Json(new
             {
@@ -487,7 +492,7 @@ internal static class WebApplicationExtensions
                 cursorAt = softCursor ? snap.CursorAt : null,
                 frameWidth = snap.FrameWidth,
                 frameHeight = snap.FrameHeight,
-                note = opts.VmEmbedPane
+                note = vmEmbed
                     ? "Her screen prefers VirtualBox HWND via GET /browser/embed (surface=vm). Soft cursor pink→teal on desktop_click/move. JPEG is fallback."
                     : snap.Backend == VictoriaBrowserViewHub.BackendVboxGuest
                         ? "VirtualBox guest framebuffer (victoria-sandbox). Hover coords = guest origin 0,0 for desktop_click. In-memory only."
@@ -512,7 +517,9 @@ internal static class WebApplicationExtensions
             CancellationToken ct) =>
         {
             var opts = tools.Value;
-            if (!opts.VmEmbedPane && !opts.PlaywrightEmbedPane)
+            var vmEmbed = access.VmEmbedPane;
+            var playwrightEmbed = !vmEmbed && opts.PlaywrightEmbedPane;
+            if (!vmEmbed && !playwrightEmbed)
             {
                 return Results.Json(new
                 {
@@ -521,7 +528,7 @@ internal static class WebApplicationExtensions
                     hwnd = 0,
                     pid = 0,
                     title = (string?)null,
-                    detail = "Neither VmEmbedPane nor PlaywrightEmbedPane is on. Enable Tools:VmEmbedPane (VirtualBox) or Tools:PlaywrightEmbedPane, then restart Host."
+                    detail = "VM embed is off. In Presence: Settings → Tools & Access → Embed VirtualBox in Her screen."
                 });
             }
 
@@ -530,7 +537,7 @@ internal static class WebApplicationExtensions
                 return Results.Json(new
                 {
                     mode = "fallback",
-                    surface = opts.VmEmbedPane ? "vm" : "playwright",
+                    surface = vmEmbed ? "vm" : "playwright",
                     hwnd = 0,
                     pid = 0,
                     title = (string?)null,
@@ -543,7 +550,7 @@ internal static class WebApplicationExtensions
                 return Results.Json(new
                 {
                     mode = "capture_off",
-                    surface = opts.VmEmbedPane ? "vm" : "playwright",
+                    surface = vmEmbed ? "vm" : "playwright",
                     hwnd = 0,
                     pid = 0,
                     title = (string?)null,
@@ -552,7 +559,7 @@ internal static class WebApplicationExtensions
             }
 
             // VM embed wins when enabled — Her screen shows victoria-sandbox VirtualBox window.
-            if (opts.VmEmbedPane)
+            if (vmEmbed)
             {
                 var titleFilter = (opts.DesktopTargetWindowTitle ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(titleFilter))
@@ -649,6 +656,7 @@ internal static class WebApplicationExtensions
             allowBrowserCapture = access.AllowBrowserCapture,
             allowComputerControl = access.AllowComputerControl,
             softCursorRestore = access.SoftCursorRestore,
+            vmEmbedPane = access.VmEmbedPane,
             allowMt4Read = access.AllowMt4Read,
             allowMt4Trade = access.AllowMt4Trade,
             allowEmailRead = access.AllowEmailRead,
@@ -661,7 +669,7 @@ internal static class WebApplicationExtensions
             cuaDriverAvailable = cuaPath is not null,
             cuaDriverPath = cuaPath,
             scope = "session",
-            note = "Session gates until Host restart. Seeded from Tools in appsettings.json (desktop/browser capture + computer control default on; email read/send/delete default off). SoftCursorRestore + DesktopBackend=cua = LLMOD-style agent cursor (blue overlay; your mouse stays put). Non-empty DesktopTargetWindowTitle hard-scopes desktop_* to that VM/window title substring. Email accounts bind from Email:Accounts (env passwords only)."
+            note = "Session gates until Host restart. Seeded from Tools in appsettings.json. Presence Settings → Tools & Access → Embed VirtualBox in Her screen toggles VmEmbedPane (victoria-sandbox HWND)."
         };
     }
 
