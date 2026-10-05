@@ -80,7 +80,7 @@ Next free `N`: **16**.
 | **PROP-3** | — | Parked until SMS QA Pass |
 | **PROP-13** | BED-01 | Ticketed 2026-09-29. Avenue A: 13.1 intent+URL, 13.2 reply firewall, 13.3 capture gate + private-host reject. |
 | **PROP-14** | BED/FED | **In progress** — 14.1 cursor + 14.2 HWND embed on `cursor/prop14-cursor-hwnd-9531`; Windows Home PC smoke still needed |
-| **PROP-15** | TT-01 | Unexecuted. Persona platform fork. Lock Q1–Q5 before send-to-PM. |
+| **PROP-15** | TT-01 | Unexecuted, Kurt-locked. CreatorEdition fork; single-active; total quarantine; in-app wizard; chat+memory+charter+SoulLoop+VM/tooling. Ready for send-to-PM. |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.
