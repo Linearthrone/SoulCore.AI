@@ -54,7 +54,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-12-cua-playwright-resolution | Lock web=Playwright / desktop=CUA+VM; ForceTool health companion | **Decided 2026-09-16** — emergency ship; see `docs/agents/reports/PROP-12-PM01-cua-playwright-decision.md` | emergency |
 | PROP-13-playwright-frame-not-leaked-text | Open Playwright to a URL and show the frame; chat must not echo `<execute_tool>` | **BED Pass** 2026-09-29 — Avenue A 13.1–13.3; QA Windows smoke pending | 13.1–13.3 BED |
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
-| PROP-15-persona-creation-platform | Fork-ready persona platform — templates, trait scales, per-persona brains; Victoria strip | **Unexecuted** — parked pending Kurt Q1–Q5 (fork artifact, concurrency, memory, wizard, MVP scope) | 15.0–15.6 suggested |
+| PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Unexecuted** — Kurt-locked 2026-10-05; ready for send-to-PM; repo `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
