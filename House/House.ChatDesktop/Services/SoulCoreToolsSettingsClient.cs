@@ -12,6 +12,7 @@ public sealed class ToolsAccessSnapshot
     public bool AllowBrowserCapture { get; init; }
     public bool AllowComputerControl { get; init; }
     public bool SoftCursorRestore { get; init; } = true;
+    public bool VmEmbedPane { get; init; } = true;
     public bool AllowMt4Read { get; init; }
     public bool AllowMt4Trade { get; init; }
     public bool AllowEmailRead { get; init; }
@@ -83,6 +84,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         bool? allowBrowserCapture = null,
         bool? allowComputerControl = null,
         bool? softCursorRestore = null,
+        bool? vmEmbedPane = null,
         bool? allowMt4Read = null,
         bool? allowMt4Trade = null,
         bool? allowEmailRead = null,
@@ -106,6 +108,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
             if (allowBrowserCapture is { } b) doc["allowBrowserCapture"] = b;
             if (allowComputerControl is { } c) doc["allowComputerControl"] = c;
             if (softCursorRestore is { } soft) doc["softCursorRestore"] = soft;
+            if (vmEmbedPane is { } vm) doc["vmEmbedPane"] = vm;
             if (allowMt4Read is { } r) doc["allowMt4Read"] = r;
             if (allowMt4Trade is { } t) doc["allowMt4Trade"] = t;
             if (allowEmailRead is { } er) doc["allowEmailRead"] = er;
@@ -142,6 +145,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         AllowBrowserCapture = dto?.AllowBrowserCapture ?? false,
         AllowComputerControl = dto?.AllowComputerControl ?? false,
         SoftCursorRestore = dto?.SoftCursorRestore ?? true,
+        VmEmbedPane = dto?.VmEmbedPane ?? true,
         AllowMt4Read = dto?.AllowMt4Read ?? false,
         AllowMt4Trade = dto?.AllowMt4Trade ?? false,
         AllowEmailRead = dto?.AllowEmailRead ?? false,
@@ -171,6 +175,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
 
         [JsonPropertyName("softCursorRestore")]
         public bool SoftCursorRestore { get; set; }
+
+        [JsonPropertyName("vmEmbedPane")]
+        public bool VmEmbedPane { get; set; }
 
         [JsonPropertyName("allowMt4Read")]
         public bool AllowMt4Read { get; set; }

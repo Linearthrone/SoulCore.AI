@@ -162,12 +162,14 @@ if ($RestartHost) {
 if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
     Write-Host "SoulCore already listening on ${BindAddress}:${Port}"
     Write-Host "Health: $HealthUrl"
-    Write-Host "Tip: after changing SoulCore/.env or guest tools, re-run with -RestartHost so the process reloads secrets."
+    Write-Host "Tip: after changing SoulCore/.env or source, re-run with -RestartHost (rebuilds Host) so the process reloads."
     exit 0
 }
 
 $dll = Join-Path $SoulCoreRoot "SoulCore.Host\bin\Debug\net8.0\SoulCore.Host.dll"
-$needBuild = $ForceRebuild -or -not (Test-Path -LiteralPath $dll)
+# -RestartHost alone used to reuse a stale DLL (no embedPane / wrong BrowserBackend).
+# Always rebuild when restarting or when the DLL is missing.
+$needBuild = $ForceRebuild -or $RestartHost -or -not (Test-Path -LiteralPath $dll)
 
 if ($needBuild) {
     Write-Host "Building SoulCore..."

@@ -19,6 +19,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     private int _allowEmailSend;
     private int _allowEmailDelete;
     private int _softCursorRestore;
+    private int _vmEmbedPane;
 
     public ComputerControlGate(IOptions<ToolsOptions> options)
     {
@@ -33,6 +34,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowEmailSend = opts.AllowEmailSend ? 1 : 0;
         _allowEmailDelete = opts.AllowEmailDelete ? 1 : 0;
         _softCursorRestore = opts.SoftCursorRestore ? 1 : 0;
+        _vmEmbedPane = opts.VmEmbedPane ? 1 : 0;
             DesktopBackend = string.IsNullOrWhiteSpace(opts.DesktopBackend)
             ? ToolsOptions.BackendCua
             : opts.DesktopBackend.Trim();
@@ -70,7 +72,8 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         string desktopTargetWindowTitle = "",
         bool allowEmailRead = false,
         bool allowEmailSend = false,
-        bool allowEmailDelete = false)
+        bool allowEmailDelete = false,
+        bool vmEmbedPane = true)
     {
         _allowDesktopCapture = allowDesktopCapture ? 1 : 0;
         _allowBrowserCapture = allowBrowserCapture ? 1 : 0;
@@ -81,6 +84,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowEmailSend = allowEmailSend ? 1 : 0;
         _allowEmailDelete = allowEmailDelete ? 1 : 0;
         _softCursorRestore = softCursorRestore ? 1 : 0;
+        _vmEmbedPane = vmEmbedPane ? 1 : 0;
         DesktopBackend = desktopBackend;
         BrowserBackend = browserBackend;
         Mt4Backend = mt4Backend;
@@ -96,6 +100,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public bool AllowEmailSend => Read(ref _allowEmailSend);
     public bool AllowEmailDelete => Read(ref _allowEmailDelete);
     public bool SoftCursorRestore => Read(ref _softCursorRestore);
+    public bool VmEmbedPane => Read(ref _vmEmbedPane);
 
     public string DesktopBackend { get; }
     public string BrowserBackend { get; }
@@ -113,6 +118,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public void SetAllowEmailSend(bool enabled) => Write(ref _allowEmailSend, enabled);
     public void SetAllowEmailDelete(bool enabled) => Write(ref _allowEmailDelete, enabled);
     public void SetSoftCursorRestore(bool enabled) => Write(ref _softCursorRestore, enabled);
+    public void SetVmEmbedPane(bool enabled) => Write(ref _vmEmbedPane, enabled);
 
     private static bool Read(ref int flag) =>
         Interlocked.CompareExchange(ref flag, 0, 0) == 1;

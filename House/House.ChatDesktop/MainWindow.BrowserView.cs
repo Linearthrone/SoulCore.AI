@@ -141,9 +141,29 @@ public partial class MainWindow
         else
         {
             ClearVictoriaBrowserImage();
+            // Surface Host embed status in the big empty label (not only the tiny footer).
+            if (VictoriaBrowserEmptyText is not null)
+            {
+                VictoriaBrowserEmptyText.Text = BuildHerScreenEmptyHint(snap, embed);
+                VictoriaBrowserEmptyText.IsVisible = true;
+            }
         }
 
         ApplyVictoriaBrowserSoftCursor(snap, embed);
+    }
+
+    private static string BuildHerScreenEmptyHint(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed)
+    {
+        if (embed is { Mode: "embedded", Hwnd: > 0 })
+            return "Embedding…";
+        if (embed is { Mode: "fallback" or "capture_off" or "disabled" }
+            && !string.IsNullOrWhiteSpace(embed.Detail))
+            return embed.Detail!;
+        if (!string.IsNullOrWhiteSpace(snap.Detail))
+            return snap.Detail!;
+        if (snap.EmbedPane)
+            return "Waiting for VirtualBox victoria-sandbox (visible, not minimized) — or a desktop_screenshot JPEG fallback.";
+        return "Waiting for Victoria's browser — pink cursor idle, teal on click";
     }
 
     private void ApplyVictoriaBrowserEmbed(BrowserEmbedSnapshot embed)

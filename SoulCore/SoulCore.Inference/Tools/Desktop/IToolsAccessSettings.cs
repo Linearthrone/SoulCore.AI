@@ -30,6 +30,9 @@ public interface IToolsAccessSettings
     /// </summary>
     string DesktopTargetWindowTitle { get; }
 
+    /// <summary>Presence Her screen SetParent of VirtualBox victoria-sandbox (session).</summary>
+    bool VmEmbedPane { get; }
+
     void SetAllowDesktopCapture(bool enabled);
     void SetAllowBrowserCapture(bool enabled);
     void SetAllowComputerControl(bool enabled);
@@ -39,4 +42,5 @@ public interface IToolsAccessSettings
     void SetAllowEmailSend(bool enabled);
     void SetAllowEmailDelete(bool enabled);
     void SetSoftCursorRestore(bool enabled);
+    void SetVmEmbedPane(bool enabled);
 }

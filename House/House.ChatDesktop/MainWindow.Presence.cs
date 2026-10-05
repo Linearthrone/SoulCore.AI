@@ -1070,6 +1070,7 @@ public partial class MainWindow
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
+            || ToolsVmEmbedPaneCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
@@ -1087,6 +1088,7 @@ public partial class MainWindow
             allowBrowserCapture: ToolsAllowBrowserCaptureCheck.IsChecked == true,
             allowComputerControl: ToolsAllowComputerControlCheck.IsChecked == true,
             softCursorRestore: ToolsSoftCursorRestoreCheck.IsChecked == true,
+            vmEmbedPane: ToolsVmEmbedPaneCheck.IsChecked == true,
             allowMt4Read: ToolsAllowMt4ReadCheck.IsChecked == true,
             allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true,
             allowEmailRead: ToolsAllowEmailReadCheck.IsChecked == true,
@@ -1111,6 +1113,7 @@ public partial class MainWindow
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
+            || ToolsVmEmbedPaneCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
@@ -1127,6 +1130,7 @@ public partial class MainWindow
             ToolsAllowBrowserCaptureCheck.IsChecked = snap.Reachable ? snap.AllowBrowserCapture : true;
             ToolsAllowComputerControlCheck.IsChecked = snap.Reachable ? snap.AllowComputerControl : true;
             ToolsSoftCursorRestoreCheck.IsChecked = snap.Reachable ? snap.SoftCursorRestore : true;
+            ToolsVmEmbedPaneCheck.IsChecked = snap.Reachable ? snap.VmEmbedPane : true;
             ToolsAllowMt4ReadCheck.IsChecked = snap.AllowMt4Read;
             ToolsAllowMt4TradeCheck.IsChecked = snap.AllowMt4Trade;
             ToolsAllowEmailReadCheck.IsChecked = snap.AllowEmailRead;
