@@ -1,6 +1,6 @@
 ---
 type: proposal
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 prop_id: PROP-15-persona-creation-platform
 created: 2026-10-05
@@ -11,8 +11,8 @@ related:
   - https://github.com/House-VictoriAI/SoulCore.AI_CreatorEdition
   - docs/agents/unexecuted_proposals/victoria-browser-live-cursor-pane.md
   - Agents/AGENTS.md
-sent_at:
-pm_intake:
+sent_at: 2026-10-05
+pm_intake: docs/agents/tasks/PROP-15-TT01-to-PM01.md
 kurt_locks:
   fork_repo: https://github.com/House-VictoriAI/SoulCore.AI_CreatorEdition
   concurrency_v1: single-active-persona
@@ -139,4 +139,4 @@ Answers are sufficient for send-to-PM.
   - **15.6** QA — Create persona ≠ Victoria; quarantine test; trait A/B; VM tool path
   - **Later** — multi-simultaneous; MCP shared-memory server; Metahuman body
 
-**TT recommendation:** Ready to **send-to-PM** on request. Execution is on **CreatorEdition**, not LinearThrone main.
+**TT recommendation:** Sent to PM-01 2026-10-05. Execution on **CreatorEdition**. Intake: `docs/agents/tasks/PROP-15-TT01-to-PM01.md`.
