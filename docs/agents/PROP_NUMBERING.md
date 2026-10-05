@@ -55,6 +55,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-13-playwright-frame-not-leaked-text | Open Playwright to a URL and show the frame; chat must not echo `<execute_tool>` | **BED Pass** 2026-09-29 — Avenue A 13.1–13.3; QA Windows smoke pending | 13.1–13.3 BED |
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
 | PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Sent to PM** 2026-10-05 — Kurt-locked; execute on `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
+| PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -65,7 +66,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **16**.
+Next free `N`: **17**.
 
 ## Open items (not on `main`)
 
@@ -81,6 +82,7 @@ Next free `N`: **16**.
 | **PROP-13** | BED-01 | Ticketed 2026-09-29. Avenue A: 13.1 intent+URL, 13.2 reply firewall, 13.3 capture gate + private-host reject. |
 | **PROP-14** | BED/FED | **In progress** — 14.1 cursor + 14.2 HWND embed on `cursor/prop14-cursor-hwnd-9531`; Windows Home PC smoke still needed |
 | **PROP-15** | PM-01 | Sent 2026-10-05. Intake `PROP-15-TT01-to-PM01.md`. Execute on CreatorEdition; awaiting PM splits 15.0–15.6. |
+| **PROP-16** | FED/OPS | **In progress** — 16.1 LocalStackControl+UI + 16.2 restart-stack.ps1 on `cursor/prop16-host-update-stack-9531` |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.
