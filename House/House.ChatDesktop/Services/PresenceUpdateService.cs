@@ -77,9 +77,9 @@ public sealed class PresenceUpdateService
                 {
                     return PresenceUpdateCheckResult.FeedEmpty(
                         CurrentVersion,
-                        "No Presence releases on GitHub yet — Update has nothing to download. " +
+                        "No Presence releases on GitHub yet — Presence step has nothing to download. " +
                         "Publish with: House/scripts/pack-presence.ps1 -Bump -Publish " +
-                        "(or the Presence Release GitHub Action). Host still updates via ALLSTART -RestartHost.");
+                        "(or the Presence Release GitHub Action). Host still updates via chrome Update / Update now.");
                 }
             }
 
@@ -264,7 +264,7 @@ public sealed class PresenceUpdateCheckResult
     {
         Status = Kind.UpToDate,
         CurrentVersion = version,
-        Message = $"You're on the latest Presence ({version}). Host is separate — restart Host after Host fixes."
+        Message = $"You're on the latest Presence ({version}). Host updates via chrome Update / Update now."
     };
 
     public static PresenceUpdateCheckResult Available(string current, string remote, UpdateInfo info) => new()
@@ -273,7 +273,7 @@ public sealed class PresenceUpdateCheckResult
         CurrentVersion = current,
         AvailableVersion = remote,
         Update = info,
-        Message = $"Presence update available: {remote} (you have {current}). Host still needs ALLSTART -RestartHost for Host fixes."
+        Message = $"Presence update available: {remote} (you have {current}). Chrome Update also rebuilds Host first."
     };
 
     public static PresenceUpdateCheckResult DevBuild(string version, string message) => new()

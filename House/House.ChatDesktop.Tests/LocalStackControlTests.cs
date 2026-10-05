@@ -70,4 +70,65 @@ public class LocalStackControlTests
         Assert.Equal(@"C:\Users\test\Soul_Core", s.SoulCoreRepoRoot);
         Assert.False(s.AutoStartStack);
     }
+
+    [Theory]
+    [InlineData("3\t1\n", 3, 1)]
+    [InlineData("0 0", 0, 0)]
+    [InlineData("12 4", 12, 4)]
+    public void TryParseRevListLeftRight_ParsesBehindAhead(string stdout, int behind, int ahead)
+    {
+        Assert.True(LocalStackControl.TryParseRevListLeftRight(stdout, out var left, out var right));
+        Assert.Equal(behind, left);
+        Assert.Equal(ahead, right);
+    }
+
+    [Fact]
+    public void TryParseRevListLeftRight_RejectsGarbage()
+    {
+        Assert.False(LocalStackControl.TryParseRevListLeftRight("not-a-count", out _, out _));
+        Assert.False(LocalStackControl.TryParseRevListLeftRight("", out _, out _));
+    }
+
+    [Fact]
+    public void IsPorcelainDirty_WhitespaceOnlyIsClean()
+    {
+        Assert.False(LocalStackControl.IsPorcelainDirty(""));
+        Assert.False(LocalStackControl.IsPorcelainDirty("   \n"));
+        Assert.True(LocalStackControl.IsPorcelainDirty(" M House/foo.cs\n"));
+    }
+
+    [Fact]
+    public void BuildGitStatusDetail_SummarizesState()
+    {
+        var detail = LocalStackControl.BuildGitStatusDetail(2, 0, true, "origin/main");
+        Assert.Contains("behind 2", detail);
+        Assert.Contains("dirty", detail);
+        Assert.Contains("origin/main", detail);
+    }
+
+    [Fact]
+    public async Task RestartStackAsync_FailsWhenScriptMissing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "hv-repo-rst-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "ALLSTART.ps1"), "# test");
+        try
+        {
+            using var stack = new LocalStackControl(dir);
+            var result = await stack.RestartStackAsync();
+            Assert.False(result.Ok);
+            Assert.Contains("missing script", result.Detail, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("restart-stack", result.Detail, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { /* ignore */ }
+        }
+    }
+
+    [Fact]
+    public void RestartStackRelativeScript_IsUnderHouseScripts()
+    {
+        Assert.Equal("House\\scripts\\restart-stack.ps1", LocalStackControl.RestartStackRelativeScript);
+    }
 }
