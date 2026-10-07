@@ -67,7 +67,9 @@
               <Button x:Name="NavSettings" Classes="frame-nav" Content="SETTINGS"
                       Click="NavSettings_Click"/>
               <Button x:Name="NavUpdate" Classes="chrome" Content="Update" FontSize="11" Padding="10,6"
-                      Click="UpdateCheck_Click" ToolTip.Tip="Check for Presence updates (see Settings → Updates for Presence + Host versions)"/>
+                      Click="UpdateNow_Click" ToolTip.Tip="Update Host (git pull + rebuild) then Presence (Velopack when installed)"/>
+              <Button x:Name="NavRestartStack" Classes="chrome" Content="Restart stack" FontSize="11" Padding="10,6"
+                      Click="RestartStack_Click" ToolTip.Tip="Stop Presence and bring the full local stack back up (ALLSTOP → ALLSTART)"/>
               <Button Classes="chrome" Content="Correct mood…" FontSize="11" Padding="10,6"
                       Click="CorrectEmotion_Click"/>
               <Button Classes="chrome" Content="Refresh" Click="Refresh_Click"/>
@@ -784,8 +786,11 @@
               <StackPanel Margin="12" Spacing="6">
                 <TextBlock Text="Updates" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"
-                           Text="Update downloads Presence (this app) from GitHub Releases after a pack is published. It does not update Host — restart Host for Playwright/tool fixes. If the feed is empty, publish with pack-presence.ps1 -Publish (or the Presence Release Action)."
+                           Text="Update covers Presence and Host: git pull when behind, Host rebuild/restart, then Presence Velopack when an installed build has a feed. Restart stack runs ALLSTOP → ALLSTART (Presence will exit). Settings → System Host Start/Stop/Restart remain Host-only."
                            Margin="0,0,0,12"/>
+                <TextBlock Text="Git status" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="UpdateGitStatusBox" Classes="input" IsReadOnly="True" Text="—"
+                         TextWrapping="Wrap" Padding="8" Margin="0,0,0,8"/>
                 <TextBlock Text="Presence version" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="UpdateVersionBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,8"/>
@@ -797,9 +802,13 @@
                          TextWrapping="Wrap" Padding="8" Margin="0,0,0,12"/>
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                   <Button x:Name="UpdateCheckButton" Classes="primary" Content="Check for updates"
-                          Click="UpdateCheck_Click"/>
+                          Click="UpdateCheck_Click" ToolTip.Tip="Refresh git / Host / Presence status only — does not rebuild"/>
+                  <Button x:Name="UpdateNowButton" Classes="primary" Content="Update now"
+                          Click="UpdateNow_Click" ToolTip.Tip="Pull (if behind) → rebuild Host → Presence Velopack when available"/>
                   <Button x:Name="UpdateApplyButton" Classes="ghost" Content="Download &amp; restart"
                           IsEnabled="False" Click="UpdateApply_Click"/>
+                  <Button x:Name="RestartStackButton" Classes="ghost" Content="Restart stack"
+                          Click="RestartStack_Click"/>
                 </StackPanel>
                 <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap"
                            Foreground="{DynamicResource MutedBrush}" Text=""/>

@@ -1,7 +1,7 @@
-d# Presence + Host Update and Full Stack Restart
+# Presence + Host Update and Full Stack Restart
 
 **Date:** 2026-10-05  
-**Status:** Approved for implementation planning  
+**Status:** In progress (PROP-16.1 / 16.2)  
 **Approach:** Extend existing `LocalStackControl` + `PresenceUpdateService` (Approach 1)
 
 ## Problem
