@@ -33,6 +33,9 @@ public partial class MainWindow
     {
         if (_browserViewBusy) return;
         if (PresenceView is { IsVisible: false }) return;
+        // Skip Host poll while What she saw tab is selected (HWND embed stays attached).
+        if (PresenceSideTabs is { SelectedItem: TabItem tab } && !ReferenceEquals(tab, HerScreenTab))
+            return;
 
         _browserViewBusy = true;
         try
@@ -46,6 +49,17 @@ public partial class MainWindow
         finally
         {
             _browserViewBusy = false;
+        }
+    }
+
+    private void PresenceSideTabs_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (PresenceSideTabs?.SelectedItem is TabItem tab && ReferenceEquals(tab, HerScreenTab))
+        {
+            // Re-measure embed after the tab becomes visible again.
+            _ = RefreshVictoriaBrowserViewAsync();
+            PositionVictoriaBrowserSoftCursor();
+            UpdateEmbedHoverCoordsFromSystemCursor();
         }
     }
 

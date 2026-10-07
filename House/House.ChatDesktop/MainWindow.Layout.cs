@@ -46,10 +46,7 @@ public partial class MainWindow
             PresenceColumnSplitter.AddHandler(
                 Thumb.DragCompletedEvent,
                 (_, _) => ScheduleLayoutSave());
-        if (PresenceRowSplitter is not null)
-            PresenceRowSplitter.AddHandler(
-                Thumb.DragCompletedEvent,
-                (_, _) => ScheduleLayoutSave());
+        // PresenceRowSplitter removed — What she saw is a tab beside Her screen.
     }
 
     private void MainWindow_LayoutPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -176,13 +173,7 @@ public partial class MainWindow
             cols[0].MinWidth = LocalUiSettings.MinChatWidth;
         }
 
-        if (PresenceSideSplit?.RowDefinitions is { Count: >= 3 } rows)
-        {
-            var sight = _uiSettings.ResolvedSightRowHeight();
-            rows[2].Height = new GridLength(sight);
-            rows[2].MinHeight = LocalUiSettings.MinSightRowHeight;
-            rows[0].MinHeight = LocalUiSettings.MinBrowserRowHeight;
-        }
+        // Sight row height no longer applies — Her screen / What she saw share a tabbed column.
     }
 
     private void CapturePaneSizesIntoSettings()
@@ -192,13 +183,6 @@ public partial class MainWindow
             var side = cols[2].ActualWidth;
             if (side >= LocalUiSettings.MinSideColumnWidth)
                 _uiSettings.SideColumnWidth = side;
-        }
-
-        if (PresenceSideSplit?.RowDefinitions is { Count: >= 3 } rows)
-        {
-            var sight = rows[2].ActualHeight;
-            if (sight >= LocalUiSettings.MinSightRowHeight)
-                _uiSettings.SightRowHeight = sight;
         }
     }
 
