@@ -60,6 +60,7 @@ public partial class MainWindow
         {
             // Re-measure embed after the tab becomes visible again.
             _ = RefreshVictoriaBrowserViewAsync();
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             PositionVictoriaBrowserSoftCursor();
             UpdateEmbedHoverCoordsFromSystemCursor();
         }
@@ -209,7 +210,11 @@ public partial class MainWindow
         if (embed.Hwnd == _lastEmbedHwnd
             && string.Equals(_lastEmbedMode, embed.Mode, StringComparison.Ordinal)
             && _victoriaBrowserEmbedHost is { NativeHostUnavailable: false })
+        {
+            // Same HWND — still sync size (splitter / window resize).
+            _victoriaBrowserEmbedHost.SyncSizeToSlot();
             return;
+        }
 
         _lastEmbedHwnd = embed.Hwnd;
         _lastEmbedMode = embed.Mode;
@@ -329,7 +334,12 @@ public partial class MainWindow
     {
         if (_browserCursorLayerHooked || VictoriaBrowserSurface is null)
             return;
-        VictoriaBrowserSurface.SizeChanged += (_, _) => PositionVictoriaBrowserSoftCursor();
+        VictoriaBrowserSurface.SizeChanged += (_, _) =>
+        {
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+            PositionVictoriaBrowserSoftCursor();
+            UpdateEmbedHoverCoordsFromSystemCursor();
+        };
         _browserCursorLayerHooked = true;
     }
 

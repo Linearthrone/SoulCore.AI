@@ -16,13 +16,13 @@
 - Agent-only badge (option A)
 - Hover-only badge (option B) — superseded by C
 - Driving guest clicks from Avalonia (native HWND receives clicks)
-- Removing VirtualBox window chrome
 
 ## Design
 
-- Soft cursor: stretch-to-fill mapping when embed is live (matches `MoveWindow`).
+- Soft cursor: stretch-to-fill mapping when embed is live (matches embed `SetWindowPos`).
 - Badge text: `her (x, y)` from Host `cursorX`/`cursorY`; while operator pointer is over the surface append ` · you click (x, y)` (stretch-to-fill guest map).
 - Hover coords: poll system cursor vs Her-screen surface bounds (Win32 `GetCursorPos`) so Avalonia does not steal HWND input.
 - JPEG path: Uniform letterbox hover map + Avalonia PointerMoved; her line appears when soft cursor is active (vbox-guest).
 - Frame size from `/browser/view` hub; if missing while embed live, use last known or default until first `desktop_screenshot`.
 - Clipboard on surface click: prefer operator `click (x, y)`; else her position as `click (x, y)`.
+- Embed resize: strip overlapped chrome styles on SetParent; `SyncSizeToSlot` on surface/splitter resize (DIP × DPI → `SetWindowPos`) so the VM fills the Her screen slot instead of clipping the right edge. Default side column 520 (was 260).

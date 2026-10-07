@@ -14,12 +14,14 @@ public sealed class LocalUiSettings
 
     public const double DefaultWindowWidth = 1180;
     public const double DefaultWindowHeight = 780;
-    public const double DefaultSideColumnWidth = 260;
+    /// <summary>Wide enough for a usable VM embed (guest was clipped at 260).</summary>
+    public const double DefaultSideColumnWidth = 520;
     public const double DefaultSightRowHeight = 200;
     public const double MinWindowWidth = 900;
     public const double MinWindowHeight = 600;
     public const double MinChatWidth = 320;
     public const double MinSideColumnWidth = 200;
+    public const double MaxSideColumnWidth = 1600;
     public const double MinSightRowHeight = 120;
     public const double MinBrowserRowHeight = 120;
 
@@ -112,7 +114,7 @@ public sealed class LocalUiSettings
         if (WindowHeight is double h)
             WindowHeight = Clamp(h, MinWindowHeight, 3000);
         if (SideColumnWidth is double side)
-            SideColumnWidth = Clamp(side, MinSideColumnWidth, 900);
+            SideColumnWidth = Clamp(side, MinSideColumnWidth, MaxSideColumnWidth);
         if (SightRowHeight is double sight)
             SightRowHeight = Clamp(sight, MinSightRowHeight, 800);
     }
@@ -124,7 +126,7 @@ public sealed class LocalUiSettings
         Clamp(WindowHeight ?? DefaultWindowHeight, MinWindowHeight, 3000);
 
     public double ResolvedSideColumnWidth() =>
-        Clamp(SideColumnWidth ?? DefaultSideColumnWidth, MinSideColumnWidth, 900);
+        Clamp(SideColumnWidth ?? DefaultSideColumnWidth, MinSideColumnWidth, MaxSideColumnWidth);
 
     public double ResolvedSightRowHeight() =>
         Clamp(SightRowHeight ?? DefaultSightRowHeight, MinSightRowHeight, 800);

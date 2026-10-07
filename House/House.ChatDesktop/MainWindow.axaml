@@ -144,7 +144,7 @@
         </Border>
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
-      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,260">
+      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,520">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">

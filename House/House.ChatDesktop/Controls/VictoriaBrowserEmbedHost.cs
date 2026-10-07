@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using House.ChatDesktop.Services;
 
@@ -20,6 +21,7 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
 {
     private nint _hwnd;
     private nint _previousParent;
+    private int _originalStyle;
     private bool _attached;
     private bool _nativeHostUnavailable;
     private IPlatformHandle? _placeholderHandle;
@@ -66,6 +68,28 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         IsVisible = true;
     }
 
+    /// <summary>
+    /// Force the embedded HWND to match this control's current slot (DIP × DPI).
+    /// Call after pane/splitter resize — VirtualBox otherwise keeps its old outer size and clips.
+    /// </summary>
+    public void SyncSizeToSlot()
+    {
+        if (!_attached || _hwnd == 0 || !OperatingSystem.IsWindows())
+            return;
+
+        var scaling = VisualRoot?.RenderScaling ?? 1.0;
+        var w = (int)Math.Round(Bounds.Width * scaling);
+        var h = (int)Math.Round(Bounds.Height * scaling);
+        if (w > 1 && h > 1)
+        {
+            ApplyPixelSize(w, h);
+            return;
+        }
+
+        // Bounds not measured yet — fall back to parent client rect.
+        ResizeToParentClient(nint.Zero);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         if (_nativeHostUnavailable)
@@ -103,22 +127,28 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         try
         {
             _previousParent = GetParent(_hwnd);
-            // CHILD style so layout lives inside Presence; keep visible.
-            var originalStyle = GetWindowLong(_hwnd, GWL_STYLE);
-            var childStyle = (originalStyle | WS_CHILD | WS_VISIBLE) & ~WS_POPUP;
+            // CHILD + strip overlapped chrome so MoveWindow can shrink below guest+chrome
+            // minimums (otherwise the right side of the VM stays clipped in the slot).
+            _originalStyle = GetWindowLong(_hwnd, GWL_STYLE);
+            var childStyle = (_originalStyle | WS_CHILD | WS_VISIBLE)
+                             & ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX
+                                 | WS_MAXIMIZEBOX | WS_SYSMENU | WS_BORDER | WS_DLGFRAME);
             _ = SetWindowLong(_hwnd, GWL_STYLE, childStyle);
 
             Marshal.SetLastPInvokeError(0);
             if (SetParent(_hwnd, parent.Handle) == 0 && Marshal.GetLastPInvokeError() != 0)
             {
-                _ = SetWindowLong(_hwnd, GWL_STYLE, originalStyle);
+                _ = SetWindowLong(_hwnd, GWL_STYLE, _originalStyle);
+                _originalStyle = 0;
                 return CreateFallbackHost(parent);
             }
 
             _attached = true;
             _placeholderHandle = null;
-            ResizeToHost(parent.Handle);
+            ResizeToParentClient(parent.Handle);
             _ = ShowWindow(_hwnd, SW_SHOW);
+            // First layout pass often has 0×0 bounds — sync again after measure.
+            Dispatcher.UIThread.Post(SyncSizeToSlot, DispatcherPriority.Loaded);
             return new PlatformHandle(_hwnd, "HWND");
         }
         catch (Exception ex)
@@ -186,10 +216,10 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
     {
         base.OnSizeChanged(e);
         if (_attached && _hwnd != 0 && OperatingSystem.IsWindows())
-            ResizeToHost(nint.Zero);
+            SyncSizeToSlot();
     }
 
-    private void ResizeToHost(nint parentHint)
+    private void ResizeToParentClient(nint parentHint)
     {
         if (!OperatingSystem.IsWindows() || _hwnd == 0)
             return;
@@ -204,7 +234,24 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         // (that looked like "window pops up and immediately disappears").
         if (width <= 1 || height <= 1)
             return;
-        _ = MoveWindow(_hwnd, 0, 0, width, height, true);
+        ApplyPixelSize(width, height);
+    }
+
+    private void ApplyPixelSize(int width, int height)
+    {
+        if (!OperatingSystem.IsWindows() || _hwnd == 0 || width <= 1 || height <= 1)
+            return;
+
+        // SetWindowPos is more reliable than MoveWindow for forcing VirtualBox below its
+        // former overlapped minimum size after chrome styles are stripped.
+        _ = SetWindowPos(
+            _hwnd,
+            HWND_TOP,
+            0,
+            0,
+            width,
+            height,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
         _ = ShowWindow(_hwnd, SW_SHOW);
     }
 
@@ -219,9 +266,23 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         try
         {
             _ = SetParent(_hwnd, _previousParent);
-            var style = GetWindowLong(_hwnd, GWL_STYLE);
-            style = (style | WS_POPUP | WS_VISIBLE) & ~WS_CHILD;
-            _ = SetWindowLong(_hwnd, GWL_STYLE, style);
+            if (_originalStyle != 0)
+                _ = SetWindowLong(_hwnd, GWL_STYLE, _originalStyle);
+            else
+            {
+                var style = GetWindowLong(_hwnd, GWL_STYLE);
+                style = (style | WS_POPUP | WS_VISIBLE) & ~WS_CHILD;
+                _ = SetWindowLong(_hwnd, GWL_STYLE, style);
+            }
+
+            _ = SetWindowPos(
+                _hwnd,
+                HWND_TOP,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
             _ = ShowWindow(_hwnd, SW_SHOW);
         }
         catch
@@ -231,13 +292,28 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
 
         _attached = false;
         _previousParent = 0;
+        _originalStyle = 0;
     }
 
     private const int GWL_STYLE = -16;
     private const int WS_CHILD = 0x40000000;
     private const int WS_POPUP = unchecked((int)0x80000000);
     private const int WS_VISIBLE = 0x10000000;
+    private const int WS_CAPTION = 0x00C00000;
+    private const int WS_THICKFRAME = 0x00040000;
+    private const int WS_MINIMIZEBOX = 0x00020000;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int WS_SYSMENU = 0x00080000;
+    private const int WS_BORDER = 0x00800000;
+    private const int WS_DLGFRAME = 0x00400000;
     private const int SW_SHOW = 5;
+    private static readonly nint HWND_TOP = nint.Zero;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_SHOWWINDOW = 0x0040;
+    private const uint SWP_FRAMECHANGED = 0x0020;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
@@ -258,7 +334,8 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
     private static extern int SetWindowLong(nint hWnd, int nIndex, int dwNewLong);
 
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool MoveWindow(nint hWnd, int x, int y, int nWidth, int nHeight, bool bRepaint);
+    private static extern bool SetWindowPos(
+        nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetClientRect(nint hWnd, out RECT lpRect);
