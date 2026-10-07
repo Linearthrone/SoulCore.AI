@@ -239,7 +239,7 @@
                       PointerMoved="VictoriaBrowserSurface_PointerMoved"
                       PointerExited="VictoriaBrowserSurface_PointerExited"
                       PointerPressed="VictoriaBrowserSurface_PointerPressed"
-                      ToolTip.Tip="Embedded Chromium when live · hover JPEG fallback for click coords">
+                      ToolTip.Tip="VM embed: live VirtualBox + hover coords + her pink/teal cursor. Clicks go to the VM. JPEG fallback: hover to copy click (x,y).">
                 <Grid>
                   <TextBlock x:Name="VictoriaBrowserEmptyText"
                              Text="Waiting for Victoria's browser — pink cursor idle, teal on click"

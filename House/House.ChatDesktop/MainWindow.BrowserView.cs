@@ -118,13 +118,15 @@ public partial class MainWindow
         if (embedded)
         {
             ApplyVictoriaBrowserEmbed(embed!);
-            // Hide JPEG while HWND is live — coord hover is for JPEG fallback only.
+            // Hide JPEG while HWND is live; hover coords come from system-cursor poll
+            // (Avalonia PointerMoved never fires over the SetParent child).
             if (VictoriaBrowserImage is not null)
                 VictoriaBrowserImage.IsVisible = false;
             if (VictoriaBrowserEmptyText is not null)
                 VictoriaBrowserEmptyText.IsVisible = false;
-            HideVictoriaBrowserCoords();
+            EnsureGuestFrameSizeForEmbed();
             ApplyVictoriaBrowserSoftCursor(snap, embed);
+            UpdateEmbedHoverCoordsFromSystemCursor();
             return;
         }
 
@@ -142,7 +144,9 @@ public partial class MainWindow
                 VictoriaBrowserWaitingText.IsVisible = true;
             }
 
+            EnsureGuestFrameSizeForEmbed();
             ApplyVictoriaBrowserSoftCursor(snap, embed);
+            UpdateEmbedHoverCoordsFromSystemCursor();
             return;
         }
 
@@ -310,6 +314,17 @@ public partial class MainWindow
         _browserCursorLayerHooked = true;
     }
 
+    private bool IsVictoriaVmEmbedLive() =>
+        _victoriaBrowserEmbedHost is { NativeHostUnavailable: false } && _lastEmbedHwnd > 0;
+
+    private void EnsureGuestFrameSizeForEmbed()
+    {
+        if (_browserImagePixelWidth > 0 && _browserImagePixelHeight > 0)
+            return;
+        _browserImagePixelWidth = VictoriaBrowserCoordMap.DefaultGuestWidth;
+        _browserImagePixelHeight = VictoriaBrowserCoordMap.DefaultGuestHeight;
+    }
+
     private void PositionVictoriaBrowserSoftCursor()
     {
         var surface = VictoriaBrowserSurface;
@@ -332,14 +347,6 @@ public partial class MainWindow
             return;
         }
 
-        // HWND embed fills the slot; JPEG uses Uniform letterbox — same Uniform map either way
-        // when frame size is known (guest framebuffer).
-        var scale = Math.Min(bounds.Width / _browserImagePixelWidth, bounds.Height / _browserImagePixelHeight);
-        var drawW = _browserImagePixelWidth * scale;
-        var drawH = _browserImagePixelHeight * scale;
-        var offsetX = (bounds.Width - drawW) / 2;
-        var offsetY = (bounds.Height - drawH) / 2;
-
         var flash = string.Equals(_browserCursorState, "click", StringComparison.OrdinalIgnoreCase)
                     && _browserCursorAt is DateTimeOffset at
                     && (DateTimeOffset.UtcNow - at).TotalMilliseconds < SoftCursorFlashMs;
@@ -349,13 +356,70 @@ public partial class MainWindow
         cursor.Width = flash ? 36 : 28;
         cursor.Height = flash ? 36 : 28;
 
-        var left = offsetX + (cx * scale) - (cursor.Width / 2);
-        var top = offsetY + (cy * scale) - (cursor.Height / 2);
-        Canvas.SetLeft(cursor, left);
-        Canvas.SetTop(cursor, top);
+        // HWND embed fills the slot (stretch); JPEG uses Uniform letterbox.
+        var mapped = IsVictoriaVmEmbedLive()
+            ? VictoriaBrowserCoordMap.TryMapGuestToSurfaceStretchFill(
+                cx, cy, bounds.Width, bounds.Height,
+                _browserImagePixelWidth, _browserImagePixelHeight,
+                cursor.Width, cursor.Height)
+            : VictoriaBrowserCoordMap.TryMapGuestToSurfaceUniform(
+                cx, cy, bounds.Width, bounds.Height,
+                _browserImagePixelWidth, _browserImagePixelHeight,
+                cursor.Width, cursor.Height);
+
+        if (mapped is null)
+        {
+            layer.IsVisible = false;
+            return;
+        }
+
+        Canvas.SetLeft(cursor, mapped.Value.Left);
+        Canvas.SetTop(cursor, mapped.Value.Top);
         layer.Width = bounds.Width;
         layer.Height = bounds.Height;
         layer.IsVisible = true;
+    }
+
+    /// <summary>
+    /// Option B: show operator mouse position as guest coords while VM HWND is embedded.
+    /// Polls Win32 cursor so we do not put an Avalonia hit-test layer over the child (takeover stays).
+    /// </summary>
+    private void UpdateEmbedHoverCoordsFromSystemCursor()
+    {
+        if (!IsVictoriaVmEmbedLive() || VictoriaBrowserSurface is null)
+        {
+            HideVictoriaBrowserCoords();
+            return;
+        }
+
+        EnsureGuestFrameSizeForEmbed();
+        var local = HerScreenCursorProbe.TryGetPointerInSurface(VictoriaBrowserSurface);
+        if (local is null)
+        {
+            HideVictoriaBrowserCoords();
+            return;
+        }
+
+        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            local.Value.X,
+            local.Value.Y,
+            VictoriaBrowserSurface.Bounds.Width,
+            VictoriaBrowserSurface.Bounds.Height,
+            _browserImagePixelWidth,
+            _browserImagePixelHeight);
+
+        if (mapped is null)
+        {
+            HideVictoriaBrowserCoords();
+            return;
+        }
+
+        var (x, y) = mapped.Value;
+        _lastHoverClickHint = VictoriaBrowserCoordMap.FormatClickHint(x, y);
+        if (VictoriaBrowserCoordText is not null)
+            VictoriaBrowserCoordText.Text = _lastHoverClickHint;
+        if (VictoriaBrowserCoordBadge is not null)
+            VictoriaBrowserCoordBadge.IsVisible = true;
     }
 
     private void ShowVictoriaBrowserBitmap(byte[] imageBytes)
@@ -393,13 +457,21 @@ public partial class MainWindow
         if (VictoriaBrowserEmptyText is not null)
             VictoriaBrowserEmptyText.IsVisible = true;
         _lastBrowserImageHash = null;
-        _browserImagePixelWidth = 0;
-        _browserImagePixelHeight = 0;
-        HideVictoriaBrowserCoords();
+        // Keep guest frame size while VM HWND embed is live (soft cursor + hover map).
+        if (!IsVictoriaVmEmbedLive())
+        {
+            _browserImagePixelWidth = 0;
+            _browserImagePixelHeight = 0;
+            HideVictoriaBrowserCoords();
+        }
     }
 
     private void VictoriaBrowserSurface_PointerMoved(object? sender, PointerEventArgs e)
     {
+        // VM embed: HWND steals pointer — coords updated via UpdateEmbedHoverCoordsFromSystemCursor.
+        if (IsVictoriaVmEmbedLive())
+            return;
+
         if (VictoriaBrowserSurface is null || VictoriaBrowserImage is null || !VictoriaBrowserImage.IsVisible)
         {
             HideVictoriaBrowserCoords();
