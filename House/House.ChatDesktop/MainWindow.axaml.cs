@@ -118,6 +118,7 @@ public partial class MainWindow : Window
         _hudDock = HudPanel.Parent as Panel;
         _chatDock = ChatPanel.Parent as Panel;
         _servicesDock = ServicesPanel.Parent as Panel;
+        // ScreenPanel docks in a TabItem now (What she saw); pop-out uses a twin window, not reparent.
         _screenDock = ScreenPanel.Parent as Panel;
 
         _ws.StateChanged += OnWsStateChanged;
