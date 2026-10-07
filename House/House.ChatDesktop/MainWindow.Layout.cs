@@ -45,7 +45,11 @@ public partial class MainWindow
         if (PresenceColumnSplitter is not null)
             PresenceColumnSplitter.AddHandler(
                 Thumb.DragCompletedEvent,
-                (_, _) => ScheduleLayoutSave());
+                (_, _) =>
+                {
+                    _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+                    ScheduleLayoutSave();
+                });
         // PresenceRowSplitter removed — What she saw is a tab beside Her screen.
     }
 

@@ -29,6 +29,23 @@ public class LocalUiSettingsLayoutTests
     }
 
     [Fact]
+    public void Normalize_ClampsSideColumnToMax()
+    {
+        var s = new LocalUiSettings { SideColumnWidth = 5000 };
+        s.Normalize();
+        Assert.Equal(LocalUiSettings.MaxSideColumnWidth, s.SideColumnWidth);
+    }
+
+    [Fact]
+    public void ResolvedSideColumnWidth_DefaultsWideEnoughForVmEmbed()
+    {
+        Assert.True(LocalUiSettings.DefaultSideColumnWidth >= 480);
+        Assert.Equal(
+            LocalUiSettings.DefaultSideColumnWidth,
+            new LocalUiSettings().ResolvedSideColumnWidth());
+    }
+
+    [Fact]
     public void RoundTrip_PersistsLayoutFields()
     {
         var dir = Path.Combine(Path.GetTempPath(), "hv-ui-" + Guid.NewGuid().ToString("N"));

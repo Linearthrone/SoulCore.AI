@@ -18,6 +18,8 @@ public partial class MainWindow
     private VictoriaBrowserEmbedHost? _victoriaBrowserEmbedHost;
     private int? _browserCursorX;
     private int? _browserCursorY;
+    private int? _hoverGuestX;
+    private int? _hoverGuestY;
     private string? _browserCursorState;
     private DateTimeOffset? _browserCursorAt;
     private bool _browserCursorLayerHooked;
@@ -58,6 +60,7 @@ public partial class MainWindow
         {
             // Re-measure embed after the tab becomes visible again.
             _ = RefreshVictoriaBrowserViewAsync();
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             PositionVictoriaBrowserSoftCursor();
             UpdateEmbedHoverCoordsFromSystemCursor();
         }
@@ -207,7 +210,11 @@ public partial class MainWindow
         if (embed.Hwnd == _lastEmbedHwnd
             && string.Equals(_lastEmbedMode, embed.Mode, StringComparison.Ordinal)
             && _victoriaBrowserEmbedHost is { NativeHostUnavailable: false })
+        {
+            // Same HWND — still sync size (splitter / window resize).
+            _victoriaBrowserEmbedHost.SyncSizeToSlot();
             return;
+        }
 
         _lastEmbedHwnd = embed.Hwnd;
         _lastEmbedMode = embed.Mode;
@@ -308,6 +315,8 @@ public partial class MainWindow
         _browserCursorState = snap.CursorState;
         _browserCursorAt = snap.CursorAt;
         PositionVictoriaBrowserSoftCursor();
+        // Option C: her coords always on the badge (hover filled in by poll / PointerMoved).
+        RefreshVictoriaBrowserCoordBadge();
     }
 
     private void ClearVictoriaBrowserSoftCursor()
@@ -318,13 +327,19 @@ public partial class MainWindow
         _browserCursorAt = null;
         if (VictoriaBrowserCursorLayer is not null)
             VictoriaBrowserCursorLayer.IsVisible = false;
+        RefreshVictoriaBrowserCoordBadge();
     }
 
     private void EnsureBrowserCursorLayerHooked()
     {
         if (_browserCursorLayerHooked || VictoriaBrowserSurface is null)
             return;
-        VictoriaBrowserSurface.SizeChanged += (_, _) => PositionVictoriaBrowserSoftCursor();
+        VictoriaBrowserSurface.SizeChanged += (_, _) =>
+        {
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+            PositionVictoriaBrowserSoftCursor();
+            UpdateEmbedHoverCoordsFromSystemCursor();
+        };
         _browserCursorLayerHooked = true;
     }
 
@@ -395,14 +410,16 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Option B: show operator mouse position as guest coords while VM HWND is embedded.
-    /// Polls Win32 cursor so we do not put an Avalonia hit-test layer over the child (takeover stays).
+    /// Option C: poll operator mouse over the VM HWND (Win32 — no Avalonia steal) and refresh
+    /// the badge with her agent coords (always) + yours while hovering.
     /// </summary>
     private void UpdateEmbedHoverCoordsFromSystemCursor()
     {
         if (!IsVictoriaVmEmbedLive() || VictoriaBrowserSurface is null)
         {
-            HideVictoriaBrowserCoords();
+            _hoverGuestX = null;
+            _hoverGuestY = null;
+            RefreshVictoriaBrowserCoordBadge();
             return;
         }
 
@@ -410,7 +427,9 @@ public partial class MainWindow
         var local = HerScreenCursorProbe.TryGetPointerInSurface(VictoriaBrowserSurface);
         if (local is null)
         {
-            HideVictoriaBrowserCoords();
+            _hoverGuestX = null;
+            _hoverGuestY = null;
+            RefreshVictoriaBrowserCoordBadge();
             return;
         }
 
@@ -424,16 +443,16 @@ public partial class MainWindow
 
         if (mapped is null)
         {
-            HideVictoriaBrowserCoords();
+            _hoverGuestX = null;
+            _hoverGuestY = null;
+            RefreshVictoriaBrowserCoordBadge();
             return;
         }
 
-        var (x, y) = mapped.Value;
-        _lastHoverClickHint = VictoriaBrowserCoordMap.FormatClickHint(x, y);
-        if (VictoriaBrowserCoordText is not null)
-            VictoriaBrowserCoordText.Text = _lastHoverClickHint;
-        if (VictoriaBrowserCoordBadge is not null)
-            VictoriaBrowserCoordBadge.IsVisible = true;
+        _hoverGuestX = mapped.Value.X;
+        _hoverGuestY = mapped.Value.Y;
+        _lastHoverClickHint = VictoriaBrowserCoordMap.FormatClickHint(mapped.Value.X, mapped.Value.Y);
+        RefreshVictoriaBrowserCoordBadge();
     }
 
     private void ShowVictoriaBrowserBitmap(byte[] imageBytes)
@@ -488,7 +507,9 @@ public partial class MainWindow
 
         if (VictoriaBrowserSurface is null || VictoriaBrowserImage is null || !VictoriaBrowserImage.IsVisible)
         {
-            HideVictoriaBrowserCoords();
+            _hoverGuestX = null;
+            _hoverGuestY = null;
+            RefreshVictoriaBrowserCoordBadge();
             return;
         }
 
@@ -503,29 +524,38 @@ public partial class MainWindow
 
         if (mapped is null)
         {
-            HideVictoriaBrowserCoords();
+            _hoverGuestX = null;
+            _hoverGuestY = null;
+            RefreshVictoriaBrowserCoordBadge();
             return;
         }
 
-        var (x, y) = mapped.Value;
-        _lastHoverClickHint = VictoriaBrowserCoordMap.FormatClickHint(x, y);
-        if (VictoriaBrowserCoordText is not null)
-            VictoriaBrowserCoordText.Text = _lastHoverClickHint;
-        if (VictoriaBrowserCoordBadge is not null)
-            VictoriaBrowserCoordBadge.IsVisible = true;
+        _hoverGuestX = mapped.Value.X;
+        _hoverGuestY = mapped.Value.Y;
+        _lastHoverClickHint = VictoriaBrowserCoordMap.FormatClickHint(mapped.Value.X, mapped.Value.Y);
+        RefreshVictoriaBrowserCoordBadge();
     }
 
-    private void VictoriaBrowserSurface_PointerExited(object? sender, PointerEventArgs e) =>
-        HideVictoriaBrowserCoords();
+    private void VictoriaBrowserSurface_PointerExited(object? sender, PointerEventArgs e)
+    {
+        _hoverGuestX = null;
+        _hoverGuestY = null;
+        _lastHoverClickHint = null;
+        RefreshVictoriaBrowserCoordBadge();
+    }
 
     private async void VictoriaBrowserSurface_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_lastHoverClickHint))
+        // Prefer operator hover hint for clipboard; else her agent coords.
+        var text = _lastHoverClickHint
+                   ?? (_browserCursorX is int hx && _browserCursorY is int hy
+                       ? VictoriaBrowserCoordMap.FormatClickHint(hx, hy)
+                       : null);
+        if (string.IsNullOrWhiteSpace(text))
             return;
         if (!e.GetCurrentPoint(VictoriaBrowserSurface).Properties.IsLeftButtonPressed)
             return;
 
-        var text = _lastHoverClickHint!;
         try
         {
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
@@ -542,10 +572,32 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// Option C badge: her agent soft-cursor guest coords always; operator hover while present.
+    /// </summary>
+    private void RefreshVictoriaBrowserCoordBadge()
+    {
+        var text = VictoriaBrowserCoordMap.FormatCoordBadge(
+            _browserCursorX, _browserCursorY, _hoverGuestX, _hoverGuestY);
+        if (text is null)
+        {
+            if (VictoriaBrowserCoordBadge is not null)
+                VictoriaBrowserCoordBadge.IsVisible = false;
+            return;
+        }
+
+        if (VictoriaBrowserCoordText is not null)
+            VictoriaBrowserCoordText.Text = text;
+        if (VictoriaBrowserCoordBadge is not null)
+            VictoriaBrowserCoordBadge.IsVisible = true;
+    }
+
     private void HideVictoriaBrowserCoords()
     {
+        _hoverGuestX = null;
+        _hoverGuestY = null;
+        _lastHoverClickHint = null;
         if (VictoriaBrowserCoordBadge is not null)
             VictoriaBrowserCoordBadge.IsVisible = false;
-        _lastHoverClickHint = null;
     }
 }

@@ -121,4 +121,22 @@ public static class VictoriaBrowserCoordMap
     }
 
     public static string FormatClickHint(int x, int y) => $"click ({x}, {y})";
+
+    /// <summary>Her agent soft-cursor guest coords (option C / always).</summary>
+    public static string FormatHerHint(int x, int y) => $"her ({x}, {y})";
+
+    /// <summary>
+    /// Option C badge: her agent coords always; operator hover while present.
+    /// Null when neither source has coordinates.
+    /// </summary>
+    public static string? FormatCoordBadge(int? herX, int? herY, int? hoverX, int? hoverY)
+    {
+        if (herX is int hx && herY is int hy && hoverX is int ox && hoverY is int oy)
+            return $"{FormatHerHint(hx, hy)} · you {FormatClickHint(ox, oy)}";
+        if (herX is int hxOnly && herY is int hyOnly)
+            return FormatHerHint(hxOnly, hyOnly);
+        if (hoverX is int oxOnly && hoverY is int oyOnly)
+            return FormatClickHint(oxOnly, oyOnly);
+        return null;
+    }
 }

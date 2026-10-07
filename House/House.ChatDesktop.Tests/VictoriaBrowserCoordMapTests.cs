@@ -59,6 +59,38 @@ public class VictoriaBrowserCoordMapTests
     }
 
     [Fact]
+    public void FormatHerHint_ShowsAgentCursor()
+    {
+        Assert.Equal("her (100, 200)", VictoriaBrowserCoordMap.FormatHerHint(100, 200));
+    }
+
+    [Fact]
+    public void FormatCoordBadge_OptionC_BothWhenHovering()
+    {
+        Assert.Equal(
+            "her (100, 200) · you click (412, 277)",
+            VictoriaBrowserCoordMap.FormatCoordBadge(100, 200, 412, 277));
+    }
+
+    [Fact]
+    public void FormatCoordBadge_OptionC_HerOnlyWhenNotHovering()
+    {
+        Assert.Equal("her (100, 200)", VictoriaBrowserCoordMap.FormatCoordBadge(100, 200, null, null));
+    }
+
+    [Fact]
+    public void FormatCoordBadge_HoverOnly_WhenNoAgentCursor()
+    {
+        Assert.Equal("click (412, 277)", VictoriaBrowserCoordMap.FormatCoordBadge(null, null, 412, 277));
+    }
+
+    [Fact]
+    public void FormatCoordBadge_Null_WhenNeither()
+    {
+        Assert.Null(VictoriaBrowserCoordMap.FormatCoordBadge(null, null, null, null));
+    }
+
+    [Fact]
     public void TryMapStretchFill_Center_MapsToGuestCenter()
     {
         // 1280x800 in a 640x400 surface — stretch (no letterbox)

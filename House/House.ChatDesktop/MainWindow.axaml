@@ -144,7 +144,7 @@
         </Border>
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
-      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,260">
+      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,520">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">
@@ -241,7 +241,7 @@
                           PointerMoved="VictoriaBrowserSurface_PointerMoved"
                           PointerExited="VictoriaBrowserSurface_PointerExited"
                           PointerPressed="VictoriaBrowserSurface_PointerPressed"
-                          ToolTip.Tip="VM embed: live VirtualBox + hover coords + her pink/teal cursor. Clicks go to the VM. JPEG fallback: hover to copy click (x,y).">
+                          ToolTip.Tip="VM embed: live VirtualBox + her pink/teal cursor. Badge: her (x,y) always; you click (x,y) while hovering. Clicks go to the VM. JPEG: hover to copy click (x,y).">
                     <Grid>
                       <TextBlock x:Name="VictoriaBrowserEmptyText"
                                  Text="Waiting for Victoria's browser — pink cursor idle, teal on click"

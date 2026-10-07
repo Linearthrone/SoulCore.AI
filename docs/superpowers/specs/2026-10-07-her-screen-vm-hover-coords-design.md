@@ -1,25 +1,28 @@
-# Her screen VM: hover coords (B) + soft cursor + live display
+# Her screen VM: coords badge (C) + soft cursor + live display
 
 **Date:** 2026-10-07  
-**Status:** Approved (Approach 1, coords = B hover only)  
-**Depends:** PROP-16 embed HWND cache (PR #131)
+**Status:** Approved (Approach 1, coords = C both)  
+**Depends:** PROP-16 embed HWND cache (PR #131); hover-only B (PR #133)
 
 ## Goals
 
 1. Live VM display in Her screen (HWND embed).
-2. Operator hover coordinates on the VM surface for guidance (option B).
+2. Coords badge option **C**: her agent soft-cursor guest coords always; operator hover guest coords while hovering.
 3. Her pink/teal soft cursor visible and aligned.
 4. Bonus: clicks pass through to the embedded VirtualBox HWND (takeover).
 
 ## Non-goals
 
-- Agent-cursor coordinate badge (option A/C)
+- Agent-only badge (option A)
+- Hover-only badge (option B) — superseded by C
 - Driving guest clicks from Avalonia (native HWND receives clicks)
-- Removing VirtualBox window chrome
 
 ## Design
 
-- Soft cursor: stretch-to-fill mapping when embed is live (matches `MoveWindow`).
-- Hover coords: poll system cursor vs Her-screen surface bounds (Win32 `GetCursorPos`) so Avalonia does not steal HWND input; map with stretch-to-fill to guest framebuffer pixels; show `click (x, y)` badge.
-- JPEG path unchanged (Uniform letterbox map + Avalonia PointerMoved).
-- Frame size from `/browser/view` hub; if missing while embed live, use last known or a documented default until first `desktop_screenshot`.
+- Soft cursor: stretch-to-fill mapping when embed is live (matches embed `SetWindowPos`).
+- Badge text: `her (x, y)` from Host `cursorX`/`cursorY`; while operator pointer is over the surface append ` · you click (x, y)` (stretch-to-fill guest map).
+- Hover coords: poll system cursor vs Her-screen surface bounds (Win32 `GetCursorPos`) so Avalonia does not steal HWND input.
+- JPEG path: Uniform letterbox hover map + Avalonia PointerMoved; her line appears when soft cursor is active (vbox-guest).
+- Frame size from `/browser/view` hub; if missing while embed live, use last known or default until first `desktop_screenshot`.
+- Clipboard on surface click: prefer operator `click (x, y)`; else her position as `click (x, y)`.
+- Embed resize: strip overlapped chrome styles on SetParent; `SyncSizeToSlot` on surface/splitter resize (DIP × DPI → `SetWindowPos`) so the VM fills the Her screen slot instead of clipping the right edge. Default side column 520 (was 260).

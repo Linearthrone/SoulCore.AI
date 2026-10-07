@@ -80,4 +80,13 @@ public sealed class PresenceNativeHostManifestTests
         host.Bind(0);
         Assert.False(host.IsVisible);
     }
+
+    [Fact]
+    public void EmbedHost_SyncSizeToSlot_is_safe_when_not_attached()
+    {
+        var host = new VictoriaBrowserEmbedHost();
+        host.Bind(0);
+        host.SyncSizeToSlot(); // no-op; must not throw
+        Assert.False(host.IsVisible);
+    }
 }
