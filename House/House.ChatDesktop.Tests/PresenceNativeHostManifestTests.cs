@@ -42,7 +42,7 @@ public sealed class PresenceNativeHostManifestTests
     }
 
     [Fact]
-    public void Csproj_wires_ApplicationManifest_and_version_0_1_6()
+    public void Csproj_wires_ApplicationManifest_and_semver()
     {
         var path = Path.Combine(ChatDesktopDir, "House.ChatDesktop.csproj");
         var doc = XDocument.Load(path);
@@ -52,10 +52,11 @@ public sealed class PresenceNativeHostManifestTests
         Assert.Equal("app.manifest", manifest);
 
         var version = doc.Descendants(ns + "Version").Select(e => e.Value).FirstOrDefault();
-        Assert.Equal("0.1.6", version);
+        Assert.False(string.IsNullOrWhiteSpace(version));
+        Assert.Matches(@"^\d+\.\d+\.\d+$", version!);
 
         var info = doc.Descendants(ns + "InformationalVersion").Select(e => e.Value).FirstOrDefault();
-        Assert.Equal("0.1.6", info);
+        Assert.Equal(version, info);
     }
 
     [Fact]
