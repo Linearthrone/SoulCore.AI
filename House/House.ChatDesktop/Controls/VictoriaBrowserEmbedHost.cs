@@ -118,6 +118,7 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
             _attached = true;
             _placeholderHandle = null;
             ResizeToHost(parent.Handle);
+            _ = ShowWindow(_hwnd, SW_SHOW);
             return new PlatformHandle(_hwnd, "HWND");
         }
         catch (Exception ex)
@@ -197,7 +198,14 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
             return;
         if (!GetClientRect(parent, out var rc))
             return;
-        _ = MoveWindow(_hwnd, 0, 0, rc.Right - rc.Left, rc.Bottom - rc.Top, true);
+        var width = rc.Right - rc.Left;
+        var height = rc.Bottom - rc.Top;
+        // Layout may not be measured on first attach — never shrink the VM to 0x0
+        // (that looked like "window pops up and immediately disappears").
+        if (width <= 1 || height <= 1)
+            return;
+        _ = MoveWindow(_hwnd, 0, 0, width, height, true);
+        _ = ShowWindow(_hwnd, SW_SHOW);
     }
 
     private void DetachIfNeeded()
