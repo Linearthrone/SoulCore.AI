@@ -7,14 +7,20 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// <summary>
 /// Locate the Victoria VirtualBox guest window (victoria-sandbox) for Presence HWND embed.
 /// Prefer VirtualBoxVM.exe (the running VM) over VirtualBox Manager.
+/// After Presence SetParent, the HWND is no longer top-level — EnumWindows misses it.
+/// Cache + IsWindow keeps returning the same HWND so Her screen does not tear down.
 /// </summary>
 public static class VictoriaVirtualBoxWindowLocator
 {
     public sealed record FoundWindow(nint Hwnd, int Pid, string Title, string ExePath);
 
+    private static readonly object CacheGate = new();
+    private static FoundWindow? _cached;
+
     /// <summary>
-    /// Best-effort find of the victoria-sandbox VirtualBox top-level window.
-    /// <paramref name="titleSubstring"/> defaults to matching any VirtualBox VM when empty.
+    /// Best-effort find of the victoria-sandbox VirtualBox window.
+    /// Prefers a visible top-level match; falls back to a still-alive cached HWND
+    /// (required after Presence SetParent makes the window a child).
     /// </summary>
     public static FoundWindow? TryFind(string? titleSubstring = "victoria-sandbox")
     {
@@ -22,6 +28,52 @@ public static class VictoriaVirtualBoxWindowLocator
             return null;
 
         var needle = (titleSubstring ?? "").Trim();
+        var topLevel = TryFindTopLevel(needle);
+        if (topLevel is not null)
+        {
+            lock (CacheGate)
+                _cached = topLevel;
+            return topLevel;
+        }
+
+        lock (CacheGate)
+        {
+            if (_cached is null)
+                return null;
+
+            if (!IsWindow(_cached.Hwnd))
+            {
+                _cached = null;
+                return null;
+            }
+
+            // Still the same process? (VM may have restarted under a new PID.)
+            GetWindowThreadProcessId(_cached.Hwnd, out uint pid);
+            if (pid == 0 || unchecked((int)pid) != _cached.Pid)
+            {
+                _cached = null;
+                return null;
+            }
+
+            var title = GetTitle(_cached.Hwnd);
+            if (string.IsNullOrWhiteSpace(title))
+                title = _cached.Title;
+
+            // Refresh title on the cached record (child windows still have titles).
+            _cached = _cached with { Title = title };
+            return _cached;
+        }
+    }
+
+    /// <summary>Drop cache (e.g. when VmEmbedPane is turned off).</summary>
+    public static void ClearCache()
+    {
+        lock (CacheGate)
+            _cached = null;
+    }
+
+    private static FoundWindow? TryFindTopLevel(string needle)
+    {
         FoundWindow? best = null;
         var bestScore = -1;
 
@@ -131,6 +183,9 @@ public static class VictoriaVirtualBoxWindowLocator
 
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(nint hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(nint hWnd);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetWindowText(nint hWnd, StringBuilder lpString, int nMaxCount);

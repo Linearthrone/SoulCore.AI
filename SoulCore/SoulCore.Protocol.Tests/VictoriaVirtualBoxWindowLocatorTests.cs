@@ -17,9 +17,16 @@ public class VictoriaVirtualBoxWindowLocatorTests
     [Fact]
     public void TryFind_OnNonWindowsOrNoVm_ReturnsNullSafely()
     {
-        // CI/Linux: no VirtualBox UI — must not throw.
+        // CI/Linux: no VirtualBox UI - must not throw.
         var found = VictoriaVirtualBoxWindowLocator.TryFind("victoria-sandbox");
         if (!OperatingSystem.IsWindows())
             Assert.Null(found);
+    }
+
+    [Fact]
+    public void ClearCache_DoesNotThrow()
+    {
+        VictoriaVirtualBoxWindowLocator.ClearCache();
+        VictoriaVirtualBoxWindowLocator.ClearCache();
     }
 }

@@ -128,6 +128,24 @@ public partial class MainWindow
             return;
         }
 
+        // After SetParent the VM HWND is no longer top-level. Host may briefly report
+        // fallback/hwnd=0 if cache is cold — do not tear down a live embed (that made
+        // the VirtualBox window flash on the desktop then vanish).
+        if (_victoriaBrowserEmbedHost is { NativeHostUnavailable: false }
+            && _lastEmbedHwnd > 0
+            && embed is { Mode: "fallback", Hwnd: <= 0 }
+            && string.Equals(embed.Surface, "vm", StringComparison.OrdinalIgnoreCase))
+        {
+            if (VictoriaBrowserWaitingText is not null)
+            {
+                VictoriaBrowserWaitingText.Text = "Embedded VirtualBox (holding HWND while Host re-resolves)...";
+                VictoriaBrowserWaitingText.IsVisible = true;
+            }
+
+            ApplyVictoriaBrowserSoftCursor(snap, embed);
+            return;
+        }
+
         ClearVictoriaBrowserEmbed(embed?.Detail);
         if (snap.ImageBytes is { Length: > 0 })
         {

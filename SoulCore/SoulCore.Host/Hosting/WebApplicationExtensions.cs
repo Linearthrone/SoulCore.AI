@@ -243,7 +243,11 @@ internal static class WebApplicationExtensions
             if (ReadBool(root, "softCursorRestore") is { } soft)
                 access.SetSoftCursorRestore(soft);
             if (ReadBool(root, "vmEmbedPane") is { } vmEmbed)
+            {
                 access.SetVmEmbedPane(vmEmbed);
+                if (!vmEmbed)
+                    VictoriaVirtualBoxWindowLocator.ClearCache();
+            }
             if (ReadBool(root, "allowMt4Read") is { } mt4Read)
                 access.SetAllowMt4Read(mt4Read);
             if (ReadBool(root, "allowMt4Trade") is { } mt4Trade)
@@ -521,6 +525,7 @@ internal static class WebApplicationExtensions
             var playwrightEmbed = !vmEmbed && opts.PlaywrightEmbedPane;
             if (!vmEmbed && !playwrightEmbed)
             {
+                VictoriaVirtualBoxWindowLocator.ClearCache();
                 return Results.Json(new
                 {
                     mode = "disabled",
@@ -528,7 +533,7 @@ internal static class WebApplicationExtensions
                     hwnd = 0,
                     pid = 0,
                     title = (string?)null,
-                    detail = "VM embed is off. In Presence: Settings → Tools & Access → Embed VirtualBox in Her screen."
+                    detail = "VM embed is off. In Presence: Settings -> Tools & Access -> Embed VirtualBox in Her screen."
                 });
             }
 
@@ -565,6 +570,8 @@ internal static class WebApplicationExtensions
                 if (string.IsNullOrWhiteSpace(titleFilter))
                     titleFilter = "victoria-sandbox";
 
+                // TryFind caches HWND: after Presence SetParent the window is no longer
+                // top-level, so EnumWindows alone would miss it and Presence would tear down.
                 var vm = VictoriaVirtualBoxWindowLocator.TryFind(titleFilter);
                 if (vm is null)
                 {
@@ -575,7 +582,7 @@ internal static class WebApplicationExtensions
                         hwnd = 0,
                         pid = 0,
                         title = (string?)null,
-                        detail = $"No VirtualBox window matching '{titleFilter}' yet — start victoria-sandbox (visible, not minimized) or use JPEG fallback."
+                        detail = $"No VirtualBox window matching '{titleFilter}' yet - start victoria-sandbox (visible, not minimized) or use JPEG fallback."
                     });
                 }
 
@@ -590,6 +597,8 @@ internal static class WebApplicationExtensions
                     detail = "Presence should SetParent this VirtualBox HWND into Her screen (no floating twin)."
                 });
             }
+
+            VictoriaVirtualBoxWindowLocator.ClearCache();
 
             // Ensure headed Chromium is up so a window exists to reparent.
             if (string.Equals(bridge.BackendName, PlaywrightBrowserBridge.BackendId, StringComparison.OrdinalIgnoreCase))
