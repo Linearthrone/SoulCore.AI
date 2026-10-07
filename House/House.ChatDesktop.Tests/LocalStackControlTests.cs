@@ -131,4 +131,10 @@ public class LocalStackControlTests
     {
         Assert.Equal("House\\scripts\\restart-stack.ps1", LocalStackControl.RestartStackRelativeScript);
     }
+
+    [Fact]
+    public void BumpVersionsRelativeScript_IsUnderHouseScripts()
+    {
+        Assert.Equal("House\\scripts\\bump-versions.ps1", LocalStackControl.BumpVersionsRelativeScript);
+    }
 }
