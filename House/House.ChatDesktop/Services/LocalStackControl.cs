@@ -150,6 +150,9 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
     /// <summary>PROP-16.2 relative path from repo root (Presence spawns detached).</summary>
     public const string RestartStackRelativeScript = "House\\scripts\\restart-stack.ps1";
 
+    /// <summary>Bumps SoulCore.Host csproj Version so /health version moves after Update.</summary>
+    public const string BumpVersionsRelativeScript = "House\\scripts\\bump-versions.ps1";
+
     /// <summary>
     /// PROP-16: git fetch + ahead/behind vs upstream + dirty porcelain.
     /// </summary>
@@ -217,7 +220,8 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
     }
 
     /// <summary>
-    /// PROP-16: rebuild + restart Host via start-soulcore.ps1, then poll /health.
+    /// PROP-16: bump Host patch version, rebuild + restart via start-soulcore.ps1, poll /health.
+    /// Rebuild alone does not change /health version — the csproj stamp must move.
     /// </summary>
     public async Task<LocalStackActionResult> UpdateHostAsync(
         CancellationToken ct = default,
@@ -227,6 +231,15 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
         if (RepoRoot is null)
             return LocalStackActionResult.Fail(
                 "repo root not found — set HOUSE_SOULCORE_REPO or Settings → SoulCore repo folder");
+
+        progress?.Report("Bumping Host version…");
+        var bump = await RunScriptAsync(
+            BumpVersionsRelativeScript,
+            new[] { "-Target", "host", "-Part", "patch" },
+            ct,
+            wait: true).ConfigureAwait(false);
+        if (!bump.Ok)
+            return LocalStackActionResult.Fail($"Host version bump failed: {bump.Detail}");
 
         progress?.Report("Rebuilding and restarting Host…");
         var rebuild = await RunScriptAsync(
@@ -244,11 +257,14 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             ct.ThrowIfCancellationRequested();
             if (await ProbeHostHealthAsync(ct).ConfigureAwait(false))
             {
-                progress?.Report("Host healthy");
-                return LocalStackActionResult.Succeed(
-                    string.IsNullOrWhiteSpace(rebuild.Detail)
-                        ? "Host rebuilt and healthy"
-                        : rebuild.Detail);
+                var hostVer = await TryReadHostVersionAsync(ct).ConfigureAwait(false);
+                progress?.Report(string.IsNullOrWhiteSpace(hostVer)
+                    ? "Host healthy"
+                    : $"Host healthy ({hostVer})");
+                var detail = string.IsNullOrWhiteSpace(hostVer)
+                    ? (string.IsNullOrWhiteSpace(rebuild.Detail) ? "Host rebuilt and healthy" : rebuild.Detail)
+                    : $"Host {hostVer} - {bump.Detail}";
+                return LocalStackActionResult.Succeed(detail);
             }
 
             progress?.Report("Waiting for Host /health…");
@@ -257,6 +273,27 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
 
         return LocalStackActionResult.Fail(
             $"Host rebuild ran but /health did not answer within {timeout}s. Detail: {rebuild.Detail}");
+    }
+
+    private async Task<string?> TryReadHostVersionAsync(CancellationToken ct)
+    {
+        try
+        {
+            var url = $"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/health";
+            using var response = await _http.GetAsync(url, ct).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+            await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (doc.RootElement.TryGetProperty("version", out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String)
+                return v.GetString();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
