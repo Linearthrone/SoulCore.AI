@@ -23,6 +23,7 @@ public partial class MainWindow
     private string? _browserCursorState;
     private DateTimeOffset? _browserCursorAt;
     private bool _browserCursorLayerHooked;
+    private VictoriaHerScreenOverlayWindow? _herScreenOverlay;
 
     // PROP-14.1 palette — match PlaywrightClickCursor IdleHex / ClickHex.
     private static readonly IBrush SoftCursorIdleStroke = new SolidColorBrush(Color.Parse("#FF2D55"));
@@ -63,7 +64,11 @@ public partial class MainWindow
             _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             PositionVictoriaBrowserSoftCursor();
             UpdateEmbedHoverCoordsFromSystemCursor();
+            return;
         }
+
+        // Overlay is a separate HWND — hide when Her screen tab is not showing.
+        HideHerScreenOverlay();
     }
 
     private void ApplyVictoriaBrowserView(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed = null)
@@ -271,6 +276,7 @@ public partial class MainWindow
         _lastEmbedHwnd = 0;
         _lastEmbedMode = detail;
         DestroyVictoriaBrowserEmbedHost();
+        HideHerScreenOverlay();
     }
 
     private void DestroyVictoriaBrowserEmbedHost()
@@ -296,6 +302,59 @@ public partial class MainWindow
         _victoriaBrowserEmbedHost = null;
         if (VictoriaBrowserEmbedSlot is not null)
             VictoriaBrowserEmbedSlot.IsVisible = false;
+    }
+
+    /// <summary>
+    /// Owned click-through window above the VM HWND — in-tree Avalonia layers paint under SetParent.
+    /// </summary>
+    private void EnsureHerScreenOverlay()
+    {
+        if (!OperatingSystem.IsWindows() || !IsVictoriaVmEmbedLive())
+        {
+            HideHerScreenOverlay();
+            return;
+        }
+
+        if (_herScreenOverlay is { IsVisible: true })
+            return;
+
+        try
+        {
+            _herScreenOverlay ??= new VictoriaHerScreenOverlayWindow();
+            if (!_herScreenOverlay.IsVisible)
+                _herScreenOverlay.Show(this);
+        }
+        catch (Exception ex)
+        {
+            PresenceStartupLog.WriteException("EnsureHerScreenOverlay", ex);
+        }
+    }
+
+    private void HideHerScreenOverlay()
+    {
+        try
+        {
+            if (_herScreenOverlay is { IsVisible: true })
+                _herScreenOverlay.Hide();
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    private void CloseHerScreenOverlay()
+    {
+        try
+        {
+            _herScreenOverlay?.Close();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _herScreenOverlay = null;
     }
 
     private void ApplyVictoriaBrowserSoftCursor(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed)
@@ -327,6 +386,7 @@ public partial class MainWindow
         _browserCursorAt = null;
         if (VictoriaBrowserCursorLayer is not null)
             VictoriaBrowserCursorLayer.IsVisible = false;
+        _herScreenOverlay?.SetSoftCursor(false, 0, 0, 28, SoftCursorIdleStroke, SoftCursorIdleFill);
         RefreshVictoriaBrowserCoordBadge();
     }
 
@@ -366,6 +426,7 @@ public partial class MainWindow
             || _browserImagePixelWidth <= 0 || _browserImagePixelHeight <= 0)
         {
             layer.IsVisible = false;
+            _herScreenOverlay?.SetSoftCursor(false, 0, 0, 28, SoftCursorIdleStroke, SoftCursorIdleFill);
             return;
         }
 
@@ -373,6 +434,7 @@ public partial class MainWindow
         if (bounds.Width <= 1 || bounds.Height <= 1)
         {
             layer.IsVisible = false;
+            _herScreenOverlay?.SetSoftCursor(false, 0, 0, 28, SoftCursorIdleStroke, SoftCursorIdleFill);
             return;
         }
 
@@ -380,28 +442,43 @@ public partial class MainWindow
                     && _browserCursorAt is DateTimeOffset at
                     && (DateTimeOffset.UtcNow - at).TotalMilliseconds < SoftCursorFlashMs;
 
-        cursor.Stroke = flash ? SoftCursorClickStroke : SoftCursorIdleStroke;
-        cursor.Fill = flash ? SoftCursorClickFill : SoftCursorIdleFill;
-        cursor.Width = flash ? 36 : 28;
-        cursor.Height = flash ? 36 : 28;
+        var stroke = flash ? SoftCursorClickStroke : SoftCursorIdleStroke;
+        var fill = flash ? SoftCursorClickFill : SoftCursorIdleFill;
+        var size = flash ? 36.0 : 28.0;
 
         // HWND embed fills the slot (stretch); JPEG uses Uniform letterbox.
         var mapped = IsVictoriaVmEmbedLive()
             ? VictoriaBrowserCoordMap.TryMapGuestToSurfaceStretchFill(
                 cx, cy, bounds.Width, bounds.Height,
                 _browserImagePixelWidth, _browserImagePixelHeight,
-                cursor.Width, cursor.Height)
+                size, size)
             : VictoriaBrowserCoordMap.TryMapGuestToSurfaceUniform(
                 cx, cy, bounds.Width, bounds.Height,
                 _browserImagePixelWidth, _browserImagePixelHeight,
-                cursor.Width, cursor.Height);
+                size, size);
 
         if (mapped is null)
         {
             layer.IsVisible = false;
+            _herScreenOverlay?.SetSoftCursor(false, 0, 0, size, stroke, fill);
             return;
         }
 
+        // Live VM HWND covers in-tree Avalonia — paint cursor on the owned overlay instead.
+        if (IsVictoriaVmEmbedLive())
+        {
+            layer.IsVisible = false;
+            EnsureHerScreenOverlay();
+            _herScreenOverlay?.SyncToSurface(surface);
+            _herScreenOverlay?.SetSoftCursor(true, mapped.Value.Left, mapped.Value.Top, size, stroke, fill);
+            return;
+        }
+
+        HideHerScreenOverlay();
+        cursor.Stroke = stroke;
+        cursor.Fill = fill;
+        cursor.Width = size;
+        cursor.Height = size;
         Canvas.SetLeft(cursor, mapped.Value.Left);
         Canvas.SetTop(cursor, mapped.Value.Top);
         layer.Width = bounds.Width;
@@ -579,6 +656,20 @@ public partial class MainWindow
     {
         var text = VictoriaBrowserCoordMap.FormatCoordBadge(
             _browserCursorX, _browserCursorY, _hoverGuestX, _hoverGuestY);
+
+        if (IsVictoriaVmEmbedLive())
+        {
+            // Badge under HWND is invisible — drive the click-through overlay.
+            if (VictoriaBrowserCoordBadge is not null)
+                VictoriaBrowserCoordBadge.IsVisible = false;
+            EnsureHerScreenOverlay();
+            if (VictoriaBrowserSurface is not null)
+                _herScreenOverlay?.SyncToSurface(VictoriaBrowserSurface);
+            _herScreenOverlay?.SetBadge(text);
+            return;
+        }
+
+        HideHerScreenOverlay();
         if (text is null)
         {
             if (VictoriaBrowserCoordBadge is not null)
@@ -599,5 +690,6 @@ public partial class MainWindow
         _lastHoverClickHint = null;
         if (VictoriaBrowserCoordBadge is not null)
             VictoriaBrowserCoordBadge.IsVisible = false;
+        _herScreenOverlay?.SetBadge(null);
     }
 }

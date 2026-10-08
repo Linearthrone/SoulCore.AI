@@ -160,6 +160,7 @@ public partial class MainWindow : Window
             _pollTimer.Stop();
             _desktopViewTimer.Stop();
             _browserViewTimer.Stop();
+            CloseHerScreenOverlay();
             _desktopPopOut?.Close();
             _popOuts.CloseAll();
             SaveDisplayNameFromEditor();

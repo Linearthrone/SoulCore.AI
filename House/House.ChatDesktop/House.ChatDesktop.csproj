@@ -12,8 +12,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <!-- PROP-4.2: bump with House/scripts/bump-versions.ps1 on every Presence fix (vpk packVersion). -->
-    <Version>0.1.16</Version>
-    <InformationalVersion>0.1.16</InformationalVersion>
+    <Version>0.1.17</Version>
+    <InformationalVersion>0.1.17</InformationalVersion>
     <Product>House Victoria Presence</Product>
     <Company>LinearThrone</Company>
   </PropertyGroup>

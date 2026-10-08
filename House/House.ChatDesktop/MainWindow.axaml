@@ -256,7 +256,9 @@
                       <Panel x:Name="VictoriaBrowserEmbedSlot"
                              IsVisible="False"
                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-                      <!-- Soft cursor overlay (VM embed / guest JPEG) — pink idle, teal click -->
+                      <!-- Soft cursor + badge: JPEG path uses these in-tree layers.
+                           Live VM HWND paints above Avalonia — BrowserView opens a
+                           click-through owned overlay window for cursor/coords then. -->
                       <Canvas x:Name="VictoriaBrowserCursorLayer" IsHitTestVisible="False" IsVisible="False">
                         <Ellipse x:Name="VictoriaBrowserCursor" Width="28" Height="28"
                                  Stroke="#FFFF2D55" StrokeThickness="3"
