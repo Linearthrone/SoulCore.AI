@@ -14,6 +14,10 @@ public partial class MainWindow
     private DispatcherTimer? _layoutSaveTimer;
     private bool _layoutReady;
     private bool _applyingLayout;
+    private bool _eastSideResizeDragging;
+    private double _eastSideResizeStartX;
+    private double _eastSideResizeStartSide;
+    private double _eastSideResizeStartWindow;
 
     private void InitLayoutChrome()
     {
@@ -73,7 +77,6 @@ public partial class MainWindow
 
         if (e.Property == WidthProperty || e.Property == HeightProperty)
         {
-            // Star side column grows with the window — keep HWND matched to the slot.
             _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             ScheduleLayoutSave();
         }
@@ -179,15 +182,15 @@ public partial class MainWindow
     {
         if (PresenceMainSplit?.ColumnDefinitions is { Count: >= 3 } cols)
         {
-            // Star+star so dragging the window's right edge (and the splitter) resizes Her screen /
-            // VM embed — a fixed Pixel side column left all growth in chat (*).
-            var (chatStar, sideStar) = PresencePaneLayout.StarWeightsForSideWidth(
-                _uiSettings.ResolvedSideColumnWidth(),
-                _uiSettings.ResolvedWindowWidth());
-            cols[0].Width = new GridLength(chatStar, GridUnitType.Star);
+            // Pixel Her screen (stable HWND embed). Col 3 is Avalonia-only east grip.
+            var side = _uiSettings.ResolvedSideColumnWidth();
+            cols[0].Width = new GridLength(1, GridUnitType.Star);
             cols[0].MinWidth = LocalUiSettings.MinChatWidth;
-            cols[2].Width = new GridLength(sideStar, GridUnitType.Star);
+            cols[2].Width = new GridLength(side);
             cols[2].MinWidth = LocalUiSettings.MinSideColumnWidth;
+            if (cols.Count >= 4)
+                cols[3].Width = new GridLength(PresencePaneLayout.EastGripWidth);
+            MinWidth = PresencePaneLayout.MinWindowWidthForSide(side);
         }
 
         // Sight row height no longer applies — Her screen / What she saw share a tabbed column.
@@ -201,6 +204,101 @@ public partial class MainWindow
             if (side >= LocalUiSettings.MinSideColumnWidth)
                 _uiSettings.SideColumnWidth = Math.Min(side, LocalUiSettings.MaxSideColumnWidth);
         }
+    }
+
+    /// <summary>
+    /// Right grip beside the VM: grow Her screen + window together. Needed because the
+    /// embedded VirtualBox HWND sits on top of the window's ResizeEast strip.
+    /// </summary>
+    private void HerScreenEastResize_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+            return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+        if (PresenceMainSplit?.ColumnDefinitions is not { Count: >= 3 } cols)
+            return;
+
+        _eastSideResizeDragging = true;
+        _eastSideResizeStartX = e.GetPosition(this).X;
+        _eastSideResizeStartSide = cols[2].ActualWidth > 1
+            ? cols[2].ActualWidth
+            : _uiSettings.ResolvedSideColumnWidth();
+        _eastSideResizeStartWindow = Width;
+        if (sender is Control grip)
+            e.Pointer.Capture(grip);
+        e.Handled = true;
+    }
+
+    private void HerScreenEastResize_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_eastSideResizeDragging)
+            return;
+
+        var delta = e.GetPosition(this).X - _eastSideResizeStartX;
+        ApplyHerScreenEastExpand(_eastSideResizeStartSide + delta, _eastSideResizeStartWindow + delta);
+        e.Handled = true;
+    }
+
+    private void HerScreenEastResize_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_eastSideResizeDragging)
+            return;
+        EndHerScreenEastResize(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void HerScreenEastResize_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (!_eastSideResizeDragging)
+            return;
+        EndHerScreenEastResize(pointer: null);
+    }
+
+    private void EndHerScreenEastResize(IPointer? pointer)
+    {
+        _eastSideResizeDragging = false;
+        try
+        {
+            pointer?.Capture(null);
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+        ScheduleLayoutSave();
+    }
+
+    private void ApplyHerScreenEastExpand(double desiredSide, double desiredWindow)
+    {
+        if (PresenceMainSplit?.ColumnDefinitions is not { Count: >= 3 } cols)
+            return;
+
+        var side = Math.Clamp(
+            desiredSide,
+            LocalUiSettings.MinSideColumnWidth,
+            LocalUiSettings.MaxSideColumnWidth);
+        var minWindow = PresencePaneLayout.MinWindowWidthForSide(side);
+        var window = Math.Max(desiredWindow, minWindow);
+
+        _applyingLayout = true;
+        try
+        {
+            cols[2].Width = new GridLength(side);
+            if (WindowState == WindowState.Normal)
+            {
+                MinWidth = minWindow;
+                Width = window;
+            }
+        }
+        finally
+        {
+            _applyingLayout = false;
+        }
+
+        _victoriaBrowserEmbedHost?.SyncSizeToSlot();
     }
 
     private void CaptureWindowBoundsIntoSettings()
@@ -263,7 +361,8 @@ public partial class MainWindow
         foreach (var grip in new[]
                  {
                      ResizeWest, ResizeEast, ResizeNorth, ResizeSouth,
-                     ResizeNorthWest, ResizeNorthEast, ResizeSouthWest, ResizeSouthEast
+                     ResizeNorthWest, ResizeNorthEast, ResizeSouthWest, ResizeSouthEast,
+                     HerScreenEastResizeGrip
                  })
         {
             if (grip is null) continue;
