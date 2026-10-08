@@ -258,9 +258,10 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     [Fact]
-    public async Task DesktopNlOpenChrome_ForcesDesktopOpenApp()
+    public async Task DesktopNlOpenChrome_ForcesBrowserNavigate()
     {
-        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Chrome." };
+        // PROP-12: playwright-primary — "open Chrome" → browser_navigate, not desktop_open_app.
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened the browser." };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
         var handler = MakeHandler(inference, registry, unreal, MakeChatOptions(useToolLoop: true));
@@ -268,15 +269,15 @@ public class ChatWebSocketHandlerToolLoopTests
         await RunOneChatTurnAsync(handler, "open Google Chrome");
 
         Assert.True(inference.CompleteWithToolsCalled);
-        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
+        Assert.Equal("browser_navigate", inference.LastLoopOptions?.ForceToolName);
         Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
-    // VM scope: ForceTool stays desktop_open_app (guest inject, not host Process.Start).
+    // VM desktop scope + playwright: web still ForceTool browser_navigate (PROP-12).
     [Fact]
-    public async Task DesktopNlOpenChrome_VmScoped_StillForcesOpenApp()
+    public async Task DesktopNlOpenChrome_VmScoped_ForcesBrowserNavigate()
     {
-        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Firefox in the VM." };
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Playwright." };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
         var scoped = new ComputerControlGate(
@@ -285,7 +286,8 @@ public class ChatWebSocketHandlerToolLoopTests
             allowComputerControl: true,
             allowMt4Read: false,
             allowMt4Trade: false,
-            desktopTargetWindowTitle: "victoria-sandbox");
+            desktopTargetWindowTitle: "victoria-sandbox",
+            browserBackend: "playwright");
         var handler = MakeHandler(
             inference, registry, unreal, MakeChatOptions(useToolLoop: true),
             toolsAccess: scoped);
@@ -293,8 +295,8 @@ public class ChatWebSocketHandlerToolLoopTests
         await RunOneChatTurnAsync(handler, "open Google Chrome");
 
         Assert.True(inference.CompleteWithToolsCalled);
-        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
-        Assert.Contains("DESKTOP SCOPE", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Equal("browser_navigate", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("WEB IS NOT THE VM", inference.LastSystemContent ?? "", StringComparison.Ordinal);
         Assert.Contains("Preferred workflow", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
@@ -420,13 +422,13 @@ public class ChatWebSocketHandlerToolLoopTests
         var frames = await RunOneChatTurnAsync(handler, "open chrome and go to https://example.com");
 
         Assert.True(inference.CompleteWithToolsCalled,
-            "BED-185: PreferHermes must not block Ollama / desktop_open_app");
+            "BED-185: PreferHermes must not block Ollama / browser_navigate");
         var err = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.Error);
         Assert.Null(err);
         var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
         Assert.NotNull(done);
         Assert.Equal("ollama ok despite hermes down", done!.Payload?.GetProperty("text").GetString());
-        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
+        Assert.Equal("browser_navigate", inference.LastLoopOptions?.ForceToolName);
     }
 
     // ---------------------------------------------------------------------

@@ -161,8 +161,8 @@ logger.LogInformation(
 if (!SoulCore.Inference.Tools.Desktop.DesktopToolIntent.IsPlaywrightBackend(browserBackend))
 {
     logger.LogWarning(
-        "BrowserBackend={BrowserBackend} — Victoria will drive VirtualBox / guest Firefox for websites. " +
-        "Remove SOULCORE_Tools__BrowserBackend=native from SoulCore/.env (or set playwright), then restart Host.",
+        "BrowserBackend={BrowserBackend} — Victoria will drive VirtualBox / guest Firefox for websites and may claim she can only chat. " +
+        "PROP-12 requires playwright. Set Tools:BrowserBackend=playwright in appsettings (and remove SOULCORE_Tools__BrowserBackend=native from SoulCore/.env), then restart Host.",
         browserBackend);
 }
 

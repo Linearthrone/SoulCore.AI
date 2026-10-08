@@ -128,6 +128,7 @@ public class DesktopToolIntentTests
         Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.Block, StringComparison.Ordinal);
     }
 
     [Fact]

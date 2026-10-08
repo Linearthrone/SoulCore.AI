@@ -26,6 +26,8 @@ public static class ComputerUseGuidance
         "(notepad, explorer, cmd, powershell). Launch is background-friendly.\n" +
         "If the user asks to open a browser / Chrome / Edge / Firefox / a website: browser_navigate ONLY. " +
         "desktop_open_app chrome/edge/firefox is refused. There is no guest Firefox path.\n" +
+        "NEVER tell Kayleigh you can only text/chat or that you have no browser — you have browser_* tools. " +
+        "If a tool fails, report the tool error and retry or ask for install-playwright.ps1; do not invent a capability limit.\n" +
         "If Playwright Chromium is missing (setup_needed / install-playwright.ps1): tell Kayleigh that recipe. " +
         "Do NOT mention VirtualBox, the Ubuntu VM, or Firefox when the ask is a website.\n" +
         "If the user ONLY asked to open/launch a non-browser app, call desktop_open_app once and " +
