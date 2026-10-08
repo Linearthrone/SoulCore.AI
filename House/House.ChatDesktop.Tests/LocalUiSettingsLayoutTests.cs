@@ -46,6 +46,37 @@ public class LocalUiSettingsLayoutTests
     }
 
     [Fact]
+    public void StarWeightsForSideWidth_GivesSideRoomToGrow()
+    {
+        var (chat, side) = PresencePaneLayout.StarWeightsForSideWidth(
+            sideWidth: 520,
+            windowWidth: 1180);
+        Assert.True(side > 0);
+        Assert.True(chat > 0);
+        // ~520 of ~1174 usable → side share roughly 40%+
+        Assert.InRange(side / (chat + side), 0.35, 0.55);
+    }
+
+    [Fact]
+    public void MainWindow_axaml_uses_star_side_column_for_vm_resize()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..",
+            "House.ChatDesktop", "MainWindow.axaml"));
+        if (!File.Exists(path))
+        {
+            path = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+                "House", "House.ChatDesktop", "MainWindow.axaml"));
+        }
+
+        Assert.True(File.Exists(path), "MainWindow.axaml not found for layout assert");
+        var axaml = File.ReadAllText(path);
+        Assert.Contains("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,4,520\"", axaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RoundTrip_PersistsLayoutFields()
     {
         var dir = Path.Combine(Path.GetTempPath(), "hv-ui-" + Guid.NewGuid().ToString("N"));

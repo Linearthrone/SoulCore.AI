@@ -21,7 +21,8 @@ public sealed class LocalUiSettings
     public const double MinWindowHeight = 600;
     public const double MinChatWidth = 320;
     public const double MinSideColumnWidth = 200;
-    public const double MaxSideColumnWidth = 1600;
+    /// <summary>Soft cap when persisting; star layout can grow larger while the window is wide.</summary>
+    public const double MaxSideColumnWidth = 2400;
     public const double MinSightRowHeight = 120;
     public const double MinBrowserRowHeight = 120;
 
