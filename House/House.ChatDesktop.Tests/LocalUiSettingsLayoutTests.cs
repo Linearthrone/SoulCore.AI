@@ -60,18 +60,22 @@ public class LocalUiSettingsLayoutTests
     [Fact]
     public void MainWindow_axaml_uses_star_side_column_for_vm_resize()
     {
-        var path = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..",
-            "House.ChatDesktop", "MainWindow.axaml"));
-        if (!File.Exists(path))
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        string? path = null;
+        while (dir is not null)
         {
-            path = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-                "House", "House.ChatDesktop", "MainWindow.axaml"));
+            var candidate = Path.Combine(dir.FullName, "House", "House.ChatDesktop", "MainWindow.axaml");
+            if (File.Exists(candidate))
+            {
+                path = candidate;
+                break;
+            }
+
+            dir = dir.Parent;
         }
 
-        Assert.True(File.Exists(path), "MainWindow.axaml not found for layout assert");
-        var axaml = File.ReadAllText(path);
+        Assert.True(path is not null, "MainWindow.axaml not found for layout assert");
+        var axaml = File.ReadAllText(path!);
         Assert.Contains("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ColumnDefinitions=\"*,4,520\"", axaml, StringComparison.Ordinal);
     }
