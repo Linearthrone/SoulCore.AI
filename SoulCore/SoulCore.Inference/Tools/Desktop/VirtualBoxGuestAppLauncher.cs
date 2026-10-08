@@ -206,14 +206,34 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest click ({x},{y}) is off the Ubuntu screen (origin 0,0).", null);
 
-        var xdArgs = new List<string> { "mousemove", "--sync", x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture), "click" };
-        if (clicks == 2)
-            xdArgs.AddRange(new[] { "--repeat", "2", "--delay", "80" });
-        xdArgs.Add(btn.ToString(CultureInfo.InvariantCulture));
+        // Park host Absolute pointing off the VM, then move + click as separate
+        // xdotool runs so Mouse Integration cannot yank the pointer mid-gesture.
+        using (HostPointerPark.Begin())
+        {
+            var move = await XdotoolAsync(
+                    new[]
+                    {
+                        "mousemove", "--sync",
+                        x.ToString(CultureInfo.InvariantCulture),
+                        y.ToString(CultureInfo.InvariantCulture)
+                    },
+                    ct)
+                .ConfigureAwait(false);
+            if (!move.Success)
+                return move;
 
-        var result = await XdotoolAsync(xdArgs, ct).ConfigureAwait(false);
-        if (!result.Success)
-            return result;
+            await Task.Delay(40, ct).ConfigureAwait(false);
+
+            var clickArgs = new List<string> { "click", "--clearmodifiers" };
+            if (clicks == 2)
+                clickArgs.AddRange(new[] { "--repeat", "2", "--delay", "80" });
+            clickArgs.Add(btn.ToString(CultureInfo.InvariantCulture));
+
+            var result = await XdotoolAsync(clickArgs, ct).ConfigureAwait(false);
+            if (!result.Success)
+                return result;
+        }
+
         var label = clicks == 2 ? "double-clicked" : "clicked";
         return new DesktopOpResult(
             true,
@@ -226,20 +246,24 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
     {
         if (!TryMapMouseButton(button, out var btn, out var err))
             return new DesktopOpResult(false, err, null);
-        var result = await XdotoolAsync(
-                new[]
-                {
-                    "mousemove", "--sync",
-                    x1.ToString(CultureInfo.InvariantCulture), y1.ToString(CultureInfo.InvariantCulture),
-                    "mousedown", btn.ToString(CultureInfo.InvariantCulture),
-                    "mousemove", "--sync",
-                    x2.ToString(CultureInfo.InvariantCulture), y2.ToString(CultureInfo.InvariantCulture),
-                    "mouseup", btn.ToString(CultureInfo.InvariantCulture)
-                },
-                ct)
-            .ConfigureAwait(false);
-        if (!result.Success)
-            return result;
+        using (HostPointerPark.Begin())
+        {
+            var result = await XdotoolAsync(
+                    new[]
+                    {
+                        "mousemove", "--sync",
+                        x1.ToString(CultureInfo.InvariantCulture), y1.ToString(CultureInfo.InvariantCulture),
+                        "mousedown", btn.ToString(CultureInfo.InvariantCulture),
+                        "mousemove", "--sync",
+                        x2.ToString(CultureInfo.InvariantCulture), y2.ToString(CultureInfo.InvariantCulture),
+                        "mouseup", btn.ToString(CultureInfo.InvariantCulture)
+                    },
+                    ct)
+                .ConfigureAwait(false);
+            if (!result.Success)
+                return result;
+        }
+
         return new DesktopOpResult(
             true,
             $"dragged {button} guest ({x1},{y1})→({x2},{y2}) in the {GuestOpenedMarker}.",
@@ -292,9 +316,13 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             });
         }
 
-        var result = await XdotoolAsync(args, ct).ConfigureAwait(false);
-        if (!result.Success)
-            return result;
+        using (HostPointerPark.Begin())
+        {
+            var result = await XdotoolAsync(args, ct).ConfigureAwait(false);
+            if (!result.Success)
+                return result;
+        }
+
         return new DesktopOpResult(
             true,
             $"scrolled guest ({x},{y}) dY={deltaY} dX={deltaX} in the {GuestOpenedMarker}.",
