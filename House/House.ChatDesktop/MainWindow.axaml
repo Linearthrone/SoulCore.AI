@@ -144,8 +144,8 @@
         </Border>
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
-      <!-- Both columns are * so east-window resize and the splitter grow Her screen / VM embed. -->
-      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,6,*">
+      <!-- Pixel Her screen + Avalonia-only east grip (col 3). VM HWND steals hits on window ResizeEast. -->
+      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,6,520,10">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">
@@ -229,7 +229,7 @@
                       ResizeDirection="Columns" ShowsPreview="False"
                       Background="#44FFFFFF" MinWidth="6"
                       Cursor="SizeWestEast"
-                      ToolTip.Tip="Drag to widen or narrow Her screen (VM embed)"/>
+                      ToolTip.Tip="Drag left to widen Her screen (takes space from chat)"/>
 
         <!-- Her screen + What she saw share one column via tabs (no vertical splitter). -->
         <Border x:Name="PresenceSideSplit" Grid.Column="2" Classes="metal glass" Padding="8" MinWidth="200" MinHeight="120">
@@ -332,6 +332,15 @@
             </TabItem>
           </TabControl>
         </Border>
+
+        <!-- Right of VM: Avalonia grip the HWND cannot cover — drag right to expand embed. -->
+        <Border x:Name="HerScreenEastResizeGrip" Grid.Column="3"
+                Background="#55C4B06A" Cursor="SizeWestEast" MinWidth="10"
+                ToolTip.Tip="Drag right to widen Her screen / VM embed (window grows with it)"
+                PointerPressed="HerScreenEastResize_PointerPressed"
+                PointerMoved="HerScreenEastResize_PointerMoved"
+                PointerReleased="HerScreenEastResize_PointerReleased"
+                PointerCaptureLost="HerScreenEastResize_PointerCaptureLost"/>
       </Grid>
 
       <Border Grid.Row="1" Classes="metal glass" Padding="10" Margin="0,8,0,0">

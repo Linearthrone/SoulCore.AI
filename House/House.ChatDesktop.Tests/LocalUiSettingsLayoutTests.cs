@@ -46,19 +46,15 @@ public class LocalUiSettingsLayoutTests
     }
 
     [Fact]
-    public void StarWeightsForSideWidth_GivesSideRoomToGrow()
+    public void MinWindowWidthForSide_FitsChatSplitterSideAndEastGrip()
     {
-        var (chat, side) = PresencePaneLayout.StarWeightsForSideWidth(
-            sideWidth: 520,
-            windowWidth: 1180);
-        Assert.True(side > 0);
-        Assert.True(chat > 0);
-        // ~520 of ~1174 usable → side share roughly 40%+
-        Assert.InRange(side / (chat + side), 0.35, 0.55);
+        var min = PresencePaneLayout.MinWindowWidthForSide(520);
+        Assert.True(min >= LocalUiSettings.MinWindowWidth);
+        Assert.True(min >= LocalUiSettings.MinChatWidth + 6 + 520 + PresencePaneLayout.EastGripWidth);
     }
 
     [Fact]
-    public void MainWindow_axaml_uses_star_side_column_for_vm_resize()
+    public void MainWindow_axaml_has_avalonia_east_grip_beside_vm()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         string? path = null;
@@ -76,8 +72,9 @@ public class LocalUiSettingsLayoutTests
 
         Assert.True(path is not null, "MainWindow.axaml not found for layout assert");
         var axaml = File.ReadAllText(path!);
-        Assert.Contains("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ColumnDefinitions=\"*,4,520\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("ColumnDefinitions=\"*,6,520,10\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("HerScreenEastResizeGrip", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
     }
 
     [Fact]
