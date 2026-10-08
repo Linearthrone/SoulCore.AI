@@ -158,12 +158,19 @@ logger.LogInformation(
     "Tools browserBackend={BrowserBackend} desktopTarget={DesktopTarget} (web must use Playwright unless you intentionally set native)",
     browserBackend,
     string.IsNullOrWhiteSpace(toolsAccess.DesktopTargetWindowTitle) ? "(none)" : toolsAccess.DesktopTargetWindowTitle);
-if (!SoulCore.Inference.Tools.Desktop.DesktopToolIntent.IsPlaywrightBackend(browserBackend))
+if (SoulCore.Inference.Tools.Desktop.DesktopToolIntent.IsPlaywrightBackend(browserBackend))
 {
-    logger.LogWarning(
-        "BrowserBackend={BrowserBackend} — Victoria will drive VirtualBox / guest Firefox for websites and may claim she can only chat. " +
-        "PROP-12 requires playwright. Set Tools:BrowserBackend=playwright in appsettings (and remove SOULCORE_Tools__BrowserBackend=native from SoulCore/.env), then restart Host.",
-        browserBackend);
+    logger.LogInformation(
+        "BrowserBackend=playwright — websites use Host Chromium (not the embedded VM). " +
+        "Desk default is native+VmEmbedPane; set Tools:BrowserBackend=native to drive victoria-sandbox in Her screen.");
+}
+else
+{
+    logger.LogInformation(
+        "BrowserBackend={BrowserBackend} vmEmbed={VmEmbed} — websites/desktop use VirtualBox victoria-sandbox (Her screen embed). " +
+        "Keep the VM running and SOULCORE_VBOX_GUEST_PASS set for guestcontrol.",
+        browserBackend,
+        toolsAccess.VmEmbedPane);
 }
 
 await app.Services.GetRequiredService<IWsFrameAdapter>()

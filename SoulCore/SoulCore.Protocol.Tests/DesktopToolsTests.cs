@@ -181,17 +181,23 @@ public class DesktopToolsTests
     [Fact]
     public async Task DesktopOpenApp_GateOpen_DispatchesToBackend()
     {
-        // playwright-primary refuses chrome aliases — use a non-browser allowlist app.
+        // VM-native: chrome alias is allowed (guest Firefox). Playwright gate refuses it.
         var backend = new MockDesktopBackend();
-        var gate = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true);
+        var gate = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: true,
+            allowMt4Read: false,
+            allowMt4Trade: false,
+            browserBackend: "native");
         var tool = new DesktopOpenAppTool(gate, backend);
 
         var result = await tool.ExecuteAsync(
-            JsonDocument.Parse("""{"app":"notepad"}""").RootElement);
+            JsonDocument.Parse("""{"app":"chrome","args":"https://example.com"}""").RootElement);
 
         Assert.True(result.Success);
         Assert.Single(backend.OpenAppCalls);
-        Assert.Equal(("notepad", (string?)null), backend.OpenAppCalls[0]);
+        Assert.Equal(("chrome", "https://example.com"), backend.OpenAppCalls[0]);
         Assert.Contains("opened", result.Content, StringComparison.OrdinalIgnoreCase);
     }
 

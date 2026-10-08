@@ -132,6 +132,14 @@ public class DesktopToolIntentTests
     }
 
     [Fact]
+    public void ComputerUseGuidance_VmBlock_ForbidsChatOnlyClaim()
+    {
+        Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ComputerUseGuidance_ScopedBlock_LocksVmTitle_PlaywrightMode()
     {
         var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox", "playwright");
