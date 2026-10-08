@@ -128,6 +128,15 @@ public class DesktopToolIntentTests
         Assert.Contains("browser_click_text", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("computer_use", ComputerUseGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("ONLY asked to open/launch", ComputerUseGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.Block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ComputerUseGuidance_VmBlock_ForbidsChatOnlyClaim()
+    {
+        Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
     }
 
     [Fact]

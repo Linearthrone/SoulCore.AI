@@ -258,44 +258,55 @@ public class ChatWebSocketHandlerToolLoopTests
     }
 
     [Fact]
-    public async Task DesktopNlOpenChrome_ForcesDesktopOpenApp()
+    public async Task DesktopNlOpenChrome_VmNative_ForcesDesktopOpenApp()
     {
-        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Chrome." };
+        // Desk product: BrowserBackend=native → "open Chrome" opens guest Firefox via desktop_open_app.
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Firefox in the VM." };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
-        var handler = MakeHandler(inference, registry, unreal, MakeChatOptions(useToolLoop: true));
+        var native = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: true,
+            allowMt4Read: false,
+            allowMt4Trade: false,
+            browserBackend: "native",
+            desktopTargetWindowTitle: "victoria-sandbox");
+        var handler = MakeHandler(
+            inference, registry, unreal, MakeChatOptions(useToolLoop: true),
+            toolsAccess: native);
 
         await RunOneChatTurnAsync(handler, "open Google Chrome");
 
         Assert.True(inference.CompleteWithToolsCalled);
         Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
         Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("victoria-sandbox", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
-    // VM scope: ForceTool stays desktop_open_app (guest inject, not host Process.Start).
     [Fact]
-    public async Task DesktopNlOpenChrome_VmScoped_StillForcesOpenApp()
+    public async Task DesktopNlOpenChrome_PlaywrightOverride_ForcesBrowserNavigate()
     {
-        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Firefox in the VM." };
+        var inference = new ScriptedInferenceClient { CompleteWithToolsReply = "Opened Playwright." };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
-        var scoped = new ComputerControlGate(
+        var playwright = new ComputerControlGate(
             allowDesktopCapture: true,
             allowBrowserCapture: true,
             allowComputerControl: true,
             allowMt4Read: false,
             allowMt4Trade: false,
-            desktopTargetWindowTitle: "victoria-sandbox");
+            desktopTargetWindowTitle: "victoria-sandbox",
+            browserBackend: "playwright");
         var handler = MakeHandler(
             inference, registry, unreal, MakeChatOptions(useToolLoop: true),
-            toolsAccess: scoped);
+            toolsAccess: playwright);
 
         await RunOneChatTurnAsync(handler, "open Google Chrome");
 
         Assert.True(inference.CompleteWithToolsCalled);
-        Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
-        Assert.Contains("DESKTOP SCOPE", inference.LastSystemContent ?? "", StringComparison.Ordinal);
-        Assert.Contains("Preferred workflow", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Equal("browser_navigate", inference.LastLoopOptions?.ForceToolName);
+        Assert.Contains("WEB IS NOT THE VM", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
     // ---------------------------------------------------------------------
@@ -413,9 +424,18 @@ public class ChatWebSocketHandlerToolLoopTests
         };
         var registry = new ToolRegistry(Array.Empty<ITool>());
         var unreal = new RecordingUnrealVerbClient();
+        var native = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: true,
+            allowMt4Read: false,
+            allowMt4Trade: false,
+            browserBackend: "native",
+            desktopTargetWindowTitle: "victoria-sandbox");
         var handler = MakeHandler(
             inference, registry, unreal,
-            MakeChatOptions(useToolLoop: true));
+            MakeChatOptions(useToolLoop: true),
+            toolsAccess: native);
 
         var frames = await RunOneChatTurnAsync(handler, "open chrome and go to https://example.com");
 

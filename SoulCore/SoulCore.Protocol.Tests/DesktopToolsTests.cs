@@ -181,8 +181,15 @@ public class DesktopToolsTests
     [Fact]
     public async Task DesktopOpenApp_GateOpen_DispatchesToBackend()
     {
+        // VM-native: chrome alias is allowed (guest Firefox). Playwright gate refuses it.
         var backend = new MockDesktopBackend();
-        var gate = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: true);
+        var gate = new ComputerControlGate(
+            allowDesktopCapture: true,
+            allowBrowserCapture: true,
+            allowComputerControl: true,
+            allowMt4Read: false,
+            allowMt4Trade: false,
+            browserBackend: "native");
         var tool = new DesktopOpenAppTool(gate, backend);
 
         var result = await tool.ExecuteAsync(

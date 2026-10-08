@@ -340,18 +340,16 @@ Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
 # a multi-minute install inside ALLSTART blocks Host/GUI startup. Install once separately.
 $InstallPlaywright = Join-Path $RepoRoot "SoulCore\scripts\install-playwright.ps1"
 $EnvFile = Join-Path $RepoRoot "SoulCore\.env"
+# Desk default is VM embed (BrowserBackend=native). Only verify Playwright when .env opts into it.
+$wantPlaywright = $false
 if (Test-Path -LiteralPath $EnvFile) {
-    $envNative = Select-String -Path $EnvFile -Pattern '^\s*SOULCORE_Tools__BrowserBackend\s*=\s*native\s*$' -CaseSensitive:$false -ErrorAction SilentlyContinue
-    if ($envNative) {
-        Write-Host ""
-        Write-Host ">>> WARNING: SoulCore\.env sets SOULCORE_Tools__BrowserBackend=native" -ForegroundColor Red
-        Write-Host ">>> That FORCES VirtualBox guest Firefox for websites (overrides appsettings playwright)." -ForegroundColor Red
-        Write-Host ">>> Fix: delete that line (or set =playwright), then .\ALLSTART.ps1 -RestartHost" -ForegroundColor Yellow
-        Write-Host ""
-    }
+    $envPw = Select-String -Path $EnvFile -Pattern '^\s*SOULCORE_Tools__BrowserBackend\s*=\s*playwright\s*$' -CaseSensitive:$false -ErrorAction SilentlyContinue
+    if ($envPw) { $wantPlaywright = $true }
 }
 if ($SkipPlaywrightInstall) {
     Write-Host "=== ALLSTART: Playwright verify skipped (-SkipPlaywrightInstall) ==="
+} elseif (-not $wantPlaywright) {
+    Write-Host "=== ALLSTART: Playwright verify skipped (desk uses VM embed / BrowserBackend=native) ==="
 } elseif (Test-Path -LiteralPath $InstallPlaywright) {
     Write-Host "=== ALLSTART: Playwright Chromium verify (OPS-198, soft-fail) ==="
     try {

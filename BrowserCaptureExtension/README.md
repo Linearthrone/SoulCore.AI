@@ -30,7 +30,7 @@ Click the extension icon — popup should show **bridge connected :17891**.
 
 ### 3. SoulCore Host
 
-`Tools:BrowserBackend=native` (default) routes `browser_*` tools to this bridge.
+With desk `BrowserBackend=native`, `browser_*` prefer GuestVm (VirtualBox) over this extension; the extension is a fallback when GuestVm is unavailable.
 No Hermes required.
 
 ## SoulCore tools
