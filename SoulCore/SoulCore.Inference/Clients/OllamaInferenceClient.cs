@@ -1172,9 +1172,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
             || (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal)
                 && (string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
                     || string.Equals(toolName, "browser_snapshot", StringComparison.Ordinal)
-                    || string.Equals(toolName, "browser_fill", StringComparison.Ordinal)))
+                    || string.Equals(toolName, "browser_fill", StringComparison.Ordinal)
+                    // Guest AT-SPI / click_text may be down — allow pixel path bootstrap.
+                    || string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal)
+                    || string.Equals(toolName, "desktop_click", StringComparison.Ordinal)))
             || (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal)
-                && string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)));
+                && (string.Equals(toolName, "browser_navigate", StringComparison.Ordinal)
+                    || string.Equals(toolName, "desktop_open_app", StringComparison.Ordinal))));
 
     /// <summary>
     /// Alternates that fulfill the forced intent (consume ForceTool).
@@ -1184,7 +1188,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
          && string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal))
         || (string.Equals(forceToolName, "browser_click_text", StringComparison.Ordinal)
             && (string.Equals(toolName, "browser_fill", StringComparison.Ordinal)
-                || string.Equals(toolName, "browser_click", StringComparison.Ordinal)));
+                || string.Equals(toolName, "browser_click", StringComparison.Ordinal)
+                // Pixel click on the guest fulfills Login when AT-SPI click_text cannot.
+                || string.Equals(toolName, "desktop_click", StringComparison.Ordinal)
+                || string.Equals(toolName, "desktop_screenshot", StringComparison.Ordinal)));
 
     private static HashSet<string> BuildForceToolNameSet(string forceToolName)
     {
@@ -1215,10 +1222,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
             yield return "browser_navigate";
             yield return "browser_snapshot";
             yield return "browser_fill";
+            yield return "desktop_screenshot";
+            yield return "desktop_click";
         }
         else if (string.Equals(forceToolName, "desktop_screenshot", StringComparison.Ordinal))
         {
+            // Open/navigate bootstrap only — keep click out of the forced tools[]
+            // so exclusivity still requires the PNG first.
             yield return "browser_navigate";
+            yield return "desktop_open_app";
         }
     }
 
