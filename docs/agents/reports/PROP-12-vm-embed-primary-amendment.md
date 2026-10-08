@@ -19,3 +19,7 @@ is now:
 
 Victoria must never claim she can only text in chat; tool failures should name
 the real error (VM off, missing `SOULCORE_VBOX_GUEST_PASS`, etc.).
+
+**Follow-up (Host 0.1.9):** Login / page NL ForceTool on `BrowserBackend=native` is
+`desktop_screenshot` (not BED-194 `browser_click_text`). Playwright opt-in keeps
+`browser_click_text`. Kayleigh `click (x, y)` pastes ForceTool screenshot first.

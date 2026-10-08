@@ -10,8 +10,9 @@ public class DesktopToolIntentTests
     [InlineData("what's on my desktop?", "desktop_screenshot")]
     [InlineData("use the computer and draw a line", "desktop_screenshot")]
     [InlineData("click on the Chrome window", "desktop_screenshot")]
-    [InlineData("click the login button", "browser_click_text")]
-    [InlineData("sign in on the page", "browser_click_text")]
+    // Default / null backend = VM-primary desk → screenshot-first (not click_text).
+    [InlineData("click the login button", "desktop_screenshot")]
+    [InlineData("sign in on the page", "desktop_screenshot")]
     [InlineData("what windows are open?", "desktop_screenshot")]
     [InlineData("call list_desktop_windows", "list_desktop_windows")]
     [InlineData("open a Google Chrome window on my desktop", "desktop_open_app")]
@@ -24,6 +25,25 @@ public class DesktopToolIntentTests
     public void TryMatch_HighConfidence_ForcesTool(string text, string expectedTool)
     {
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));
+        Assert.Equal(expectedTool, match.ToolName);
+    }
+
+    [Theory]
+    [InlineData("click the login button", "browser_click_text")]
+    [InlineData("sign in on the page", "browser_click_text")]
+    public void TryMatch_PlaywrightBackend_LoginForcesClickText(string text, string expectedTool)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, "playwright", out var match));
+        Assert.Equal(expectedTool, match.ToolName);
+    }
+
+    [Theory]
+    [InlineData("click the login button", "desktop_screenshot")]
+    [InlineData("sign in on the page", "desktop_screenshot")]
+    [InlineData("click (488, 559)", "desktop_screenshot")]
+    public void TryMatch_NativeBackend_LoginForcesScreenshot(string text, string expectedTool)
+    {
+        Assert.True(DesktopToolIntent.TryMatch(text, "native", out var match));
         Assert.Equal(expectedTool, match.ToolName);
     }
 
@@ -137,6 +157,8 @@ public class DesktopToolIntentTests
         Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("When Kayleigh gives click", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("browser_click_text-only limitation", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
     }
 
     [Fact]

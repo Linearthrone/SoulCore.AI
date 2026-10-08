@@ -73,6 +73,7 @@ public static class ComputerUseGuidance
         "4) Always desktop_screenshot (or browser_snapshot) before claiming you can see the page. " +
         "list_desktop_windows is titles/bounds only — not vision. Kayleigh can also watch the live Her screen embed.\n" +
         "5) desktop_click at coordinates from THAT screenshot (guest 0,0). Never use Windows-monitor coords. " +
+        "When Kayleigh gives click (x, y) / her (x, y) from Her screen: desktop_screenshot first, then desktop_click those guest coords — do not refuse or invent a browser_click_text-only limitation.\n" +
         "Window center is only for clicking a window chrome — not Login on a page.\n" +
         "6) desktop_type / desktop_key after a click target. desktop_drag / desktop_scroll as needed.\n" +
         "7) Guest Additions need SOULCORE_VBOX_GUEST_PASS in SoulCore/.env — if tools say it is missing, ask Kayleigh to set it and restart Host.\n" +
@@ -184,6 +185,16 @@ public static class DesktopToolIntent
 
     private static readonly Regex BrowserPage = new(
         @"\b(?:login|log\s*in|sign\s*in|sign\s*up|register|checkout|password|username|email\s+field|web\s*page|website|web\s*site|in\s+firefox|on\s+the\s+page|click\s+(?:the\s+)?(?:login|sign|submit|button|link)|find\s+(?:the\s+)?(?:login|button|link))\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Kayleigh paste from Her screen badge: <c>click (x, y)</c> / <c>her (x, y)</c>.
+    /// Always screenshot-first so guest coords match the current framebuffer.
+    /// </summary>
+    private static readonly Regex GuestCoordClick = new(
+        @"\b(?:click|her)\s*\(\s*\d{1,5}\s*,\s*\d{1,5}\s*\)|" +
+        @"\byou\s+click\s*\(\s*\d{1,5}\s*,\s*\d{1,5}\s*\)|" +
+        @"\b(?:click|tap)\s+(?:at|on)\s+(?:\(?\s*)?\d{1,5}\s*,\s*\d{1,5}",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
@@ -308,11 +319,22 @@ public static class DesktopToolIntent
             return true;
         }
 
-        // Login / page UI: prefer labeled browser tools (Playwright / click_text),
-        // not exclusive desktop_screenshot (BED-194).
+        // Her-screen coordinate paste — always capture first, then desktop_click.
+        if (GuestCoordClick.IsMatch(text))
+        {
+            match = new Match(Kind.Screenshot, "desktop_screenshot");
+            return true;
+        }
+
+        // Login / page UI: Playwright → labeled click_text (BED-194).
+        // VM-primary (native / Her screen embed) → desktop_screenshot so the
+        // model can see the guest frame, then desktop_click — ForceTool
+        // exclusivity otherwise refuses screenshot while click_text is locked.
         if (BrowserPage.IsMatch(text))
         {
-            match = new Match(Kind.BrowserPage, "browser_click_text");
+            match = preferPlaywright
+                ? new Match(Kind.BrowserPage, "browser_click_text")
+                : new Match(Kind.BrowserPage, "desktop_screenshot");
             return true;
         }
 
