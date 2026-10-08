@@ -39,6 +39,10 @@ public class VictoriaBrowserViewHubTests
         Assert.Equal(VictoriaBrowserViewHub.BackendVboxGuest, snap.Backend);
         Assert.Equal(2, snap.FrameWidth);
         Assert.Equal(2, snap.FrameHeight);
+        // Soft-cursor seeded at frame center so Her screen shows pink before first click.
+        Assert.Equal(1, snap.CursorX);
+        Assert.Equal(1, snap.CursorY);
+        Assert.Equal(VictoriaBrowserViewHub.CursorIdle, snap.CursorState);
         Assert.True(hub.TryGetImageBytes(out var bytes, out _));
         Assert.Equal(png, bytes);
     }

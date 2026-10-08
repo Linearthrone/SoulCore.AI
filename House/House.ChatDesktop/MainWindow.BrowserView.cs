@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using House.ChatDesktop.Controls;
 using House.ChatDesktop.Services;
 
@@ -24,6 +25,7 @@ public partial class MainWindow
     private DateTimeOffset? _browserCursorAt;
     private bool _browserCursorLayerHooked;
     private VictoriaHerScreenOverlayWindow? _herScreenOverlay;
+    private HerScreenHwndOverlay? _herScreenHwndOverlay;
 
     // PROP-14.1 palette — match PlaywrightClickCursor IdleHex / ClickHex.
     private static readonly IBrush SoftCursorIdleStroke = new SolidColorBrush(Color.Parse("#FF2D55"));
@@ -241,6 +243,11 @@ public partial class MainWindow
             };
             // Bind before Add so OnAttachedToVisualTree / CreateNativeControlCore see _hwnd.
             host.Bind((nint)embed.Hwnd);
+            host.SoftCursorSiblingRaised += (_, _) =>
+            {
+                if (_herScreenHwndOverlay is { IsAttached: true })
+                    _herScreenHwndOverlay.SyncToParent();
+            };
             VictoriaBrowserEmbedSlot.Children.Add(host);
             VictoriaBrowserEmbedSlot.IsVisible = true;
             _victoriaBrowserEmbedHost = host;
@@ -305,7 +312,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Owned click-through window above the VM HWND — in-tree Avalonia layers paint under SetParent.
+    /// Prefer Win32 sibling overlay (above VirtualBox GPU). Fall back to owned Avalonia window.
     /// </summary>
     private void EnsureHerScreenOverlay()
     {
@@ -315,12 +322,20 @@ public partial class MainWindow
             return;
         }
 
-        if (_herScreenOverlay is { IsVisible: true })
-            return;
-
         try
         {
-            _herScreenOverlay ??= new VictoriaHerScreenOverlayWindow();
+            var parent = _victoriaBrowserEmbedHost?.EmbedParentHwnd ?? 0;
+            if (parent != 0)
+            {
+                _herScreenHwndOverlay ??= new HerScreenHwndOverlay();
+                _herScreenHwndOverlay.Attach(parent);
+                // Avalonia popup is redundant when HWND sibling works.
+                if (_herScreenOverlay is { IsVisible: true })
+                    _herScreenOverlay.Hide();
+                return;
+            }
+
+            _herScreenOverlay ??= new VictoriaHerScreenOverlayWindow { Topmost = true };
             if (!_herScreenOverlay.IsVisible)
                 _herScreenOverlay.Show(this);
         }
@@ -334,6 +349,15 @@ public partial class MainWindow
     {
         try
         {
+            _herScreenHwndOverlay?.Hide();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        try
+        {
             if (_herScreenOverlay is { IsVisible: true })
                 _herScreenOverlay.Hide();
         }
@@ -345,6 +369,17 @@ public partial class MainWindow
 
     private void CloseHerScreenOverlay()
     {
+        try
+        {
+            _herScreenHwndOverlay?.Dispose();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _herScreenHwndOverlay = null;
+
         try
         {
             _herScreenOverlay?.Close();
@@ -363,7 +398,17 @@ public partial class MainWindow
         var surface = embed?.Surface ?? snap.EmbedSurface;
         var wants = string.Equals(surface, "vm", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(snap.Backend, "vbox-guest", StringComparison.OrdinalIgnoreCase);
-        if (!wants || snap.CursorX is not int cx || snap.CursorY is not int cy)
+        if (!wants)
+        {
+            ClearVictoriaBrowserSoftCursor();
+            return;
+        }
+
+        // Prefer Host cursor; if she hasn't aimed yet, seed center so pink is visible on embed.
+        EnsureGuestFrameSizeForEmbed();
+        var cx = snap.CursorX ?? (_browserImagePixelWidth > 0 ? _browserImagePixelWidth / 2 : null);
+        var cy = snap.CursorY ?? (_browserImagePixelHeight > 0 ? _browserImagePixelHeight / 2 : null);
+        if (cx is null || cy is null)
         {
             ClearVictoriaBrowserSoftCursor();
             return;
@@ -387,6 +432,7 @@ public partial class MainWindow
         if (VictoriaBrowserCursorLayer is not null)
             VictoriaBrowserCursorLayer.IsVisible = false;
         _herScreenOverlay?.SetSoftCursor(false, 0, 0, 28, SoftCursorIdleStroke, SoftCursorIdleFill);
+        _herScreenHwndOverlay?.SetSoftCursor(false, 0, 0, 28, false);
         RefreshVictoriaBrowserCoordBadge();
     }
 
@@ -464,13 +510,26 @@ public partial class MainWindow
             return;
         }
 
-        // Live VM HWND covers in-tree Avalonia — paint cursor on the owned overlay instead.
+        // Live VM HWND covers in-tree Avalonia — paint on Win32 sibling (or Avalonia fallback).
         if (IsVictoriaVmEmbedLive())
         {
             layer.IsVisible = false;
             EnsureHerScreenOverlay();
-            _herScreenOverlay?.SyncToSurface(surface);
-            _herScreenOverlay?.SetSoftCursor(true, mapped.Value.Left, mapped.Value.Top, size, stroke, fill);
+            var scaling = TopLevel.GetTopLevel(surface)?.RenderScaling ?? 1.0;
+            var centerX = (int)Math.Round((mapped.Value.Left + size / 2) * scaling);
+            var centerY = (int)Math.Round((mapped.Value.Top + size / 2) * scaling);
+            var sizePx = (int)Math.Round(size * scaling);
+            if (_herScreenHwndOverlay is { IsAttached: true })
+            {
+                _herScreenHwndOverlay.SyncToParent();
+                _herScreenHwndOverlay.SetSoftCursor(true, centerX, centerY, sizePx, flash);
+            }
+            else
+            {
+                _herScreenOverlay?.SyncToSurface(surface);
+                _herScreenOverlay?.SetSoftCursor(true, mapped.Value.Left, mapped.Value.Top, size, stroke, fill);
+            }
+
             return;
         }
 
@@ -663,9 +722,18 @@ public partial class MainWindow
             if (VictoriaBrowserCoordBadge is not null)
                 VictoriaBrowserCoordBadge.IsVisible = false;
             EnsureHerScreenOverlay();
-            if (VictoriaBrowserSurface is not null)
-                _herScreenOverlay?.SyncToSurface(VictoriaBrowserSurface);
-            _herScreenOverlay?.SetBadge(text);
+            if (_herScreenHwndOverlay is { IsAttached: true })
+            {
+                _herScreenHwndOverlay.SyncToParent();
+                _herScreenHwndOverlay.SetBadge(text);
+            }
+            else
+            {
+                if (VictoriaBrowserSurface is not null)
+                    _herScreenOverlay?.SyncToSurface(VictoriaBrowserSurface);
+                _herScreenOverlay?.SetBadge(text);
+            }
+
             return;
         }
 

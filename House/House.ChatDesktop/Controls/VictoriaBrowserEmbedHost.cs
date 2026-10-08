@@ -35,6 +35,23 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
     /// <summary>True when Win32 child-host creation failed (missing manifest / OS). JPEG fallback only.</summary>
     public bool NativeHostUnavailable => _nativeHostUnavailable;
 
+    /// <summary>Fired after the guest HWND is resized — Presence raises the soft-cursor sibling.</summary>
+    public event EventHandler? SoftCursorSiblingRaised;
+
+    /// <summary>
+    /// Parent HWND of the SetParent'd guest (Avalonia NativeControlHost). Soft-cursor
+    /// overlay attaches as a sibling of the VM so it paints above the GPU surface.
+    /// </summary>
+    public nint EmbedParentHwnd
+    {
+        get
+        {
+            if (!OperatingSystem.IsWindows() || !_attached || _hwnd == 0)
+                return 0;
+            return GetParent(_hwnd);
+        }
+    }
+
     /// <summary>
     /// Set the Chromium HWND before attaching to the visual tree.
     /// Attach only after Bind with a non-zero hwnd so CreateNativeControlCore sees it.
@@ -83,6 +100,8 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         if (w > 1 && h > 1)
         {
             ApplyPixelSize(w, h);
+            // Keep soft-cursor sibling above VirtualBox after every resize.
+            SoftCursorSiblingRaised?.Invoke(this, EventArgs.Empty);
             return;
         }
 
