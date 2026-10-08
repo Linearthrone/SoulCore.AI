@@ -43,6 +43,10 @@ public partial class MainWindow
     {
         // GridSplitter inherits Thumb drag events; window size does not change when panes move.
         if (PresenceColumnSplitter is not null)
+        {
+            PresenceColumnSplitter.AddHandler(
+                Thumb.DragDeltaEvent,
+                (_, _) => _victoriaBrowserEmbedHost?.SyncSizeToSlot());
             PresenceColumnSplitter.AddHandler(
                 Thumb.DragCompletedEvent,
                 (_, _) =>
@@ -50,6 +54,7 @@ public partial class MainWindow
                     _victoriaBrowserEmbedHost?.SyncSizeToSlot();
                     ScheduleLayoutSave();
                 });
+        }
         // PresenceRowSplitter removed — What she saw is a tab beside Her screen.
     }
 
@@ -61,12 +66,15 @@ public partial class MainWindow
         {
             UpdateMaximizeCaption();
             SyncResizeGripState();
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             ScheduleLayoutSave();
             return;
         }
 
         if (e.Property == WidthProperty || e.Property == HeightProperty)
         {
+            // Star side column grows with the window — keep HWND matched to the slot.
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             ScheduleLayoutSave();
         }
     }
@@ -171,10 +179,15 @@ public partial class MainWindow
     {
         if (PresenceMainSplit?.ColumnDefinitions is { Count: >= 3 } cols)
         {
-            var side = _uiSettings.ResolvedSideColumnWidth();
-            cols[2].Width = new GridLength(side);
-            cols[2].MinWidth = LocalUiSettings.MinSideColumnWidth;
+            // Star+star so dragging the window's right edge (and the splitter) resizes Her screen /
+            // VM embed — a fixed Pixel side column left all growth in chat (*).
+            var (chatStar, sideStar) = PresencePaneLayout.StarWeightsForSideWidth(
+                _uiSettings.ResolvedSideColumnWidth(),
+                _uiSettings.ResolvedWindowWidth());
+            cols[0].Width = new GridLength(chatStar, GridUnitType.Star);
             cols[0].MinWidth = LocalUiSettings.MinChatWidth;
+            cols[2].Width = new GridLength(sideStar, GridUnitType.Star);
+            cols[2].MinWidth = LocalUiSettings.MinSideColumnWidth;
         }
 
         // Sight row height no longer applies — Her screen / What she saw share a tabbed column.
@@ -186,7 +199,7 @@ public partial class MainWindow
         {
             var side = cols[2].ActualWidth;
             if (side >= LocalUiSettings.MinSideColumnWidth)
-                _uiSettings.SideColumnWidth = side;
+                _uiSettings.SideColumnWidth = Math.Min(side, LocalUiSettings.MaxSideColumnWidth);
         }
     }
 

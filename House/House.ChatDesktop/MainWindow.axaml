@@ -144,7 +144,8 @@
         </Border>
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
-      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,520">
+      <!-- Both columns are * so east-window resize and the splitter grow Her screen / VM embed. -->
+      <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,6,*">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
           <Grid RowDefinitions="Auto,*">
             <DockPanel Margin="4,2,4,8">
@@ -224,10 +225,11 @@
           </Grid>
         </Border>
 
-        <GridSplitter x:Name="PresenceColumnSplitter" Grid.Column="1" Width="4"
+        <GridSplitter x:Name="PresenceColumnSplitter" Grid.Column="1" Width="6"
                       ResizeDirection="Columns" ShowsPreview="False"
-                      Background="#33FFFFFF" MinWidth="4"
-                      ToolTip.Tip="Drag to resize chat vs Her screen"/>
+                      Background="#44FFFFFF" MinWidth="6"
+                      Cursor="SizeWestEast"
+                      ToolTip.Tip="Drag to widen or narrow Her screen (VM embed)"/>
 
         <!-- Her screen + What she saw share one column via tabs (no vertical splitter). -->
         <Border x:Name="PresenceSideSplit" Grid.Column="2" Classes="metal glass" Padding="8" MinWidth="200" MinHeight="120">
