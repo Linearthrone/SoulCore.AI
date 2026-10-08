@@ -26,9 +26,14 @@ public sealed class VictoriaHerScreenOverlayWindow : Window
         CanResize = false;
         ShowInTaskbar = false;
         ShowActivated = false;
-        Topmost = false;
-        Background = Brushes.Transparent;
-        TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent };
+        // Topmost fallback when Win32 sibling overlay cannot attach.
+        Topmost = true;
+        Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
+        TransparencyLevelHint = new[]
+        {
+            WindowTransparencyLevel.Transparent,
+            WindowTransparencyLevel.None
+        };
         ExtendClientAreaToDecorationsHint = true;
         ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
         ExtendClientAreaTitleBarHeightHint = -1;
