@@ -30,7 +30,7 @@ Click the extension icon — popup should show **bridge connected :17891**.
 
 ### 3. SoulCore Host
 
-`Tools:BrowserBackend=native` (default) routes `browser_*` tools to this bridge.
+`Tools:BrowserBackend=native` routes `browser_*` tools to this bridge (optional; PROP-12 default is `playwright`).
 No Hermes required.
 
 ## SoulCore tools
