@@ -21,6 +21,7 @@
 
 - Soft cursor: stretch-to-fill mapping when embed is live (matches embed `SetWindowPos`).
 - Badge text: `her (x, y)` from Host `cursorX`/`cursorY`; while operator pointer is over the surface append ` · you click (x, y)` (stretch-to-fill guest map).
+- **Z-order:** SetParent’d VirtualBox HWND paints above Avalonia siblings. While embed is live, soft cursor + badge render in an owned click-through window (`WS_EX_TRANSPARENT` / `NOACTIVATE`) synced to the Her screen slot — not in-tree Canvas/Border.
 - Hover coords: poll system cursor vs Her-screen surface bounds (Win32 `GetCursorPos`) so Avalonia does not steal HWND input.
 - JPEG path: Uniform letterbox hover map + Avalonia PointerMoved; her line appears when soft cursor is active (vbox-guest).
 - Frame size from `/browser/view` hub; if missing while embed live, use last known or default until first `desktop_screenshot`.
