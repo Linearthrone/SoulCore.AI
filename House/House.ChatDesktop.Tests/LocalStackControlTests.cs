@@ -137,4 +137,16 @@ public class LocalStackControlTests
     {
         Assert.Equal("House\\scripts\\bump-versions.ps1", LocalStackControl.BumpVersionsRelativeScript);
     }
+
+    [Theory]
+    [InlineData("0.1.6", "0.1.7", true)]
+    [InlineData("0.1.6", "0.1.6", false)]
+    [InlineData(null, "0.1.7", true)]
+    [InlineData("0.1.6", null, false)]
+    [InlineData("", "", false)]
+    [InlineData("0.1.9", "0.1.10", true)]
+    public void HostVersionMoved_DetectsStaleHealth(string? before, string? after, bool expected)
+    {
+        Assert.Equal(expected, LocalStackControl.HostVersionMoved(before, after));
+    }
 }

@@ -86,15 +86,14 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             if (guest.Success)
                 return guest;
 
-            // Host PostMessage / CUA "background" into the VirtualBox HWND does not
-            // activate Ubuntu widgets — returning that as Success hid real guestcontrol
-            // failures (Kayleigh saw the pink aim overlay, button never pressed).
+            // Host PostMessage into the VirtualBox HWND does not activate Ubuntu widgets.
+            // Do not paraphrase this as "the host blocked the click" — guest injection failed.
             return new DesktopOpResult(
                 false,
-                guest.Content
-                + " Guest click failed — host window fallback is disabled (Absolute/PostMessage "
-                + "into VirtualBox does not click guest UI). Check SOULCORE_VBOX_GUEST_PASS, "
-                + "Guest Additions, and xdotool on the Ubuntu VM.",
+                "desktop_click did not activate the Ubuntu guest UI. "
+                + guest.Content
+                + " (Host-window PostMessage fallback stays off — it cannot press guest widgets. "
+                + "Need VirtualBox console mouse / AT-SPI / xdotool via Guest Additions.)",
                 guest.Data);
         }
 
