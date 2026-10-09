@@ -370,7 +370,8 @@ public class ScopedDesktopControlBackendTests
         Assert.False(result.Success);
         Assert.Single(guest.ClickCalls);
         Assert.Empty(inner.ClickCalls);
-        Assert.Contains("fallback is disabled", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("did not activate the Ubuntu guest UI", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("PostMessage fallback stays off", result.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
