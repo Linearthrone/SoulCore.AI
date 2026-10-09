@@ -86,17 +86,16 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             if (guest.Success)
                 return guest;
 
-            var host = await ClickHostScopedAsync(x, y, button, clicks, mapGuestOrigin: true, ct)
-                .ConfigureAwait(false);
-            if (host.Success)
-            {
-                return new DesktopOpResult(
-                    true,
-                    host.Content + " (guest click failed — host window fallback: " + guest.Content + ")",
-                    host.Data);
-            }
-
-            return guest;
+            // Host PostMessage / CUA "background" into the VirtualBox HWND does not
+            // activate Ubuntu widgets — returning that as Success hid real guestcontrol
+            // failures (Kayleigh saw the pink aim overlay, button never pressed).
+            return new DesktopOpResult(
+                false,
+                guest.Content
+                + " Guest click failed — host window fallback is disabled (Absolute/PostMessage "
+                + "into VirtualBox does not click guest UI). Check SOULCORE_VBOX_GUEST_PASS, "
+                + "Guest Additions, and xdotool on the Ubuntu VM.",
+                guest.Data);
         }
 
         return await ClickHostScopedAsync(x, y, button, clicks, mapGuestOrigin: false, ct)
@@ -115,17 +114,11 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             if (guest.Success)
                 return guest;
 
-            var host = await DragHostScopedAsync(x1, y1, x2, y2, button, mapGuestOrigin: true, ct)
-                .ConfigureAwait(false);
-            if (host.Success)
-            {
-                return new DesktopOpResult(
-                    true,
-                    host.Content + " (guest drag failed — host window fallback: " + guest.Content + ")",
-                    host.Data);
-            }
-
-            return guest;
+            return new DesktopOpResult(
+                false,
+                guest.Content
+                + " Guest drag failed — host window fallback is disabled for the same reason as clicks.",
+                guest.Data);
         }
 
         return await DragHostScopedAsync(x1, y1, x2, y2, button, mapGuestOrigin: false, ct)

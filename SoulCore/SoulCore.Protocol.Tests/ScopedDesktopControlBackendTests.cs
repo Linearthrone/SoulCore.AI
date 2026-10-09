@@ -355,7 +355,7 @@ public class ScopedDesktopControlBackendTests
     }
 
     [Fact]
-    public async Task Click_GuestDesktop_Fails_FallsBackToHostWindow()
+    public async Task Click_GuestDesktop_Fails_DoesNotFalseSuccessViaHostFallback()
     {
         var inner = new RecordingBackend();
         inner.ListWindowsResult = new DesktopOpResult(
@@ -365,14 +365,12 @@ public class ScopedDesktopControlBackendTests
         var guest = new RecordingGuestDesktop { FailClick = true };
         var scoped = new ScopedDesktopControlBackend(inner, Scope, guest);
 
-        // Guest coords (40,120) → host (140,170) inside the VM window.
         var result = await scoped.ClickAsync(40, 120, "left");
 
-        Assert.True(result.Success);
+        Assert.False(result.Success);
         Assert.Single(guest.ClickCalls);
-        Assert.Single(inner.ClickCalls);
-        Assert.Equal((140, 170, "left", 1), inner.ClickCalls[0]);
-        Assert.Contains("fallback", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(inner.ClickCalls);
+        Assert.Contains("fallback is disabled", result.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
