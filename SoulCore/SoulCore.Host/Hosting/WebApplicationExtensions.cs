@@ -162,7 +162,12 @@ internal static class WebApplicationExtensions
                             ? InferenceOptions.CloudBaseUrl
                             : "loopback")
                         : null,
-                    apiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey())
+                    apiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey()),
+                    visionSidecar = inferenceOptions.IsVisionSidecarConfigured,
+                    visionModel = string.IsNullOrWhiteSpace(inferenceOptions.VisionModel)
+                        ? null
+                        : inferenceOptions.VisionModel.Trim(),
+                    visionApiKeyConfigured = !string.IsNullOrWhiteSpace(inferenceOptions.ResolveVisionApiKey())
                 },
                 soulLoop = new
                 {

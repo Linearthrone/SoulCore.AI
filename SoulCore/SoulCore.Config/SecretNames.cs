@@ -16,6 +16,13 @@ public static class SecretNames
     public const string OllamaApiKey = "SOULCORE_OLLAMA_API_KEY";
 
     /// <summary>
+    /// Synthetic.new API key for OpenAI-compat vision
+    /// (<c>https://api.synthetic.new/openai/v1</c>, model e.g. <c>syn:large:vision</c>).
+    /// Env alias <c>SYNTHETIC_API_KEY</c> is also accepted. Never commit values.
+    /// </summary>
+    public const string SyntheticApiKey = "SOULCORE_SYNTHETIC_API_KEY";
+
+    /// <summary>
     /// Companion phone / remote WS upgrade token (BED-155). When set, Host
     /// fail-closes <c>/ws</c> unless <c>Authorization: Bearer</c> or <c>X-Api-Key</c> matches.
     /// Prefer ≥ 32 random chars. Never commit values.

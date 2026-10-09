@@ -96,6 +96,31 @@ public sealed class InferenceOptions
     /// <summary>True when <see cref="BaseUrl"/> targets ollama.com (direct cloud).</summary>
     public bool IsCloudEndpoint => IsOllamaCloudUrl(BaseUrl);
 
+    /// <summary>
+    /// Optional OpenAI-compat vision sidecar (e.g. Synthetic.new). When set with
+    /// <see cref="VisionModel"/> + API key, screenshot tools are described by this
+    /// endpoint and the text is injected into the tool loop so local chat models
+    /// that fail at vision still get readable UI content.
+    /// Example: <c>https://api.synthetic.new/openai/v1</c>
+    /// </summary>
+    public string VisionBaseUrl { get; set; } = "";
+
+    /// <summary>Vision model id (e.g. <c>syn:large:vision</c>). Empty disables the sidecar.</summary>
+    public string VisionModel { get; set; } = "";
+
+    /// <summary>
+    /// Optional vision API key in config. Prefer env <c>SOULCORE_SYNTHETIC_API_KEY</c>
+    /// or <c>SYNTHETIC_API_KEY</c>.
+    /// </summary>
+    public string? VisionApiKey { get; set; }
+
+    /// <summary>Timeout for vision describe calls (seconds). Default 60.</summary>
+    public int VisionTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>True when vision sidecar BaseUrl + Model are both set.</summary>
+    public bool IsVisionSidecarConfigured =>
+        !string.IsNullOrWhiteSpace(VisionBaseUrl) && !string.IsNullOrWhiteSpace(VisionModel);
+
     public static bool IsOllamaCloudUrl(string? baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -116,6 +141,31 @@ public sealed class InferenceOptions
         if (!string.IsNullOrWhiteSpace(fromEnv))
             return fromEnv.Trim();
         return string.IsNullOrWhiteSpace(ApiKey) ? null : ApiKey.Trim();
+    }
+
+    /// <summary>
+    /// Vision key: <c>SOULCORE_SYNTHETIC_API_KEY</c>, then <c>SYNTHETIC_API_KEY</c>,
+    /// then config <see cref="VisionApiKey"/>.
+    /// </summary>
+    public string? ResolveVisionApiKey()
+    {
+        foreach (var key in new[] { SecretNames.SyntheticApiKey, "SYNTHETIC_API_KEY" })
+        {
+            var fromEnv = Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrWhiteSpace(fromEnv))
+                return fromEnv.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(VisionApiKey) ? null : VisionApiKey.Trim();
+    }
+
+    /// <summary>Normalized vision OpenAI-compat base (trailing slash).</summary>
+    public string? ResolveVisionBaseUrl()
+    {
+        if (string.IsNullOrWhiteSpace(VisionBaseUrl))
+            return null;
+        var t = VisionBaseUrl.Trim().TrimEnd('/');
+        return t + "/";
     }
 
     /// <summary>
