@@ -56,6 +56,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     private readonly ILogger<OllamaInferenceClient> _logger;
     private readonly IToolRegistry? _toolRegistry;
     private readonly IUeLiveSignal _ueLive;
+    private readonly IVisionDescribeClient _vision;
 
     /// <summary>
     /// DI-friendly constructor (the one <c>AddHttpClient&lt;OllamaInferenceClient&gt;</c>
@@ -71,8 +72,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
         HttpClient http,
         IOptions<InferenceOptions> options,
         ILogger<OllamaInferenceClient> logger,
-        IUeLiveSignal ueLive)
-        : this(http, options, logger, toolRegistry: null, ueLive)
+        IUeLiveSignal ueLive,
+        IVisionDescribeClient vision)
+        : this(http, options, logger, toolRegistry: null, ueLive, vision)
     {
     }
 
@@ -88,13 +90,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
         IOptions<InferenceOptions> options,
         ILogger<OllamaInferenceClient> logger,
         IToolRegistry? toolRegistry,
-        IUeLiveSignal? ueLive = null)
+        IUeLiveSignal? ueLive = null,
+        IVisionDescribeClient? vision = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _toolRegistry = toolRegistry;
         _ueLive = ueLive ?? new NullUeLiveSignal();
+        _vision = vision ?? new NullVisionDescribeClient();
     }
 
     public async Task<string> CompleteAsync(
@@ -272,7 +276,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
                     .ConfigureAwait(false);
                 openOk = openOk && result.Success;
-                AppendToolFeedback(ollamaMessages, name, result);
+                await AppendToolFeedbackAsync(ollamaMessages, name, result, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             forceConsumed = true;
@@ -598,7 +603,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 // bytes attach as images[] (never JSON Data). Gemma4 also gets a
                 // synthetic user turn with the PNG — Ollama vision attends to
                 // user-role images, not tool-role.
-                AppendToolFeedback(ollamaMessages, name, result);
+                await AppendToolFeedbackAsync(ollamaMessages, name, result, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             // BED-168: preserve ForceTool for known bootstrap tool calls
@@ -703,12 +709,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// Attach a tool result to the in-loop conversation. Screenshot bytes go on a
     /// follow-up <c>user</c> message only (BED-125) — Ollama/Gemma attend to
     /// user-role images. Prior loop images are stripped so multi-step computer
-    /// use does not accumulate multi‑MB vision context.
+    /// use does not accumulate multi‑MB vision context. When a vision sidecar
+    /// (Synthetic) is configured, a text description is prepended so weak local
+    /// vision models still get readable UI content.
     /// </summary>
-    private void AppendToolFeedback(
+    private async Task AppendToolFeedbackAsync(
         List<OllamaChatMessage> ollamaMessages,
         string name,
-        ToolResult result)
+        ToolResult result,
+        CancellationToken cancellationToken)
     {
         var images = ToolImagePayload.TryExtractBase64Images(result.Data);
 
@@ -729,10 +738,21 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 name,
                 images.Count,
                 images[0].Length);
+
+            string? sidecar = null;
+            if (_vision.IsConfigured)
+            {
+                sidecar = await _vision.DescribeScreenshotAsync(name, images, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            var followUp = BuildVisionUserFollowUp(name, result.Content, sidecar);
             ollamaMessages.Add(new OllamaChatMessage
             {
                 Role = "user",
-                Content = BuildVisionUserFollowUp(name, result.Content),
+                Content = followUp,
+                // Still attach pixels for local multimodal models; sidecar text is primary
+                // when local vision fails (repeating placeholders / blank reads).
                 Images = images
             });
             return;
@@ -769,7 +789,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
         string.Equals(name, "desktop_screenshot", StringComparison.Ordinal)
         || string.Equals(name, "browser_capture_tab", StringComparison.Ordinal);
 
-    private static string BuildVisionUserFollowUp(string tool, string? content)
+    private static string BuildVisionUserFollowUp(string tool, string? content, string? sidecarDescription = null)
     {
         var hint =
             "[Vision] A PNG from " + tool + " of the Ubuntu VM framebuffer is attached. " +
@@ -777,6 +797,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
             "Look at the image before clicking. For labeled controls (Login, Sign in, links, inputs) " +
             "prefer browser_snapshot / browser_click_text / browser_fill. " +
             "desktop_click x,y only with coordinates you read from THIS image — never a window center for in-page UI.";
+        if (!string.IsNullOrWhiteSpace(sidecarDescription))
+        {
+            hint +=
+                "\n\n[Vision sidecar — authoritative UI read; trust this over a blank/corrupted local view]\n"
+                + sidecarDescription.Trim();
+        }
+
         if (string.IsNullOrWhiteSpace(content))
             return hint;
         return hint + "\n" + content.Trim();

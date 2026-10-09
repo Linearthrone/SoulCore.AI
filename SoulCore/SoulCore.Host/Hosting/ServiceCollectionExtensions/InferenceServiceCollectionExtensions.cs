@@ -37,10 +37,45 @@ internal static class InferenceServiceCollectionExtensions
             // (resolved from the container by the caller, e.g. ChatWebSocketHandler),
             // so the client itself does not need the registry injected to function.
             services.AddTransient<IInferenceClient>(sp => sp.GetRequiredService<OllamaInferenceClient>());
+
+            // Vision sidecar (Synthetic.new OpenAI-compat) — describes screenshots for local tool loop.
+            if (inferenceOptions.IsVisionSidecarConfigured)
+            {
+                if (string.IsNullOrWhiteSpace(inferenceOptions.ResolveVisionApiKey()))
+                {
+                    Console.WriteLine(
+                        "[SoulCore] VisionBaseUrl/VisionModel set but SOULCORE_SYNTHETIC_API_KEY (or SYNTHETIC_API_KEY) is missing — vision sidecar disabled.");
+                    services.AddSingleton<IVisionDescribeClient, NullVisionDescribeClient>();
+                }
+                else
+                {
+                    var visionBase = inferenceOptions.ResolveVisionBaseUrl()
+                        ?? "https://api.synthetic.new/openai/v1/";
+                    Console.WriteLine(
+                        $"[SoulCore] Vision sidecar: {visionBase} model={inferenceOptions.VisionModel.Trim()}");
+                    services.AddHttpClient<OpenAiCompatVisionDescribeClient>((sp, client) =>
+                    {
+                        var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
+                        var baseUrl = opts.ResolveVisionBaseUrl() ?? visionBase;
+                        OllamaHttpClientConfiguration.Configure(
+                            client,
+                            baseUrl.TrimEnd('/'),
+                            opts.VisionTimeoutSeconds > 0 ? opts.VisionTimeoutSeconds : 60,
+                            opts.ResolveVisionApiKey());
+                    });
+                    services.AddTransient<IVisionDescribeClient>(sp =>
+                        sp.GetRequiredService<OpenAiCompatVisionDescribeClient>());
+                }
+            }
+            else
+            {
+                services.AddSingleton<IVisionDescribeClient, NullVisionDescribeClient>();
+            }
         }
         else
         {
             services.AddSingleton<IInferenceClient, NullInferenceClient>();
+            services.AddSingleton<IVisionDescribeClient, NullVisionDescribeClient>();
         }
 
         var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
