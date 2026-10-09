@@ -309,17 +309,27 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                 .ConfigureAwait(false);
             if (!raw.Success)
                 return null;
-            if (!TryReadAction(raw.Content, out var action)
-                || !string.Equals(action, "click_xy_atspi", StringComparison.Ordinal))
-            {
+            if (!TryReadAction(raw.Content, out var action))
                 return null;
+            if (string.Equals(action, "click_xy_atspi", StringComparison.Ordinal))
+            {
+                return new DesktopOpResult(
+                    true,
+                    $"clicked via AT-SPI do_action at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
+                    + raw.Content,
+                    new { x, y, coords = "guest-framebuffer", method = "atspi" });
             }
 
-            return new DesktopOpResult(
-                true,
-                $"clicked via AT-SPI (no mouse) at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
-                + raw.Content,
-                new { x, y, coords = "guest-framebuffer", method = "atspi" });
+            if (string.Equals(action, "click_xy_atspi_mouse", StringComparison.Ordinal))
+            {
+                return new DesktopOpResult(
+                    true,
+                    $"clicked via AT-SPI generate_mouse_event at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
+                    + raw.Content,
+                    new { x, y, coords = "guest-framebuffer", method = "atspi-mouse" });
+            }
+
+            return null;
         }
         catch (Exception ex)
         {
