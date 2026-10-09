@@ -157,9 +157,20 @@ function Stop-SoulCoreOnPort {
 if ($RestartHost) {
     Write-Host "RestartHost: clearing any Host on ${BindAddress}:${Port}"
     Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
+    # Second pass — pid-file miss / slow exit used to leave the port busy, then the
+    # "already listening" early-exit skipped rebuild and left /health stuck (e.g. 0.1.6).
+    if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
+        Write-Host "RestartHost: port still busy — forcing another stop..."
+        Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
+        Start-Sleep -Milliseconds 500
+    }
+    if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
+        throw "RestartHost could not free ${BindAddress}:${Port} — refuse to reuse stale Host (Update would lie)."
+    }
 }
 
-if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
+# Only skip work when operator did not ask for rebuild/restart.
+if (-not $ForceRebuild -and -not $RestartHost -and (Test-PortListening -LocalPort $Port -Address $BindAddress)) {
     Write-Host "SoulCore already listening on ${BindAddress}:${Port}"
     Write-Host "Health: $HealthUrl"
     Write-Host "Tip: after changing SoulCore/.env or source, re-run with -RestartHost (rebuilds Host) so the process reloads."

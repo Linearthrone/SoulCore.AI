@@ -115,14 +115,13 @@ public sealed class LocalStackControl : IDisposable
     public Task<LocalStackActionResult> StopHostAsync(CancellationToken ct = default) =>
         RunScriptAsync("SoulCore\\scripts\\stop-soulcore.ps1", Array.Empty<string>(), ct);
 
-    public async Task<LocalStackActionResult> RestartHostAsync(CancellationToken ct = default)
-    {
-        var stop = await StopHostAsync(ct).ConfigureAwait(false);
-        var start = await StartHostAsync(ct).ConfigureAwait(false);
-        return new LocalStackActionResult(
-            start.Ok,
-            $"stop: {stop.Detail}; start: {start.Detail}");
-    }
+    public Task<LocalStackActionResult> RestartHostAsync(CancellationToken ct = default) =>
+        // Must rebuild: stop→start alone reused a stale DLL and left /health version stuck.
+        RunScriptAsync(
+            "SoulCore\\scripts\\start-soulcore.ps1",
+            new[] { "-ForceRebuild", "-RestartHost" },
+            ct,
+            wait: true);
 
     public Task<LocalStackActionResult> StartAllAsync(CancellationToken ct = default) =>
         RunScriptAsync("ALLSTART.ps1", Array.Empty<string>(), ct);
@@ -222,6 +221,7 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
     /// <summary>
     /// PROP-16: bump Host patch version, rebuild + restart via start-soulcore.ps1, poll /health.
     /// Rebuild alone does not change /health version — the csproj stamp must move.
+    /// Fails if /health version is unchanged after bump+rebuild (stale Host reuse).
     /// </summary>
     public async Task<LocalStackActionResult> UpdateHostAsync(
         CancellationToken ct = default,
@@ -231,6 +231,8 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
         if (RepoRoot is null)
             return LocalStackActionResult.Fail(
                 "repo root not found — set HOUSE_SOULCORE_REPO or Settings → SoulCore repo folder");
+
+        var versionBefore = await TryReadHostVersionAsync(ct).ConfigureAwait(false);
 
         progress?.Report("Bumping Host version…");
         var bump = await RunScriptAsync(
@@ -258,6 +260,15 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             if (await ProbeHostHealthAsync(ct).ConfigureAwait(false))
             {
                 var hostVer = await TryReadHostVersionAsync(ct).ConfigureAwait(false);
+                if (!HostVersionMoved(versionBefore, hostVer))
+                {
+                    return LocalStackActionResult.Fail(
+                        $"Host /health still reports '{hostVer ?? "(missing)"}' after bump+rebuild " +
+                        $"(was '{versionBefore ?? "(missing)"}'). Stale process was likely reused — " +
+                        "check SoulCore/scripts/.soulcore-host.log and free port 7700, then Update again. " +
+                        $"Bump: {bump.Detail}");
+                }
+
                 progress?.Report(string.IsNullOrWhiteSpace(hostVer)
                     ? "Host healthy"
                     : $"Host healthy ({hostVer})");
@@ -273,6 +284,21 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
 
         return LocalStackActionResult.Fail(
             $"Host rebuild ran but /health did not answer within {timeout}s. Detail: {rebuild.Detail}");
+    }
+
+    /// <summary>
+    /// True when post-update /health version differs from the pre-update reading.
+    /// Empty→empty is not a move (cannot verify).
+    /// </summary>
+    public static bool HostVersionMoved(string? before, string? after)
+    {
+        var a = (before ?? "").Trim();
+        var b = (after ?? "").Trim();
+        if (b.Length == 0)
+            return false;
+        if (a.Length == 0)
+            return true; // first readable version after rebuild counts as progress
+        return !string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<string?> TryReadHostVersionAsync(CancellationToken ct)
