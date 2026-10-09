@@ -3,18 +3,46 @@ using System.Runtime.InteropServices;
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
-/// Parks the Windows host cursor away from the VirtualBox window during guest
-/// xdotool clicks. With Mouse Integration (Absolute), hovering Her screen keeps
-/// overriding the guest pointer — so aim overlay looks right but the press lands
-/// under Kayleigh's mouse (or nowhere useful).
+/// Parks the Windows host cursor away from the VirtualBox / Presence embed during
+/// guest xdotool clicks. Mouse Integration (Absolute) only updates the guest while
+/// the host cursor is over the VM HWND — parking to (0,0) often still sits on
+/// Presence's top-left Her screen, so we park outside the VM (and its root) window.
 /// </summary>
 public static class HostPointerPark
 {
+    public readonly record struct Rect(int Left, int Top, int Right, int Bottom)
+    {
+        public bool Contains(int x, int y) =>
+            x >= Left && x < Right && y >= Top && y < Bottom;
+    }
+
     /// <summary>
-    /// Move host cursor to the virtual-screen origin, wait briefly for Absolute
-    /// pointing to settle, restore on dispose. No-op on non-Windows.
+    /// Park outside the victoria-sandbox HWND (and its root owner/parent window).
+    /// Falls back to virtual-screen corners away from common top-left layouts.
     /// </summary>
-    public static IDisposable Begin()
+    public static IDisposable BeginAwayFromVm(string? titleSubstring = "victoria-sandbox")
+    {
+        if (!OperatingSystem.IsWindows())
+            return Noop.Instance;
+
+        var excludes = new List<Rect>();
+        var found = VictoriaVirtualBoxWindowLocator.TryFind(titleSubstring);
+        if (found is not null)
+        {
+            if (GetWindowRect(found.Hwnd, out var rc))
+                excludes.Add(new Rect(rc.Left, rc.Top, rc.Right, rc.Bottom));
+
+            // SetParent child → root is Presence; Absolute tracks over that client too.
+            var root = GetAncestor(found.Hwnd, GaRoot);
+            if (root != 0 && root != found.Hwnd && GetWindowRect(root, out var rootRc))
+                excludes.Add(new Rect(rootRc.Left, rootRc.Top, rootRc.Right, rootRc.Bottom));
+        }
+
+        return BeginAwayFrom(excludes);
+    }
+
+    /// <summary>Testable park: move to first virtual-screen candidate outside excludes.</summary>
+    public static IDisposable BeginAwayFrom(IReadOnlyList<Rect> excludes)
     {
         if (!OperatingSystem.IsWindows())
             return Noop.Instance;
@@ -22,20 +50,94 @@ public static class HostPointerPark
         if (!GetCursorPos(out var saved))
             return Noop.Instance;
 
-        var x = GetSystemMetrics(SmXVirtualScreen);
-        var y = GetSystemMetrics(SmYVirtualScreen);
-        // Nudge one pixel if already there so Absolute still gets an update.
-        if (saved.X == x && saved.Y == y)
-            x += 1;
-
+        var (x, y) = PickParkPoint(excludes);
         _ = SetCursorPos(x, y);
         Thread.Sleep(SettleMs);
         return new Restorer(saved.X, saved.Y);
     }
 
-    private const int SettleMs = 40;
+    /// <summary>Legacy entry — same as <see cref="BeginAwayFromVm"/>.</summary>
+    public static IDisposable Begin() => BeginAwayFromVm();
+
+    /// <summary>
+    /// Prefer bottom-right / bottom-left / top-right of the virtual screen so we
+    /// avoid Presence's usual top-left placement of Her screen.
+    /// </summary>
+    public static (int X, int Y) PickParkPoint(IReadOnlyList<Rect> excludes)
+    {
+        // Synthetic desktop on non-Windows so unit tests can exercise the picker.
+        int vx, vy, vw, vh;
+        if (OperatingSystem.IsWindows())
+        {
+            vx = GetSystemMetrics(SmXVirtualScreen);
+            vy = GetSystemMetrics(SmYVirtualScreen);
+            vw = Math.Max(1, GetSystemMetrics(SmCxVirtualScreen));
+            vh = Math.Max(1, GetSystemMetrics(SmCyVirtualScreen));
+        }
+        else
+        {
+            vx = 0;
+            vy = 0;
+            vw = 1920;
+            vh = 1080;
+        }
+
+        var candidates = new (int X, int Y)[]
+        {
+            (vx + vw - 4, vy + vh - 4), // bottom-right first
+            (vx + 4, vy + vh - 4),      // bottom-left
+            (vx + vw - 4, vy + 4),      // top-right
+            (vx + vw / 2, vy + vh - 4), // bottom-center
+            (vx + 4, vy + 4),           // top-left last (often Presence)
+        };
+
+        foreach (var c in candidates)
+        {
+            if (!IsInsideAny(c.X, c.Y, excludes))
+                return c;
+        }
+
+        // All corners covered — park just outside the largest exclude to the right.
+        if (excludes.Count > 0)
+        {
+            var widest = excludes[0];
+            foreach (var r in excludes)
+            {
+                if ((r.Right - r.Left) > (widest.Right - widest.Left))
+                    widest = r;
+            }
+
+            var ox = Math.Min(vx + vw - 2, widest.Right + 8);
+            var yLo = Math.Min(vy + 2, vy + vh - 2);
+            var yHi = Math.Max(vy + 2, vy + vh - 2);
+            var oy = Math.Clamp((widest.Top + widest.Bottom) / 2, yLo, yHi);
+            if (!IsInsideAny(ox, oy, excludes))
+                return (ox, oy);
+
+            // Last resort: one pixel past the right edge of the widest exclude.
+            return (widest.Right + 1, (widest.Top + widest.Bottom) / 2);
+        }
+
+        return (vx + vw - 4, vy + vh - 4);
+    }
+
+    public static bool IsInsideAny(int x, int y, IReadOnlyList<Rect> excludes)
+    {
+        foreach (var r in excludes)
+        {
+            if (r.Contains(x, y))
+                return true;
+        }
+
+        return false;
+    }
+
+    private const int SettleMs = 80;
     private const int SmXVirtualScreen = 76;
     private const int SmYVirtualScreen = 77;
+    private const int SmCxVirtualScreen = 78;
+    private const int SmCyVirtualScreen = 79;
+    private const uint GaRoot = 2;
 
     private sealed class Restorer : IDisposable
     {
@@ -71,6 +173,12 @@ public static class HostPointerPark
         public int Y;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out POINT lpPoint);
 
@@ -79,4 +187,10 @@ public static class HostPointerPark
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetAncestor(nint hWnd, uint gaFlags);
 }

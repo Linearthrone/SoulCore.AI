@@ -93,40 +93,177 @@ def snapshot(query):
         walk(app, acc, query)
     out(True, action="snapshot", count=len(acc), elements=acc[:400])
 
-def match_nodes(query):
+def walk_nodes(node, acc, query, depth=0):
+    # Like walk but keeps the live AT-SPI node for do_action.
+    if node is None or depth > 28 or len(acc) >= 450:
+        return
+    try:
+        role = (node.get_role_name() or "").strip()
+        name = (node.get_name() or "").strip()
+        role_l = role.lower()
+        if role_l in INTERESTING and (name or role_l in ("entry", "password text", "document web", "text")):
+            if not query or query in name.lower() or query in role_l:
+                x, y, w, h = extents(node)
+                if w >= 2 and h >= 2:
+                    acc.append((node, {
+                        "role": role, "name": name,
+                        "x": x, "y": y, "w": w, "h": h,
+                        "cx": x + w // 2, "cy": y + h // 2,
+                    }))
+        n = node.get_child_count()
+        for i in range(max(0, n)):
+            walk_nodes(node.get_child_at_index(i), acc, query, depth + 1)
+    except Exception:
+        return
+
+def match_node_pairs(query):
     Atspi = load_atspi()
     apps = firefox_apps(Atspi)
     acc = []
     q = (query or "").lower()
     for app in apps:
-        walk(app, acc, "")
-    hits = [e for e in acc if q and q in (e.get("name") or "").lower()]
+        walk_nodes(app, acc, "")
+    hits = [p for p in acc if q and q in (p[1].get("name") or "").lower()]
     if not hits:
-        hits = [e for e in acc if q and q in (e.get("role") or "").lower()]
+        hits = [p for p in acc if q and q in (p[1].get("role") or "").lower()]
     return hits
 
+def match_nodes(query):
+    return [el for _, el in match_node_pairs(query)]
+
+def try_do_action(node):
+    # Activate via AT-SPI (no mouse) — immune to VirtualBox Absolute pointing.
+    try:
+        n = node.get_n_actions()
+    except Exception:
+        return False
+    preferred = ("click", "press", "activate", "jump", "open")
+    for i in range(max(0, n)):
+        try:
+            an = (node.get_action_name(i) or "").strip().lower()
+        except Exception:
+            continue
+        if an not in preferred:
+            continue
+        try:
+            result = node.do_action(i)
+            # gi Atspi may return True, or None on success — only False is failure.
+            if result is False:
+                continue
+            return True
+        except Exception:
+            continue
+    return False
+
+def activate_node(node):
+    # Walk parents: leaf text often has no action; the button/link above does.
+    cur = node
+    for _ in range(10):
+        if cur is None:
+            return None
+        if try_do_action(cur):
+            return cur
+        try:
+            cur = cur.get_parent()
+        except Exception:
+            return None
+    return None
+
+def desktop_apps(Atspi):
+    desktop = Atspi.get_desktop(0)
+    found = []
+    for i in range(desktop.get_child_count()):
+        app = desktop.get_child_at_index(i)
+        if app is not None:
+            found.append(app)
+    return found
+
+def node_at_point(Atspi, x, y):
+    # Resolve accessible under screen point; Firefox apps first, then all apps.
+    xi, yi = int(x), int(y)
+    ordered = []
+    seen = set()
+    for app in firefox_apps(Atspi) + desktop_apps(Atspi):
+        try:
+            key = id(app)
+        except Exception:
+            key = None
+        if key in seen:
+            continue
+        if key is not None:
+            seen.add(key)
+        ordered.append(app)
+    for app in ordered:
+        try:
+            comp = app.get_component_iface()
+            if comp is None:
+                continue
+            node = comp.get_accessible_at_point(xi, yi, Atspi.CoordType.SCREEN)
+            if node is not None:
+                return node
+        except Exception:
+            continue
+    # Extents fallback when get_accessible_at_point is empty (common on some themes).
+    best = None
+    best_area = None
+    acc = []
+    for app in ordered:
+        walk_nodes(app, acc, "", 0)
+    for node, el in acc:
+        x0, y0, w, h = el["x"], el["y"], el["w"], el["h"]
+        if w < 2 or h < 2:
+            continue
+        if x0 <= xi < x0 + w and y0 <= yi < y0 + h:
+            area = w * h
+            if best is None or area < best_area:
+                best, best_area = node, area
+    return best
+
 def click_text(query, nth):
-    hits = match_nodes(query)
+    hits = match_node_pairs(query)
     if not hits:
         out(False, error=f"no control matching '{query}'", count=0)
         return
     idx = max(1, nth) - 1
     if idx >= len(hits):
-        out(False, error=f"nth={nth} out of range (found {len(hits)})", count=len(hits), elements=hits[:20])
+        out(False, error=f"nth={nth} out of range (found {len(hits)})",
+            count=len(hits), elements=[e for _, e in hits[:20]])
         return
-    el = hits[idx]
-    out(True, action="click_text", count=len(hits), picked=el, elements=hits[:20])
+    node, el = hits[idx]
+    activated = activate_node(node)
+    if activated is not None:
+        out(True, action="click_text_atspi", count=len(hits), picked=el,
+            elements=[e for _, e in hits[:20]], method="atspi")
+        return
+    out(True, action="click_text", count=len(hits), picked=el,
+        elements=[e for _, e in hits[:20]], method="coords")
+
+def click_xy(x, y):
+    # Prefer AT-SPI accessible-at-point + do_action; else report coords for xdotool.
+    Atspi = load_atspi()
+    target = node_at_point(Atspi, x, y)
+    activated = activate_node(target) if target is not None else None
+    if activated is not None:
+        role = (activated.get_role_name() or "").strip()
+        name = (activated.get_name() or "").strip()
+        out(True, action="click_xy_atspi", x=int(x), y=int(y),
+            role=role, name=name, method="atspi")
+        return
+    out(False, action="click_xy", x=int(x), y=int(y), method="coords",
+        error="no AT-SPI action at point — use xdotool")
 
 def fill(query, value):
-    hits = match_nodes(query)
-    entries = [e for e in hits if "entry" in (e.get("role") or "").lower()
-               or "password" in (e.get("role") or "").lower()
-               or "text" in (e.get("role") or "").lower()]
+    hits = match_node_pairs(query)
+    entries = [p for p in hits if "entry" in (p[1].get("role") or "").lower()
+               or "password" in (p[1].get("role") or "").lower()
+               or "text" in (p[1].get("role") or "").lower()]
     pick = (entries or hits)
     if not pick:
         out(False, error=f"no field matching '{query}'")
         return
-    el = pick[0]
+    node, el = pick[0]
+    # Focus via AT-SPI when possible so Absolute mouse is not required.
+    try_do_action(node)
     out(True, action="fill", picked=el, typed_len=len(value or ""), value_set=False)
 
 def tabs():
@@ -146,6 +283,10 @@ def main():
             q = argv[1] if len(argv) > 1 else ""
             nth = int(argv[2]) if len(argv) > 2 else 1
             click_text(q, nth)
+        elif cmd == "click_xy":
+            cx = int(argv[1]) if len(argv) > 1 else -1
+            cy = int(argv[2]) if len(argv) > 2 else -1
+            click_xy(cx, cy)
         elif cmd == "fill":
             q = argv[1] if len(argv) > 1 else ""
             raw = argv[2] if len(argv) > 2 else ""

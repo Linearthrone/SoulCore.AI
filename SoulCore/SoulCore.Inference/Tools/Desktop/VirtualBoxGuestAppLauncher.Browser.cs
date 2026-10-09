@@ -56,13 +56,24 @@ public sealed partial class VirtualBoxGuestAppLauncher
         if (!TryReadPicked(raw.Content, out var x, out var y, out var label, out var err))
             return new DesktopOpResult(false, err ?? raw.Content, null);
 
+        // AT-SPI do_action already activated the control — no xdotool / Absolute fight.
+        if (TryReadAction(raw.Content, out var action)
+            && string.Equals(action, "click_text_atspi", StringComparison.Ordinal))
+        {
+            return new DesktopOpResult(
+                true,
+                $"clicked '{label}' via AT-SPI (no mouse) at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
+                + raw.Content,
+                new { x, y, text = label, coords = "guest-framebuffer", method = "atspi" });
+        }
+
         var click = await ClickAsync(x, y, "left", 1, ct).ConfigureAwait(false);
         if (!click.Success)
             return click;
         return new DesktopOpResult(
             true,
             $"clicked '{label}' at guest ({x},{y}) in the {GuestOpenedMarker}.\n" + raw.Content,
-            new { x, y, text = label, coords = "guest-framebuffer" });
+            new { x, y, text = label, coords = "guest-framebuffer", method = "xdotool" });
     }
 
     public async Task<DesktopOpResult> BrowserFillAsync(
@@ -258,6 +269,27 @@ public sealed partial class VirtualBoxGuestAppLauncher
         {
             return raw;
         }
+    }
+
+    private static bool TryReadAction(string? json, out string action)
+    {
+        action = "";
+        try
+        {
+            using var doc = JsonDocument.Parse(ExtractJsonObject(json ?? ""));
+            if (doc.RootElement.TryGetProperty("action", out var a)
+                && a.ValueKind == JsonValueKind.String)
+            {
+                action = a.GetString() ?? "";
+                return action.Length > 0;
+            }
+        }
+        catch (JsonException)
+        {
+            // fall through
+        }
+
+        return false;
     }
 
     private static bool TryReadPicked(

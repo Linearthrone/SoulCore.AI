@@ -206,9 +206,17 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest click ({x},{y}) is off the Ubuntu screen (origin 0,0).", null);
 
-        // Park host Absolute pointing off the VM, then move + click as separate
-        // xdotool runs so Mouse Integration cannot yank the pointer mid-gesture.
-        using (HostPointerPark.Begin())
+        // Left single-click: AT-SPI do_action bypasses VirtualBox Absolute pointing entirely.
+        if (clicks == 1 && btn == 1)
+        {
+            var atspi = await TryAtspiClickXyAsync(x, y, ct).ConfigureAwait(false);
+            if (atspi is not null)
+                return atspi;
+        }
+
+        // Park host Absolute pointing outside Presence/VM, then move + click as
+        // separate xdotool runs so Mouse Integration cannot yank the pointer mid-gesture.
+        using (HostPointerPark.BeginAwayFromVm())
         {
             var move = await XdotoolAsync(
                     new[]
@@ -238,7 +246,48 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         return new DesktopOpResult(
             true,
             $"{label} {button} at guest ({x},{y}) in the {GuestOpenedMarker} (not Windows).",
-            new { x, y, button, clicks, coords = "guest-framebuffer" });
+            new { x, y, button, clicks, coords = "guest-framebuffer", method = "xdotool" });
+    }
+
+    /// <summary>
+    /// Guest AT-SPI click at framebuffer point. Returns null when unavailable so
+    /// caller can fall back to parked xdotool.
+    /// </summary>
+    private async Task<DesktopOpResult?> TryAtspiClickXyAsync(int x, int y, CancellationToken ct)
+    {
+        try
+        {
+            await EnsureGuestBrowserScriptAsync(ct).ConfigureAwait(false);
+            await TryEnableA11yAsync(ct).ConfigureAwait(false);
+            var raw = await GuestPythonAsync(
+                    new[]
+                    {
+                        GuestBrowserScript.GuestPath,
+                        "click_xy",
+                        x.ToString(CultureInfo.InvariantCulture),
+                        y.ToString(CultureInfo.InvariantCulture)
+                    },
+                    ct)
+                .ConfigureAwait(false);
+            if (!raw.Success)
+                return null;
+            if (!TryReadAction(raw.Content, out var action)
+                || !string.Equals(action, "click_xy_atspi", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return new DesktopOpResult(
+                true,
+                $"clicked via AT-SPI (no mouse) at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
+                + raw.Content,
+                new { x, y, coords = "guest-framebuffer", method = "atspi" });
+        }
+        catch (Exception ex)
+        {
+            TimingLog($"atspi click_xy fallback: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<DesktopOpResult> DragAsync(
@@ -246,7 +295,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
     {
         if (!TryMapMouseButton(button, out var btn, out var err))
             return new DesktopOpResult(false, err, null);
-        using (HostPointerPark.Begin())
+        using (HostPointerPark.BeginAwayFromVm())
         {
             var result = await XdotoolAsync(
                     new[]
@@ -316,7 +365,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             });
         }
 
-        using (HostPointerPark.Begin())
+        using (HostPointerPark.BeginAwayFromVm())
         {
             var result = await XdotoolAsync(args, ct).ConfigureAwait(false);
             if (!result.Success)
