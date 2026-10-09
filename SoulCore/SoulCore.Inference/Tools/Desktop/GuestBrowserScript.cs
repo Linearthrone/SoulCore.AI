@@ -235,11 +235,31 @@ def click_text(query, nth):
         out(True, action="click_text_atspi", count=len(hits), picked=el,
             elements=[e for _, e in hits[:20]], method="atspi")
         return
+    Atspi = load_atspi()
+    if atspi_mouse_click(Atspi, el.get("cx", 0), el.get("cy", 0)):
+        out(True, action="click_text_atspi_mouse", count=len(hits), picked=el,
+            elements=[e for _, e in hits[:20]], method="atspi-mouse")
+        return
     out(True, action="click_text", count=len(hits), picked=el,
         elements=[e for _, e in hits[:20]], method="coords")
 
+def atspi_mouse_click(Atspi, x, y):
+    # In-guest synthetic mouse via AT-SPI — does not use host Absolute pointing.
+    try:
+        Atspi.generate_mouse_event(int(x), int(y), "b1c")
+        return True
+    except Exception:
+        pass
+    try:
+        Atspi.generate_mouse_event(int(x), int(y), "abs")
+        Atspi.generate_mouse_event(int(x), int(y), "b1p")
+        Atspi.generate_mouse_event(int(x), int(y), "b1r")
+        return True
+    except Exception:
+        return False
+
 def click_xy(x, y):
-    # Prefer AT-SPI accessible-at-point + do_action; else report coords for xdotool.
+    # Prefer AT-SPI do_action; then AT-SPI synthetic mouse; else coords for xdotool.
     Atspi = load_atspi()
     target = node_at_point(Atspi, x, y)
     activated = activate_node(target) if target is not None else None
@@ -248,6 +268,9 @@ def click_xy(x, y):
         name = (activated.get_name() or "").strip()
         out(True, action="click_xy_atspi", x=int(x), y=int(y),
             role=role, name=name, method="atspi")
+        return
+    if atspi_mouse_click(Atspi, x, y):
+        out(True, action="click_xy_atspi_mouse", x=int(x), y=int(y), method="atspi-mouse")
         return
     out(False, action="click_xy", x=int(x), y=int(y), method="coords",
         error="no AT-SPI action at point — use xdotool")

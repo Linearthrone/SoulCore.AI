@@ -50,8 +50,22 @@ public static class HostPointerPark
         if (!GetCursorPos(out var saved))
             return Noop.Instance;
 
-        var (x, y) = PickParkPoint(excludes);
-        _ = SetCursorPos(x, y);
+        // Try several candidates — SetCursorPos clamps onto the virtual screen, so a
+        // point "outside" a fullscreen Presence can snap back onto the embed.
+        foreach (var (x, y) in EnumerateParkCandidates(excludes))
+        {
+            _ = SetCursorPos(x, y);
+            Thread.Sleep(20);
+            if (GetCursorPos(out var now) && !IsInsideAny(now.X, now.Y, excludes))
+            {
+                Thread.Sleep(SettleMs);
+                return new Restorer(saved.X, saved.Y);
+            }
+        }
+
+        // Last try: primary pick even if still inside (better than nothing).
+        var fallback = PickParkPoint(excludes);
+        _ = SetCursorPos(fallback.X, fallback.Y);
         Thread.Sleep(SettleMs);
         return new Restorer(saved.X, saved.Y);
     }
@@ -65,8 +79,50 @@ public static class HostPointerPark
     /// </summary>
     public static (int X, int Y) PickParkPoint(IReadOnlyList<Rect> excludes)
     {
-        // Synthetic desktop on non-Windows so unit tests can exercise the picker.
-        int vx, vy, vw, vh;
+        foreach (var c in EnumerateParkCandidates(excludes))
+        {
+            if (!IsInsideAny(c.X, c.Y, excludes))
+                return c;
+        }
+
+        GetVirtualScreen(out var vx, out var vy, out var vw, out var vh);
+        return (vx + vw - 4, vy + vh - 4);
+    }
+
+    /// <summary>Ordered park candidates (corners, then just outside excludes).</summary>
+    public static IEnumerable<(int X, int Y)> EnumerateParkCandidates(IReadOnlyList<Rect> excludes)
+    {
+        GetVirtualScreen(out var vx, out var vy, out var vw, out var vh);
+
+        yield return (vx + vw - 4, vy + vh - 4);
+        yield return (vx + 4, vy + vh - 4);
+        yield return (vx + vw - 4, vy + 4);
+        yield return (vx + vw / 2, vy + vh - 4);
+        yield return (vx + 4, vy + 4);
+
+        if (excludes.Count == 0)
+            yield break;
+
+        var widest = excludes[0];
+        foreach (var r in excludes)
+        {
+            if ((r.Right - r.Left) > (widest.Right - widest.Left))
+                widest = r;
+        }
+
+        var midY = (widest.Top + widest.Bottom) / 2;
+        var midX = (widest.Left + widest.Right) / 2;
+        // Prefer points that may sit on a second monitor or in a gap beside Presence.
+        yield return (widest.Right + 8, midY);
+        yield return (widest.Left - 8, midY);
+        yield return (midX, widest.Bottom + 8);
+        yield return (midX, widest.Top - 8);
+        yield return (widest.Right + 1, midY);
+        yield return (vx + vw - 2, vy + vh - 2);
+    }
+
+    private static void GetVirtualScreen(out int vx, out int vy, out int vw, out int vh)
+    {
         if (OperatingSystem.IsWindows())
         {
             vx = GetSystemMetrics(SmXVirtualScreen);
@@ -81,44 +137,6 @@ public static class HostPointerPark
             vw = 1920;
             vh = 1080;
         }
-
-        var candidates = new (int X, int Y)[]
-        {
-            (vx + vw - 4, vy + vh - 4), // bottom-right first
-            (vx + 4, vy + vh - 4),      // bottom-left
-            (vx + vw - 4, vy + 4),      // top-right
-            (vx + vw / 2, vy + vh - 4), // bottom-center
-            (vx + 4, vy + 4),           // top-left last (often Presence)
-        };
-
-        foreach (var c in candidates)
-        {
-            if (!IsInsideAny(c.X, c.Y, excludes))
-                return c;
-        }
-
-        // All corners covered — park just outside the largest exclude to the right.
-        if (excludes.Count > 0)
-        {
-            var widest = excludes[0];
-            foreach (var r in excludes)
-            {
-                if ((r.Right - r.Left) > (widest.Right - widest.Left))
-                    widest = r;
-            }
-
-            var ox = Math.Min(vx + vw - 2, widest.Right + 8);
-            var yLo = Math.Min(vy + 2, vy + vh - 2);
-            var yHi = Math.Max(vy + 2, vy + vh - 2);
-            var oy = Math.Clamp((widest.Top + widest.Bottom) / 2, yLo, yHi);
-            if (!IsInsideAny(ox, oy, excludes))
-                return (ox, oy);
-
-            // Last resort: one pixel past the right edge of the widest exclude.
-            return (widest.Right + 1, (widest.Top + widest.Bottom) / 2);
-        }
-
-        return (vx + vw - 4, vy + vh - 4);
     }
 
     public static bool IsInsideAny(int x, int y, IReadOnlyList<Rect> excludes)

@@ -51,4 +51,13 @@ public class HostPointerParkTests
         using var park = HostPointerPark.BeginAwayFrom(excludes);
         Assert.NotNull(park);
     }
+
+    [Fact]
+    public void EnumerateParkCandidates_IncludesOutsideExcludePoints()
+    {
+        var excludes = new[] { new HostPointerPark.Rect(0, 0, 800, 600) };
+        var list = HostPointerPark.EnumerateParkCandidates(excludes).ToList();
+        Assert.Contains(list, p => p.X >= 808); // widest.Right + 8
+        Assert.True(list.Count >= 6);
+    }
 }
