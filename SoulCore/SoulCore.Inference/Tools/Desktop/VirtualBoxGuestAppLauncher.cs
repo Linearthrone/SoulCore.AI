@@ -380,6 +380,17 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
     {
         if (string.IsNullOrEmpty(text))
             return new DesktopOpResult(true, "typed nothing", null);
+
+        // Wayland clients (guest Firefox) ignore xdotool. PS/2 scancodes do not.
+        if (VboxConsoleKeyboard.TryPlanText(text, out var codes, out _))
+        {
+            return await PutScancodesAsync(
+                    codes,
+                    $"typed {text.Length} chars in the {GuestOpenedMarker}.",
+                    ct)
+                .ConfigureAwait(false);
+        }
+
         var result = await XdotoolAsync(new[] { "type", "--clearmodifiers", "--", text }, ct)
             .ConfigureAwait(false);
         if (!result.Success)
@@ -391,6 +402,15 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
     {
         if (!TryMapXdotoolKey(key, out var xd, out var err))
             return new DesktopOpResult(false, err, null);
+        if (VboxConsoleKeyboard.TryPlanKey(key, out var codes, out _))
+        {
+            return await PutScancodesAsync(
+                    codes,
+                    $"key '{key}' in the {GuestOpenedMarker} ({xd}).",
+                    ct)
+                .ConfigureAwait(false);
+        }
+
         var result = await XdotoolAsync(new[] { "key", "--clearmodifiers", xd }, ct)
             .ConfigureAwait(false);
         if (!result.Success)
@@ -701,6 +721,33 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
 
     private Task<DesktopOpResult> XdotoolAsync(IReadOnlyList<string> args, CancellationToken ct)
         => GuestRunAsync("/usr/bin/xdotool", args, wait: true, ct);
+
+    private async Task<DesktopOpResult> PutScancodesAsync(
+        string[] codes, string okMessage, CancellationToken ct)
+    {
+        const int chunk = 48;
+        for (var i = 0; i < codes.Length; i += chunk)
+        {
+            var argv = new List<string> { "controlvm", _vmName, "keyboardputscancode" };
+            var end = Math.Min(i + chunk, codes.Length);
+            for (var j = i; j < end; j++)
+                argv.Add(codes[j]);
+
+            var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+            if (exit != 0)
+            {
+                return new DesktopOpResult(
+                    false,
+                    $"keyboardputscancode failed (exit {exit}): {JoinOut(stdout, stderr)}",
+                    null);
+            }
+        }
+
+        return new DesktopOpResult(
+            true,
+            okMessage,
+            new { method = "keyboardputscancode", vm = _vmName });
+    }
 
     private async Task<DesktopOpResult> GuestStartAsync(
         string exe, IReadOnlyList<string> exeArgs, CancellationToken ct)
