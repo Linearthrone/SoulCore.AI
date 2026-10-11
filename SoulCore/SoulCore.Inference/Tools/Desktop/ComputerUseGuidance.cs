@@ -69,7 +69,8 @@ public static class ComputerUseGuidance
         "do not invent a chat-only limitation.\n" +
         "2) If a tool says the VM is powered off / not running: tell Kayleigh to start victoria-sandbox in VirtualBox, then retry. " +
         "Do not invent a Playwright workaround unless she asks for Playwright.\n" +
-        "3) Non-browser apps: desktop_open_app notepad|explorer|cmd|powershell inside the guest.\n" +
+        "3) Non-browser apps: desktop_open_app notepad|explorer|cmd|powershell|codium inside the guest. " +
+        "codium is VSCodium, her IDE (file tree, editor, terminal).\n" +
         "4) Always desktop_screenshot (or browser_snapshot) before claiming you can see the page. " +
         "list_desktop_windows is titles/bounds only — not vision. Kayleigh can also watch the live Her screen embed.\n" +
         "5) desktop_click at coordinates from THAT screenshot (guest 0,0). Never use Windows-monitor coords. " +

@@ -80,7 +80,16 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             return new DesktopOpResult(false, "app must be non-empty", null);
 
         if (!DesktopAppLauncher.TryResolve(app, args, out var resolved, out var error))
-            return new DesktopOpResult(false, error, null);
+        {
+            var guestAlias = (app ?? "").Trim().ToLowerInvariant();
+            if (!TryMapGuestExe(guestAlias, null, out _, out _))
+                return new DesktopOpResult(false, error, null);
+            resolved = new DesktopAppLauncher.ResolvedLaunch(
+                guestAlias,
+                guestAlias,
+                string.IsNullOrWhiteSpace(args) ? "" : args.Trim(),
+                false);
+        }
 
         if (!TryMapGuestExe(resolved.Alias, LooksLikeUrl(resolved.Arguments) ? resolved.Arguments.Trim().Trim('"') : null,
                 out var exe, out var exeArgs))
@@ -473,6 +482,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             "notepad" => "text editor",
             "explorer" or "file_explorer" => "files",
             "cmd" or "powershell" => "terminal",
+            "codium" or "vscodium" or "vscode" or "code" or "vs_code" => "codium",
             _ => a,
         };
     }
@@ -498,6 +508,11 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                 return true;
             case "terminal":
                 exe = "/usr/bin/gnome-terminal";
+                return true;
+            case "codium":
+                exe = "/usr/bin/codium";
+                if (!string.IsNullOrWhiteSpace(url))
+                    args = new[] { url.Trim() };
                 return true;
             default:
                 return false;

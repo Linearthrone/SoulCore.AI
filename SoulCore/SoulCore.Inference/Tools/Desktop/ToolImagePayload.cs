@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using SixLabors.ImageSharp;
@@ -13,8 +14,20 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// </summary>
 public static class ToolImagePayload
 {
-    /// <summary>Longest edge for vision payloads (keeps clickable UI detail).</summary>
-    public const int DefaultMaxEdgePx = 1024;
+    /// <summary>
+    /// Longest edge for vision payloads. Guest frames around 1510px must stay
+    /// 1:1 with <c>desktop_click</c> or the model clicks in the shrunk image
+    /// and the pointer lands high and to the left.
+    /// </summary>
+    public const int DefaultMaxEdgePx = 2048;
+
+    /// <summary>JPEG plus the guest-to-image scale the model must undo.</summary>
+    public readonly record struct PreparedVisionImage(
+        byte[] Jpeg,
+        int SourceWidth,
+        int SourceHeight,
+        int VisionWidth,
+        int VisionHeight);
 
     /// <summary>JPEG quality for vision (UI screenshots compress well).</summary>
     public const int DefaultJpegQuality = 72;
@@ -31,40 +44,12 @@ public static class ToolImagePayload
         int maxEdgePx = DefaultMaxEdgePx,
         int jpegQuality = DefaultJpegQuality)
     {
-        if (data is null) return null;
-
-        byte[]? bytes = null;
-        try
-        {
-            switch (data)
-            {
-                case byte[] raw:
-                    bytes = raw;
-                    break;
-                case JsonElement je when je.ValueKind == JsonValueKind.Object
-                                         && je.TryGetProperty("bytes", out var b)
-                                         && b.ValueKind == JsonValueKind.String:
-                    bytes = Convert.FromBase64String(b.GetString()!);
-                    break;
-                default:
-                {
-                    var prop = data.GetType().GetProperty("bytes", BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
-                               ?? data.GetType().GetProperty("Bytes", BindingFlags.Public | BindingFlags.Instance);
-                    if (prop?.GetValue(data) is byte[] arr)
-                        bytes = arr;
-                    break;
-                }
-            }
-        }
-        catch
-        {
-            return null;
-        }
-
+        var bytes = TryReadImageBytes(data);
         if (bytes is null || bytes.Length == 0)
             return null;
 
-        var compact = TryCompressForVision(bytes, maxEdgePx, jpegQuality);
+        var prepared = TryPrepareVisionImage(bytes, maxEdgePx, jpegQuality);
+        var compact = prepared?.Jpeg;
         if (compact is null || compact.Length == 0)
         {
             // Undecodable or exotic format — attach original only if small enough.
@@ -81,10 +66,100 @@ public static class ToolImagePayload
     }
 
     /// <summary>
+    /// Decode tool Data into a vision JPEG plus the framebuffer size the click grid uses.
+    /// Null when the buffer is not a decodable image or the JPEG exceeds <paramref name="maxBytes"/>.
+    /// </summary>
+    public static PreparedVisionImage? TryPrepareFromToolData(
+        object? data,
+        int maxBytes = DefaultMaxBytes,
+        int maxEdgePx = DefaultMaxEdgePx,
+        int jpegQuality = DefaultJpegQuality)
+    {
+        var bytes = TryReadImageBytes(data);
+        if (bytes is null || bytes.Length == 0)
+            return null;
+
+        var prepared = TryPrepareVisionImage(bytes, maxEdgePx, jpegQuality);
+        if (prepared is null || prepared.Value.Jpeg.Length == 0 || prepared.Value.Jpeg.Length > maxBytes)
+            return null;
+        return prepared;
+    }
+
+    private static byte[]? TryReadImageBytes(object? data)
+    {
+        if (data is null)
+            return null;
+
+        try
+        {
+            switch (data)
+            {
+                case byte[] raw:
+                    return raw.Length == 0 ? null : raw;
+                case JsonElement je when je.ValueKind == JsonValueKind.Object
+                                         && je.TryGetProperty("bytes", out var b)
+                                         && b.ValueKind == JsonValueKind.String:
+                    return Convert.FromBase64String(b.GetString()!);
+                default:
+                {
+                    var prop = data.GetType().GetProperty("bytes", BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+                               ?? data.GetType().GetProperty("Bytes", BindingFlags.Public | BindingFlags.Instance);
+                    if (prop?.GetValue(data) is byte[] arr && arr.Length > 0)
+                        return arr;
+                    return null;
+                }
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Tell the model how to turn a point on the attached JPEG into
+    /// <c>desktop_click</c> guest-framebuffer pixels.
+    /// </summary>
+    public static string FormatClickScaleHint(
+        int sourceWidth,
+        int sourceHeight,
+        int visionWidth,
+        int visionHeight)
+    {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || visionWidth <= 0 || visionHeight <= 0)
+            return "desktop_click uses guest framebuffer pixels (origin 0,0).";
+
+        if (sourceWidth == visionWidth && sourceHeight == visionHeight)
+        {
+            return
+                $"Attached image is {visionWidth}x{visionHeight}, the same grid as the guest framebuffer. " +
+                "desktop_click x,y are those pixels (origin 0,0).";
+        }
+
+        var scaleX = sourceWidth / (double)visionWidth;
+        var scaleY = sourceHeight / (double)visionHeight;
+        return
+            $"Attached image is {visionWidth}x{visionHeight}. desktop_click uses the full guest framebuffer " +
+            $"{sourceWidth}x{sourceHeight} (origin 0,0). " +
+            $"Multiply a point on the attached image before clicking: " +
+            $"click_x = round(image_x * {scaleX.ToString("0.###", CultureInfo.InvariantCulture)}), " +
+            $"click_y = round(image_y * {scaleY.ToString("0.###", CultureInfo.InvariantCulture)}).";
+    }
+
+    /// <summary>
     /// Downscale so max(width,height) ≤ <paramref name="maxEdgePx"/> and encode JPEG.
     /// Returns null if the buffer is not a decodable image.
     /// </summary>
     public static byte[]? TryCompressForVision(
+        byte[] bytes,
+        int maxEdgePx = DefaultMaxEdgePx,
+        int jpegQuality = DefaultJpegQuality)
+        => TryPrepareVisionImage(bytes, maxEdgePx, jpegQuality)?.Jpeg;
+
+    /// <summary>
+    /// Same encode as <see cref="TryCompressForVision"/> plus source and vision sizes.
+    /// </summary>
+    public static PreparedVisionImage? TryPrepareVisionImage(
         byte[] bytes,
         int maxEdgePx = DefaultMaxEdgePx,
         int jpegQuality = DefaultJpegQuality)
@@ -121,7 +196,7 @@ public static class ToolImagePayload
 
             using var ms = new MemoryStream();
             image.SaveAsJpeg(ms, new JpegEncoder { Quality = jpegQuality });
-            return ms.ToArray();
+            return new PreparedVisionImage(ms.ToArray(), w, h, image.Width, image.Height);
         }
         catch
         {

@@ -21,6 +21,35 @@ public class ToolImagePayloadTests
     }
 
     [Fact]
+    public void FormatClickScaleHint_GuestFrameMatchesImage_UsesSameGrid()
+    {
+        var hint = ToolImagePayload.FormatClickScaleHint(1510, 770, 1510, 770);
+        Assert.Contains("1510x770", hint, StringComparison.Ordinal);
+        Assert.Contains("same grid", hint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatClickScaleHint_ShrunkImage_TellsModelToScaleUp()
+    {
+        var hint = ToolImagePayload.FormatClickScaleHint(1510, 770, 1024, 522);
+        Assert.Contains("1024x522", hint, StringComparison.Ordinal);
+        Assert.Contains("1510x770", hint, StringComparison.Ordinal);
+        Assert.Contains("image_y * 1.475", hint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryPrepareVisionImage_KeepsGuestSizedFrameUnderDefaultCap()
+    {
+        var png = MakePng(1510, 770);
+        var prepared = ToolImagePayload.TryPrepareVisionImage(png);
+        Assert.NotNull(prepared);
+        Assert.Equal(1510, prepared!.Value.SourceWidth);
+        Assert.Equal(770, prepared.Value.SourceHeight);
+        Assert.Equal(1510, prepared.Value.VisionWidth);
+        Assert.Equal(770, prepared.Value.VisionHeight);
+    }
+
+    [Fact]
     public void TryCompressForVision_DownscalesLargeImage()
     {
         var png = MakePng(2000, 1500);

@@ -719,7 +719,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
         ToolResult result,
         CancellationToken cancellationToken)
     {
-        var images = ToolImagePayload.TryExtractBase64Images(result.Data);
+        var prepared = ToolImagePayload.TryPrepareFromToolData(result.Data);
+        List<string>? images = null;
+        if (prepared is { } frame)
+            images = new List<string> { Convert.ToBase64String(frame.Jpeg) };
 
         // Text-only tool role — do not double-attach the PNG here.
         ollamaMessages.Add(new OllamaChatMessage
@@ -746,7 +749,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     .ConfigureAwait(false);
             }
 
-            var followUp = BuildVisionUserFollowUp(name, result.Content, sidecar);
+            var scaleHint = prepared is { } scaled
+                ? ToolImagePayload.FormatClickScaleHint(
+                    scaled.SourceWidth,
+                    scaled.SourceHeight,
+                    scaled.VisionWidth,
+                    scaled.VisionHeight)
+                : null;
+            var followUp = BuildVisionUserFollowUp(name, result.Content, sidecar, scaleHint);
             ollamaMessages.Add(new OllamaChatMessage
             {
                 Role = "user",
@@ -789,14 +799,19 @@ public sealed class OllamaInferenceClient : IInferenceClient
         string.Equals(name, "desktop_screenshot", StringComparison.Ordinal)
         || string.Equals(name, "browser_capture_tab", StringComparison.Ordinal);
 
-    private static string BuildVisionUserFollowUp(string tool, string? content, string? sidecarDescription = null)
+    private static string BuildVisionUserFollowUp(
+        string tool,
+        string? content,
+        string? sidecarDescription = null,
+        string? clickScaleHint = null)
     {
         var hint =
-            "[Vision] A PNG from " + tool + " of the Ubuntu VM framebuffer is attached. " +
+            "[Vision] A JPEG from " + tool + " of the Ubuntu VM framebuffer is attached. " +
             "Coordinates are guest pixels (origin 0,0) — not Windows monitors and not the VirtualBox window. " +
+            (string.IsNullOrWhiteSpace(clickScaleHint) ? "" : clickScaleHint.Trim() + " ") +
             "Look at the image before clicking. For labeled controls (Login, Sign in, links, inputs) " +
             "prefer browser_snapshot / browser_click_text / browser_fill. " +
-            "desktop_click x,y only with coordinates you read from THIS image — never a window center for in-page UI.";
+            "desktop_click x,y uses the guest framebuffer grid from the scale note above — never a window center for in-page UI.";
         if (!string.IsNullOrWhiteSpace(sidecarDescription))
         {
             hint +=
