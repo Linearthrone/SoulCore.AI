@@ -57,4 +57,8 @@ public sealed class EmailMailboxChoiceTests
     [InlineData("a@b", false)]
     public void IsSafeMailboxId_MatchesHostLabelRules(string id, bool expected) =>
         Assert.Equal(expected, EmailMailboxChoice.IsSafeMailboxId(id));
+
+    [Fact]
+    public void IsSafeMailboxId_RejectsOver64() =>
+        Assert.False(EmailMailboxChoice.IsSafeMailboxId(new string('a', 65)));
 }

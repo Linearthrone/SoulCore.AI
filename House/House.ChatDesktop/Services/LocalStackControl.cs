@@ -11,7 +11,6 @@ public sealed class LocalStackControl : IDisposable
 {
     public const string OllamaTagsUrl = "http://127.0.0.1:11434/api/tags";
     public const string ComfyUiUrl = "http://127.0.0.1:8188/system_stats";
-    public const string DefaultHostHealthUrl = "http://127.0.0.1:7700/health";
 
     /// <summary>Env override for repo root when Presence is installed outside the checkout.</summary>
     public const string RepoRootEnvName = "HOUSE_SOULCORE_REPO";
@@ -69,16 +68,7 @@ public sealed class LocalStackControl : IDisposable
             if (vbox is null)
                 return false;
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = vbox,
-                ArgumentList = { "list", "runningvms" },
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
+            using var proc = Process.Start(CreateVBoxPsi(vbox, new[] { "list", "runningvms" }));
             if (proc is null) return false;
             var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
             await proc.WaitForExitAsync(ct).ConfigureAwait(false);
@@ -102,6 +92,21 @@ public sealed class LocalStackControl : IDisposable
     public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
+    private static ProcessStartInfo CreateVBoxPsi(string vbox, IReadOnlyList<string> args)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = vbox,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        foreach (var a in args)
+            psi.ArgumentList.Add(a);
+        return psi;
+    }
+
     private async Task<LocalStackActionResult> RunVBoxManageAsync(
         IReadOnlyList<string> args,
         CancellationToken ct)
@@ -116,18 +121,7 @@ public sealed class LocalStackControl : IDisposable
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = vbox,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            foreach (var a in args)
-                psi.ArgumentList.Add(a);
-
-            using var proc = Process.Start(psi);
+            using var proc = Process.Start(CreateVBoxPsi(vbox, args));
             if (proc is null)
                 return new LocalStackActionResult(false, "Failed to start VBoxManage");
 
@@ -242,14 +236,9 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             var counts = await RunGitAsync(
                 new[] { "rev-list", "--left-right", "--count", "@{u}...HEAD" },
                 ct).ConfigureAwait(false);
-            if (counts.Ok && TryParseRevListLeftRight(counts.Detail, out behind, out ahead))
-            {
-                // ok
-            }
-            else if (!counts.Ok)
-            {
+            if (!counts.Ok)
                 return LocalStackGitStatus.Unavailable($"git rev-list failed: {counts.Detail}");
-            }
+            _ = TryParseRevListLeftRight(counts.Detail, out behind, out ahead);
         }
 
         var porcelain = await RunGitAsync(new[] { "status", "--porcelain" }, ct).ConfigureAwait(false);

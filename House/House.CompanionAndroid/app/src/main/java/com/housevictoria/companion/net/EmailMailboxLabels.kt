@@ -5,7 +5,7 @@ package com.housevictoria.companion.net
  * Host owns the account set — never invent victoria|personal|business slots.
  */
 object EmailMailboxLabels {
-    private val SAFE_ID = Regex("^[A-Za-z0-9_-]+$")
+    private val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
 
     fun titleFor(id: String): String {
         val key = id.trim()
@@ -46,8 +46,5 @@ object EmailMailboxLabels {
             .filter { it.id.isNotBlank() }
             .sortedBy { it.id.lowercase() }
 
-    fun isSafeMailboxId(id: String): Boolean {
-        val t = id.trim()
-        return t.isNotEmpty() && SAFE_ID.matches(t)
-    }
+    fun isSafeMailboxId(id: String): Boolean = SAFE_ID.matches(id.trim())
 }

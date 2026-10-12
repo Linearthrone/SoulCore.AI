@@ -539,15 +539,16 @@ public partial class MainWindow
         var cts = new CancellationTokenSource();
         _hostActionCts = cts;
         SetHostStackButtonsBusy(true, tag);
-        if (ServicesStatusText is not null)
-            ServicesStatusText.Text = $"Running {tag}…";
-        WriteHostActionStatus(tag switch
-        {
-            "host-start" => "Starting Host…",
-            "host-stop" => "Stopping Host…",
-            "host-restart" => "Restarting Host…",
-            _ => $"Running {tag}…"
-        }, includeServices: false);
+        var hostStackTag = tag is "host-start" or "host-stop" or "host-restart";
+        WriteHostActionStatus(
+            tag switch
+            {
+                "host-start" => "Starting Host…",
+                "host-stop" => "Stopping Host…",
+                "host-restart" => "Restarting Host…",
+                _ => $"Running {tag}…"
+            },
+            includeHostStack: hostStackTag);
 
         try
         {
@@ -1331,28 +1332,6 @@ public partial class MainWindow
         BandMoodText.Text = $"Mood — {label} · {warmCool} · {keyed} · {steady} · {focused}";
     }
 
-    private static string HumanizeActivity(string? category, string phrase)
-    {
-        var clean = phrase ?? string.Empty;
-        var holding = clean.IndexOf("(holding ", StringComparison.OrdinalIgnoreCase);
-        if (holding >= 0)
-            clean = clean[..holding].Trim();
-
-        if (!string.IsNullOrWhiteSpace(clean))
-            return clean;
-
-        return (category ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "sleep" or "rest" => "Resting",
-            "idle" => "Idle",
-            "recall" => "Recalling recent context",
-            "chat" or "talk" => "In conversation",
-            "tool" or "desktop" or "browse" => "Working with tools",
-            "" => "Idle",
-            _ => char.ToUpperInvariant(category![0]) + category[1..]
-        };
-    }
-
     internal static (string? Category, string Phrase) ParseWantWire(string? want, string? categoryHint)
     {
         var category = string.IsNullOrWhiteSpace(categoryHint) ? null : categoryHint.Trim();
@@ -1472,7 +1451,7 @@ public partial class MainWindow
             brush = _mutedBrush;
             if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
             {
-                ActivityText.Text = sleepCat ? "Resting" : "Resting";
+                ActivityText.Text = "Resting";
                 _lastActivityPhrase = ActivityText.Text;
             }
         }
