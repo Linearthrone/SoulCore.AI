@@ -1,7 +1,7 @@
 # CLEANUP Sweep 1 — House PROP-17
 
 Branch: `cursor/prop17-cleanup-sweeps-6372`  
-Commit: `f36f472` (code) + this report  
+Commits: `f36f472` + follow-up code; this report  
 Scope: `House/House.ChatDesktop/**`, `House/House.CompanionAndroid/**` (PROP-17 shell, Host Stop, PresenceHud, email labels). No `SoulCore/**`.
 
 ## Findings fixed (file:symbol)
@@ -23,11 +23,16 @@ Scope: `House/House.ChatDesktop/**`, `House/House.CompanionAndroid/**` (PROP-17 
 | 13 | `MainWindow.axaml.cs` `_hostActionGeneration` | Comment without ticket prefix |
 | 14 | `PresenceHonestyTests` | Kurt → Kayleigh in fixtures |
 | 15 | `CompanionTokenEnvTests` | `kurtw` sample path → LinearThrone |
-| 16 | `EmailMailboxChoiceTests` | Cover `IsSafeMailboxId` |
+| 16 | `EmailMailboxChoiceTests` | Cover `IsSafeMailboxId` (+ over-64) |
 | 17 | `EmailMailboxLabels` / `PresenceHud` / HUD call sites | Trim PROP-17 restating comments |
 | 18 | `HealthClient.currentActivity` | Trim ticket prefix on doc |
+| 19 | `MainWindow.HumanizeActivity` | Remove unused dead helper from Presence honesty churn |
+| 20 | `LocalStackControl.CreateVBoxPsi` | Dedupe VBoxManage ProcessStartInfo builders |
+| 21 | `LocalStackControl.DefaultHostHealthUrl` | Remove unused constant |
+| 22 | `LocalStackControl.GetGitStatusAsync` | Flatten empty rev-list success branch |
+| 23 | `EmailMailboxLabels.SAFE_ID` | Align Android max length 64 with desk |
 
-**Cleanup count: 18** (net −35 lines in code commit).
+**Cleanup count: 23**.
 
 ## Deferred (Sweep 2+)
 
@@ -40,18 +45,18 @@ Scope: `House/House.ChatDesktop/**`, `House/House.CompanionAndroid/**` (PROP-17 
 ## Residual risk
 
 - Low: `WriteHostActionStatus` preserves prior Services vs HostStack write rules (host tags only update HostStack on completion; start always updates both).
-- Low: `IsSafeMailboxId` regex matches prior 1–64 charset rules used by the dialog.
+- Low: `IsSafeMailboxId` regex matches prior desk 1–64 charset rules; Android now rejects >64 (aligned).
 - Naming: Kurt/`kurtw` removed from House ChatDesktop + CompanionAndroid + their tests; LinearThrone / Kayleigh / Victoria retained.
 
 ## Tests
 
 ```text
 dotnet test House/House.ChatDesktop.Tests/House.ChatDesktop.Tests.csproj
-Passed!  Failed: 0, Passed: 101, Skipped: 0, Total: 101
+Passed!  Failed: 0, Passed: 102, Skipped: 0, Total: 102
 ```
 
 ```text
-./gradlew :app:clean :app:testDebugUnitTest --rerun-tasks
+./gradlew :app:testDebugUnitTest --rerun-tasks
 BUILD SUCCESSFUL — Android unit tests: tests=25 failures=0 errors=0
 (includes EmailMailboxLabelsTest, PresenceHudTest, HealthClientActivityTest)
 ```
