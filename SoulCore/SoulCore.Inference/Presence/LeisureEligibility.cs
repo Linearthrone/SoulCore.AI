@@ -1,3 +1,4 @@
+using System.Globalization;
 using SoulCore.Memory;
 
 namespace SoulCore.Inference.Presence;
@@ -8,6 +9,22 @@ namespace SoulCore.Inference.Presence;
 /// </summary>
 public static class LeisureEligibility
 {
+    /// <summary>
+    /// Park-until values are written as invariant UTC ISO (<c>...Z</c>).
+    /// Parse with the same culture/styles everywhere so probe due checks agree.
+    /// </summary>
+    public static bool TryParseParkUntil(string? parkUntil, out DateTimeOffset until)
+    {
+        until = default;
+        if (string.IsNullOrWhiteSpace(parkUntil))
+            return false;
+        return DateTimeOffset.TryParse(
+            parkUntil,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out until);
+    }
+
     /// <param name="runningId">Current assigned-work pointer, if any.</param>
     /// <param name="runningTask">Row for <paramref name="runningId"/>, if loaded.</param>
     /// <param name="ledger">All tasks (or at least todo/in_progress); suspended may be present.</param>
@@ -50,9 +67,7 @@ public static class LeisureEligibility
     {
         if (!string.Equals(task.Status, "parked", StringComparison.OrdinalIgnoreCase))
             return false;
-        if (string.IsNullOrWhiteSpace(task.ParkUntil))
-            return false;
-        if (!DateTimeOffset.TryParse(task.ParkUntil, out var until))
+        if (!TryParseParkUntil(task.ParkUntil, out var until))
             return false;
         return until <= utcNow;
     }

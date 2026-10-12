@@ -128,11 +128,7 @@ public sealed class AssignedWorkHostedService : BackgroundService
         var now = DateTimeOffset.UtcNow;
         foreach (var row in parked)
         {
-            if (string.IsNullOrWhiteSpace(row.ParkUntil))
-                continue;
-            if (!DateTimeOffset.TryParse(row.ParkUntil, out var until))
-                continue;
-            if (until > now)
+            if (!LeisureEligibility.IsParkProbeDue(row, now))
                 continue;
             _store.SetRunning(row.Id);
             _logger.LogInformation("Parked task due for probe: id={Id}", row.Id);

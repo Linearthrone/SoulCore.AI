@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Workflow;
@@ -9,6 +10,25 @@ namespace SoulCore.Protocol.Tests;
 /// <summary>PROP-17.1 / 17.2 targeted store + hygiene coverage.</summary>
 public class Prop17ParkAndSopTests
 {
+    [Fact]
+    public void ParkUntil_Parse_IsInvariantUtc()
+    {
+        Assert.True(LeisureEligibility.TryParseParkUntil(
+            "2026-10-12T22:00:00.000Z", out var until));
+        Assert.Equal(DateTimeOffset.Parse("2026-10-12T22:00:00.000Z"), until);
+
+        var parked = new VictoriaTask(
+            1, "t", "", "parked", "medium",
+            "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z",
+            ParkUntil: "2026-10-12T22:00:00.000Z");
+        Assert.True(LeisureEligibility.IsParkProbeDue(
+            parked, DateTimeOffset.Parse("2026-10-12T22:00:00.000Z")));
+        Assert.False(LeisureEligibility.IsParkProbeDue(
+            parked, DateTimeOffset.Parse("2026-10-12T21:59:59.000Z")));
+        Assert.False(LeisureEligibility.TryParseParkUntil(null, out _));
+        Assert.False(LeisureEligibility.TryParseParkUntil("   ", out _));
+    }
+
     [Fact]
     public async Task Park_And_Release_RoundTrip()
     {

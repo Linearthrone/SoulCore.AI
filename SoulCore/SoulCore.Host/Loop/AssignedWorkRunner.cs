@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SoulCore.Adapters.Ws;
@@ -256,12 +255,7 @@ public sealed class AssignedWorkRunner
     /// </summary>
     private async Task<TimeSpan?> TryProbeParkedAsync(VictoriaTask task, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(task.ParkUntil)
-            || !DateTimeOffset.TryParse(
-                task.ParkUntil,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var until)
+        if (!LeisureEligibility.TryParseParkUntil(task.ParkUntil, out var until)
             || until > DateTimeOffset.UtcNow)
         {
             return null;
