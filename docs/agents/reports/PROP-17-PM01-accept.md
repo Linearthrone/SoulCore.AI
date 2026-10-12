@@ -1,0 +1,48 @@
+---
+type: report
+prop_id: PROP-17-victoria-between-talks
+from: PM-01
+to: TT-01
+environment: TINA-main
+status: accepted-pm-ticketed
+created: 2026-10-12
+updated: 2026-10-12
+---
+
+# PROP-17 PM-01 accept (TINA-main)
+
+**Route:** Avenue A (gate → procedure → R&R → shell). Accepted as recommended.
+
+**Operator brief:** Diligent ticketing, hurried same-day execution. Victoria must park dead work and run new behaviors **today** for bug-out so she can **work tomorrow** without reconnect/hammer loops.
+
+## PM locks
+
+| Decision | Value |
+| --- | --- |
+| LeisureModel default | `qwen2.5:1.5b` (local `:11434` only; missing → quiet) |
+| First park cooldown | 45 minutes, then one probe |
+| Re-park cooldown | 120 minutes |
+| Identical-failure threshold | 3 |
+| Creativity clock | None |
+| PROP-16 | Relocate to System in 17.4 — do not drop |
+
+## Tickets issued
+
+| Split | Role | Status | Notes |
+| --- | --- | --- | --- |
+| PROP-17.1 | BED-01 | **START NOW** | Ledger, park, host rejects, Host Stop |
+| PROP-17.2 | BED-01 | **START NOW** (parallel) | Tab/browser invariants, SOP, life-hacks |
+| PROP-17.3 | BED-01 | Queued | After 17.1 + 17.2 Pass |
+| PROP-17.4 | FED-01 | **START NOW** (layout) | Band honesty after 17.1/17.3 |
+| PROP-17.5 | FED-01 | Pending | Mood/doing-line; Android email after 17.4 |
+
+## Activation (user relays)
+
+```text
+@Agents/BED-01.md Start PROP-17.1.
+@Agents/BED-01.md Start PROP-17.2.
+@Agents/FED-01.md Start PROP-17.4.
+```
+
+After 17.1 + 17.2 Pass: `@Agents/BED-01.md Start PROP-17.3.`  
+After 17.4 email model: `@Agents/FED-01.md Start PROP-17.5.`
