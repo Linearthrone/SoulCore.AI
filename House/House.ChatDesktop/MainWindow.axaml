@@ -57,27 +57,30 @@
                            Foreground="{DynamicResource MutedBrush}" LetterSpacing="1.5"/>
                 <TextBlock x:Name="EndpointText" Text="127.0.0.1:7700" FontSize="10"
                            Foreground="{DynamicResource MutedBrush}" Opacity="0.6"/>
-                <TextBlock x:Name="BuildVersionsText" Text="" FontSize="10"
-                           Foreground="{DynamicResource AccentBrush}" Opacity="0.9"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock x:Name="BuildVersionsText" Text="" FontSize="10"
+                             Foreground="{DynamicResource AccentBrush}" Opacity="0.9"
+                             VerticalAlignment="Center"/>
+                  <!-- PROP-16 / PROP-17.4: update mark opens System (not title-bar Update) -->
+                  <Button x:Name="UpdateAvailableMark" Classes="chrome" Content="● update"
+                          FontSize="10" Padding="8,2" IsVisible="False"
+                          Click="UpdateAvailableMark_Click"
+                          ToolTip.Tip="Update available — open Settings → System"/>
+                </StackPanel>
               </StackPanel>
             </StackPanel>
 
-            <!-- Settings sits ON the frame (Presence tab removed) -->
+            <!-- Settings only on the frame (Update / Restart / Correct mood / Refresh removed) -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,12,0">
               <Button x:Name="NavSettings" Classes="frame-nav" Content="SETTINGS"
                       Click="NavSettings_Click"/>
-              <Button x:Name="NavUpdate" Classes="chrome" Content="Update" FontSize="11" Padding="10,6"
-                      Click="UpdateNow_Click" ToolTip.Tip="Update Host (git pull + rebuild) then Presence (Velopack when installed)"/>
-              <Button x:Name="NavRestartStack" Classes="chrome" Content="Restart stack" FontSize="11" Padding="10,6"
-                      Click="RestartStack_Click" ToolTip.Tip="Stop Presence and bring the full local stack back up (ALLSTOP → ALLSTART)"/>
-              <Button Classes="chrome" Content="Correct mood…" FontSize="11" Padding="10,6"
-                      Click="CorrectEmotion_Click"/>
-              <Button Classes="chrome" Content="Refresh" Click="Refresh_Click"/>
               <TextBlock x:Name="ConnStatusText" Text="" IsVisible="False"/>
-              <!-- Keep hidden for code-behind until fully purged -->
+              <!-- Compat shims for code-behind -->
               <RadioButton x:Name="NavPresence" IsVisible="False" IsChecked="True"/>
               <Border Classes="mood-gem-well" Width="1" Height="1" IsVisible="False"/>
               <ToggleButton x:Name="HudAlwaysOnTop" IsVisible="False"/>
+              <Button x:Name="NavUpdate" IsVisible="False" Click="UpdateNow_Click"/>
+              <Button x:Name="NavRestartStack" IsVisible="False" Click="RestartStack_Click"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
@@ -147,7 +150,8 @@
       <!-- Pixel Her screen + Avalonia-only east grip (col 3). VM HWND steals hits on window ResizeEast. -->
       <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,6,520,10">
         <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
-          <Grid RowDefinitions="Auto,*">
+          <!-- PROP-17.4: composer inside ChatPanel so pop-out includes draft / Hold to talk / Send -->
+          <Grid RowDefinitions="Auto,*,Auto">
             <DockPanel Margin="4,2,4,8">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                 <ToggleButton x:Name="ChatAlwaysOnTop" Classes="chrome" Content="Pin"
@@ -223,6 +227,51 @@
                   </StackPanel>
                 </StackPanel>
               </ScrollViewer>
+            </Border>
+
+            <Border Grid.Row="2" Classes="carbon" Padding="8" Margin="0,8,0,0">
+              <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="chrome" Content="Attach" Click="AttachImage_Click"
+                          ToolTip.Tip="Attach image (MMS outbound)"/>
+                  <Button x:Name="PttButton" Classes="primary" Content="Hold to talk"
+                          ToolTip.Tip="Push-to-talk — mic → Host STT"/>
+                  <Button Classes="ghost" Content="Video"
+                          ToolTip.Tip="WebRTC deferred — entry point lives in chat"/>
+                  <Border x:Name="PendingImageChip" Classes="carbon" Padding="8,4" IsVisible="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock x:Name="PendingImageLabel" Text="image" FontSize="11" VerticalAlignment="Center"/>
+                      <Button Classes="chrome" Content="×" Padding="6,1" Click="ClearPendingImage_Click"/>
+                    </StackPanel>
+                  </Border>
+                  <TextBlock x:Name="PttHintText" Text="" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                             VerticalAlignment="Center"/>
+                  <TextBlock x:Name="VoiceHealthCompactText" Text="" FontSize="10"
+                             Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border x:Name="QuoteChip" Classes="carbon" Padding="10,6" IsVisible="False">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="chrome" Content="×" Padding="6,1"
+                            Click="ClearQuote_Click" ToolTip.Tip="Clear quote"/>
+                    <StackPanel>
+                      <TextBlock Text="Replying to excerpt" FontSize="10" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource AccentBrush}"/>
+                      <TextBlock x:Name="QuoteChipText" FontSize="11" TextWrapping="Wrap" MaxHeight="64"
+                                 TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+                <DockPanel Grid.Row="2">
+                  <Button DockPanel.Dock="Right" Classes="primary" Content="Send" Width="96"
+                          Margin="10,0,0,0" Click="Send_Click"/>
+                  <TextBox x:Name="ChatInput" Classes="input" AcceptsReturn="True"
+                           TextWrapping="Wrap" MinHeight="40" MaxHeight="140"
+                           VerticalContentAlignment="Top" Padding="10,8"
+                           Watermark="Message Victoria…"
+                           KeyDown="ChatInput_KeyDown"
+                           TextChanged="ChatInput_TextChanged"/>
+                </DockPanel>
+              </Grid>
             </Border>
           </Grid>
         </Border>
@@ -347,43 +396,43 @@
                 PointerCaptureLost="HerScreenEastResize_PointerCaptureLost"/>
       </Grid>
 
-      <Border Grid.Row="1" Classes="metal glass" Padding="10" Margin="0,8,0,0">
-        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Classes="chrome" Content="Attach" Click="AttachImage_Click"
-                    ToolTip.Tip="Attach image (MMS outbound)"/>
-            <Button x:Name="PttButton" Classes="primary" Content="Hold to talk"
-                    ToolTip.Tip="Push-to-talk — mic → Host STT"/>
-            <Button Classes="ghost" Content="Video"
-                    ToolTip.Tip="WebRTC deferred — entry point lives in chat"/>
-            <Border x:Name="PendingImageChip" Classes="carbon" Padding="8,4" IsVisible="False">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="PendingImageLabel" Text="image" FontSize="11" VerticalAlignment="Center"/>
-                <Button Classes="chrome" Content="×" Padding="6,1" Click="ClearPendingImage_Click"/>
-              </StackPanel>
-            </Border>
-            <TextBlock x:Name="PttHintText" Text="" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                       VerticalAlignment="Center"/>
+      <!-- PROP-17.4: activity band always under the main split (composer moved into ChatPanel) -->
+      <Border x:Name="ActivityBand" Grid.Row="1" Classes="metal glass" Padding="12,10" Margin="0,8,0,0">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock x:Name="BandDoingText" FontSize="12" TextWrapping="Wrap"
+                       Text="Doing — waiting for Host…"/>
+            <TextBlock x:Name="BandOnHerMindText" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedBrush}"
+                       Text="On her mind — quiet between talks (interest status awaits PROP-17.3)"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock x:Name="BandMoodText" FontSize="12" VerticalAlignment="Center"
+                         Text="Mood — —"/>
+              <Button Classes="chrome" Content="Correct mood…" FontSize="10" Padding="8,2"
+                      Click="CorrectEmotion_Click"
+                      ToolTip.Tip="Disclosure in the band — not title chrome"/>
+            </StackPanel>
+            <TextBlock x:Name="BandInfluencesText" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedBrush}"
+                       Text="Influences — none yet"/>
           </StackPanel>
-          <Border x:Name="QuoteChip" Classes="carbon" Padding="10,6" IsVisible="False">
-            <DockPanel>
-              <Button DockPanel.Dock="Right" Classes="chrome" Content="×" Padding="6,1"
-                      Click="ClearQuote_Click" ToolTip.Tip="Clear quote"/>
-              <StackPanel>
-                <TextBlock Text="Replying to excerpt" FontSize="10" FontWeight="SemiBold"
-                           Foreground="{DynamicResource AccentBrush}"/>
-                <TextBlock x:Name="QuoteChipText" FontSize="11" TextWrapping="Wrap" MaxHeight="64"
-                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedBrush}"/>
-              </StackPanel>
-            </DockPanel>
-          </Border>
-          <DockPanel Grid.Row="2">
-            <Button DockPanel.Dock="Right" Classes="primary" Content="Send" Width="96"
-                    Margin="10,0,0,0" Click="Send_Click"/>
-            <TextBox x:Name="ChatInput" Classes="input" AcceptsReturn="False" Height="40"
-                     VerticalContentAlignment="Center" Padding="10,0" Watermark="Message Victoria…"
-                     KeyDown="ChatInput_KeyDown"/>
-          </DockPanel>
+          <StackPanel Grid.Column="1" Spacing="4" MinWidth="200" Margin="16,0,0,0">
+            <TextBlock Text="Tasks" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <TextBlock x:Name="BandTasksText" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedBrush}"
+                       Text="Ledger statuses await Host PROP-17.1 (parked / suspended / release)."/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="chrome" Content="Add" FontSize="10" Padding="8,2" IsEnabled="False"
+                      ToolTip.Tip="Disabled until PROP-17.1 task APIs exist"/>
+              <Button Classes="chrome" Content="Suspend" FontSize="10" Padding="8,2" IsEnabled="False"
+                      ToolTip.Tip="Disabled until PROP-17.1 task APIs exist"/>
+              <Button Classes="chrome" Content="Release" FontSize="10" Padding="8,2" IsEnabled="False"
+                      ToolTip.Tip="Disabled until PROP-17.1 task APIs exist"/>
+            </StackPanel>
+          </StackPanel>
+          <Border x:Name="EmotionCorrectInlineHost" Grid.Row="1" Grid.ColumnSpan="2"
+                  Margin="0,8,0,0" IsVisible="False"/>
         </Grid>
       </Border>
 
@@ -512,41 +561,44 @@
                     Click="OpenPresenceFromIdentity_Click" Margin="0,0,12,0"/>
             <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
           </DockPanel>
-        <TabControl Grid.Row="1" Classes="settings-tabs" Background="Transparent" BorderThickness="0">
-          <TabItem Header="Identity">
+        <TabControl x:Name="SettingsTabs" Grid.Row="1" Classes="settings-tabs"
+                    Background="Transparent" BorderThickness="0">
+          <TabItem x:Name="IdentityTab" Header="Identity">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12" Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                  <TextBlock Text="Identity" FontSize="18" FontWeight="SemiBold"/>
-                </StackPanel>
-                <TextBlock Text="Her name" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <DockPanel Margin="0,0,0,12">
-                  <Button DockPanel.Dock="Right" Classes="ghost" Content="Save" Margin="8,0,0,0"
-                          Click="IdentitySave_Click"/>
-                  <TextBox x:Name="DisplayNameBox" Classes="input" MaxLength="64" Height="36"
-                           VerticalContentAlignment="Center" Padding="8,0" LostFocus="DisplayNameBox_LostFocus"/>
-                </DockPanel>
-                <TextBlock Text="Detailed identity" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="IdentityDetailBox" Classes="input" IsReadOnly="True" AcceptsReturn="True"
-                         TextWrapping="Wrap" MinHeight="160" Padding="10" Margin="0,0,0,12"
-                         Text="Loading identity…"/>
-                <TextBlock Text="Charter (from Host /health)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="IdentityCharterBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,12"/>
-                <Button Classes="ghost" Content="← Back to chat" HorizontalAlignment="Left"
-                        Click="OpenPresenceFromIdentity_Click"/>
+              <StackPanel Margin="12" Spacing="6">
+                <TextBlock Text="Identity" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                           Text="Read-only portrait. Name is Host contact / local display text — no essay editor here."/>
+                <TextBlock Text="Name" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
+                <TextBox x:Name="DisplayNameBox" Classes="input" IsReadOnly="True" MaxLength="64" Height="36"
+                         VerticalContentAlignment="Center" Padding="8,0"/>
+                <!-- Hidden shims: essay removed; charter/detail now structured -->
+                <TextBox x:Name="IdentityDetailBox" IsVisible="False"/>
+                <TextBox x:Name="IdentityCharterBox" IsVisible="False"/>
+
+                <TextBlock Text="Charter anchors" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                <TextBlock x:Name="IdentityCharterKindsText" TextWrapping="Wrap" FontSize="12"
+                           Text="Loading charter…"/>
+
+                <TextBlock Text="Stats" FontWeight="SemiBold" Margin="0,16,0,4"/>
+                <TextBlock x:Name="IdentityStatsText" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="Loading stats…"/>
+
+                <TextBlock Text="Prompt mix" FontWeight="SemiBold" Margin="0,16,0,4"/>
+                <TextBlock x:Name="IdentityPromptMixText" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Text="—"/>
               </StackPanel>
             </ScrollViewer>
           </TabItem>
 
-          <TabItem Header="Tools &amp; Access">
+          <TabItem x:Name="ToolsTab" Header="Tools &amp; Access">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <StackPanel Margin="12">
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                  <TextBlock Text="Tools &amp; Access" FontSize="18" FontWeight="SemiBold"/>
-                </StackPanel>
+                <TextBlock Text="Tools &amp; Access" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
-                           Text="Desktop and browser capture + computer control default ON. Backends moved to System."
+                           Text="Session gates on Host. Backends live on System. list-tools, system info, and her tasks/workflows stay always on."
                            Margin="0,0,0,16"/>
                 <TextBlock Text="Desktop &amp; browser" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <CheckBox x:Name="ToolsAllowDesktopCaptureCheck" Content="Allow desktop screenshots &amp; window list"
@@ -565,15 +617,31 @@
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowMt4TradeCheck" Content="Allow MT4 trade / close / backtest"
                           Margin="0,0,0,16" Click="ToolsAccessToggle_Click"/>
-                <TextBlock Text="Email" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
-                           Text="Quick switches (same controls live on the Email tab with mailbox setup)."/>
-                <CheckBox x:Name="ToolsAllowEmailReadCheck" Content="Allow email read / sort / mark (victoria + LinearThrone accounts)"
+                <TextBlock Text="Email permissions" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <CheckBox x:Name="ToolsAllowEmailReadCheck" Content="Allow email read / sort / mark"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowEmailSendCheck" Content="Allow email send / reply (still asks for confirmation)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowEmailDeleteCheck" Content="Allow email delete (still asks for confirmation)"
-                          Margin="0,0,0,16" Click="ToolsAccessToggle_Click"/>
+                          Margin="0,0,0,8" Click="ToolsAccessToggle_Click"/>
+                <Button Classes="primary" Content="Email setup…" HorizontalAlignment="Left"
+                        Click="EmailSetup_Click" Margin="0,0,0,16"
+                        ToolTip.Tip="One dialog — unlimited accounts, no three-role cap"/>
+                <!-- Compat shims for removed Email-tab gate duplicates -->
+                <CheckBox x:Name="EmailGateReadCheck" IsVisible="False" Click="EmailGateToggle_Click"/>
+                <CheckBox x:Name="EmailGateSendCheck" IsVisible="False" Click="EmailGateToggle_Click"/>
+                <CheckBox x:Name="EmailGateDeleteCheck" IsVisible="False" Click="EmailGateToggle_Click"/>
+                <TextBlock x:Name="EmailGateStatusText" IsVisible="False"/>
+
+                <TextBlock Text="Family switches" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"
+                           Text="Host has not exposed these family gates yet — left off and disabled so Presence does not invent backend."/>
+                <CheckBox x:Name="FamilyFilesOnPcCheck" Content="Files on this PC" IsEnabled="False" Margin="0,0,0,4"/>
+                <CheckBox x:Name="FamilyGuestVmFilesShellCheck" Content="Guest VM files &amp; shell" IsEnabled="False" Margin="0,0,0,4"/>
+                <CheckBox x:Name="FamilyBrowserDrivingCheck" Content="Browser driving (separate from capture)" IsEnabled="False" Margin="0,0,0,4"/>
+                <CheckBox x:Name="FamilyBodyUnrealCheck" Content="Body / Unreal" IsEnabled="False" Margin="0,0,0,4"/>
+                <CheckBox x:Name="FamilyChiefArchitectCheck" Content="Chief Architect" IsEnabled="False" Margin="0,0,0,12"/>
+
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="ghost" Content="Refresh" Click="ToolsAccessRefresh_Click"/>
                   <TextBlock x:Name="ToolsAccessStatusText" Foreground="{DynamicResource MutedBrush}"
@@ -583,252 +651,160 @@
             </ScrollViewer>
           </TabItem>
 
-          <TabItem Header="Email">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12" Spacing="8">
-                <TextBlock Text="Mailboxes" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
-                           Text="Give Victoria a mailbox she can check, and optionally yours. For Gmail, use an App Password (not your normal login password)."/>
+          <TabItem x:Name="SystemTab" Header="System">
+            <ScrollViewer x:Name="SystemScroll" VerticalScrollBarVisibility="Auto">
+              <Grid Margin="12" ColumnDefinitions="*,16,*">
+                <!-- Left: Host + token + mailboxes + VM -->
+                <StackPanel>
+                  <TextBlock Text="System" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                  <CheckBox x:Name="AutoStartStackCheck" Content="Auto-start Host + Ollama when Presence opens"
+                            IsChecked="True" Margin="0,0,0,8" Click="AutoStartStackCheck_Click"/>
+                  <!-- Repo path kept for code-behind resolve; not shown (PROP-17.4) -->
+                  <TextBox x:Name="SoulCoreRepoRootBox" IsVisible="False"
+                           LostFocus="SoulCoreRepoRootBox_LostFocus"/>
+                  <TextBox x:Name="SystemEndpointBox" IsVisible="False"/>
 
-                <TextBlock Text="Which mailbox?" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                <ComboBox x:Name="EmailAccountCombo" Classes="input" Height="40"
-                          SelectionChanged="EmailAccountCombo_SelectionChanged">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <StackPanel Spacing="2" Margin="0,4">
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Subtitle}" FontSize="11"
-                                   Foreground="{DynamicResource MutedBrush}"/>
-                      </StackPanel>
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <Border Classes="carbon" Padding="10,8" Margin="0,4,0,0">
-                  <TextBlock x:Name="EmailReadyBanner" TextWrapping="Wrap" FontSize="12"
-                             Text="Pick a mailbox to see its status."/>
-                </Border>
-
-                <CheckBox x:Name="EmailEnabledCheck" Content="Victoria may use this mailbox"
-                          Margin="0,4,0,0"/>
-
-                <TextBlock Text="Email address" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                <TextBox x:Name="EmailAddressBox" Classes="input" Height="36" Padding="10,0"
-                         VerticalContentAlignment="Center"
-                         Watermark="name@gmail.com"/>
-
-                <TextBlock Text="App password" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           Text="Gmail: Google Account → Security → 2-Step Verification → App passwords → Mail. Paste the 16-character password here. Leave blank if you already saved one and only want to change the address."/>
-                <TextBox x:Name="EmailPasswordBox" Classes="input" Height="36" Padding="10,0"
-                         PasswordChar="•" VerticalContentAlignment="Center"
-                         Watermark="Paste app password (leave blank to keep)"/>
-                <TextBlock x:Name="EmailPasswordHint" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           Text="No password saved yet"/>
-
-                <TextBlock Text="Name on outgoing mail" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                <TextBox x:Name="EmailDisplayNameBox" Classes="input" Height="36" Padding="10,0"
-                         VerticalContentAlignment="Center"
-                         Watermark="e.g. Victoria or LinearThrone"/>
-
-                <!-- Username kept for non-Gmail; auto-filled from address when blank -->
-                <TextBox x:Name="EmailUsernameBox" IsVisible="False"/>
-
-                <Expander x:Name="EmailAdvancedExpander" Header="Advanced server settings (usually leave alone)"
-                          Margin="0,8,0,0" IsExpanded="False">
-                  <StackPanel Margin="0,8,0,0" Spacing="6">
-                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                               Text="Defaults are already set for Gmail. Only change these if your provider gave you different incoming/outgoing servers."/>
-                    <Button Classes="ghost" Content="Reset to Gmail defaults" HorizontalAlignment="Left"
-                            Click="EmailGmailDefaults_Click" Margin="0,0,0,6"/>
-                    <TextBlock Text="Incoming mail server (IMAP)" Foreground="{DynamicResource MutedBrush}"/>
-                    <DockPanel>
-                      <TextBox x:Name="EmailImapPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
-                               Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="993" Margin="8,0,0,0"/>
-                      <TextBox x:Name="EmailImapHostBox" Classes="input" Height="34" Padding="8,0"
-                               VerticalContentAlignment="Center" Text="imap.gmail.com"/>
-                    </DockPanel>
-                    <CheckBox x:Name="EmailImapSslCheck" Content="Incoming connection is encrypted (SSL)" IsChecked="True"/>
-                    <TextBlock Text="Outgoing mail server (SMTP)" Foreground="{DynamicResource MutedBrush}"/>
-                    <DockPanel>
-                      <TextBox x:Name="EmailSmtpPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
-                               Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="587" Margin="8,0,0,0"/>
-                      <TextBox x:Name="EmailSmtpHostBox" Classes="input" Height="34" Padding="8,0"
-                               VerticalContentAlignment="Center" Text="smtp.gmail.com"/>
-                    </DockPanel>
-                    <CheckBox x:Name="EmailSmtpSslCheck"
-                              Content="Outgoing uses port 465 (rare). Leave off for normal Gmail (port 587)."/>
+                  <TextBlock Text="SoulCore Host" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <Button x:Name="HostStartButton" Classes="primary" Content="Start Host"
+                            Click="HostStart_Click"/>
+                    <Button x:Name="HostStopButton" Classes="ghost" Content="Stop Host"
+                            Click="HostStop_Click"/>
+                    <Button x:Name="HostRestartButton" Classes="ghost" Content="Restart Host"
+                            Click="HostRestart_Click"/>
                   </StackPanel>
-                </Expander>
+                  <TextBlock x:Name="HostStackStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                             TextWrapping="Wrap" Text="" Margin="0,0,0,12"/>
 
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                  <Button Classes="primary" Content="Save this mailbox" Click="EmailAccountSave_Click"/>
-                  <Button Classes="ghost" Content="Reload" Click="EmailAccountsRefresh_Click"/>
-                  <TextBlock x:Name="EmailSettingsStatusText" Foreground="{DynamicResource MutedBrush}"
-                             VerticalAlignment="Center" FontSize="11"/>
+                  <TextBlock Text="Companion API token" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <TextBox x:Name="CompanionTokenBox" Classes="input" PasswordChar="•"
+                           Watermark="Paste token — leave blank to keep saved"
+                           Padding="8" Margin="0,0,0,6"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <Button Classes="primary" Content="Save token" Click="CompanionTokenSave_Click"/>
+                    <Button Classes="ghost" Content="Clear saved" Click="CompanionTokenClear_Click"/>
+                    <Button Classes="ghost" Content="Reconnect WS" Click="CompanionTokenReconnect_Click"/>
+                  </StackPanel>
+                  <TextBlock x:Name="CompanionTokenStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                             Text="" Margin="0,0,0,12"/>
+
+                  <TextBlock Text="Mailboxes" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <TextBlock x:Name="SystemMailboxesText" TextWrapping="Wrap" FontSize="12"
+                             Foreground="{DynamicResource MutedBrush}"
+                             Text="None loaded — use Tools &amp; Access → Email setup."
+                             Margin="0,0,0,12"/>
+
+                  <TextBlock Text="Guest VM (victoria-sandbox)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
+                             Text="Operator buttons via VBoxManage. Presence does not auto-start the VM."/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <Button Classes="primary" Content="Start" Click="VmStart_Click"/>
+                    <Button Classes="ghost" Content="Save state" Click="VmSave_Click"/>
+                    <Button Classes="ghost" Content="Power off" Click="VmPowerOff_Click"/>
+                  </StackPanel>
+                  <TextBlock x:Name="VmStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                             TextWrapping="Wrap" Text="" Margin="0,0,0,16"/>
+
+                  <TextBlock Text="Notifications" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <CheckBox x:Name="NotifEnabledCheckBox" Content="Sound when she messages (unfocused)"
+                            IsChecked="True" Margin="0,0,0,6" Click="NotifEnabled_Click"/>
+                  <DockPanel Margin="0,0,0,6">
+                    <Button DockPanel.Dock="Right" Classes="ghost" Content="Browse…" Margin="8,0,0,0"
+                            Click="NotifBrowse_Click"/>
+                    <Button DockPanel.Dock="Right" Classes="ghost" Content="Clear" Margin="8,0,0,0"
+                            Click="NotifClear_Click"/>
+                    <TextBox x:Name="NotifSoundPathBox" Classes="input" IsReadOnly="True"
+                             Text="(system beep)" Padding="8,0"/>
+                  </DockPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+                    <Button Classes="ghost" Content="Test sound" Click="NotifTest_Click"/>
+                    <TextBlock x:Name="NotifStatusText" Foreground="{DynamicResource MutedBrush}"
+                               VerticalAlignment="Center" FontSize="11"/>
+                  </StackPanel>
+
+                  <Border x:Name="SystemUpdatesBlock" Classes="carbon" Padding="10" Margin="0,0,0,12">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="Updates (PROP-16)" FontWeight="SemiBold"/>
+                      <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                 Text="Git pull when behind, Host rebuild/restart, then Presence Velopack. Restart stack runs ALLSTOP → ALLSTART."/>
+                      <TextBox x:Name="UpdateGitStatusBox" Classes="input" IsReadOnly="True" Text="—"
+                               TextWrapping="Wrap" Padding="8"/>
+                      <TextBox x:Name="UpdateVersionBox" Classes="input" IsReadOnly="True" Text="—"
+                               Padding="8"/>
+                      <TextBox x:Name="UpdateHostVersionBox" Classes="input" IsReadOnly="True" Text="—"
+                               Padding="8"/>
+                      <TextBox x:Name="UpdateFeedBox" Classes="input" IsReadOnly="True" Text="—"
+                               TextWrapping="Wrap" Padding="8"/>
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="UpdateCheckButton" Classes="primary" Content="Check"
+                                Click="UpdateCheck_Click"/>
+                        <Button x:Name="UpdateNowButton" Classes="primary" Content="Update now"
+                                Click="UpdateNow_Click"/>
+                        <Button x:Name="UpdateApplyButton" Classes="ghost" Content="Download &amp; restart"
+                                IsEnabled="False" Click="UpdateApply_Click"/>
+                        <Button x:Name="RestartStackButton" Classes="ghost" Content="Restart stack"
+                                Click="RestartStack_Click"/>
+                      </StackPanel>
+                      <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource MutedBrush}" Text=""/>
+                    </StackPanel>
+                  </Border>
+
+                  <Button Classes="ghost" Content="Refresh" HorizontalAlignment="Left"
+                          Click="RefreshSystem_Click"/>
                 </StackPanel>
 
-                <TextBlock Text="What she is allowed to do" FontWeight="SemiBold" Margin="0,20,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"
-                           Text="Even with a mailbox saved, these switches must be on before she can touch mail. Send and delete always ask you first."/>
-                <CheckBox x:Name="EmailGateReadCheck" Content="She may read, search, and file mail"
-                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
-                <CheckBox x:Name="EmailGateSendCheck" Content="She may send or reply (asks you to confirm)"
-                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
-                <CheckBox x:Name="EmailGateDeleteCheck" Content="She may delete mail (asks you to confirm)"
-                          Margin="0,0,0,6" Click="EmailGateToggle_Click"/>
-                <TextBlock x:Name="EmailGateStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           Text=""/>
-              </StackPanel>
-            </ScrollViewer>
-          </TabItem>
+                <!-- Right (~half): health / versions -->
+                <StackPanel Grid.Column="2">
+                  <TextBlock Text="Health &amp; versions" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                        Margin="0,0,0,12">
+                    <TextBlock Text="Bind" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemBindBox" Grid.Column="1" Classes="input" IsReadOnly="True" Text="—"
+                             Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="1" Text="Port" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemPortBox" Grid.Row="1" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="7700" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="2" Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemInferenceBox" Grid.Row="2" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="3" Text="Memory path" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemMemoryPathBox" Grid.Row="3" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             TextWrapping="Wrap" Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="4" Text="Memory open" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemMemoryOpenBox" Grid.Row="4" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="5" Text="SoulLoop" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemSoulLoopBox" Grid.Row="5" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="6" Text="Desktop" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="ToolsDesktopBackendBox" Grid.Row="6" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="7" Text="Browser" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="ToolsBrowserBackendBox" Grid.Row="7" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="8" Text="MT4" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="ToolsMt4BackendBox" Grid.Row="8" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="9" Text="Versions" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                    <TextBox x:Name="SystemVersionsBox" Grid.Row="9" Grid.Column="1" Classes="input" IsReadOnly="True"
+                             Text="—" Padding="6" Margin="0,0,0,6"/>
+                  </Grid>
 
-          <TabItem Header="System">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12">
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                  <TextBlock Text="System" FontSize="18" FontWeight="SemiBold"/>
-                </StackPanel>
-                <TextBlock Text="Host endpoint" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemEndpointBox" Classes="input" IsReadOnly="True" Text="127.0.0.1:7700"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="SoulCore repo folder" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"
-                           Text="Folder that contains ALLSTART.ps1 (needed when Presence was installed via Setup.exe). Also: HOUSE_SOULCORE_REPO."/>
-                <TextBox x:Name="SoulCoreRepoRootBox" Classes="input" Watermark="e.g. C:\Users\you\Soul_Core"
-                         Padding="8" Margin="0,0,0,6" LostFocus="SoulCoreRepoRootBox_LostFocus"/>
-                <CheckBox x:Name="AutoStartStackCheck" Content="Auto-start Host + Ollama when Presence opens"
-                          IsChecked="True" Margin="0,0,0,8" Click="AutoStartStackCheck_Click"/>
-                <TextBlock Text="SoulCore Host" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
-                           Text="Start / stop / restart Host via the repo scripts (needs SoulCore repo folder above). Same as the House drawer lamp, without the hold-to-stop dance."/>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                  <Button x:Name="HostStartButton" Classes="primary" Content="Start Host"
-                          Click="HostStart_Click" ToolTip.Tip="Start Host (+ Ollama if needed) for chat"/>
-                  <Button x:Name="HostStopButton" Classes="ghost" Content="Stop Host"
-                          Click="HostStop_Click" ToolTip.Tip="Stop SoulCore Host"/>
-                  <Button x:Name="HostRestartButton" Classes="ghost" Content="Restart Host"
-                          Click="HostRestart_Click" ToolTip.Tip="Stop then start Host (pick up code / appsettings changes)"/>
-                </StackPanel>
-                <TextBlock x:Name="HostStackStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           TextWrapping="Wrap" Text="" Margin="0,0,0,12"/>
-                <TextBlock Text="Companion API token" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"
-                           Text="Same value as SOULCORE_COMPANION_API_TOKEN in SoulCore/.env. Required for chat when Host has companion auth on. Saved only on this PC."/>
-                <TextBox x:Name="CompanionTokenBox" Classes="input" PasswordChar="•"
-                         Watermark="Paste token — leave blank to keep saved"
-                         Padding="8" Margin="0,0,0,6"/>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                  <Button Classes="primary" Content="Save token" Click="CompanionTokenSave_Click"/>
-                  <Button Classes="ghost" Content="Clear saved" Click="CompanionTokenClear_Click"/>
-                  <Button Classes="ghost" Content="Reconnect WS" Click="CompanionTokenReconnect_Click"/>
-                </StackPanel>
-                <TextBlock x:Name="CompanionTokenStatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           Text="" Margin="0,0,0,10"/>
-                <TextBlock Text="Bind address" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemBindBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="Port" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemPortBox" Classes="input" IsReadOnly="True" Text="7700"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemInferenceBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="Memory path" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemMemoryPathBox" Classes="input" IsReadOnly="True" Text="—"
-                         TextWrapping="Wrap" Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="Memory open" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemMemoryOpenBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,10"/>
-                <TextBlock Text="SoulLoop" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemSoulLoopBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,8"/>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,14">
-                  <Button Classes="ghost" Content="Tick SoulLoop" Click="SoulLoopTick_Click"/>
-                  <Button Classes="primary" Content="Reconnect WS" Click="SoulLoopRestart_Click"/>
-                </StackPanel>
-                <TextBlock Text="Backends (read-only from Host)" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                <TextBlock Text="Desktop backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="ToolsDesktopBackendBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,8"/>
-                <TextBlock Text="Browser backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="ToolsBrowserBackendBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,8"/>
-                <TextBlock Text="MT4 backend" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="ToolsMt4BackendBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,14"/>
-                <Button Classes="ghost" Content="Refresh" HorizontalAlignment="Left" Click="RefreshSystem_Click"/>
-              </StackPanel>
-            </ScrollViewer>
-          </TabItem>
+                  <TextBlock Text="Voice (STT / TTS)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <TextBlock x:Name="SystemVoiceHealthText" TextWrapping="Wrap" FontSize="12"
+                             Foreground="{DynamicResource MutedBrush}" Text="—" Margin="0,0,0,8"/>
+                  <Expander Header="Advanced voice URLs" IsExpanded="False">
+                    <TextBlock x:Name="SystemVoiceUrlsText" TextWrapping="Wrap" FontSize="11"
+                               Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0" Text="—"/>
+                  </Expander>
 
-          <TabItem Header="Services">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12" Spacing="6">
-                <TextBlock Text="Services" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"
-                           Text="Open the House drawer on Presence for SoulCore / Ollama / Unreal / Comfy / CUA / Sandbox lamps. Explicit Start / Stop / Restart Host buttons are under Settings → System."
-                           Margin="0,0,0,12"/>
-                <Button Classes="ghost" Content="Refresh" Click="ServicesRefresh_Click" HorizontalAlignment="Left"/>
-              </StackPanel>
-            </ScrollViewer>
-          </TabItem>
-
-          <TabItem Header="Notifications">
-            <StackPanel Margin="12">
-              <TextBlock Text="Notifications" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
-              <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
-                         Text="Sound when Victoria messages while the window is unfocused." Margin="0,0,0,16"/>
-              <CheckBox x:Name="NotifEnabledCheckBox" Content="Enable notification sound" IsChecked="True"
-                        Margin="0,0,0,12" Click="NotifEnabled_Click"/>
-              <TextBlock Text="Sound file (.wav)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-              <DockPanel Margin="0,0,0,12">
-                <Button DockPanel.Dock="Right" Classes="ghost" Content="Browse…" Margin="8,0,0,0"
-                        Click="NotifBrowse_Click"/>
-                <Button DockPanel.Dock="Right" Classes="ghost" Content="Clear" Margin="8,0,0,0"
-                        Click="NotifClear_Click"/>
-                <TextBox x:Name="NotifSoundPathBox" Classes="input" IsReadOnly="True"
-                         Text="(system beep)" Padding="8,0"/>
-              </DockPanel>
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="primary" Content="Test sound" Click="NotifTest_Click"/>
-                <TextBlock x:Name="NotifStatusText" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-              </StackPanel>
-            </StackPanel>
-          </TabItem>
-
-          <TabItem Header="Updates">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="12" Spacing="6">
-                <TextBlock Text="Updates" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"
-                           Text="Update covers Presence and Host: git pull when behind, Host rebuild/restart, then Presence Velopack when an installed build has a feed. Restart stack runs ALLSTOP → ALLSTART (Presence will exit). Settings → System Host Start/Stop/Restart remain Host-only."
-                           Margin="0,0,0,12"/>
-                <TextBlock Text="Git status" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="UpdateGitStatusBox" Classes="input" IsReadOnly="True" Text="—"
-                         TextWrapping="Wrap" Padding="8" Margin="0,0,0,8"/>
-                <TextBlock Text="Presence version" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="UpdateVersionBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,8"/>
-                <TextBlock Text="Host version (from /health)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="UpdateHostVersionBox" Classes="input" IsReadOnly="True" Text="—"
-                         Padding="8" Margin="0,0,0,8"/>
-                <TextBlock Text="Update feed" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="UpdateFeedBox" Classes="input" IsReadOnly="True" Text="—"
-                         TextWrapping="Wrap" Padding="8" Margin="0,0,0,12"/>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                  <Button x:Name="UpdateCheckButton" Classes="primary" Content="Check for updates"
-                          Click="UpdateCheck_Click" ToolTip.Tip="Refresh git / Host / Presence status only — does not rebuild"/>
-                  <Button x:Name="UpdateNowButton" Classes="primary" Content="Update now"
-                          Click="UpdateNow_Click" ToolTip.Tip="Pull (if behind) → rebuild Host → Presence Velopack when available"/>
-                  <Button x:Name="UpdateApplyButton" Classes="ghost" Content="Download &amp; restart"
-                          IsEnabled="False" Click="UpdateApply_Click"/>
-                  <Button x:Name="RestartStackButton" Classes="ghost" Content="Restart stack"
-                          Click="RestartStack_Click"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+                    <Button Classes="ghost" Content="Tick SoulLoop" Click="SoulLoopTick_Click"/>
+                    <Button Classes="ghost" Content="Reconnect WS" Click="SoulLoopRestart_Click"/>
+                  </StackPanel>
                 </StackPanel>
-                <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap"
-                           Foreground="{DynamicResource MutedBrush}" Text=""/>
-              </StackPanel>
+              </Grid>
             </ScrollViewer>
           </TabItem>
         </TabControl>
