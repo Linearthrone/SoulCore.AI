@@ -120,7 +120,6 @@ public sealed class ChatSendHandler
             await _turnGate!.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-        // PROP-17.3: human turn aborts in-flight R&R before the next preamble.
         _lease?.Abort("human-chat");
         _leisure?.Clear();
 

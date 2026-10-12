@@ -49,46 +49,18 @@ public static class Mt4ToolSupport
         options is not null && options.AllowMt4Trade;
 
     /// <summary>
-    /// PROP-17.1: model-minted <c>confirmed</c> is stripped and never grants consent.
+    /// PROP-17.1: model-minted <c>confirmed</c> never grants consent.
     /// Host-side <see cref="Presence.IOperatorConsentGate"/> must grant first.
     /// </summary>
-    public static bool IsConfirmed(JsonElement args, Presence.IOperatorConsentGate? consent)
-    {
-        _ = StripConfirmed(args);
-        return consent is not null && consent.TryConsume(Presence.OperatorConsentGate.Mt4Write);
-    }
-
-    /// <summary>Legacy — always false after strip (model cannot mint consent).</summary>
-    public static bool IsConfirmed(JsonElement args)
-    {
-        _ = StripConfirmed(args);
-        return false;
-    }
+    public static bool IsConfirmed(Presence.IOperatorConsentGate? consent) =>
+        consent is not null && consent.TryConsume(Presence.OperatorConsentGate.Mt4Write);
 
     /// <summary>
-    /// Returns a clone of <paramref name="args"/> with SoulCore-only keys
-    /// (e.g. <c>confirmed</c>) removed before dispatch to the MCP bridge.
+    /// Clone of <paramref name="args"/> with SoulCore-only <c>confirmed</c> removed
+    /// before dispatch to the MCP bridge.
     /// </summary>
-    public static JsonElement StripConfirmed(JsonElement args)
-    {
-        if (args.ValueKind != JsonValueKind.Object)
-            return args;
-
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
-            writer.WriteStartObject();
-            foreach (var prop in args.EnumerateObject())
-            {
-                if (string.Equals(prop.Name, "confirmed", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                prop.WriteTo(writer);
-            }
-            writer.WriteEndObject();
-        }
-
-        return JsonDocument.Parse(stream.ToArray()).RootElement.Clone();
-    }
+    public static JsonElement StripConfirmed(JsonElement args) =>
+        Presence.ConsentArgs.StripModelConfirmed(args);
 
     public static bool TryGetRequiredString(
         JsonElement args,
@@ -344,7 +316,7 @@ public abstract class Mt4ToolBase : ITool
             return Task.FromResult(new ToolResult(false, Mt4ToolSupport.TradeDeniedMessage, null));
 
         args = args.ValueKind == JsonValueKind.Object ? Mt4ToolSupport.StripConfirmed(args) : args;
-        if (!Mt4ToolSupport.IsConfirmed(args, Consent))
+        if (!Mt4ToolSupport.IsConfirmed(Consent))
         {
             Consent?.NotePending(Presence.OperatorConsentGate.Mt4Write);
             return Task.FromResult(new ToolResult(false, confirmPrompt, null));

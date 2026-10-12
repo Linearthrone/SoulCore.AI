@@ -83,14 +83,11 @@ public sealed class AssignedWorkRunner
             return TimeSpan.FromSeconds(5);
         }
 
-        // Never schedule parked / suspended.
         if (VictoriaTaskRules.IsNeverStarted(task.Status))
         {
             if (string.Equals(task.Status, "parked", StringComparison.OrdinalIgnoreCase)
                 && await TryProbeParkedAsync(task, cancellationToken).ConfigureAwait(false) is { } probeDelay)
-            {
                 return probeDelay;
-            }
 
             _store.Clear();
             Note($"Parked — {task.ParkReason}".TrimEnd(' ', '—'));
@@ -170,7 +167,6 @@ public sealed class AssignedWorkRunner
         var visible = WorkContinuation.VisibleText(reply, continuing: true);
         await ReflectEmotionAsync(visible, cancellationToken).ConfigureAwait(false);
 
-        // PROP-17.1: a tool name is not progress. Only a successful work-tool result resets the streak.
         var workResults = noting.Results
             .Where(r => WorkContinuation.IsWorkTool(r.Name))
             .ToList();
@@ -178,8 +174,7 @@ public sealed class AssignedWorkRunner
         var surfaceFailures = workResults
             .Where(r => !r.Success)
             .Select(r => SurfaceFailureKey(r.Name, r.Content, task.Surface))
-            .Where(k => k is not null)
-            .Cast<string>()
+            .OfType<string>()
             .ToList();
 
         if (anyWorkSuccess)
@@ -218,9 +213,6 @@ public sealed class AssignedWorkRunner
             }
         }
 
-        // PROP-17.3: work continuation lines do not append to presence-local
-        // (continuation spam buried the human thread). Band + ChatDone carry status.
-
         if (WorkContinuation.NeedsKayleigh(reply))
         {
             await _tasks.UpdateStatusAsync(task.Id, "blocked", cancellationToken).ConfigureAwait(false);
@@ -232,7 +224,6 @@ public sealed class AssignedWorkRunner
             return TimeSpan.FromSeconds(15);
         }
 
-        // Done is a real status — model must call task_update_status; no regex completion.
         var refreshed = await _tasks.GetAsync(task.Id, cancellationToken).ConfigureAwait(false);
         if (refreshed is not null
             && string.Equals(refreshed.Status, "done", StringComparison.OrdinalIgnoreCase))
@@ -276,7 +267,6 @@ public sealed class AssignedWorkRunner
             return null;
         }
 
-        // One probe: briefly resume in_progress, clear failures, set running pointer.
         await _tasks.UpdateStatusAsync(task.Id, "in_progress", cancellationToken).ConfigureAwait(false);
         await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
         var resumed = await _tasks.GetAsync(task.Id, cancellationToken).ConfigureAwait(false);
@@ -286,8 +276,6 @@ public sealed class AssignedWorkRunner
         _store.Project(resumed);
         Note("Probe after park — " + task.Title);
         await PushStatusAsync("Probe after park", "working", cancellationToken).ConfigureAwait(false);
-        // Fall through by returning null is wrong — caller already branched. Re-enter via next loop.
-        // Instead run one pass inline by returning a short delay after setting pointer; HostedService will call again.
         return TimeSpan.FromSeconds(1);
     }
 
@@ -297,20 +285,10 @@ public sealed class AssignedWorkRunner
         if (c.Contains("park", StringComparison.OrdinalIgnoreCase)
             && c.Contains("site down", StringComparison.OrdinalIgnoreCase))
             return "browser:site_down";
-        if (name.StartsWith("browser_", StringComparison.Ordinal))
-        {
-            if (c.Contains("refused", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("timeout", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("ERR_", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("net::", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("HTTP 5", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("no response", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("health", StringComparison.OrdinalIgnoreCase) && c.Contains("fail", StringComparison.OrdinalIgnoreCase))
-            {
-                return "browser:" + ExtractUrlToken(c);
-            }
-        }
+
+        if (name.StartsWith("browser_", StringComparison.Ordinal)
+            && LooksLikeBrowserSurfaceFailure(c))
+            return "browser:" + ExtractUrlToken(c);
 
         if (name.StartsWith("desktop_", StringComparison.Ordinal) || name.StartsWith("guest_", StringComparison.Ordinal))
         {
@@ -319,29 +297,42 @@ public sealed class AssignedWorkRunner
                     || c.Contains("not running", StringComparison.OrdinalIgnoreCase)
                     || c.Contains("failed", StringComparison.OrdinalIgnoreCase)))
                 return "maestro:unreachable";
-            if (c.Contains("VM", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("guestcontrol", StringComparison.OrdinalIgnoreCase)
-                || c.Contains("not running", StringComparison.OrdinalIgnoreCase))
-            {
-                if (c.Contains("fail", StringComparison.OrdinalIgnoreCase)
-                    || c.Contains("not running", StringComparison.OrdinalIgnoreCase)
-                    || c.Contains("offline", StringComparison.OrdinalIgnoreCase)
-                    || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase))
-                    return "vm:off";
-            }
+
+            if (LooksLikeVmSurfaceMention(c) && LooksLikeVmSurfaceDown(c))
+                return "vm:off";
         }
 
         if (!string.IsNullOrWhiteSpace(surface)
             && (c.Contains("fail", StringComparison.OrdinalIgnoreCase)
                 || c.Contains("error", StringComparison.OrdinalIgnoreCase)
                 || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)))
-        {
             return surface.Trim().ToLowerInvariant() + ":" + name;
-        }
 
         return null;
     }
+
+    private static bool LooksLikeBrowserSurfaceFailure(string c) =>
+        c.Contains("refused", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("ERR_", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("net::", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("HTTP 5", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("no response", StringComparison.OrdinalIgnoreCase)
+        || (c.Contains("health", StringComparison.OrdinalIgnoreCase)
+            && c.Contains("fail", StringComparison.OrdinalIgnoreCase));
+
+    private static bool LooksLikeVmSurfaceMention(string c) =>
+        c.Contains("VM", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("guestcontrol", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("not running", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeVmSurfaceDown(string c) =>
+        c.Contains("fail", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("not running", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("offline", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase);
 
     private static string ExtractUrlToken(string content)
     {

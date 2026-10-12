@@ -13,7 +13,6 @@ public sealed partial class VirtualBoxGuestAppLauncher
         if (target is null)
             return new DesktopOpResult(false, "browser_navigate needs an http(s) URL.", null);
 
-        // PROP-17.2: one live tab per URL — if Firefox already has this URL, focus it.
         var tabs = await BrowserTabsAsync(ct).ConfigureAwait(false);
         if (tabs.Success && !string.IsNullOrWhiteSpace(tabs.Content)
             && tabs.Content.Contains(target, StringComparison.OrdinalIgnoreCase))
@@ -25,7 +24,6 @@ public sealed partial class VirtualBoxGuestAppLauncher
                 BrowserResultHonesty.Navigated(target, "", "vbox-guest", goalComplete: false));
         }
 
-        // PROP-17.2: refuse a second browser when Firefox is already open — reuse the process.
         var listed = await ListWindowsAsync(ct).ConfigureAwait(false);
         var firefoxOpen = listed.Success
             && (listed.Content ?? "").Contains("Firefox", StringComparison.OrdinalIgnoreCase);

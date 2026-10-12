@@ -90,7 +90,6 @@ public sealed class InferenceLease : IInferenceLease
         {
             if (!string.Equals(_holder, holder.Trim(), StringComparison.Ordinal))
                 return;
-            // Keep-alive refresh — not a creativity clock on the interest thread.
             _expiresAt = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(90));
         }
     }

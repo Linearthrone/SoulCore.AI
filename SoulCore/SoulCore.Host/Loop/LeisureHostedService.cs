@@ -121,7 +121,7 @@ public sealed class LeisureHostedService : BackgroundService
             {
                 _logger.LogWarning(ex, "Leisure R&R pass failed; staying quiet");
                 delay = TimeSpan.FromSeconds(30);
-                try { _lease.Release(InferenceLease.LeisureHolder); } catch { /* ignore */ }
+                _lease.Release(InferenceLease.LeisureHolder);
             }
 
             await DelayAsync(delay, stoppingToken).ConfigureAwait(false);

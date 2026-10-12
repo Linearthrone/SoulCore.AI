@@ -76,7 +76,6 @@ public sealed class AssignedWorkHostedService : BackgroundService
                 continue;
             }
 
-            // PROP-17.3: exclusive leisure lease — work runner does not tick.
             if (_lease.IsHeld
                 && string.Equals(_lease.Holder, InferenceLease.LeisureHolder, StringComparison.Ordinal))
             {

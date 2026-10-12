@@ -26,27 +26,17 @@ public static class LeisureEligibility
 
         if (runningId is > 0 && runningTask is not null)
         {
-            // Suspended never blocks — clear pointer is the work runner's job.
-            if (string.Equals(runningTask.Status, "suspended", StringComparison.OrdinalIgnoreCase))
-            {
-                // fall through — suspended does not block R&R
-            }
-            else if (string.Equals(runningTask.Status, "in_progress", StringComparison.OrdinalIgnoreCase)
-                     && surfaceUp(NormalizeSurface(runningTask.Surface)))
-            {
+            if (string.Equals(runningTask.Status, "in_progress", StringComparison.OrdinalIgnoreCase)
+                && surfaceUp(NormalizeSurface(runningTask.Surface)))
                 return false;
-            }
-            else if (string.Equals(runningTask.Status, "parked", StringComparison.OrdinalIgnoreCase)
-                     && IsParkProbeDue(runningTask, now))
-            {
-                // Work runner owns the one probe — do not steal the lease.
+
+            if (string.Equals(runningTask.Status, "parked", StringComparison.OrdinalIgnoreCase)
+                && IsParkProbeDue(runningTask, now))
                 return false;
-            }
         }
 
         foreach (var row in ledger)
         {
-            // Suspended / parked (not due) / done / blocked never count as runnable.
             if (!VictoriaTaskRules.IsSchedulable(row.Status))
                 continue;
             if (surfaceUp(NormalizeSurface(row.Surface)))

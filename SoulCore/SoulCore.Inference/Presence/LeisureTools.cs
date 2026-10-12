@@ -53,19 +53,16 @@ public static class LeisureTools
             return false;
         if (Allow.Contains(name))
             return true;
-        // Guest screenshots / look-read families when named guest_*_screenshot etc.
         if (name.StartsWith("guest_read", StringComparison.OrdinalIgnoreCase))
             return true;
-        if (name.Contains("screenshot", StringComparison.OrdinalIgnoreCase)
-            && !name.Contains("send", StringComparison.OrdinalIgnoreCase))
-            return true;
-        return false;
+        return name.Contains("screenshot", StringComparison.OrdinalIgnoreCase)
+               && !name.Contains("send", StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<ToolDefinition> FilterDefinitions(IReadOnlyList<ToolDefinition> all)
     {
         if (all is null || all.Count == 0)
-            return all ?? Array.Empty<ToolDefinition>();
+            return Array.Empty<ToolDefinition>();
         return all.Where(d => IsAllowed(d.Name)).ToList();
     }
 

@@ -47,42 +47,14 @@ public static class EmailToolSupport
         options is not null && options.AllowEmailDelete;
 
     /// <summary>
-    /// PROP-17.1: model-minted <c>confirmed</c> is never consent. Strip it, then
-    /// require a host-side <see cref="IOperatorConsentGate"/> grant (Kayleigh yes / companion token).
+    /// PROP-17.1: model-minted <c>confirmed</c> is never consent — only a host-side
+    /// <see cref="IOperatorConsentGate"/> grant (Kayleigh yes / companion token).
     /// </summary>
-    public static bool IsConfirmed(JsonElement args, IOperatorConsentGate? consent, string scope)
-    {
-        _ = StripModelConfirmed(args);
-        return consent is not null && consent.TryConsume(scope);
-    }
+    public static bool IsConfirmed(IOperatorConsentGate? consent, string scope) =>
+        consent is not null && consent.TryConsume(scope);
 
-    /// <summary>Legacy signature — always false (model cannot mint consent).</summary>
-    public static bool IsConfirmed(JsonElement args)
-    {
-        _ = StripModelConfirmed(args);
-        return false;
-    }
-
-    public static JsonElement StripModelConfirmed(JsonElement args)
-    {
-        if (args.ValueKind != JsonValueKind.Object)
-            return args;
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
-            writer.WriteStartObject();
-            foreach (var prop in args.EnumerateObject())
-            {
-                if (string.Equals(prop.Name, "confirmed", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                prop.WriteTo(writer);
-            }
-
-            writer.WriteEndObject();
-        }
-
-        return JsonDocument.Parse(stream.ToArray()).RootElement.Clone();
-    }
+    public static JsonElement StripModelConfirmed(JsonElement args) =>
+        ConsentArgs.StripModelConfirmed(args);
 
     public static JsonElement ParseSchema(string json) =>
         JsonDocument.Parse(json).RootElement.Clone();

@@ -133,7 +133,7 @@ public class Prop17LeisureTests
         Assert.Equal("trade", trade.Kind);
         Assert.True(ActionProposalClassifier.TryClassify("drop the lesson and build it", out var replace));
         Assert.Equal("replace_work", replace.Kind);
-        Assert.False(ActionProposalClassifier.LooksLikeActionProposal("reading a paper on neural interfaces"));
+        Assert.False(ActionProposalClassifier.TryClassify("reading a paper on neural interfaces", out _));
     }
 
     [Fact]

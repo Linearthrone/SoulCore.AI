@@ -100,7 +100,6 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                 null);
         }
 
-        // PROP-17.2: refuse a second browser when Firefox is already live.
         if (Browser.BrowserHygiene.LooksLikeBrowserProcess(resolved.Alias)
             && !string.Equals(resolved.Alias, "firefox", StringComparison.OrdinalIgnoreCase))
         {

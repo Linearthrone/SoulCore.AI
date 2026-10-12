@@ -64,7 +64,7 @@ public sealed class EmailDeleteTool : EmailToolBase
         if (string.IsNullOrWhiteSpace(account))
             return Task.FromResult(new ToolResult(false, EmailToolSupport.NoAccountsMessage, null));
 
-        if (!EmailToolSupport.IsConfirmed(args, Consent, OperatorConsentGate.EmailDelete))
+        if (!EmailToolSupport.IsConfirmed(Consent, OperatorConsentGate.EmailDelete))
         {
             Consent?.NotePending(OperatorConsentGate.EmailDelete);
             return Task.FromResult(new ToolResult(
@@ -151,7 +151,7 @@ public sealed class EmailSendTool : EmailToolBase
         if (string.IsNullOrWhiteSpace(account))
             return Task.FromResult(new ToolResult(false, EmailToolSupport.NoAccountsMessage, null));
 
-        if (!EmailToolSupport.IsConfirmed(args, Consent, OperatorConsentGate.EmailSend))
+        if (!EmailToolSupport.IsConfirmed(Consent, OperatorConsentGate.EmailSend))
         {
             Consent?.NotePending(OperatorConsentGate.EmailSend);
             return Task.FromResult(new ToolResult(
