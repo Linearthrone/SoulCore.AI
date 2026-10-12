@@ -4,8 +4,9 @@ using SoulCore.Memory;
 namespace SoulCore.Inference.Tools.Workflow;
 
 /// <summary>
-/// Model-callable <c>task_create</c> (BED-140). Inserts a row into
-/// <c>victoria_tasks</c> with <c>status='todo'</c> and returns the new id.
+/// Model-callable <c>task_create</c> (BED-140 / PROP-17.1). Inserts a row into
+/// <c>victoria_tasks</c>. Default status is <c>suspended</c> unless
+/// <c>ready=true</c> (then <c>todo</c>). No delete API.
 /// Separate from PM tickets under <c>docs/agents/tasks/</c>.
 /// </summary>
 public sealed class TaskCreateTool : ITool
@@ -59,11 +60,30 @@ public sealed class TaskCreateTool : ITool
         if (args.TryGetProperty("priority", out var priProp) && priProp.ValueKind == JsonValueKind.String)
             priority = priProp.GetString();
 
+        string? surface = null;
+        if (args.TryGetProperty("surface", out var surfProp) && surfProp.ValueKind == JsonValueKind.String)
+            surface = surfProp.GetString();
+
+        var ready = false;
+        if (args.TryGetProperty("ready", out var readyProp))
+        {
+            ready = readyProp.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.String => string.Equals(readyProp.GetString(), "true", StringComparison.OrdinalIgnoreCase),
+                _ => false
+            };
+        }
+
+        string? status = null;
+        if (args.TryGetProperty("status", out var stProp) && stProp.ValueKind == JsonValueKind.String)
+            status = stProp.GetString();
+
         VictoriaTask? task;
         try
         {
-            // Authoritative payload comes from the persisted row (not store-type constants).
-            var id = await _tasks.CreateAsync(title!, description, priority, ct).ConfigureAwait(false);
+            var id = await _tasks.CreateAsync(
+                title!, description, priority, surface, ready, status, notes: null, ct).ConfigureAwait(false);
             task = await _tasks.GetAsync(id, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -110,6 +130,19 @@ public sealed class TaskCreateTool : ITool
               "type": "string",
               "description": "Optional priority (default medium).",
               "default": "medium"
+            },
+            "surface": {
+              "type": "string",
+              "description": "maestro|browser|vm|local (default local)."
+            },
+            "ready": {
+              "type": "boolean",
+              "description": "When true, status is todo; otherwise suspended (PROP-17.1).",
+              "default": false
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional explicit status. Overrides ready when set."
             }
           },
           "required": ["title"]

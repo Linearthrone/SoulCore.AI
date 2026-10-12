@@ -41,6 +41,7 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
         services.AddHostedService<SoulLoopHostedService>();
         services.AddSingleton<WorkTurnGate>();
+        services.AddSingleton<IOperatorConsentGate, OperatorConsentGate>();
         services.AddSingleton<IAssignedWorkStore, FileAssignedWorkStore>();
         services.AddSingleton<AssignedWorkRunner>();
         services.AddHostedService<AssignedWorkHostedService>();
