@@ -10,7 +10,7 @@ created: 2026-10-12
 updated: 2026-10-12
 wave: between-talks
 title: Companion mood word + doing-line; Android email follows unlimited accounts
-depends_on: PROP-17.4 email account model (for Android editor); mood/doing-line can start earlier if frames exist
+depends_on: PROP-17.4 Pass (#149); PROP-17.3 Pass (doing-line / interest sources)
 proposal: docs/agents/unexecuted_proposals/victoria-between-talks.md
 intake: docs/agents/tasks/PROP-17-TT01-to-PM01.md
 urgency: same-day phone honesty after desk shell — no phone redesign

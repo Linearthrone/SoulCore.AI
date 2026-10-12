@@ -56,7 +56,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
 | PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Sent to PM** 2026-10-05 — Kurt-locked; execute on `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
-| PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **In progress** 2026-10-12 — 17.2 Pass · 17.4 merged (#149) · 17.1 Partial (Avalonia Stop gap → 17.6) · 17.3 START NOW · 17.5 Pending | 17.1 BED · 17.2 BED · 17.3 BED · 17.4 FED · 17.5 FED · 17.6 FED |
+| PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **In progress** 2026-10-12 — 17.2/17.3 Pass · 17.4 merged (#149) · 17.1 Partial (+17.6 Stop UI Pass, PR #151) · 17.5 START NOW | 17.1–17.6 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -84,7 +84,7 @@ Next free `N`: **18**.
 | **PROP-14** | BED/FED | **In progress** — 14.1 cursor + 14.2 HWND embed on `cursor/prop14-cursor-hwnd-9531`; Windows Home PC smoke still needed |
 | **PROP-15** | PM-01 | Sent 2026-10-05. Intake `PROP-15-TT01-to-PM01.md`. Execute on CreatorEdition; awaiting PM splits 15.0–15.6. |
 | **PROP-16** | FED/OPS | **In progress** — 16.1 LocalStackControl+UI + 16.2 restart-stack.ps1 on `cursor/prop16-host-update-stack-9531` |
-| **PROP-17** | BED/FED | **In progress** — 17.2 Pass + 17.4 on `main` (#149). 17.1 Partial (park/rejects landed; Avalonia Stop-during-start → **17.6**). **17.3 START NOW** (park gate met). 17.5 phone Pending. LeisureModel `qwen2.5:1.5b`; park 45m / re-park 120m. BED branch `cursor/prop17-bed01-park-sop-d759` |
+| **PROP-17** | BED/FED | **In progress** — 17.2+17.3 Pass on #150; 17.4 on `main` (#149); 17.6 Pass on #151; 17.1 Partial accepted with 17.6. **17.5 START NOW** (phone mood/doing-line). LeisureModel `qwen2.5:1.5b` |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.
