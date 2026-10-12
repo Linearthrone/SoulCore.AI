@@ -34,7 +34,7 @@ updated: 2026-10-12
 | PROP-17.2 | BED-01 | **Pass** | Tab/browser, SOP, life-hacks |
 | PROP-17.3 | BED-01 | **Pass** (#150) | R&R LeisureModel |
 | PROP-17.4 | FED-01 | **Pass** (#149 merged) | Three-tab shell |
-| PROP-17.5 | FED-01 | **START NOW** | Mood/doing-line; Android email |
+| PROP-17.5 | FED-01 | **Pass** (#152) | Mood/doing-line; Android email |
 | PROP-17.6 | FED-01 | **Pass** (#151) | Stop enabled while Starting Host |
 
 ## Activation (user relays)

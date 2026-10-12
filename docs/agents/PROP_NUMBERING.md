@@ -56,7 +56,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
 | PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Sent to PM** 2026-10-05 — Kurt-locked; execute on `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
-| PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **In progress** 2026-10-12 — 17.2/17.3 Pass · 17.4 merged (#149) · 17.1 Partial (+17.6 Stop UI Pass, PR #151) · 17.5 START NOW | 17.1–17.6 |
+| PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **Code complete** 2026-10-12 — 17.2–17.6 Pass; 17.1 Partial+17.6; PRs #149–#152; Windows/device smoke remaining | 17.1–17.6 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
