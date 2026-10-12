@@ -57,10 +57,16 @@ Left alone on purpose: `TryValidateStopLoss` empty `// ok` parse arms — reshap
 ```text
 dotnet test SoulCore/SoulCore.Protocol.Tests \
   --filter "FullyQualifiedName~Prop17|FullyQualifiedName~TaskTools|FullyQualifiedName~WorkContinuation|FullyQualifiedName~GuestWorkspace|FullyQualifiedName~EmailTools|FullyQualifiedName~Mt4Tools"
+
+Passed!  Failed: 0, Passed: 125, Skipped: 0, Total: 125
 ```
 
 ```text
 dotnet test House/House.ChatDesktop.Tests/House.ChatDesktop.Tests.csproj
+
+Passed!  Failed: 0, Passed: 102, Skipped: 0, Total: 102
 ```
 
 Logs: `/opt/cursor/artifacts/sweep4-prop17-tests.log`, `/opt/cursor/artifacts/sweep4-house-chatdesktop-tests.log`
+
+Code SHA: `452023b`
