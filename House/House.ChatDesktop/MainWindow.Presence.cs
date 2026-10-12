@@ -107,7 +107,7 @@ public partial class MainWindow
 
     private void PersistStackSettingsFromUi()
     {
-        // PROP-17.4: repo folder is no longer shown — keep existing saved root unless the hidden box has text.
+        // Repo folder UI is hidden — keep saved root unless the box has text.
         var path = SoulCoreRepoRootBox?.Text?.Trim();
         if (string.IsNullOrWhiteSpace(path))
             path = _uiSettings.SoulCoreRepoRoot ?? _stack.RepoRoot;
@@ -160,7 +160,7 @@ public partial class MainWindow
             {
                 AppendSystemNotice(
                     "SoulCore repo not found — set Settings → System → SoulCore repo folder " +
-                    @"(e.g. C:\Users\kurtw\Soul_Core) then reopen Presence.");
+                    @"(e.g. C:\Users\LinearThrone\Soul_Core) then reopen Presence.");
                 return;
             }
 
@@ -489,20 +489,18 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// PROP-17.6: Stop stays available during “Starting Host…” and force-kills via LocalStackControl.
+    /// Stop stays available during “Starting Host…” and force-kills via LocalStackControl.
     /// </summary>
     private async Task InterruptOrStopHostAsync()
     {
         if (_servicesBusy && _activeServiceTag is "host-start" or "host-restart")
         {
-            // Supersede the in-flight start/restart so its finally/status cannot stick “Starting Host…”.
+            // Supersede in-flight start/restart so its finally cannot stick “Starting Host…”.
             var stopGen = ++_hostActionGeneration;
-            try { _hostActionCts?.Cancel(); } catch { /* ignore */ }
+            try { _hostActionCts?.Cancel(); }
+            catch (ObjectDisposedException) { /* already disposed */ }
 
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = "Stopping Host…";
-            if (HostStackStatusText is not null)
-                HostStackStatusText.Text = "Stopping Host…";
+            WriteHostActionStatus("Stopping Host…");
 
             PersistStackSettingsFromUi();
             LocalStackActionResult result;
@@ -518,11 +516,7 @@ public partial class MainWindow
             if (stopGen != _hostActionGeneration)
                 return;
 
-            var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = msg;
-            if (HostStackStatusText is not null)
-                HostStackStatusText.Text = msg;
+            WriteHostActionStatus(result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}");
 
             _servicesBusy = false;
             _activeServiceTag = null;
@@ -547,14 +541,13 @@ public partial class MainWindow
         SetHostStackButtonsBusy(true, tag);
         if (ServicesStatusText is not null)
             ServicesStatusText.Text = $"Running {tag}…";
-        if (HostStackStatusText is not null)
-            HostStackStatusText.Text = tag switch
-            {
-                "host-start" => "Starting Host…",
-                "host-stop" => "Stopping Host…",
-                "host-restart" => "Restarting Host…",
-                _ => $"Running {tag}…"
-            };
+        WriteHostActionStatus(tag switch
+        {
+            "host-start" => "Starting Host…",
+            "host-stop" => "Stopping Host…",
+            "host-restart" => "Restarting Host…",
+            _ => $"Running {tag}…"
+        }, includeServices: false);
 
         try
         {
@@ -610,16 +603,12 @@ public partial class MainWindow
                     break;
             }
 
-            // PROP-17.6: if Stop interrupted this start/restart, do not restore “Starting Host…” / busy.
+            // Stop interrupt supersedes this generation — do not restore “Starting Host…” / busy.
             if (gen != _hostActionGeneration)
                 return;
 
             var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = msg;
-            if (HostStackStatusText is not null
-                && tag is "host-start" or "host-stop" or "host-restart")
-                HostStackStatusText.Text = msg;
+            WriteHostActionStatus(msg, includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
 
             if (result.Ok && tag is "host-start" or "host-restart")
             {
@@ -633,23 +622,17 @@ public partial class MainWindow
         {
             if (gen != _hostActionGeneration)
                 return;
-            const string cancelled = "Cancelled — Host start stopped.";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = cancelled;
-            if (HostStackStatusText is not null
-                && tag is "host-start" or "host-stop" or "host-restart")
-                HostStackStatusText.Text = cancelled;
+            WriteHostActionStatus(
+                "Cancelled — Host start stopped.",
+                includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
         }
         catch (Exception ex)
         {
             if (gen != _hostActionGeneration)
                 return;
-            var err = $"Error: {ex.Message}";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = err;
-            if (HostStackStatusText is not null
-                && tag is "host-start" or "host-stop" or "host-restart")
-                HostStackStatusText.Text = err;
+            WriteHostActionStatus(
+                $"Error: {ex.Message}",
+                includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
         }
         finally
         {
@@ -666,15 +649,26 @@ public partial class MainWindow
         }
     }
 
+    private void WriteHostActionStatus(
+        string message,
+        bool includeServices = true,
+        bool includeHostStack = true)
+    {
+        if (includeServices && ServicesStatusText is not null)
+            ServicesStatusText.Text = message;
+        if (includeHostStack && HostStackStatusText is not null)
+            HostStackStatusText.Text = message;
+    }
+
     /// <summary>
-    /// PROP-17.6: while Starting/Restarting Host, Stop stays enabled for pull-the-plug force-kill.
+    /// While Starting/Restarting Host, Stop stays enabled for force-kill.
     /// </summary>
     private void SetHostStackButtonsBusy(bool busy, string? activeTag = null)
     {
         if (HostStartButton is not null)
-            HostStartButton.IsEnabled = HostStackBusyPolicy.IsHostStartEnabled(busy);
+            HostStartButton.IsEnabled = !busy;
         if (HostRestartButton is not null)
-            HostRestartButton.IsEnabled = HostStackBusyPolicy.IsHostRestartEnabled(busy);
+            HostRestartButton.IsEnabled = !busy;
         if (HostStopButton is not null)
             HostStopButton.IsEnabled = HostStackBusyPolicy.IsHostStopEnabled(busy, activeTag);
     }
@@ -682,7 +676,8 @@ public partial class MainWindow
     private void DisposeHostActionCts()
     {
         if (_hostActionCts is null) return;
-        try { _hostActionCts.Dispose(); } catch { /* ignore */ }
+        try { _hostActionCts.Dispose(); }
+        catch (ObjectDisposedException) { /* already disposed */ }
         _hostActionCts = null;
     }
 
@@ -1301,30 +1296,24 @@ public partial class MainWindow
         RefreshActivityBand();
     }
 
-    /// <summary>
-    /// PROP-17.4 band under the main split. Parked/interest honest stubs until 17.1/17.3.
-    /// </summary>
+    /// <summary>Activity band under the main split (honest stubs until Host wires park/interest).</summary>
     private void RefreshActivityBand()
     {
         var doing = string.IsNullOrWhiteSpace(_lastActivityPhrase) ? "—" : _lastActivityPhrase.Trim();
         if (BandDoingText is not null)
             BandDoingText.Text = $"Doing — {doing}";
 
+        // Never restamp last order as work; do not invent Host interest phrases.
         if (BandOnHerMindText is not null)
-        {
-            // Never restamp last order as work. Interest status awaits PROP-17.3.
             BandOnHerMindText.Text =
                 "On her mind — quiet between talks (research interest awaits PROP-17.3; not inventing Host phrases)";
-        }
 
         if (BandInfluencesText is not null)
             BandInfluencesText.Text = "Influences — none yet (≤3 when Host reports)";
 
         if (BandTasksText is not null)
-        {
             BandTasksText.Text =
                 "Ledger: title / surface / status / why — awaits PROP-17.1. Add / Suspend / Release disabled until then.";
-        }
 
         RefreshBandMoodLine();
     }

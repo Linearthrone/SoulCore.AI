@@ -40,7 +40,7 @@ object HealthClient {
     }
 
     /**
-     * PROP-17.5 / PROP-4: Host `currentActivity` doing-now phrase from `/health`.
+     * Host `currentActivity` doing-now phrase from `/health`.
      * Never invents slogans when the field is absent.
      */
     fun currentActivity(wsUrl: String): String? {

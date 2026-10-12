@@ -152,7 +152,7 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                 .padding(padding)
                 .imePadding()
         ) {
-            // PROP-17.5: mood word + doing-line only — no Link redesign.
+            // Mood word + doing-line only — no Link redesign.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

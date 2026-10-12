@@ -526,7 +526,6 @@ private fun EmailAccountsSection(
                 onStatus(result.detail ?: "Could not load mailboxes", false)
                 return@launch
             }
-            // PROP-17.5: Host list only — never invent victoria|personal|business slots.
             val list = EmailMailboxLabels.buildList(result.accounts)
             accounts = list
             val prefer = preferId?.trim().orEmpty().ifBlank { mailboxId.trim() }

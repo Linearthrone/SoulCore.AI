@@ -15,7 +15,7 @@ class CompanionApp : Application() {
         // PROP-3: own the transcript before any screen exists, so replies that
         // land while Chat is closed are still recorded.
         ChatStore.install(this)
-        // PROP-17.5: mood word + doing-line from Host frames (same sources as desk band).
+        // Mood word + doing-line from Host frames (same sources as desk band).
         PresenceHud.install(this)
         // FED-151: foreground tracker + reply channel + frame collector (does not touch FGS hub).
         AppForeground.init(this)

@@ -1,15 +1,11 @@
 namespace House.ChatDesktop.Services;
 
 /// <summary>
-/// PROP-17.6: Host stack button enablement while a service action is in flight.
+/// Host stack button enablement while a service action is in flight.
 /// Stop stays available during start/restart so the operator can force-kill.
 /// </summary>
 public static class HostStackBusyPolicy
 {
     public static bool IsHostStopEnabled(bool busy, string? activeTag) =>
         !busy || activeTag is "host-start" or "host-restart";
-
-    public static bool IsHostStartEnabled(bool busy) => !busy;
-
-    public static bool IsHostRestartEnabled(bool busy) => !busy;
 }

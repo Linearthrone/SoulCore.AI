@@ -57,12 +57,10 @@ public sealed class LocalStackControl : IDisposable
         return ProbeUrlAsync(url, ct);
     }
 
-    /// <summary>PROP-17.4: guest VM name for operator Start / Save / Power off.</summary>
+    /// <summary>Guest VM name for operator Start / Save / Power off.</summary>
     public const string SandboxVmName = "victoria-sandbox";
 
-    /// <summary>
-    /// PROP-4: victoria-sandbox running? Loopback/local VBoxManage only.
-    /// </summary>
+    /// <summary>Is victoria-sandbox running? Loopback/local VBoxManage only.</summary>
     public async Task<bool> ProbeSandboxAsync(CancellationToken ct = default)
     {
         try
@@ -92,15 +90,15 @@ public sealed class LocalStackControl : IDisposable
         }
     }
 
-    /// <summary>PROP-17.4: operator Start VM — never auto-called on Presence open.</summary>
+    /// <summary>Operator Start VM — never auto-called on Presence open.</summary>
     public Task<LocalStackActionResult> StartSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "startvm", SandboxVmName, "--type", "gui" }, ct);
 
-    /// <summary>PROP-17.4: Save state (hibernate-style) for victoria-sandbox.</summary>
+    /// <summary>Save state (hibernate-style) for victoria-sandbox.</summary>
     public Task<LocalStackActionResult> SaveSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "savestate" }, ct);
 
-    /// <summary>PROP-17.4: Power off victoria-sandbox (caller confirms).</summary>
+    /// <summary>Power off victoria-sandbox (caller confirms).</summary>
     public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
@@ -598,8 +596,7 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             }
             catch (OperationCanceledException)
             {
-                // PROP-17.6: cancel during Host start must not leave the script process orphaned —
-                // Presence Stop also calls stop-soulcore.ps1 for force-kill of listeners.
+                // Cancel during Host start must not leave the script process orphaned.
                 try
                 {
                     if (!proc.HasExited)
