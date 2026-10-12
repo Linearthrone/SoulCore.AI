@@ -5,7 +5,7 @@ prop_root: PROP-17-victoria-between-talks
 from: PM-01
 to: BED-01
 priority: P0
-status: Pending
+status: Partial
 created: 2026-10-12
 updated: 2026-10-12
 wave: between-talks
