@@ -5,7 +5,7 @@ namespace SoulCore.Protocol.Tests;
 public class SqliteMemoryStoreJournalTests
 {
     [Fact]
-    public async Task MigrationSeedsThreeJournalBooks()
+    public async Task MigrationSeedsFourJournalBooks_IncludingLifeHacks()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-journal-{Guid.NewGuid():N}.db");
         try
@@ -13,11 +13,12 @@ public class SqliteMemoryStoreJournalTests
             await using var store = new SqliteMemoryStore(path);
             var books = await store.ListBooksAsync();
 
-            Assert.Equal(3, books.Count);
-            Assert.Equal(["feeling", "animation", "environment"], books.Select(b => b.Id).ToArray());
+            Assert.Equal(4, books.Count);
+            Assert.Equal(["feeling", "animation", "environment", "life_hacks"], books.Select(b => b.Id).ToArray());
             Assert.Contains(books, b => b.Title.Contains("Feeling", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(books, b => b.Title.Contains("Animation", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(books, b => b.Title.Contains("Environment", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(books, b => b.Title.Contains("Life-Hack", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -46,17 +47,26 @@ public class SqliteMemoryStoreJournalTests
                 "environment",
                 "I want to learn every room of Home and later notice the car and other buildings.",
                 tagsJson: "[\"seed\",\"home\"]");
+            var hackId = await store.WriteEntryAsync(
+                "life_hacks",
+                "When a site is down, park the lesson — do not refresh-loop.",
+                tagsJson: "[\"seed\",\"park\"]");
 
             Assert.True(feelId > 0);
             Assert.True(animId > 0);
             Assert.True(envId > 0);
+            Assert.True(hackId > 0);
 
             var feeling = await store.ListEntriesAsync("feeling", limit: 5);
             Assert.Single(feeling);
             Assert.Contains("curious", feeling[0].Body, StringComparison.OrdinalIgnoreCase);
 
+            var hacks = await store.ListEntriesAsync("life_hacks", limit: 5);
+            Assert.Single(hacks);
+            Assert.Contains("park", hacks[0].Body, StringComparison.OrdinalIgnoreCase);
+
             var all = await store.ListEntriesAsync(limit: 10);
-            Assert.Equal(3, all.Count);
+            Assert.Equal(4, all.Count);
         }
         finally
         {
