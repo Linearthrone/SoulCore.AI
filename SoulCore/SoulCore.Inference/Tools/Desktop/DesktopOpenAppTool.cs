@@ -87,7 +87,6 @@ public sealed class DesktopOpenAppTool : ITool
                 null);
         }
 
-        // PROP-17.2: refuse install-a-browser intent via open_app args.
         string? launchArgs = null;
         if (args.TryGetProperty("args", out var argEl) && argEl.ValueKind == JsonValueKind.String)
         {

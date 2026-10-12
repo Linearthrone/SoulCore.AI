@@ -1,12 +1,15 @@
+using System.Text.RegularExpressions;
 using House.ChatDesktop.Services;
 
 namespace House.ChatDesktop.Models;
 
 /// <summary>
-/// Friendly mailbox picker row for Presence email setup dialog (PROP-17.4: unlimited ids).
+/// Friendly mailbox picker row for Presence email setup (Host owns the account set).
 /// </summary>
 public sealed class EmailMailboxChoice
 {
+    private static readonly Regex SafeId = new("^[A-Za-z0-9_-]{1,64}$", RegexOptions.CultureInvariant);
+
     public required string Id { get; init; }
     public required string Title { get; init; }
     public required string Subtitle { get; init; }
@@ -31,8 +34,7 @@ public sealed class EmailMailboxChoice
     public static string DefaultDisplayNameFor(string id) => id.Trim().ToLowerInvariant() switch
     {
         "victoria" => "Victoria",
-        "personal" => "LinearThrone",
-        "business" => "LinearThrone",
+        "personal" or "business" => "LinearThrone",
         _ => ""
     };
 
@@ -61,9 +63,7 @@ public sealed class EmailMailboxChoice
         return $"{whose} · needs setup";
     }
 
-    /// <summary>
-    /// Lists every account Host returned. No hardcoded victoria|personal|business slots.
-    /// </summary>
+    /// <summary>Every Host account, sorted — never invents victoria|personal|business slots.</summary>
     public static IReadOnlyList<EmailMailboxChoice> BuildList(IReadOnlyList<EmailAccountSnapshot> accounts)
     {
         var list = new List<EmailMailboxChoice>();
@@ -83,7 +83,7 @@ public sealed class EmailMailboxChoice
         return list;
     }
 
-    /// <summary>System tab summary lines: mailbox name + owner (never password).</summary>
+    /// <summary>System tab summary: mailbox name + owner (never password).</summary>
     public static string FormatSystemListLine(EmailAccountSnapshot account)
     {
         var name = TitleFor(account.Id);
@@ -96,4 +96,6 @@ public sealed class EmailMailboxChoice
             : "needs setup";
         return $"{name} · {owner} · {state}";
     }
+
+    public static bool IsSafeMailboxId(string id) => SafeId.IsMatch(id.Trim());
 }

@@ -9,9 +9,6 @@ public static class ActionProposalClassifier
 {
     public readonly record struct Proposal(string Title, string Description, string Kind);
 
-    public static bool LooksLikeActionProposal(string? text) =>
-        TryClassify(text, out _);
-
     public static bool TryClassify(string? text, out Proposal proposal)
     {
         proposal = default;

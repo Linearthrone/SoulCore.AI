@@ -41,7 +41,7 @@ public sealed class LeisureSession : ILeisureSession
     {
         var topic = (interest ?? "").Trim();
         if (topic.Length == 0)
-            topic = "neural interfaces";
+            topic = LeisurePrompt.DefaultInterest;
         if (topic.Length > 80)
             topic = topic[..77] + "…";
         lock (_gate)

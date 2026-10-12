@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * PROP-17.5: thin companion HUD for Host mood word + doing-line.
+ * Thin companion HUD for Host mood word + doing-line.
  *
  * Same sources as Presence activity band:
  * - mood ← `emotion.snapshot` payload `label`

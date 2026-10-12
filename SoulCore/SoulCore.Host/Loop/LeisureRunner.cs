@@ -78,7 +78,6 @@ public sealed class LeisureRunner
 
         if (_ueLive.IsUeLive)
         {
-            // Unreal/voice need the card — stay quiet; never borrow work model.
             _logger.LogInformation("R&R quiet — Unreal live (VRAM)");
             NoteQuiet();
             return TimeSpan.FromSeconds(60);
@@ -120,7 +119,6 @@ public sealed class LeisureRunner
             new() { Role = "user", Content = user }
         };
 
-        // R&R uses its own turn buffer — never presence-local history.
         var filtered = LeisureTools.FilterRegistry(_tools);
         var noting = new NotingRegistry(filtered, name =>
         {
@@ -160,7 +158,6 @@ public sealed class LeisureRunner
             return TimeSpan.FromSeconds(30);
         }
 
-        // Action proposals → suspended; never start-now.
         if (ActionProposalClassifier.TryClassify(reply, out var proposal))
         {
             try
@@ -183,7 +180,6 @@ public sealed class LeisureRunner
             }
         }
 
-        // Untrusted page/tool text → kept summary for books; not presence-local.
         if (noting.UntrustedChunks.Count > 0)
         {
             var raw = string.Join("\n", noting.UntrustedChunks);
@@ -196,13 +192,11 @@ public sealed class LeisureRunner
             var summary = UntrustedObservation.KeepSummary(reply, interest);
             _session.NoteUntrustedSummary(summary);
             await WriteJournalNoteAsync(summary, abortToken).ConfigureAwait(false);
-            // One find worth reading = one message (not a continuation spam).
             await BroadcastFindAsync(VisibleFind(reply), abortToken).ConfigureAwait(false);
         }
 
         _activity?.NoteTool(_session.ActivityLine());
         await PushStatusAsync(_session.ActivityLine(), "leisure", abortToken).ConfigureAwait(false);
-        // No wall-clock kill — living research thread continues next pass.
         return TimeSpan.FromSeconds(20);
     }
 
@@ -220,28 +214,14 @@ public sealed class LeisureRunner
             if (!doc.RootElement.TryGetProperty("models", out var models)
                 || models.ValueKind != JsonValueKind.Array)
                 return false;
-            foreach (var m in models.EnumerateArray())
-            {
-                if (m.TryGetProperty("name", out var nameProp)
-                    && nameProp.GetString() is { } name
-                    && (string.Equals(name, model, StringComparison.OrdinalIgnoreCase)
-                        || name.StartsWith(model + ":", StringComparison.OrdinalIgnoreCase)
-                        || model.StartsWith(name.Split(':')[0], StringComparison.OrdinalIgnoreCase)
-                           && name.StartsWith(model.Split(':')[0], StringComparison.OrdinalIgnoreCase)))
-                {
-                    // Prefer exact or tag match.
-                    if (string.Equals(name, model, StringComparison.OrdinalIgnoreCase)
-                        || name.StartsWith(model, StringComparison.OrdinalIgnoreCase)
-                        || model.StartsWith(name, StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-            }
 
-            // Exact scan
             foreach (var m in models.EnumerateArray())
             {
-                if (m.TryGetProperty("name", out var nameProp)
-                    && string.Equals(nameProp.GetString(), model, StringComparison.OrdinalIgnoreCase))
+                if (!m.TryGetProperty("name", out var nameProp) || nameProp.GetString() is not { } name)
+                    continue;
+                if (string.Equals(name, model, StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith(model, StringComparison.OrdinalIgnoreCase)
+                    || model.StartsWith(name, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
 
@@ -350,14 +330,14 @@ public sealed class LeisureRunner
         {
             _onTool(name);
             var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
-            // Page/screenshot text stays in this R&R turn as untrusted.
             if (result.Content is { Length: > 0 }
                 && (name.Contains("snapshot", StringComparison.OrdinalIgnoreCase)
                     || name.Contains("screenshot", StringComparison.OrdinalIgnoreCase)
                     || name.Contains("read", StringComparison.OrdinalIgnoreCase)))
             {
-                UntrustedChunks.Add(UntrustedObservation.WrapForTurn(result.Content));
-                return result with { Content = UntrustedObservation.WrapForTurn(result.Content) };
+                var wrapped = UntrustedObservation.WrapForTurn(result.Content);
+                UntrustedChunks.Add(wrapped);
+                return result with { Content = wrapped };
             }
 
             return result;

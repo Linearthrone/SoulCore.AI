@@ -48,4 +48,17 @@ public sealed class EmailMailboxChoiceTests
         Assert.Contains("LinearThrone", line);
         Assert.DoesNotContain("password", line, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Theory]
+    [InlineData("victoria", true)]
+    [InlineData("my_box-2", true)]
+    [InlineData("", false)]
+    [InlineData("bad id", false)]
+    [InlineData("a@b", false)]
+    public void IsSafeMailboxId_MatchesHostLabelRules(string id, bool expected) =>
+        Assert.Equal(expected, EmailMailboxChoice.IsSafeMailboxId(id));
+
+    [Fact]
+    public void IsSafeMailboxId_RejectsOver64() =>
+        Assert.False(EmailMailboxChoice.IsSafeMailboxId(new string('a', 65)));
 }

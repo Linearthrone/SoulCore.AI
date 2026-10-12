@@ -164,7 +164,6 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
 
-            // PROP-17.2: one live tab per URL — focus existing tab instead of opening another.
             if (_context is not null)
             {
                 foreach (var existing in _context.Pages)

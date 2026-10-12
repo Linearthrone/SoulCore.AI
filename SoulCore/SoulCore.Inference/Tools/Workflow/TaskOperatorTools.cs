@@ -15,12 +15,10 @@ public sealed class TaskReleaseTool : ITool
         """).RootElement.Clone();
 
     private readonly IVictoriaTaskStore _tasks;
-    private readonly IAssignedWorkStore? _assigned;
 
-    public TaskReleaseTool(IVictoriaTaskStore tasks, IAssignedWorkStore? assigned = null)
+    public TaskReleaseTool(IVictoriaTaskStore tasks)
     {
         _tasks = tasks ?? throw new ArgumentNullException(nameof(tasks));
-        _assigned = assigned;
     }
 
     public ToolDefinition Definition { get; } = new(

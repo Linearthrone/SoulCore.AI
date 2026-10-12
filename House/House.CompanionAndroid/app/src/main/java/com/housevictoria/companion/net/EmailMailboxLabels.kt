@@ -1,10 +1,12 @@
 package com.housevictoria.companion.net
 
 /**
- * PROP-17.5 / 17.4: friendly labels for Host mailbox ids.
- * No hardcoded victoria|personal|business slot list — Host owns the account set.
+ * Friendly labels for Host mailbox ids.
+ * Host owns the account set — never invent victoria|personal|business slots.
  */
 object EmailMailboxLabels {
+    private val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
+
     fun titleFor(id: String): String {
         val key = id.trim()
         if (key.isEmpty()) return "Mailbox"
@@ -38,19 +40,11 @@ object EmailMailboxLabels {
         }
     }
 
-    /**
-     * Lists every account Host returned. Empty when Host has none —
-     * never invents victoria|personal|business placeholders.
-     */
+    /** Host accounts only, sorted by id. */
     fun buildList(accounts: List<EmailAccountDto>): List<EmailAccountDto> =
         accounts
             .filter { it.id.isNotBlank() }
             .sortedBy { it.id.lowercase() }
 
-    private val SAFE_ID = Regex("^[A-Za-z0-9_-]+$")
-
-    fun isSafeMailboxId(id: String): Boolean {
-        val t = id.trim()
-        return t.isNotEmpty() && SAFE_ID.matches(t)
-    }
+    fun isSafeMailboxId(id: String): Boolean = SAFE_ID.matches(id.trim())
 }

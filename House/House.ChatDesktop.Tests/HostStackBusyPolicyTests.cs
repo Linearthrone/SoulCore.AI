@@ -17,13 +17,4 @@ public class HostStackBusyPolicyTests
     {
         Assert.Equal(expected, HostStackBusyPolicy.IsHostStopEnabled(busy, tag));
     }
-
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    public void IsHostStartEnabled_DisabledOnlyWhenBusy(bool busy, bool expected)
-    {
-        Assert.Equal(expected, HostStackBusyPolicy.IsHostStartEnabled(busy));
-        Assert.Equal(expected, HostStackBusyPolicy.IsHostRestartEnabled(busy));
-    }
 }

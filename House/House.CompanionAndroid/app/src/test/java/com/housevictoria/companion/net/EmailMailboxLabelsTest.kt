@@ -27,6 +27,7 @@ class EmailMailboxLabelsTest {
         assertFalse(EmailMailboxLabels.isSafeMailboxId(""))
         assertFalse(EmailMailboxLabels.isSafeMailboxId("bad id"))
         assertFalse(EmailMailboxLabels.isSafeMailboxId("a@b"))
+        assertFalse(EmailMailboxLabels.isSafeMailboxId("a".repeat(65)))
     }
 
     @Test

@@ -11,9 +11,7 @@ using House.ChatDesktop.Services;
 
 namespace House.ChatDesktop;
 
-/// <summary>
-/// PROP-17.4: one dialog for unlimited mailbox accounts (no victoria|personal|business cap).
-/// </summary>
+/// <summary>Dialog for Host mailbox accounts (unlimited ids; Host owns the set).</summary>
 public partial class EmailSetupWindow : Window
 {
     private readonly SoulCoreEmailSettingsClient _emailSettings;
@@ -59,7 +57,7 @@ public partial class EmailSetupWindow : Window
             return;
         }
 
-        if (!IsSafeMailboxId(id))
+        if (!EmailMailboxChoice.IsSafeMailboxId(id))
         {
             SetEmailStatus("Mailbox id: letters, numbers, hyphen, underscore only", bad: true);
             return;
@@ -315,19 +313,6 @@ public partial class EmailSetupWindow : Window
         ImapHost = "imap.gmail.com",
         SmtpHost = "smtp.gmail.com"
     };
-
-    private static bool IsSafeMailboxId(string id)
-    {
-        if (id.Length is < 1 or > 64) return false;
-        foreach (var c in id)
-        {
-            if (char.IsLetterOrDigit(c) || c is '-' or '_')
-                continue;
-            return false;
-        }
-
-        return true;
-    }
 
     private IBrush OkBrush() => ResolveBrush("OkBrush", Brushes.SeaGreen);
 
