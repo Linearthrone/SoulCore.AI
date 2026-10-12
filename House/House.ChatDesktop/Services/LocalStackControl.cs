@@ -57,6 +57,9 @@ public sealed class LocalStackControl : IDisposable
         return ProbeUrlAsync(url, ct);
     }
 
+    /// <summary>PROP-17.4: guest VM name for operator Start / Save / Power off.</summary>
+    public const string SandboxVmName = "victoria-sandbox";
+
     /// <summary>
     /// PROP-4: victoria-sandbox running? Loopback/local VBoxManage only.
     /// </summary>
@@ -81,11 +84,71 @@ public sealed class LocalStackControl : IDisposable
             if (proc is null) return false;
             var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
             await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-            return stdout.Contains("victoria-sandbox", StringComparison.OrdinalIgnoreCase);
+            return stdout.Contains(SandboxVmName, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>PROP-17.4: operator Start VM — never auto-called on Presence open.</summary>
+    public Task<LocalStackActionResult> StartSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "startvm", SandboxVmName, "--type", "gui" }, ct);
+
+    /// <summary>PROP-17.4: Save state (hibernate-style) for victoria-sandbox.</summary>
+    public Task<LocalStackActionResult> SaveSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "savestate" }, ct);
+
+    /// <summary>PROP-17.4: Power off victoria-sandbox (caller confirms).</summary>
+    public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
+
+    private async Task<LocalStackActionResult> RunVBoxManageAsync(
+        IReadOnlyList<string> args,
+        CancellationToken ct)
+    {
+        var vbox = FindVBoxManage();
+        if (vbox is null)
+        {
+            return new LocalStackActionResult(
+                false,
+                "VBoxManage not found — install VirtualBox or put VBoxManage on PATH.");
+        }
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = vbox,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            foreach (var a in args)
+                psi.ArgumentList.Add(a);
+
+            using var proc = Process.Start(psi);
+            if (proc is null)
+                return new LocalStackActionResult(false, "Failed to start VBoxManage");
+
+            var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+            var stderr = await proc.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+            var detail = string.Join(" ", new[] { stdout, stderr }
+                .Select(s => s.Trim())
+                .Where(s => s.Length > 0));
+            if (detail.Length > 240)
+                detail = detail[..240] + "…";
+            if (proc.ExitCode == 0)
+                return new LocalStackActionResult(true, string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            return new LocalStackActionResult(false,
+                string.IsNullOrWhiteSpace(detail) ? $"VBoxManage exit {proc.ExitCode}" : detail);
+        }
+        catch (Exception ex)
+        {
+            return new LocalStackActionResult(false, ex.Message);
         }
     }
 
