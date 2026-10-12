@@ -38,9 +38,10 @@ environment: TINA-main
 
 ```text
 ./gradlew -p House/House.CompanionAndroid test
+→ BUILD SUCCESSFUL · 25 unique unit tests (debug+release = 50 runs) · 0 failures
 ```
 
-Unit coverage: PresenceHud frame apply, EmailMailboxLabels list/id rules, HealthClient `currentActivity` parse.
+Unit coverage: PresenceHud frame apply (4), EmailMailboxLabels list/id rules (3), HealthClient `currentActivity` parse (2), plus prior ChatStore hydrate/merge tests.
 
 ## Blockers / follow-ups
 
