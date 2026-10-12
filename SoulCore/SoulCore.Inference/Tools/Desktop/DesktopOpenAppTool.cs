@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SoulCore.Inference.Tools.Browser;
 
 namespace SoulCore.Inference.Tools.Desktop;
 
@@ -86,12 +87,28 @@ public sealed class DesktopOpenAppTool : ITool
                 null);
         }
 
+        // PROP-17.2: refuse install-a-browser intent via open_app args.
         string? launchArgs = null;
         if (args.TryGetProperty("args", out var argEl) && argEl.ValueKind == JsonValueKind.String)
         {
             var s = argEl.GetString();
             if (!string.IsNullOrWhiteSpace(s))
                 launchArgs = s;
+        }
+
+        if (BrowserHygiene.LooksLikeBrowserInstall(app + " " + (launchArgs ?? "")))
+            return new ToolResult(false, BrowserHygiene.BrowserInstallRefused, null);
+
+        if (IsBrowserAlias(app))
+        {
+            // Refuse launching a second distinct browser when one is already listed.
+            var windows = await _backend.ListWindowsAsync(ct).ConfigureAwait(false);
+            if (windows.Success
+                && BrowserHygiene.LooksLikeBrowserProcess(windows.Content)
+                && !string.Equals(app.Trim(), "firefox", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ToolResult(false, BrowserHygiene.SecondBrowserRefused, null);
+            }
         }
 
         var result = await _backend.OpenAppAsync(app, launchArgs, ct).ConfigureAwait(false);
