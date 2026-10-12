@@ -5,12 +5,12 @@ prop_root: PROP-17-victoria-between-talks
 from: PM-01
 to: BED-01
 priority: P0
-status: Queued
+status: Pending
 created: 2026-10-12
 updated: 2026-10-12
 wave: between-talks
 title: Local LeisureModel R&R + self-started research vs suspended actions
-depends_on: PROP-17.1 (park + host rejects), PROP-17.2 (tab/browser invariants)
+depends_on: PROP-17.1 Partial accepted for park/rejects (Stop UI → 17.6); PROP-17.2 Pass
 blocks: PROP-17.4 activity-band interest phrases (soft)
 proposal: docs/agents/unexecuted_proposals/victoria-between-talks.md
 intake: docs/agents/tasks/PROP-17-TT01-to-PM01.md
@@ -20,7 +20,9 @@ environment: TINA-main
 
 # PROP-17.3 — Between-talks R&R (local leisure model)
 
-**Activate only after 17.1 + 17.2 Pass:** `@Agents/BED-01.md` then `Start PROP-17.3.`
+**Activate now (PM unblocked 2026-10-12):** `@Agents/BED-01.md` then `Start PROP-17.3.`
+
+Park + host rejects + tab/browser invariants are in (17.1 Partial / 17.2 Pass). Avalonia Stop-during-start is **17.6**, not a 17.3 gate.
 
 ## Operator urgency
 
