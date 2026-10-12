@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
 using SoulCore.Inference.Clients;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
 using SoulCore.Memory;
 using SoulCore.Protocol;
@@ -27,6 +28,8 @@ public sealed class SmsInboundService : ISmsInboundService
     private readonly PresenceWsHub _hub;
     private readonly ISmsOutboundService _outbound;
     private readonly IChatTranscriptStore? _transcript;
+    private readonly IInferenceLease? _lease;
+    private readonly ILeisureSession? _leisure;
     private readonly ILogger<SmsInboundService> _logger;
 
     public SmsInboundService(
@@ -41,7 +44,9 @@ public sealed class SmsInboundService : ISmsInboundService
         PresenceWsHub hub,
         ISmsOutboundService outbound,
         ILogger<SmsInboundService> logger,
-        IChatTranscriptStore? transcript = null)
+        IChatTranscriptStore? transcript = null,
+        IInferenceLease? lease = null,
+        ILeisureSession? leisure = null)
     {
         _sms = sms?.Value ?? throw new ArgumentNullException(nameof(sms));
         _inference = inference?.Value ?? throw new ArgumentNullException(nameof(inference));
@@ -55,6 +60,8 @@ public sealed class SmsInboundService : ISmsInboundService
         _outbound = outbound ?? throw new ArgumentNullException(nameof(outbound));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _transcript = transcript;
+        _lease = lease;
+        _leisure = leisure;
     }
 
     public async Task<SmsInboundResult> HandleAsync(
@@ -96,6 +103,10 @@ public sealed class SmsInboundService : ISmsInboundService
 
         if (text.Length == 0 && string.IsNullOrWhiteSpace(mediaId))
             return new SmsInboundResult(false, false, null, null, null, "text or image required");
+
+        // PROP-17.3: SMS aborts in-flight R&R before the next preamble.
+        _lease?.Abort("human-sms");
+        _leisure?.Clear();
 
         // Images are attachments only — never tool args / executable payloads.
         var userVisible = text.Length > 0

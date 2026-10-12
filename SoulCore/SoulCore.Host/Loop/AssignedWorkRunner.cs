@@ -218,11 +218,8 @@ public sealed class AssignedWorkRunner
             }
         }
 
-        _history.AppendTurn(WorkContinuation.PresenceSessionId, new[]
-        {
-            new ChatMessage { Role = "user", Content = prompt },
-            new ChatMessage { Role = "assistant", Content = visible }
-        });
+        // PROP-17.3: work continuation lines do not append to presence-local
+        // (continuation spam buried the human thread). Band + ChatDone carry status.
 
         if (WorkContinuation.NeedsKayleigh(reply))
         {

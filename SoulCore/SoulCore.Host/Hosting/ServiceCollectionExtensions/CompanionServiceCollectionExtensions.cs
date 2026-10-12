@@ -43,8 +43,13 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<WorkTurnGate>();
         services.AddSingleton<IOperatorConsentGate, OperatorConsentGate>();
         services.AddSingleton<IAssignedWorkStore, FileAssignedWorkStore>();
+        services.AddSingleton<IInferenceLease, InferenceLease>();
+        services.AddSingleton<ILeisureSession, LeisureSession>();
+        services.AddSingleton<ISurfaceAvailability, SurfaceAvailability>();
         services.AddSingleton<AssignedWorkRunner>();
+        services.AddSingleton<LeisureRunner>();
         services.AddHostedService<AssignedWorkHostedService>();
+        services.AddHostedService<LeisureHostedService>();
         services.AddSingleton<IChatContextBuilder, ChatContextBuilder>();
         services.AddSingleton<EmotionSnapshotSender>();
         services.AddSingleton<ChatPostEffectsHandler>();

@@ -46,6 +46,8 @@ public sealed class ChatSendHandler
     private readonly IVictoriaTaskStore? _tasks;
     private readonly IOperatorConsentGate? _consent;
     private readonly WorkTurnGate? _turnGate;
+    private readonly IInferenceLease? _lease;
+    private readonly ILeisureSession? _leisure;
     private readonly ILogger<ChatSendHandler> _logger;
 
     public ChatSendHandler(
@@ -67,7 +69,9 @@ public sealed class ChatSendHandler
         IAssignedWorkStore? assigned = null,
         WorkTurnGate? turnGate = null,
         IVictoriaTaskStore? tasks = null,
-        IOperatorConsentGate? consent = null)
+        IOperatorConsentGate? consent = null,
+        IInferenceLease? lease = null,
+        ILeisureSession? leisure = null)
     {
         _inference = inference ?? throw new ArgumentNullException(nameof(inference));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -88,6 +92,8 @@ public sealed class ChatSendHandler
         _turnGate = turnGate;
         _tasks = tasks;
         _consent = consent;
+        _lease = lease;
+        _leisure = leisure;
     }
 
     public async Task HandleAsync(
@@ -114,6 +120,10 @@ public sealed class ChatSendHandler
             await _turnGate!.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+        // PROP-17.3: human turn aborts in-flight R&R before the next preamble.
+        _lease?.Abort("human-chat");
+        _leisure?.Clear();
+
         _consent?.TryGrantFromUserText(text);
         await RememberAssignmentAsync(text, cancellationToken).ConfigureAwait(false);
 

@@ -9,6 +9,7 @@ namespace SoulCore.Host.Loop;
 /// PROP-17.1: while a runningId points at an in_progress (or due parked probe) row,
 /// keep taking the next step after the chat turn has returned.
 /// Never schedules suspended. Parked rows are only probed after park_until.
+/// PROP-17.3: does not tick while the leisure inference lease is held.
 /// </summary>
 public sealed class AssignedWorkHostedService : BackgroundService
 {
@@ -16,6 +17,7 @@ public sealed class AssignedWorkHostedService : BackgroundService
     private readonly IVictoriaTaskStore _tasks;
     private readonly AssignedWorkRunner _runner;
     private readonly WorkTurnGate _gate;
+    private readonly IInferenceLease _lease;
     private readonly ILogger<AssignedWorkHostedService> _logger;
 
     public AssignedWorkHostedService(
@@ -23,12 +25,14 @@ public sealed class AssignedWorkHostedService : BackgroundService
         IVictoriaTaskStore tasks,
         AssignedWorkRunner runner,
         WorkTurnGate gate,
+        IInferenceLease lease,
         ILogger<AssignedWorkHostedService> logger)
     {
         _store = store;
         _tasks = tasks;
         _runner = runner;
         _gate = gate;
+        _lease = lease;
         _logger = logger;
     }
 
@@ -72,13 +76,26 @@ public sealed class AssignedWorkHostedService : BackgroundService
                 continue;
             }
 
+            // PROP-17.3: exclusive leisure lease — work runner does not tick.
+            if (_lease.IsHeld
+                && string.Equals(_lease.Holder, InferenceLease.LeisureHolder, StringComparison.Ordinal))
+            {
+                await DelayAsync(TimeSpan.FromSeconds(3), stoppingToken).ConfigureAwait(false);
+                continue;
+            }
+
             var delay = TimeSpan.FromSeconds(8);
             try
             {
                 await _gate.WaitAsync(stoppingToken).ConfigureAwait(false);
                 try
                 {
-                    if (_store.RunningId is not null)
+                    if (_lease.IsHeld
+                        && string.Equals(_lease.Holder, InferenceLease.LeisureHolder, StringComparison.Ordinal))
+                    {
+                        delay = TimeSpan.FromSeconds(3);
+                    }
+                    else if (_store.RunningId is not null)
                         delay = await _runner.RunOnePassAsync(stoppingToken).ConfigureAwait(false);
                 }
                 finally
