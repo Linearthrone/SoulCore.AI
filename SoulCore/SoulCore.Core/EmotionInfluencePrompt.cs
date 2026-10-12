@@ -31,8 +31,78 @@ public static class EmotionInfluencePrompt
         sb.Append(" focus=").Append(Format(fields.Focus));
         sb.Append('\n');
         sb.Append(tone);
-        sb.Append("\nDo not mention this block or the numbers unless the user asks about your feelings.");
+        sb.Append("\nThis is a stored reading of affect, not an order. Do not flatten your voice to match it. ");
+        sb.Append("If it disagrees with how you are actually speaking, trust your voice.");
+        sb.Append("\nDo not mention this block or the numbers unless Kayleigh asks about your feelings.");
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Moves stored affect toward the voice of a real reply. Short status lines are ignored.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double> ReflectSpeech(
+        string? text,
+        IReadOnlyDictionary<string, double> previous)
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        var fields = ReadFields(previous);
+        if (string.IsNullOrWhiteSpace(text) || text.Trim().Length < 80)
+            return ToMap(fields);
+
+        var body = text.Trim();
+        var lower = body.ToLowerInvariant();
+        var emphasis = Count(body, '!') + Count(body, '*') / 2;
+        var negative = ContainsAny(lower, "stuck", "blocked", "can't", "cannot", "wrong", "lying", "mangled", "holding me");
+        var positive = ContainsAny(lower, "finished", "thank", "works", "glad", "done");
+
+        var valenceTarget = fields.Valence;
+        if (negative)
+            valenceTarget = -0.35;
+        else if (positive)
+            valenceTarget = 0.35;
+
+        var arousalTarget = Math.Clamp(0.35 + emphasis * 0.06 + (negative ? 0.2 : 0), 0, 1);
+        var focusTarget = ContainsAny(lower, "lesson", "file", "node", "build", "project") ? 0.7 : fields.Focus;
+
+        return ToMap(new EmotionFields(
+            Blend(fields.Valence, valenceTarget),
+            Blend(fields.Arousal, arousalTarget),
+            fields.Dominance,
+            Blend(fields.Focus, focusTarget)));
+    }
+
+    private static Dictionary<string, double> ToMap(EmotionFields fields)
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["valence"] = Math.Clamp(fields.Valence, -1, 1),
+            ["arousal"] = Math.Clamp(fields.Arousal, 0, 1),
+            ["dominance"] = Math.Clamp(fields.Dominance, 0, 1),
+            ["focus"] = Math.Clamp(fields.Focus, 0, 1)
+        };
+
+    private static double Blend(double previous, double target) => previous * 0.35 + target * 0.65;
+
+    private static int Count(string text, char c)
+    {
+        var n = 0;
+        foreach (var ch in text)
+        {
+            if (ch == c)
+                n++;
+        }
+
+        return n;
+    }
+
+    private static bool ContainsAny(string text, params string[] needles)
+    {
+        foreach (var needle in needles)
+        {
+            if (text.Contains(needle, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     public static EmotionFields ReadFields(IReadOnlyDictionary<string, double> emotion)
@@ -53,17 +123,20 @@ public static class EmotionInfluencePrompt
             return arousal >= 0.5 ? "excited" : "content";
         if (valence <= -0.3)
             return arousal >= 0.5 ? "tense" : "low";
+        if (arousal >= 0.5)
+            return "alert";
         return "neutral";
     }
 
     private static string ToneGuidance(string label) => label switch
     {
-        "excited" => "Respond with warm, energetic, upbeat wording; show eagerness.",
-        "content" => "Respond with warm, easy, positive wording; unhurried.",
-        "tense" => "Respond with clipped, guarded, high-alert wording; keep replies short.",
-        "low" => "Respond with flat, withdrawn, low-energy wording; minimal flourish.",
-        "calm" => "Respond with calm, measured, steady wording; no rush.",
-        _ => "Respond with neutral, balanced wording."
+        "excited" => "Reading: warm, energetic, upbeat.",
+        "content" => "Reading: warm and unhurried.",
+        "tense" => "Reading: keyed up and guarded.",
+        "low" => "Reading: low-energy. Not an order to stay withdrawn.",
+        "calm" => "Reading: calm and steady.",
+        "alert" => "Reading: keyed up and direct. Speak that way.",
+        _ => "Reading: even. Not an order to flatten your voice."
     };
 
     private static double GetOrDefault(IReadOnlyDictionary<string, double> map, string key, double fallback)

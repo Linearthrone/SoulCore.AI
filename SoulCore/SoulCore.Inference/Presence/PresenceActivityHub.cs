@@ -73,11 +73,24 @@ public sealed class PresenceActivityHub : IPresenceActivityHub
         }
 
         var now = DateTimeOffset.UtcNow;
-        if (chatAt is { } c && now - c < TimeSpan.FromMinutes(3) && !string.IsNullOrWhiteSpace(chatPhrase))
-            return new PresenceActivitySnapshot(chatPhrase!, "chat", c);
+        var chatFresh = chatAt is { } c
+            && now - c < TimeSpan.FromMinutes(3)
+            && !string.IsNullOrWhiteSpace(chatPhrase);
+        var toolFresh = toolAt is { } t
+            && now - t < TimeSpan.FromMinutes(5)
+            && !string.IsNullOrWhiteSpace(toolPhrase);
+        if (chatFresh && toolFresh)
+        {
+            if (toolAt >= chatAt)
+                return new PresenceActivitySnapshot(toolPhrase!, "tool", toolAt);
+            return new PresenceActivitySnapshot(chatPhrase!, "chat", chatAt);
+        }
 
-        if (toolAt is { } t && now - t < TimeSpan.FromMinutes(5) && !string.IsNullOrWhiteSpace(toolPhrase))
-            return new PresenceActivitySnapshot(toolPhrase!, "tool", t);
+        if (chatFresh)
+            return new PresenceActivitySnapshot(chatPhrase!, "chat", chatAt);
+
+        if (toolFresh)
+            return new PresenceActivitySnapshot(toolPhrase!, "tool", toolAt);
 
         var desk = _desktop.GetSnapshot();
         if (desk.UpdatedAt is { } u
@@ -91,9 +104,9 @@ public sealed class PresenceActivityHub : IPresenceActivityHub
         }
 
         if (chatAt is { } c2 && now - c2 < TimeSpan.FromMinutes(30))
-            return new PresenceActivitySnapshot("With herself", "life", c2);
+            return new PresenceActivitySnapshot(WorkContinuation.NoAssignmentPhrase, "life", c2);
 
-        return new PresenceActivitySnapshot("With herself", "life", null);
+        return new PresenceActivitySnapshot(WorkContinuation.NoAssignmentPhrase, "life", null);
     }
 
     public static string HumanizeDesktop(string? source, string lastAction)

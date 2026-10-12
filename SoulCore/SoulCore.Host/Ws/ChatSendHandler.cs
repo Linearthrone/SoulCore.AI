@@ -7,6 +7,7 @@ using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
+using SoulCore.Host.Loop;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Presence;
@@ -41,6 +42,8 @@ public sealed class ChatSendHandler
     private readonly IToolsAccessSettings _toolsAccess;
     private readonly IPresenceActivityHub? _presenceActivity;
     private readonly IChatTranscriptStore? _transcript;
+    private readonly IAssignedWorkStore? _assigned;
+    private readonly WorkTurnGate? _turnGate;
     private readonly ILogger<ChatSendHandler> _logger;
 
     public ChatSendHandler(
@@ -58,7 +61,9 @@ public sealed class ChatSendHandler
         IToolsAccessSettings toolsAccess,
         ILogger<ChatSendHandler> logger,
         IPresenceActivityHub? presenceActivity = null,
-        IChatTranscriptStore? transcript = null)
+        IChatTranscriptStore? transcript = null,
+        IAssignedWorkStore? assigned = null,
+        WorkTurnGate? turnGate = null)
     {
         _inference = inference ?? throw new ArgumentNullException(nameof(inference));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -75,6 +80,8 @@ public sealed class ChatSendHandler
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _presenceActivity = presenceActivity;
         _transcript = transcript;
+        _assigned = assigned;
+        _turnGate = turnGate;
     }
 
     public async Task HandleAsync(
@@ -95,6 +102,13 @@ public sealed class ChatSendHandler
                 cancellationToken).ConfigureAwait(false);
             return;
         }
+
+        var holdGate = _turnGate is not null;
+        if (holdGate)
+            await _turnGate!.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+        RememberAssignment(text);
 
         var quotedText = ExtractQuotedText(frame.Payload);
         var modelUserText = QuotedChatText.BuildUserText(text, quotedText);
@@ -137,26 +151,72 @@ public sealed class ChatSendHandler
             return;
         }
 
-        string reply;
-        string provider;
+        string reply = "";
+        string provider = "ollama";
         var usedStub = false;
         var dispatchedToolNames = new HashSet<string>(StringComparer.Ordinal);
         var toolTrace = new List<ToolTraceEntry>();
+        var pausedForBudget = false;
 
         try
         {
             if (useToolLoop)
             {
-                var loopResult = await CompleteChatWithToolsAsync(
-                        modelUserText,
-                        chatContext.Preamble,
-                        historySessionId,
-                        dispatchedToolNames,
-                        toolTrace,
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                reply = loopResult.Text;
-                provider = loopResult.Provider;
+                var passText = modelUserText;
+                var extra = 0;
+                while (true)
+                {
+                    _presenceActivity?.NoteTool("Thinking");
+                    await PushActivityAsync(socket, frame.Id, "Thinking", "thinking", cancellationToken)
+                        .ConfigureAwait(false);
+
+                    var passTools = new HashSet<string>(StringComparer.Ordinal);
+                    var passTrace = new List<ToolTraceEntry>();
+                    var loopResult = await CompleteChatWithToolsAsync(
+                            passText,
+                            chatContext.Preamble,
+                            historySessionId,
+                            passTools,
+                            passTrace,
+                            cancellationToken,
+                            async (toolName, ct) =>
+                            {
+                                var phrase = WorkContinuation.PhraseForTool(toolName);
+                                _presenceActivity?.NoteTool(phrase);
+                                await PushActivityAsync(socket, frame.Id, phrase, "working", ct)
+                                    .ConfigureAwait(false);
+                            })
+                        .ConfigureAwait(false);
+                    reply = loopResult.Text;
+                    provider = loopResult.Provider;
+                    foreach (var name in passTools)
+                        dispatchedToolNames.Add(name);
+                    toolTrace.AddRange(passTrace);
+
+                    var usedWorkTools = passTools.Any(WorkContinuation.IsWorkTool);
+                    var keep = WorkContinuation.ShouldKeepGoing(text, reply, usedWorkTools);
+                    if (!keep || extra >= WorkContinuation.MaxExtraPasses)
+                    {
+                        pausedForBudget = keep && extra >= WorkContinuation.MaxExtraPasses;
+                        break;
+                    }
+
+                    await SendReplyAsync(
+                            socket,
+                            frame.Id,
+                            WorkContinuation.VisibleText(reply, continuing: true),
+                            provider,
+                            usedStub: false,
+                            continuing: true,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    extra++;
+                    passText = WorkContinuation.Nudge;
+                    _logger.LogInformation(
+                        "Work continuation pass {Pass} after tools={Tools}",
+                        extra,
+                        string.Join(',', passTools));
+                }
             }
             else
             {
@@ -194,26 +254,29 @@ public sealed class ChatSendHandler
             AppendPlainTurn(historySessionId, modelUserText, reply);
         }
 
-        foreach (var partial in ChunkReply(reply))
-        {
-            await WsFrameSender.SendFrameAsync(
+        NoteAssignmentOutcome(reply);
+        var stillOpen = _assigned?.Current is { Status: "active" };
+        var visible = WorkContinuation.VisibleText(reply, continuing: stillOpen);
+        await SendReplyAsync(socket, frame.Id, visible, provider, usedStub, continuing: stillOpen, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (stillOpen)
+            _presenceActivity?.NoteTool(WorkContinuation.ActivityFor(_assigned!.Current!.Text));
+        else if (pausedForBudget || WorkContinuation.HitToolCap(reply))
+            _presenceActivity?.NoteTool(WorkContinuation.PausedActivity);
+        else if (WorkContinuation.IsHandoff(reply) || WorkContinuation.IsUserStop(text) || _assigned?.Current is { Status: "waiting" })
+            _presenceActivity?.NoteTool(WorkContinuation.WaitingLine);
+        else
+            _presenceActivity?.NoteChat("assistant");
+
+        var activityState = stillOpen ? "working" : pausedForBudget ? "paused" : "idle";
+        await PushActivityAsync(
                 socket,
-                SoulCoreFrame.Create(
-                    SoulCoreFrameTypes.ChatDelta,
-                    new { text = partial, stub = usedStub, provider },
-                    id: frame.Id),
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        await WsFrameSender.SendFrameAsync(
-            socket,
-            SoulCoreFrame.Create(
-                SoulCoreFrameTypes.ChatDone,
-                new { text = reply, stub = usedStub, provider },
-                id: frame.Id),
-            cancellationToken).ConfigureAwait(false);
-
-        _presenceActivity?.NoteChat("assistant");
+                frame.Id,
+                _presenceActivity?.GetSnapshot().Phrase ?? WorkContinuation.NoAssignmentPhrase,
+                activityState,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         await WriteTranscriptAfterChatAsync(historySessionId, text, reply, frame.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -222,6 +285,34 @@ public sealed class ChatSendHandler
             await WriteEpisodicAfterChatAsync(modelUserText, reply, provider, cancellationToken).ConfigureAwait(false);
 
         await _postEffects.ApplyAsync(text, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (holdGate)
+                _turnGate!.Release();
+        }
+    }
+
+    private void RememberAssignment(string userText)
+    {
+        if (_assigned is null)
+            return;
+        if (WorkContinuation.IsUserStop(userText))
+        {
+            _assigned.Clear();
+            return;
+        }
+
+        if (WorkContinuation.LooksLikeAssignment(userText))
+            _assigned.SetActive(userText.Trim());
+    }
+
+    private void NoteAssignmentOutcome(string reply)
+    {
+        if (_assigned?.Current is not { Status: "active" })
+            return;
+        if (WorkContinuation.IsCheckIn(reply) || WorkContinuation.NeedsKayleigh(reply))
+            _assigned.MarkWaiting(reply);
     }
 
     /// <summary>
@@ -400,7 +491,8 @@ public sealed class ChatSendHandler
         string historySessionId,
         HashSet<string> dispatchedToolNames,
         List<ToolTraceEntry> toolTrace,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, CancellationToken, Task>? beforeTool = null)
     {
         if (!_inferenceOptions.Enabled)
         {
@@ -421,7 +513,8 @@ public sealed class ChatSendHandler
             prior.Count);
 
         var tools = _toolRegistry.GetDefinitions();
-        var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames, toolTrace);
+        var trackingRegistry = new TrackingToolRegistry(
+            _toolRegistry, dispatchedToolNames, toolTrace, beforeTool);
 
         Exception? lastError = null;
         string? replyText = null;
@@ -629,6 +722,58 @@ public sealed class ChatSendHandler
         return $"[stub] SoulCore received: {preview}";
     }
 
+    private async Task PushActivityAsync(
+        WebSocket socket,
+        string? correlationId,
+        string phrase,
+        string state,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WsFrameSender.SendFrameAsync(
+                socket,
+                SoulCoreFrame.Create(
+                    SoulCoreFrameTypes.PresenceStatus,
+                    new { alive = true, warm = true, phase = 1, activity = phrase, state },
+                    id: correlationId),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "presence activity push failed");
+        }
+    }
+
+    private static async Task SendReplyAsync(
+        WebSocket socket,
+        string? correlationId,
+        string reply,
+        string provider,
+        bool usedStub,
+        bool continuing,
+        CancellationToken cancellationToken)
+    {
+        foreach (var partial in ChunkReply(reply))
+        {
+            await WsFrameSender.SendFrameAsync(
+                socket,
+                SoulCoreFrame.Create(
+                    SoulCoreFrameTypes.ChatDelta,
+                    new { text = partial, stub = usedStub, provider, continuing },
+                    id: correlationId),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await WsFrameSender.SendFrameAsync(
+            socket,
+            SoulCoreFrame.Create(
+                SoulCoreFrameTypes.ChatDone,
+                new { text = reply, stub = usedStub, provider, continuing },
+                id: correlationId),
+            cancellationToken).ConfigureAwait(false);
+    }
+
     private static IEnumerable<string> ChunkReply(string reply)
     {
         if (string.IsNullOrEmpty(reply))
@@ -660,14 +805,18 @@ public sealed class ChatSendHandler
         private readonly HashSet<string> _dispatched;
         private readonly List<ToolTraceEntry> _trace;
 
+        private readonly Func<string, CancellationToken, Task>? _beforeTool;
+
         public TrackingToolRegistry(
             IToolRegistry inner,
             HashSet<string> dispatched,
-            List<ToolTraceEntry> trace)
+            List<ToolTraceEntry> trace,
+            Func<string, CancellationToken, Task>? beforeTool = null)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _dispatched = dispatched ?? throw new ArgumentNullException(nameof(dispatched));
             _trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            _beforeTool = beforeTool;
         }
 
         public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
@@ -676,6 +825,9 @@ public sealed class ChatSendHandler
         {
             if (!string.IsNullOrWhiteSpace(name))
                 _dispatched.Add(name);
+
+            if (_beforeTool is not null && !string.IsNullOrWhiteSpace(name))
+                await _beforeTool(name, ct).ConfigureAwait(false);
 
             var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
 

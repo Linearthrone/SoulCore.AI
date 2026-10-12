@@ -11,7 +11,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// Coordinates are the guest framebuffer (origin 0,0) — the host VirtualBox
 /// window can stay minimized. Never <c>Process.Start</c> on the Windows host.
 /// </summary>
-public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGuestBrowser
+public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGuestBrowser, IGuestWorkspace
 {
     public const string DefaultVBoxManage =
         @"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe";
@@ -923,7 +923,11 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             $"XAUTHORITY={xauth}",
             "GNOME_ACCESSIBILITY=1",
             "GTK_MODULES=gail:atk-bridge",
-            "NO_AT_BRIDGE=0"
+            "NO_AT_BRIDGE=0",
+            "LANG=C.UTF-8",
+            "LC_ALL=C.UTF-8",
+            "PYTHONIOENCODING=utf-8",
+            "PYTHONUTF8=1"
         };
     }
 
@@ -1069,6 +1073,8 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            StandardErrorEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             CreateNoWindow = true,
         };
         foreach (var a in arguments)

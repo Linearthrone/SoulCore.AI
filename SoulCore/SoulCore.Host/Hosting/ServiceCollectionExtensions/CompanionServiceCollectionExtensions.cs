@@ -9,6 +9,7 @@ using SoulCore.Host.Companion;
 using SoulCore.Core.Abstractions;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Ws;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 
@@ -39,6 +40,10 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<SoulLoopScaffold>();
         services.AddSingleton<ISoulLoop>(sp => sp.GetRequiredService<SoulLoopScaffold>());
         services.AddHostedService<SoulLoopHostedService>();
+        services.AddSingleton<WorkTurnGate>();
+        services.AddSingleton<IAssignedWorkStore, FileAssignedWorkStore>();
+        services.AddSingleton<AssignedWorkRunner>();
+        services.AddHostedService<AssignedWorkHostedService>();
         services.AddSingleton<IChatContextBuilder, ChatContextBuilder>();
         services.AddSingleton<EmotionSnapshotSender>();
         services.AddSingleton<ChatPostEffectsHandler>();

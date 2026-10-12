@@ -110,6 +110,13 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<SoulCore.Inference.Presence.IPresenceActivityHub>(sp =>
             new SoulCore.Inference.Presence.PresenceActivityHub(sp.GetRequiredService<IDesktopViewHub>()));
         services.AddSingleton<GuestVmBrowserBridgeHolder>();
+        services.AddSingleton<IGuestWorkspace>(sp =>
+        {
+            var title = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
+            if (string.IsNullOrWhiteSpace(title))
+                return new UnavailableGuestWorkspace();
+            return new VirtualBoxGuestAppLauncher(title.Trim());
+        });
         services.AddSingleton<IDesktopControlBackend>(sp =>
         {
             IDesktopControlBackend inner;
@@ -142,7 +149,8 @@ internal static class ToolsServiceCollectionExtensions
             var scopeTitle = sp.GetRequiredService<IToolsAccessSettings>().DesktopTargetWindowTitle;
             if (string.IsNullOrWhiteSpace(scopeTitle))
                 return inner;
-            var guest = new VirtualBoxGuestAppLauncher(scopeTitle);
+            var guest = sp.GetRequiredService<IGuestWorkspace>() as VirtualBoxGuestAppLauncher
+                ?? new VirtualBoxGuestAppLauncher(scopeTitle);
             sp.GetRequiredService<GuestVmBrowserBridgeHolder>().Set(guest, guest);
             return new ScopedDesktopControlBackend(
                 inner,
@@ -170,6 +178,10 @@ internal static class ToolsServiceCollectionExtensions
             sp.GetRequiredService<IDesktopControlBackend>(),
             sp.GetRequiredService<IDesktopViewHub>()));
         services.AddSingleton<ITool, DesktopOpenAppTool>();
+        services.AddSingleton<ITool, GuestListDirTool>();
+        services.AddSingleton<ITool, GuestReadFileTool>();
+        services.AddSingleton<ITool, GuestWriteFileTool>();
+        services.AddSingleton<ITool, GuestShellTool>();
         services.AddSingleton<ITool, ListDesktopWindowsTool>();
         services.AddSingleton<ITool, FocusDesktopWindowTool>();
     }

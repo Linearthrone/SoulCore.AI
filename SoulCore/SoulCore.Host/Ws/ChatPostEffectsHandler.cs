@@ -66,7 +66,10 @@ public sealed class ChatPostEffectsHandler
         try
         {
             var emotion = await _emotion.GetAsync(sideEffectCt).ConfigureAwait(false);
-            var fields = EmotionInfluencePrompt.ReadFields(emotion);
+            var reflected = EmotionInfluencePrompt.ReflectSpeech(reply, emotion);
+            if (!SameEmotion(emotion, reflected))
+                await _emotion.SetAsync(reflected, sideEffectCt).ConfigureAwait(false);
+            var fields = EmotionInfluencePrompt.ReadFields(reflected);
             await _unreal.SetEmotionAsync(new
             {
                 valence = fields.Valence,
@@ -199,6 +202,20 @@ public sealed class ChatPostEffectsHandler
             _logger.LogDebug(ex, "Unreal look side-effect ignored");
         }
     }
+
+    private static bool SameEmotion(
+        IReadOnlyDictionary<string, double> previous,
+        IReadOnlyDictionary<string, double> next)
+    {
+        var a = EmotionInfluencePrompt.ReadFields(previous);
+        var b = EmotionInfluencePrompt.ReadFields(next);
+        return Nearly(a.Valence, b.Valence)
+               && Nearly(a.Arousal, b.Arousal)
+               && Nearly(a.Dominance, b.Dominance)
+               && Nearly(a.Focus, b.Focus);
+    }
+
+    private static bool Nearly(double left, double right) => Math.Abs(left - right) < 0.0001;
 
     internal enum ToolVerbClass
     {

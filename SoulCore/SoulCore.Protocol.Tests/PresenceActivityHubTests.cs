@@ -10,7 +10,7 @@ public class PresenceActivityHubTests
     {
         var hub = new PresenceActivityHub(new DesktopViewHub(() => true, Path.Combine(Path.GetTempPath(), "pa-" + Guid.NewGuid().ToString("N"))));
         var snap = hub.GetSnapshot();
-        Assert.Equal("With herself", snap.Phrase);
+        Assert.Equal("No open assignment", snap.Phrase);
         Assert.Equal("life", snap.Source);
     }
 
@@ -30,6 +30,16 @@ public class PresenceActivityHubTests
         var hub = new PresenceActivityHub(new DesktopViewHub(() => true, Path.Combine(Path.GetTempPath(), "pa-" + Guid.NewGuid().ToString("N"))));
         hub.NoteChat("assistant");
         Assert.Equal("In conversation", hub.GetSnapshot().Phrase);
+    }
+
+    [Fact]
+    public void NoteTool_AfterChat_ShowsTheWork()
+    {
+        var hub = new PresenceActivityHub(new DesktopViewHub(() => true, Path.Combine(Path.GetTempPath(), "pa-" + Guid.NewGuid().ToString("N"))));
+        hub.NoteChat("user");
+        hub.NoteTool("Looking at the screen");
+        Assert.Equal("Looking at the screen", hub.GetSnapshot().Phrase);
+        Assert.Equal("tool", hub.GetSnapshot().Source);
     }
 
     [Fact]

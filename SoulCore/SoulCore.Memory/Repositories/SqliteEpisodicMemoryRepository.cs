@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
+using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 
 namespace SoulCore.Memory.Repositories;
@@ -48,7 +49,7 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
             INSERT INTO episodic_memories (content, occurred_at, source, is_quarantined)
             VALUES ($content, $occurred_at, $source, $quarantined);
             """;
-        cmd.Parameters.AddWithValue("$content", text.Trim());
+        cmd.Parameters.AddWithValue("$content", Utf8TextRepair.Repair(text).Trim());
         cmd.Parameters.AddWithValue("$occurred_at", occurredAt);
         cmd.Parameters.AddWithValue("$source", source);
         cmd.Parameters.AddWithValue("$quarantined", string.Equals(source, "imported", StringComparison.Ordinal) ? 1 : 0);
@@ -126,7 +127,7 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
         var list = new List<(long Id, string Content)>();
         await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
-            list.Add((reader.GetInt64(0), reader.GetString(1)));
+            list.Add((reader.GetInt64(0), Utf8TextRepair.Repair(reader.GetString(1))));
 
         return list;
         }, cancellationToken).ConfigureAwait(false);
@@ -161,7 +162,7 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
         await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
-            var content = reader.GetString(0);
+            var content = Utf8TextRepair.Repair(reader.GetString(0));
             var blob = (byte[])reader.GetValue(1);
             var vector = VectorSimilarity.FromLittleEndianBlob(blob);
             if (vector.Length == queryVector.Length)
@@ -192,7 +193,7 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
         var list = new List<string>();
         await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
-            list.Add(reader.GetString(0));
+            list.Add(Utf8TextRepair.Repair(reader.GetString(0)));
 
         return list;
         }, cancellationToken).ConfigureAwait(false);

@@ -213,11 +213,13 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <StackPanel x:Name="TypingIndicator" Orientation="Horizontal" Spacing="4"
+                  <StackPanel x:Name="TypingIndicator" Orientation="Horizontal" Spacing="6"
                               Margin="12,6,0,8" IsVisible="False">
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource MutedBrush}" Opacity="0.7"/>
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource MutedBrush}" Opacity="0.5"/>
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource MutedBrush}" Opacity="0.35"/>
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" Opacity="0.9"/>
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" Opacity="0.6"/>
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" Opacity="0.35"/>
+                    <TextBlock x:Name="TypingLabel" Text="Thinking" FontSize="12"
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                   </StackPanel>
                 </StackPanel>
               </ScrollViewer>

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,8 +12,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <!-- PROP-4.2: bump with House/scripts/bump-versions.ps1 on every Presence fix (vpk packVersion). -->
-    <Version>0.1.19</Version>
-    <InformationalVersion>0.1.19</InformationalVersion>
+    <Version>0.1.20</Version>
+    <InformationalVersion>0.1.20</InformationalVersion>
     <Product>House Victoria Presence</Product>
     <Company>LinearThrone</Company>
   </PropertyGroup>

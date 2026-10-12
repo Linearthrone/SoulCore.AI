@@ -1331,6 +1331,16 @@ public partial class MainWindow
     private void ApplyPresenceStatus(SoulCoreFrame frame)
     {
         _presenceFromWs = true;
+        var activity = ReadPayloadString(frame, "activity");
+        if (!string.IsNullOrWhiteSpace(activity))
+        {
+            _lastActivityPhrase = activity;
+            if (ActivityText is not null)
+                ActivityText.Text = activity;
+            if (TypingLabel is not null)
+                TypingLabel.Text = activity;
+        }
+
         UpdateConnectionChrome(_lastHealth);
         UpdateEngagementState();
     }
@@ -1366,7 +1376,7 @@ public partial class MainWindow
             phrase = _lastActivityPhrase;
 
         if (string.IsNullOrWhiteSpace(phrase))
-            phrase = "With herself";
+            phrase = "No open assignment";
 
         _lastActivityPhrase = phrase;
         ActivityText.Text = phrase;
@@ -1493,7 +1503,19 @@ public partial class MainWindow
 
         string state;
         IBrush brush;
-        if (soulOff || sleepCat || (deepQuiet && _lastArousal < 0.15 && !recentChat))
+        var activityLine = ActivityText?.Text?.Trim() ?? "";
+        if (activityLine.StartsWith("Working", StringComparison.OrdinalIgnoreCase))
+        {
+            state = "Working";
+            brush = _okBrush;
+        }
+        else if (activityLine.StartsWith("Waiting on you", StringComparison.OrdinalIgnoreCase)
+                 || activityLine.StartsWith("Stuck", StringComparison.OrdinalIgnoreCase))
+        {
+            state = "Waiting";
+            brush = _warnBrush;
+        }
+        else if (soulOff || sleepCat || (deepQuiet && _lastArousal < 0.15 && !recentChat))
         {
             state = "Sleeping";
             brush = _mutedBrush;
@@ -1514,7 +1536,7 @@ public partial class MainWindow
             brush = _warnBrush;
             if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
             {
-                ActivityText.Text = "With herself";
+                ActivityText.Text = "No open assignment";
                 _lastActivityPhrase = ActivityText.Text;
             }
         }
@@ -1585,7 +1607,16 @@ public partial class MainWindow
         }
 
         text ??= string.Empty;
-        SetTyping(!finalize);
+        var continuing = ReadPayloadBool(frame, "continuing") == true;
+        SetTyping(!finalize || continuing);
+        if (TypingLabel is not null && (continuing || !finalize))
+        {
+            var activity = ReadPayloadString(frame, "activity");
+            if (!string.IsNullOrWhiteSpace(activity))
+                TypingLabel.Text = activity;
+            else if (continuing)
+                TypingLabel.Text = "Still working";
+        }
         _lastChatActivityUtc = DateTimeOffset.UtcNow;
         UpdateEngagementState();
 
@@ -1602,7 +1633,7 @@ public partial class MainWindow
                 if (hasMedia || !string.IsNullOrWhiteSpace(mediaId))
                     _ = AttachInboundMediaAsync(_streamingAssistant);
                 _streamingAssistant = null;
-                SetTyping(false);
+                SetTyping(ReadPayloadBool(frame, "continuing") == true);
             }
 
             ScrollTranscriptToEnd();
@@ -1623,7 +1654,7 @@ public partial class MainWindow
             if (hasMedia || !string.IsNullOrWhiteSpace(mediaId))
                 _ = AttachInboundMediaAsync(bubble);
             _streamingAssistant = null;
-            SetTyping(false);
+            SetTyping(ReadPayloadBool(frame, "continuing") == true);
         }
         else
         {
