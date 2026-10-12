@@ -180,15 +180,17 @@ public static class Mt4ToolSupport
             return false;
         }
 
-        var parsedOk =
-            (prop.ValueKind == JsonValueKind.Number && prop.TryGetDouble(out var parsed))
-            || (prop.ValueKind == JsonValueKind.String
-                && double.TryParse(
-                    prop.GetString(),
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out parsed));
-        if (!parsedOk)
+        double parsed;
+        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDouble(out parsed))
+        {
+            // ok
+        }
+        else if (prop.ValueKind == JsonValueKind.String
+            && double.TryParse(prop.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
+        {
+            // ok
+        }
+        else
         {
             error = new ToolResult(false, SlRequiredMessage, null);
             return false;

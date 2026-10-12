@@ -17,15 +17,16 @@ Prior: Sweeps 1–3 (SoulCore + House); Sweep 3 leftovers commit `981012c`.
 Final mandatory verification of PROP-17 surface only after Sweep 3 found/fixed items.
 No invent-churn on documented leave-alones.
 
-## findings_fixed (3)
+## findings_fixed (2)
 
 | # | Location | Change |
 |---|----------|--------|
 | 1 | `Mt4ToolSupport.IsTruthyString` | Remove dead private helper (never called) |
-| 2 | `Mt4ToolSupport.TryValidateStopLoss` | Flatten empty `// ok` parse branches |
-| 3 | `MainWindow.RunServiceActionAsync` | Reuse `hostStackTag` for status writes (drop repeated tag checks) |
+| 2 | `MainWindow.RunServiceActionAsync` | Reuse `hostStackTag` for status writes (drop repeated tag checks) |
 
-**findings_fixed count: 3**
+**findings_fixed count: 2**
+
+Left alone on purpose: `TryValidateStopLoss` empty `// ok` parse arms — reshaping them either trips definite-assignment or expands the method without clarifying intent.
 
 ## Leave-alones (confirmed, not churn)
 
