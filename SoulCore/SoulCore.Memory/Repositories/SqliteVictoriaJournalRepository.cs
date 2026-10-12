@@ -7,7 +7,10 @@ namespace SoulCore.Memory.Repositories;
 
 public sealed class SqliteVictoriaJournalRepository : IVictoriaJournalStore
 {
-    public static readonly HashSet<string> AllowedJournalBookIds = new(StringComparer.OrdinalIgnoreCase){"feeling","animation","environment"};
+    public static readonly HashSet<string> AllowedJournalBookIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "feeling", "animation", "environment", "life_hacks"
+    };
     private readonly SqliteMemorySession _session;
     public SqliteVictoriaJournalRepository(SqliteMemorySession session) => _session = session ?? throw new ArgumentNullException(nameof(session));
 
@@ -28,6 +31,7 @@ public async Task<IReadOnlyList<VictoriaJournalBook>> ListBooksAsync(
             WHEN 'feeling' THEN 1
             WHEN 'animation' THEN 2
             WHEN 'environment' THEN 3
+            WHEN 'life_hacks' THEN 4
             ELSE 9
         END;
         """;
@@ -99,7 +103,7 @@ public async Task<long> WriteEntryAsync(
     if (!AllowedJournalBookIds.Contains(normalizedBook))
     {
         throw new ArgumentException(
-            $"Unknown journal book '{bookId}'. Allowed: feeling, animation, environment.",
+            $"Unknown journal book '{bookId}'. Allowed: feeling, animation, environment, life_hacks.",
             nameof(bookId));
     }
 
