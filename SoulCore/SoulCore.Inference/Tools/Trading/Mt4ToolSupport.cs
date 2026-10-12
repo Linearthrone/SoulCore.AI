@@ -180,17 +180,15 @@ public static class Mt4ToolSupport
             return false;
         }
 
-        double parsed;
-        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDouble(out parsed))
-        {
-            // ok
-        }
-        else if (prop.ValueKind == JsonValueKind.String
-            && double.TryParse(prop.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
-        {
-            // ok
-        }
-        else
+        var parsedOk =
+            (prop.ValueKind == JsonValueKind.Number && prop.TryGetDouble(out var parsed))
+            || (prop.ValueKind == JsonValueKind.String
+                && double.TryParse(
+                    prop.GetString(),
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out parsed));
+        if (!parsedOk)
         {
             error = new ToolResult(false, SlRequiredMessage, null);
             return false;
@@ -232,15 +230,6 @@ public static class Mt4ToolSupport
 
     public static JsonElement ParseSchema(string json) =>
         JsonDocument.Parse(json).RootElement.Clone();
-
-    private static bool IsTruthyString(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s))
-            return false;
-        return s.Equals("true", StringComparison.OrdinalIgnoreCase)
-            || s.Equals("yes", StringComparison.OrdinalIgnoreCase)
-            || s.Equals("1", StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 /// <summary>

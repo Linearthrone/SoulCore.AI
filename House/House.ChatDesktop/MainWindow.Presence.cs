@@ -609,7 +609,7 @@ public partial class MainWindow
                 return;
 
             var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
-            WriteHostActionStatus(msg, includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
+            WriteHostActionStatus(msg, includeHostStack: hostStackTag);
 
             if (result.Ok && tag is "host-start" or "host-restart")
             {
@@ -625,7 +625,7 @@ public partial class MainWindow
                 return;
             WriteHostActionStatus(
                 "Cancelled — Host start stopped.",
-                includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
+                includeHostStack: hostStackTag);
         }
         catch (Exception ex)
         {
@@ -633,7 +633,7 @@ public partial class MainWindow
                 return;
             WriteHostActionStatus(
                 $"Error: {ex.Message}",
-                includeHostStack: tag is "host-start" or "host-stop" or "host-restart");
+                includeHostStack: hostStackTag);
         }
         finally
         {
