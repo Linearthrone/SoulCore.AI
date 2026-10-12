@@ -5,7 +5,7 @@ prop_root: PROP-17-victoria-between-talks
 from: PM-01
 to: FED-01
 priority: P1
-status: Pending
+status: Pass
 created: 2026-10-12
 updated: 2026-10-12
 wave: between-talks
@@ -39,10 +39,10 @@ Desk first (17.1–17.4). Phone this round is **thin**: mood word + doing-line o
 
 ## Acceptance
 
-- [ ] Phone shows mood word + doing-line from live Host state (or documents missing frames as blocked with evidence)
-- [ ] Android email editor does not write the old three-role schema after 17.4 unlimited accounts
-- [ ] No phone chrome beyond mood + doing-line
-- [ ] Report: `docs/agents/reports/PROP-17.5-FED01-to-PM01.md`
+- [x] Phone shows mood word + doing-line from live Host state (or documents missing frames as blocked with evidence)
+- [x] Android email editor does not write the old three-role schema after 17.4 unlimited accounts
+- [x] No phone chrome beyond mood + doing-line
+- [x] Report: `docs/agents/reports/PROP-17.5-FED01-to-PM01.md`
 
 ## Handoff
 

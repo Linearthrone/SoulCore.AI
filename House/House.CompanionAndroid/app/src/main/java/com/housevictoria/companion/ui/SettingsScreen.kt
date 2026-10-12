@@ -47,6 +47,7 @@ import com.housevictoria.companion.data.NotificationPrefs
 import com.housevictoria.companion.net.CompanionAuthHeaders
 import com.housevictoria.companion.net.CompanionConnection
 import com.housevictoria.companion.net.EmailAccountDto
+import com.housevictoria.companion.net.EmailMailboxLabels
 import com.housevictoria.companion.net.EmailSettingsClient
 import com.housevictoria.companion.net.HealthClient
 import com.housevictoria.companion.net.WsConnectionState
@@ -57,6 +58,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.LaunchedEffect
@@ -320,7 +322,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Give Victoria a mailbox she can check, and optionally yours. " +
+                text = "Host mailboxes (unlimited ids — same model as Presence 17.4). " +
+                    "Pick an existing account or type a new id, then save. " +
                     "For Gmail, paste an App Password (not your normal login password).",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -451,7 +454,7 @@ private fun EmailAccountsSection(
 ) {
     val scope = rememberCoroutineScope()
     var accounts by remember { mutableStateOf(listOf<EmailAccountDto>()) }
-    var selectedId by remember { mutableStateOf("victoria") }
+    var mailboxId by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var showAdvanced by remember { mutableStateOf(false) }
     var displayName by remember { mutableStateOf("") }
@@ -465,31 +468,27 @@ private fun EmailAccountsSection(
     var smtpSsl by remember { mutableStateOf(false) }
     var enabled by remember { mutableStateOf(true) }
     var passwordHint by remember { mutableStateOf("No app password saved yet") }
-    var readyBanner by remember { mutableStateOf("Pick a mailbox to see its status.") }
-
-    fun mailboxTitle(id: String): String = when (id.lowercase()) {
-        "victoria" -> "Victoria's mailbox"
-        "personal" -> "LinearThrone's personal mail"
-        "business" -> "LinearThrone's business mail"
-        else -> id
+    var readyBanner by remember {
+        mutableStateOf("Load Host mailboxes, or type a new id and Save.")
     }
 
-    fun mailboxSubtitle(id: String): String = when (id.lowercase()) {
-        "victoria" -> "Her inbox — create a mailbox for her"
-        "personal" -> "Your personal inbox"
-        "business" -> "Your work / business inbox"
-        else -> "Mailbox"
-    }
-
-    fun defaultDisplayName(id: String): String = when (id.lowercase()) {
-        "victoria" -> "Victoria"
-        "personal", "business" -> "LinearThrone"
-        else -> ""
-    }
+    fun blankAccount(id: String) = EmailAccountDto(
+        id = id,
+        role = id,
+        enabled = true,
+        imapHost = "imap.gmail.com",
+        imapPort = 993,
+        imapUseSsl = true,
+        smtpHost = "smtp.gmail.com",
+        smtpPort = 587,
+        smtpUseSsl = false
+    )
 
     fun applyAccount(account: EmailAccountDto) {
-        selectedId = account.id
-        displayName = account.displayName.ifBlank { defaultDisplayName(account.id) }
+        mailboxId = account.id
+        displayName = account.displayName.ifBlank {
+            EmailMailboxLabels.defaultDisplayNameFor(account.id)
+        }
         address = account.address
         imapHost = account.imapHost.ifBlank { "imap.gmail.com" }
         imapPort = (if (account.imapPort > 0) account.imapPort else 993).toString()
@@ -504,8 +503,10 @@ private fun EmailAccountsSection(
         } else {
             "No app password saved yet"
         }
-        val title = mailboxTitle(account.id)
+        val title = EmailMailboxLabels.titleFor(account.id)
         readyBanner = when {
+            account.id.isBlank() ->
+                "Enter a mailbox id, address, and App Password, then Save."
             !account.enabled -> "$title: turned off — Victoria will skip this mailbox."
             account.isConfigured -> "$title: ready — ${account.address}"
             account.address.isBlank() && !account.hasPassword ->
@@ -526,19 +527,26 @@ private fun EmailAccountsSection(
                 onStatus(result.detail ?: "Could not load mailboxes", false)
                 return@launch
             }
-            val list = result.accounts.ifEmpty {
-                listOf(
-                    EmailAccountDto("victoria"),
-                    EmailAccountDto("personal"),
-                    EmailAccountDto("business")
-                )
-            }
+            // PROP-17.5: Host list only — never invent victoria|personal|business slots.
+            val list = EmailMailboxLabels.buildList(result.accounts)
             accounts = list
-            val pick = preferId?.let { id -> list.firstOrNull { it.id.equals(id, true) } }
-                ?: list.firstOrNull { it.id.equals(selectedId, true) }
-                ?: list.first()
-            applyAccount(pick)
-            onStatus("Mailboxes loaded", true)
+            val prefer = preferId?.trim().orEmpty().ifBlank { mailboxId.trim() }
+            val pick = prefer.takeIf { it.isNotEmpty() }
+                ?.let { id -> list.firstOrNull { it.id.equals(id, true) } }
+                ?: list.firstOrNull()
+            if (pick != null) {
+                applyAccount(pick)
+            } else if (prefer.isNotEmpty()) {
+                applyAccount(blankAccount(prefer))
+            } else {
+                mailboxId = ""
+                readyBanner = "No Host mailboxes yet — type a new id and Save."
+                passwordHint = "No app password saved yet"
+            }
+            onStatus(
+                if (list.isEmpty()) "No Host mailboxes yet" else "Mailboxes loaded (${list.size})",
+                true
+            )
         }
     }
 
@@ -546,32 +554,47 @@ private fun EmailAccountsSection(
         if (httpBase.isNotBlank()) loadAccounts()
     }
 
-    val slotIds = listOf("victoria", "personal", "business")
-    val selectedTitle = mailboxTitle(selectedId)
+    val pickerLabel = if (mailboxId.isBlank()) {
+        "Select or add mailbox…"
+    } else {
+        EmailMailboxLabels.titleFor(mailboxId)
+    }
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
-            value = selectedTitle,
+            value = pickerLabel,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Which mailbox?") },
-            supportingText = { Text(mailboxSubtitle(selectedId)) },
+            label = { Text("Host mailboxes") },
+            supportingText = {
+                Text(
+                    if (accounts.isEmpty()) {
+                        "Empty until Host returns accounts — type a new id below"
+                    } else {
+                        EmailMailboxLabels.subtitleFor(
+                            mailboxId,
+                            accounts.firstOrNull { it.id.equals(mailboxId, true) }
+                        )
+                    }
+                )
+            },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier
                 .menuAnchor()
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            enabled = accounts.isNotEmpty()
         )
         ExposedDropdownMenu(
-            expanded = expanded,
+            expanded = expanded && accounts.isNotEmpty(),
             onDismissRequest = { expanded = false }
         ) {
-            slotIds.forEach { id ->
+            accounts.forEach { account ->
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text(mailboxTitle(id))
+                            Text(EmailMailboxLabels.titleFor(account.id))
                             Text(
-                                mailboxSubtitle(id),
+                                EmailMailboxLabels.subtitleFor(account.id, account),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -579,18 +602,24 @@ private fun EmailAccountsSection(
                     },
                     onClick = {
                         expanded = false
-                        accounts.firstOrNull { it.id.equals(id, true) }?.let { applyAccount(it) }
-                            ?: run {
-                                selectedId = id
-                                displayName = defaultDisplayName(id)
-                                passwordHint = "No app password saved yet"
-                                readyBanner = "${mailboxTitle(id)}: not set up yet."
-                            }
+                        applyAccount(account)
                     }
                 )
             }
         }
     }
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = mailboxId,
+        onValueChange = { mailboxId = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Mailbox id") },
+        placeholder = { Text("any label — not limited to three roles") },
+        singleLine = true,
+        supportingText = {
+            Text("Letters, numbers, hyphen, underscore. Save creates or updates that id on Host.")
+        }
+    )
     Spacer(Modifier.height(8.dp))
     Text(
         text = readyBanner,
@@ -715,7 +744,7 @@ private fun EmailAccountsSection(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedButton(
-            onClick = { loadAccounts(selectedId) },
+            onClick = { loadAccounts(mailboxId) },
             modifier = Modifier.weight(1f)
         ) { Text("Reload") }
         Button(
@@ -725,20 +754,34 @@ private fun EmailAccountsSection(
                     onStatus("Set HTTP base above first (Host address)", false)
                     return@Button
                 }
+                val id = mailboxId.trim()
+                if (!EmailMailboxLabels.isSafeMailboxId(id)) {
+                    onStatus(
+                        if (id.isEmpty()) {
+                            "Enter a mailbox id (any label — not limited to three roles)"
+                        } else {
+                            "Mailbox id: letters, numbers, hyphen, underscore only"
+                        },
+                        false
+                    )
+                    return@Button
+                }
                 val addr = address.trim()
                 if (addr.isBlank() || !addr.contains('@')) {
                     onStatus("Enter a full email address (like name@gmail.com)", false)
                     return@Button
                 }
-                val existing = accounts.firstOrNull { it.id.equals(selectedId, true) }
+                val existing = accounts.firstOrNull { it.id.equals(id, true) }
                 if (password.isBlank() && existing?.hasPassword != true) {
                     onStatus("Paste an App Password once so she can sign in", false)
                     return@Button
                 }
                 val draft = EmailAccountDto(
-                    id = selectedId,
-                    role = selectedId,
-                    displayName = displayName.trim().ifBlank { defaultDisplayName(selectedId) },
+                    id = id,
+                    role = id,
+                    displayName = displayName.trim().ifBlank {
+                        EmailMailboxLabels.defaultDisplayNameFor(id)
+                    },
                     address = addr,
                     username = addr,
                     imapHost = imapHost.trim().ifBlank { "imap.gmail.com" },
@@ -749,7 +792,7 @@ private fun EmailAccountsSection(
                     smtpUseSsl = smtpSsl,
                     enabled = enabled
                 )
-                onStatus("Saving ${mailboxTitle(selectedId)}…", null)
+                onStatus("Saving ${EmailMailboxLabels.titleFor(id)}…", null)
                 scope.launch {
                     val result = withContext(Dispatchers.IO) {
                         EmailSettingsClient.upsert(base, token.trim(), draft, password)
@@ -758,10 +801,15 @@ private fun EmailAccountsSection(
                         onStatus(result.detail ?: "Save failed", false)
                         return@launch
                     }
-                    accounts = result.accounts.ifEmpty { accounts }
-                    accounts.firstOrNull { it.id.equals(selectedId, true) }?.let { applyAccount(it) }
+                    accounts = EmailMailboxLabels.buildList(result.accounts)
+                    accounts.firstOrNull { it.id.equals(id, true) }?.let { applyAccount(it) }
+                        ?: applyAccount(
+                            draft.copy(
+                                hasPassword = password.isNotBlank() || existing?.hasPassword == true
+                            )
+                        )
                     password = ""
-                    onStatus("Saved ${mailboxTitle(selectedId)}", true)
+                    onStatus("Saved ${EmailMailboxLabels.titleFor(id)}", true)
                 }
             },
             modifier = Modifier.weight(1f)
