@@ -1,0 +1,3 @@
+-- Schema companion for migration 010 (life_hacks journal book).
+-- Documentation only — not embedded. No standalone DDL here: SQLite CHECK recreation
+-- lives entirely in Migrations/010_life_hacks_journal.sql (applied at runtime).

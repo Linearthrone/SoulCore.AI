@@ -100,14 +100,17 @@ public partial class MainWindow
         await RunServiceActionAsync("host-start").ConfigureAwait(true);
 
     private async void HostStop_Click(object? sender, RoutedEventArgs e) =>
-        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+        await InterruptOrStopHostAsync().ConfigureAwait(true);
 
     private async void HostRestart_Click(object? sender, RoutedEventArgs e) =>
         await RunServiceActionAsync("host-restart").ConfigureAwait(true);
 
     private void PersistStackSettingsFromUi()
     {
+        // Repo folder UI is hidden — keep saved root unless the box has text.
         var path = SoulCoreRepoRootBox?.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+            path = _uiSettings.SoulCoreRepoRoot ?? _stack.RepoRoot;
         if (string.IsNullOrWhiteSpace(path))
             path = null;
         _uiSettings.SoulCoreRepoRoot = path;
@@ -157,7 +160,7 @@ public partial class MainWindow
             {
                 AppendSystemNotice(
                     "SoulCore repo not found — set Settings → System → SoulCore repo folder " +
-                    @"(e.g. C:\Users\kurtw\Soul_Core) then reopen Presence.");
+                    @"(e.g. C:\Users\LinearThrone\Soul_Core) then reopen Presence.");
                 return;
             }
 
@@ -473,7 +476,7 @@ public partial class MainWindow
         CancelSoulCoreHold(resetHint: false);
         if (LampSoulCoreHint is not null)
             LampSoulCoreHint.Text = "stopping…";
-        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+        await InterruptOrStopHostAsync().ConfigureAwait(true);
     }
 
     private void CancelSoulCoreHold(bool resetHint)
@@ -485,21 +488,67 @@ public partial class MainWindow
             LampSoulCoreHint.Text = _lastHealth.Alive ? "HOLD TO GUARD" : "CLICK TO START";
     }
 
+    /// <summary>
+    /// Stop stays available during “Starting Host…” and force-kills via LocalStackControl.
+    /// </summary>
+    private async Task InterruptOrStopHostAsync()
+    {
+        if (_servicesBusy && _activeServiceTag is "host-start" or "host-restart")
+        {
+            // Supersede in-flight start/restart so its finally cannot stick “Starting Host…”.
+            var stopGen = ++_hostActionGeneration;
+            try { _hostActionCts?.Cancel(); }
+            catch (ObjectDisposedException) { /* already disposed */ }
+
+            WriteHostActionStatus("Stopping Host…");
+
+            PersistStackSettingsFromUi();
+            LocalStackActionResult result;
+            try
+            {
+                result = await _stack.StopHostAsync().ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                result = LocalStackActionResult.Fail(ex.Message);
+            }
+
+            if (stopGen != _hostActionGeneration)
+                return;
+
+            WriteHostActionStatus(result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}");
+
+            _servicesBusy = false;
+            _activeServiceTag = null;
+            SetHostStackButtonsBusy(false);
+            await ProbeHealthAsync().ConfigureAwait(true);
+            return;
+        }
+
+        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+    }
+
     private async Task RunServiceActionAsync(string tag)
     {
         if (_servicesBusy) return;
+
+        var gen = ++_hostActionGeneration;
         _servicesBusy = true;
-        SetHostStackButtonsBusy(true);
-        if (ServicesStatusText is not null)
-            ServicesStatusText.Text = $"Running {tag}…";
-        if (HostStackStatusText is not null)
-            HostStackStatusText.Text = tag switch
+        _activeServiceTag = tag;
+        DisposeHostActionCts();
+        var cts = new CancellationTokenSource();
+        _hostActionCts = cts;
+        SetHostStackButtonsBusy(true, tag);
+        var hostStackTag = tag is "host-start" or "host-stop" or "host-restart";
+        WriteHostActionStatus(
+            tag switch
             {
                 "host-start" => "Starting Host…",
                 "host-stop" => "Stopping Host…",
                 "host-restart" => "Restarting Host…",
                 _ => $"Running {tag}…"
-            };
+            },
+            includeHostStack: hostStackTag);
 
         try
         {
@@ -509,7 +558,7 @@ public partial class MainWindow
                 case "host-start":
                 {
                     PersistStackSettingsFromUi();
-                    var ensure = await _stack.EnsureStackForChatAsync().ConfigureAwait(true);
+                    var ensure = await _stack.EnsureStackForChatAsync(cts.Token).ConfigureAwait(true);
                     result = ensure.Ok
                         ? LocalStackActionResult.Succeed(ensure.Detail)
                         : LocalStackActionResult.Fail(ensure.Detail);
@@ -517,14 +566,14 @@ public partial class MainWindow
                 }
                 case "host-stop":
                     PersistStackSettingsFromUi();
-                    result = await _stack.StopHostAsync().ConfigureAwait(true);
+                    result = await _stack.StopHostAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "host-restart":
                     PersistStackSettingsFromUi();
-                    result = await _stack.RestartHostAsync().ConfigureAwait(true);
+                    result = await _stack.RestartHostAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "ollama-start":
-                    result = await _stack.StartOllamaAsync().ConfigureAwait(true);
+                    result = await _stack.StartOllamaAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "cua-enable":
                 {
@@ -555,12 +604,12 @@ public partial class MainWindow
                     break;
             }
 
+            // Stop interrupt supersedes this generation — do not restore “Starting Host…” / busy.
+            if (gen != _hostActionGeneration)
+                return;
+
             var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = msg;
-            if (HostStackStatusText is not null
-                && tag is "host-start" or "host-stop" or "host-restart")
-                HostStackStatusText.Text = msg;
+            WriteHostActionStatus(msg, includeHostStack: hostStackTag);
 
             if (result.Ok && tag is "host-start" or "host-restart")
             {
@@ -570,27 +619,67 @@ public partial class MainWindow
 
             await ProbeHealthAsync().ConfigureAwait(true);
         }
+        catch (OperationCanceledException)
+        {
+            if (gen != _hostActionGeneration)
+                return;
+            WriteHostActionStatus(
+                "Cancelled — Host start stopped.",
+                includeHostStack: hostStackTag);
+        }
         catch (Exception ex)
         {
-            var err = $"Error: {ex.Message}";
-            if (ServicesStatusText is not null)
-                ServicesStatusText.Text = err;
-            if (HostStackStatusText is not null
-                && tag is "host-start" or "host-stop" or "host-restart")
-                HostStackStatusText.Text = err;
+            if (gen != _hostActionGeneration)
+                return;
+            WriteHostActionStatus(
+                $"Error: {ex.Message}",
+                includeHostStack: hostStackTag);
         }
         finally
         {
-            _servicesBusy = false;
-            SetHostStackButtonsBusy(false);
+            // Dispose only our CTS — Stop interrupt cancels but must not dispose while we still await.
+            if (ReferenceEquals(_hostActionCts, cts))
+                DisposeHostActionCts();
+
+            if (gen == _hostActionGeneration)
+            {
+                _servicesBusy = false;
+                _activeServiceTag = null;
+                SetHostStackButtonsBusy(false);
+            }
         }
     }
 
-    private void SetHostStackButtonsBusy(bool busy)
+    private void WriteHostActionStatus(
+        string message,
+        bool includeServices = true,
+        bool includeHostStack = true)
     {
-        if (HostStartButton is not null) HostStartButton.IsEnabled = !busy;
-        if (HostStopButton is not null) HostStopButton.IsEnabled = !busy;
-        if (HostRestartButton is not null) HostRestartButton.IsEnabled = !busy;
+        if (includeServices && ServicesStatusText is not null)
+            ServicesStatusText.Text = message;
+        if (includeHostStack && HostStackStatusText is not null)
+            HostStackStatusText.Text = message;
+    }
+
+    /// <summary>
+    /// While Starting/Restarting Host, Stop stays enabled for force-kill.
+    /// </summary>
+    private void SetHostStackButtonsBusy(bool busy, string? activeTag = null)
+    {
+        if (HostStartButton is not null)
+            HostStartButton.IsEnabled = !busy;
+        if (HostRestartButton is not null)
+            HostRestartButton.IsEnabled = !busy;
+        if (HostStopButton is not null)
+            HostStopButton.IsEnabled = HostStackBusyPolicy.IsHostStopEnabled(busy, activeTag);
+    }
+
+    private void DisposeHostActionCts()
+    {
+        if (_hostActionCts is null) return;
+        try { _hostActionCts.Dispose(); }
+        catch (ObjectDisposedException) { /* already disposed */ }
+        _hostActionCts = null;
     }
 
     private async void ServicesRefresh_Click(object? sender, RoutedEventArgs e)
@@ -611,6 +700,8 @@ public partial class MainWindow
     private async void RefreshSystem_Click(object? sender, RoutedEventArgs e)
     {
         await ProbeHealthAsync();
+        await RefreshEmailAccountsAsync().ConfigureAwait(true);
+        await RefreshVoiceStatusAsync().ConfigureAwait(true);
         ApplySystemStatus(_lastHealth);
         RefreshCompanionTokenStatus();
     }
@@ -626,11 +717,28 @@ public partial class MainWindow
     private async Task RefreshVoiceStatusAsync()
     {
         var h = await _voice.GetHealthAsync();
-        if (PttHintText is null) return;
-        if (string.IsNullOrWhiteSpace(PttHintText.Text) || PttHintText.Text.StartsWith("Voice", StringComparison.Ordinal))
+        var compact = h.Enabled
+            ? $"Voice · STT={(h.Stt?.Ok == true ? "ok" : "down")} · TTS={(h.Tts?.Ok == true ? "ok" : "down")}"
+            : "Voice off in Host";
+        if (VoiceHealthCompactText is not null)
+            VoiceHealthCompactText.Text = compact;
+        if (SystemVoiceHealthText is not null)
+        {
+            SystemVoiceHealthText.Text = h.Enabled
+                ? $"enabled · STT {(h.Stt?.Ok == true ? "ok" : "down")} · TTS {(h.Tts?.Ok == true ? "ok" : "down")}"
+                : "Voice off in Host — Hold to talk waits for STT";
+        }
+        if (SystemVoiceUrlsText is not null)
+        {
+            SystemVoiceUrlsText.Text =
+                $"STT: {h.Stt?.Url ?? "(not reported)"}\nTTS: {h.Tts?.Url ?? "(not reported)"}";
+        }
+        if (PttHintText is not null
+            && (string.IsNullOrWhiteSpace(PttHintText.Text)
+                || PttHintText.Text.StartsWith("Voice", StringComparison.Ordinal)))
         {
             PttHintText.Text = h.Enabled
-                ? $"Voice · STT={(h.Stt?.Ok == true ? "ok" : "down")} · TTS={(h.Tts?.Ok == true ? "ok" : "down")}"
+                ? compact
                 : "Voice off in Host — hold-to-talk ready when STT is up";
         }
     }
@@ -756,105 +864,11 @@ public partial class MainWindow
     private async void ToolsAccessRefresh_Click(object? sender, RoutedEventArgs e) =>
         await RefreshToolsAccessAsync();
 
-    private async void EmailAccountsRefresh_Click(object? sender, RoutedEventArgs e) =>
-        await RefreshEmailAccountsAsync();
-
-    private void EmailGmailDefaults_Click(object? sender, RoutedEventArgs e)
+    private async void EmailSetup_Click(object? sender, RoutedEventArgs e)
     {
-        if (EmailImapHostBox is not null) EmailImapHostBox.Text = "imap.gmail.com";
-        if (EmailImapPortBox is not null) EmailImapPortBox.Text = "993";
-        if (EmailImapSslCheck is not null) EmailImapSslCheck.IsChecked = true;
-        if (EmailSmtpHostBox is not null) EmailSmtpHostBox.Text = "smtp.gmail.com";
-        if (EmailSmtpPortBox is not null) EmailSmtpPortBox.Text = "587";
-        if (EmailSmtpSslCheck is not null) EmailSmtpSslCheck.IsChecked = false;
-        if (EmailSettingsStatusText is not null)
-        {
-            EmailSettingsStatusText.Text = "Gmail defaults filled in — click Save this mailbox when ready";
-            EmailSettingsStatusText.Foreground = Res("MutedBrush");
-        }
-    }
-
-    private async void EmailAccountSave_Click(object? sender, RoutedEventArgs e)
-    {
-        var id = ResolveSelectedMailboxId();
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            SetEmailStatus("Pick a mailbox first", bad: true);
-            return;
-        }
-
-        var address = (EmailAddressBox?.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(address) || !address.Contains('@'))
-        {
-            SetEmailStatus("Enter a full email address (like name@gmail.com)", bad: true);
-            return;
-        }
-
-        var password = EmailPasswordBox?.Text;
-        var existing = _emailAccounts.FirstOrDefault(a =>
-            string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase));
-        if (string.IsNullOrWhiteSpace(password) && existing is not { HasPassword: true })
-        {
-            SetEmailStatus("Paste an App Password once so she can sign in", bad: true);
-            return;
-        }
-
-        int? imapPort = null;
-        if (int.TryParse((EmailImapPortBox?.Text ?? "").Trim(), out var ip) && ip > 0)
-            imapPort = ip;
-        int? smtpPort = null;
-        if (int.TryParse((EmailSmtpPortBox?.Text ?? "").Trim(), out var sp) && sp > 0)
-            smtpPort = sp;
-
-        var username = (EmailUsernameBox?.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(username))
-            username = address;
-
-        var write = new SoulCoreEmailSettingsClient.EmailAccountWriteDto
-        {
-            Id = id,
-            Role = id,
-            DisplayName = EmailDisplayNameBox?.Text,
-            Address = address,
-            Username = username,
-            Password = string.IsNullOrWhiteSpace(password) ? null : password,
-            ImapHost = EmailImapHostBox?.Text,
-            ImapPort = imapPort,
-            ImapUseSsl = EmailImapSslCheck?.IsChecked == true,
-            SmtpHost = EmailSmtpHostBox?.Text,
-            SmtpPort = smtpPort,
-            SmtpUseSsl = EmailSmtpSslCheck?.IsChecked == true,
-            Enabled = EmailEnabledCheck?.IsChecked == true
-        };
-
-        SetEmailStatus("Saving…", bad: false);
-        var snap = await _emailSettings.UpsertAsync(write).ConfigureAwait(true);
-        ApplyEmailSettingsSnapshot(snap, saved: true, preferId: id);
-        if (EmailPasswordBox is not null)
-            EmailPasswordBox.Text = string.Empty;
-    }
-
-    private void EmailAccountCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (_emailAccountsHydrating) return;
-        var id = ResolveSelectedMailboxId();
-        if (string.IsNullOrWhiteSpace(id)) return;
-        var account = _emailAccounts.FirstOrDefault(a =>
-            string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase));
-        if (account is not null)
-            FillEmailEditor(account);
-        else
-            FillEmailEditor(new EmailAccountSnapshot
-            {
-                Id = id,
-                Role = id,
-                Enabled = true,
-                ImapPort = 993,
-                SmtpPort = 587,
-                ImapUseSsl = true,
-                ImapHost = "imap.gmail.com",
-                SmtpHost = "smtp.gmail.com"
-            });
+        var dlg = new EmailSetupWindow(_emailSettings);
+        await dlg.ShowDialog(this).ConfigureAwait(true);
+        await RefreshEmailAccountsAsync().ConfigureAwait(true);
     }
 
     private async void EmailGateToggle_Click(object? sender, RoutedEventArgs e)
@@ -863,16 +877,12 @@ public partial class MainWindow
         if (EmailGateReadCheck is null || EmailGateSendCheck is null || EmailGateDeleteCheck is null)
             return;
 
-        // Keep Tools & Access checkboxes in sync when present.
         if (ToolsAllowEmailReadCheck is not null)
             ToolsAllowEmailReadCheck.IsChecked = EmailGateReadCheck.IsChecked;
         if (ToolsAllowEmailSendCheck is not null)
             ToolsAllowEmailSendCheck.IsChecked = EmailGateSendCheck.IsChecked;
         if (ToolsAllowEmailDeleteCheck is not null)
             ToolsAllowEmailDeleteCheck.IsChecked = EmailGateDeleteCheck.IsChecked;
-
-        if (EmailGateStatusText is not null)
-            EmailGateStatusText.Text = "Saving permissions…";
 
         var snap = await _toolsSettings.PatchAsync(
             allowEmailRead: EmailGateReadCheck.IsChecked == true,
@@ -885,142 +895,25 @@ public partial class MainWindow
 
     private async Task RefreshEmailAccountsAsync()
     {
-        var prefer = ResolveSelectedMailboxId();
         var snap = await _emailSettings.GetAsync().ConfigureAwait(true);
-        ApplyEmailSettingsSnapshot(snap, saved: false, preferId: prefer);
-        // Permissions live on tools settings — refresh those for the Email tab too.
+        _emailAccounts = snap.Accounts ?? Array.Empty<EmailAccountSnapshot>();
+        ApplySystemMailboxesList();
         var tools = await _toolsSettings.GetAsync().ConfigureAwait(true);
         SyncEmailGateChecks(tools);
     }
 
-    private void ApplyEmailSettingsSnapshot(EmailSettingsSnapshot snap, bool saved, string? preferId)
+    private void ApplySystemMailboxesList()
     {
-        _emailAccounts = snap.Accounts ?? Array.Empty<EmailAccountSnapshot>();
-        _emailAccountsHydrating = true;
-        try
+        if (SystemMailboxesText is null) return;
+        if (_emailAccounts.Count == 0)
         {
-            if (EmailAccountCombo is not null)
-            {
-                var choices = EmailMailboxChoice.BuildList(_emailAccounts);
-                EmailAccountCombo.ItemsSource = choices;
-                var pickId = preferId;
-                if (string.IsNullOrWhiteSpace(pickId))
-                    pickId = choices[0].Id;
-                var selected = choices.FirstOrDefault(c =>
-                    string.Equals(c.Id, pickId, StringComparison.OrdinalIgnoreCase)) ?? choices[0];
-                EmailAccountCombo.SelectedItem = selected;
-
-                var account = _emailAccounts.FirstOrDefault(a =>
-                    string.Equals(a.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
-                if (account is not null)
-                    FillEmailEditor(account);
-                else
-                    FillEmailEditor(new EmailAccountSnapshot
-                    {
-                        Id = selected.Id,
-                        Role = selected.Id,
-                        Enabled = true,
-                        ImapPort = 993,
-                        SmtpPort = 587,
-                        ImapUseSsl = true,
-                        ImapHost = "imap.gmail.com",
-                        SmtpHost = "smtp.gmail.com",
-                        DisplayName = selected.DefaultDisplayName
-                    });
-            }
-        }
-        finally
-        {
-            _emailAccountsHydrating = false;
-        }
-
-        if (!snap.Reachable)
-        {
-            SetEmailStatus(snap.Detail ?? "Can't reach Host — is SoulCore running?", bad: true);
+            SystemMailboxesText.Text = "No mailboxes yet — Tools & Access → Email setup (unlimited ids).";
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(snap.Detail) &&
-            (snap.Detail.StartsWith("HTTP", StringComparison.Ordinal) ||
-             snap.Detail.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
-        {
-            SetEmailStatus(snap.Detail, bad: true);
-            return;
-        }
-
-        SetEmailStatus(
-            saved
-                ? $"Saved · {DateTimeOffset.Now:h:mm tt}"
-                : $"Loaded · {DateTimeOffset.Now:h:mm tt}",
-            bad: false);
-    }
-
-    private void FillEmailEditor(EmailAccountSnapshot account)
-    {
-        if (EmailEnabledCheck is not null) EmailEnabledCheck.IsChecked = account.Enabled;
-        if (EmailDisplayNameBox is not null)
-        {
-            EmailDisplayNameBox.Text = string.IsNullOrWhiteSpace(account.DisplayName)
-                ? EmailMailboxChoice.DefaultDisplayNameFor(account.Id)
-                : account.DisplayName;
-        }
-        if (EmailAddressBox is not null) EmailAddressBox.Text = account.Address;
-        if (EmailUsernameBox is not null) EmailUsernameBox.Text = account.Username;
-        if (EmailImapHostBox is not null)
-            EmailImapHostBox.Text = string.IsNullOrWhiteSpace(account.ImapHost) ? "imap.gmail.com" : account.ImapHost;
-        if (EmailImapPortBox is not null)
-            EmailImapPortBox.Text = (account.ImapPort > 0 ? account.ImapPort : 993).ToString();
-        if (EmailImapSslCheck is not null) EmailImapSslCheck.IsChecked = account.ImapUseSsl;
-        if (EmailSmtpHostBox is not null)
-            EmailSmtpHostBox.Text = string.IsNullOrWhiteSpace(account.SmtpHost) ? "smtp.gmail.com" : account.SmtpHost;
-        if (EmailSmtpPortBox is not null)
-            EmailSmtpPortBox.Text = (account.SmtpPort > 0 ? account.SmtpPort : 587).ToString();
-        if (EmailSmtpSslCheck is not null) EmailSmtpSslCheck.IsChecked = account.SmtpUseSsl;
-
-        if (EmailPasswordHint is not null)
-        {
-            EmailPasswordHint.Text = account.HasPassword
-                ? "App password already saved (won't show again — paste a new one only to replace it)"
-                : "No app password saved yet";
-        }
-
-        UpdateEmailReadyBanner(account);
-    }
-
-    private void UpdateEmailReadyBanner(EmailAccountSnapshot account)
-    {
-        if (EmailReadyBanner is null) return;
-        var title = EmailMailboxChoice.TitleFor(account.Id);
-        if (!account.Enabled)
-        {
-            EmailReadyBanner.Text = $"{title}: turned off — Victoria will skip this mailbox.";
-            EmailReadyBanner.Foreground = Res("WarnBrush");
-            return;
-        }
-
-        if (account.IsConfigured)
-        {
-            EmailReadyBanner.Text = $"{title}: ready — {account.Address}";
-            EmailReadyBanner.Foreground = Res("OkBrush");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(account.Address) && !account.HasPassword)
-        {
-            EmailReadyBanner.Text = $"{title}: not set up yet — add the email address and an App Password, then Save.";
-            EmailReadyBanner.Foreground = Res("MutedBrush");
-            return;
-        }
-
-        if (!account.HasPassword)
-        {
-            EmailReadyBanner.Text = $"{title}: needs an App Password before she can sign in.";
-            EmailReadyBanner.Foreground = Res("WarnBrush");
-            return;
-        }
-
-        EmailReadyBanner.Text = $"{title}: almost ready — check the email address and Save again.";
-        EmailReadyBanner.Foreground = Res("WarnBrush");
+        SystemMailboxesText.Text = string.Join(
+            "\n",
+            _emailAccounts.Select(EmailMailboxChoice.FormatSystemListLine));
     }
 
     private void SyncEmailGateChecks(ToolsAccessSnapshot snap)
@@ -1046,21 +939,36 @@ public partial class MainWindow
         }
     }
 
-    private string? ResolveSelectedMailboxId()
+    private async void VmStart_Click(object? sender, RoutedEventArgs e)
     {
-        return EmailAccountCombo?.SelectedItem switch
-        {
-            EmailMailboxChoice choice => choice.Id,
-            string id => id,
-            _ => null
-        };
+        if (VmStatusText is not null) VmStatusText.Text = "Starting victoria-sandbox…";
+        var result = await _stack.StartSandboxVmAsync().ConfigureAwait(true);
+        if (VmStatusText is not null)
+            VmStatusText.Text = result.Ok ? $"Start: {result.Detail}" : $"Start failed: {result.Detail}";
+        await RefreshServicesPanelAsync().ConfigureAwait(true);
     }
 
-    private void SetEmailStatus(string text, bool bad)
+    private async void VmSave_Click(object? sender, RoutedEventArgs e)
     {
-        if (EmailSettingsStatusText is null) return;
-        EmailSettingsStatusText.Text = text;
-        EmailSettingsStatusText.Foreground = bad ? _badBrush : Res("MutedBrush");
+        if (VmStatusText is not null) VmStatusText.Text = "Saving victoria-sandbox state…";
+        var result = await _stack.SaveSandboxVmAsync().ConfigureAwait(true);
+        if (VmStatusText is not null)
+            VmStatusText.Text = result.Ok ? $"Save state: {result.Detail}" : $"Save failed: {result.Detail}";
+        await RefreshServicesPanelAsync().ConfigureAwait(true);
+    }
+
+    private async void VmPowerOff_Click(object? sender, RoutedEventArgs e)
+    {
+        var ok = await ConfirmYesNoAsync(
+            "Power off victoria-sandbox now?\n\nUnsaved guest work may be lost. Prefer Save state when you can.",
+            "Power off VM").ConfigureAwait(true);
+        if (!ok) return;
+
+        if (VmStatusText is not null) VmStatusText.Text = "Powering off victoria-sandbox…";
+        var result = await _stack.PowerOffSandboxVmAsync().ConfigureAwait(true);
+        if (VmStatusText is not null)
+            VmStatusText.Text = result.Ok ? $"Power off: {result.Detail}" : $"Power off failed: {result.Detail}";
+        await RefreshServicesPanelAsync().ConfigureAwait(true);
     }
 
     private async void ToolsAccessToggle_Click(object? sender, RoutedEventArgs e)
@@ -1188,7 +1096,7 @@ public partial class MainWindow
 
     private void ApplySystemStatus(SoulCoreHealthSnapshot snap)
     {
-        if (SystemEndpointBox is null || SystemBindBox is null || SystemPortBox is null
+        if (SystemBindBox is null || SystemPortBox is null
             || SystemInferenceBox is null
             || SystemMemoryPathBox is null || SystemMemoryOpenBox is null
             || SystemSoulLoopBox is null)
@@ -1196,9 +1104,16 @@ public partial class MainWindow
             return;
         }
 
-        SystemEndpointBox.Text = ConnectionDefaults.DisplayEndpoint;
+        if (SystemEndpointBox is not null)
+            SystemEndpointBox.Text = ConnectionDefaults.DisplayEndpoint;
         SystemBindBox.Text = ConnectionDefaults.Host;
         SystemPortBox.Text = ConnectionDefaults.Port.ToString();
+        if (SystemVersionsBox is not null)
+        {
+            var presence = _updates?.CurrentVersion ?? "—";
+            var host = string.IsNullOrWhiteSpace(snap.HostVersion) ? "—" : snap.HostVersion.Trim();
+            SystemVersionsBox.Text = $"Presence {presence} · Host {host}";
+        }
 
         if (!snap.Reachable)
         {
@@ -1366,8 +1281,6 @@ public partial class MainWindow
     /// </summary>
     private void ApplyHonestActivity(bool preferHost = false)
     {
-        if (ActivityText is null) return;
-
         string? phrase = null;
         if (preferHost || string.IsNullOrWhiteSpace(_lastActivityPhrase))
             phrase = _lastHealth.CurrentActivity;
@@ -1379,29 +1292,44 @@ public partial class MainWindow
             phrase = "No open assignment";
 
         _lastActivityPhrase = phrase;
-        ActivityText.Text = phrase;
+        if (ActivityText is not null)
+            ActivityText.Text = phrase;
+        RefreshActivityBand();
     }
 
-    private static string HumanizeActivity(string? category, string phrase)
+    /// <summary>Activity band under the main split (honest stubs until Host wires park/interest).</summary>
+    private void RefreshActivityBand()
     {
-        var clean = phrase ?? string.Empty;
-        var holding = clean.IndexOf("(holding ", StringComparison.OrdinalIgnoreCase);
-        if (holding >= 0)
-            clean = clean[..holding].Trim();
+        var doing = string.IsNullOrWhiteSpace(_lastActivityPhrase) ? "—" : _lastActivityPhrase.Trim();
+        if (BandDoingText is not null)
+            BandDoingText.Text = $"Doing — {doing}";
 
-        if (!string.IsNullOrWhiteSpace(clean))
-            return clean;
+        // Never restamp last order as work; do not invent Host interest phrases.
+        if (BandOnHerMindText is not null)
+            BandOnHerMindText.Text =
+                "On her mind — quiet between talks (research interest awaits PROP-17.3; not inventing Host phrases)";
 
-        return (category ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "sleep" or "rest" => "Resting",
-            "idle" => "Idle",
-            "recall" => "Recalling recent context",
-            "chat" or "talk" => "In conversation",
-            "tool" or "desktop" or "browse" => "Working with tools",
-            "" => "Idle",
-            _ => char.ToUpperInvariant(category![0]) + category[1..]
-        };
+        if (BandInfluencesText is not null)
+            BandInfluencesText.Text = "Influences — none yet (≤3 when Host reports)";
+
+        if (BandTasksText is not null)
+            BandTasksText.Text =
+                "Ledger: title / surface / status / why — awaits PROP-17.1. Add / Suspend / Release disabled until then.";
+
+        RefreshBandMoodLine();
+    }
+
+    private void RefreshBandMoodLine()
+    {
+        if (BandMoodText is null) return;
+        var label = MoodLabelText?.Text;
+        if (string.IsNullOrWhiteSpace(label) || label == "—")
+            label = "—";
+        var warmCool = _lastValence >= 0.25 ? "warm" : _lastValence <= -0.25 ? "cool" : "neutral";
+        var keyed = _lastArousal >= 0.55 ? "keyed-up" : "calm";
+        var steady = Math.Abs(_lastDominance - 0.5) < 0.2 ? "steady" : (_lastDominance >= 0.5 ? "firm" : "soft");
+        var focused = _lastFocus >= 0.55 ? "focused" : "open";
+        BandMoodText.Text = $"Mood — {label} · {warmCool} · {keyed} · {steady} · {focused}";
     }
 
     internal static (string? Category, string Phrase) ParseWantWire(string? want, string? categoryHint)
@@ -1480,6 +1408,8 @@ public partial class MainWindow
                 : valence <= -0.25 ? _warnBrush
                 : Res("AccentBrush");
         }
+
+        RefreshBandMoodLine();
     }
 
     /// <summary>
@@ -1521,7 +1451,7 @@ public partial class MainWindow
             brush = _mutedBrush;
             if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
             {
-                ActivityText.Text = sleepCat ? "Resting" : "Resting";
+                ActivityText.Text = "Resting";
                 _lastActivityPhrase = ActivityText.Text;
             }
         }

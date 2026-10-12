@@ -40,11 +40,14 @@ public partial class MainWindow : Window
     private bool _pttBusy;
     private bool _toolsAccessHydrating;
     private bool _toolsDefaultsApplied;
-    private bool _emailAccountsHydrating;
     private bool _stackBootstrapBusy;
     private string? _pendingQuote;
     private IReadOnlyList<EmailAccountSnapshot> _emailAccounts = Array.Empty<EmailAccountSnapshot>();
     private bool _servicesBusy;
+    /// <summary>Supersedes in-flight host start/restart when Stop force-kills.</summary>
+    private int _hostActionGeneration;
+    private string? _activeServiceTag;
+    private CancellationTokenSource? _hostActionCts;
     private bool _houseDrawerOpen;
     private DateTimeOffset? _soulCoreHoldStarted;
     private DispatcherTimer? _soulCoreHoldTimer;
@@ -101,7 +104,12 @@ public partial class MainWindow : Window
         PresenceStartupLog.Write("InitializeComponent done");
         TranscriptList.ItemsSource = _messages;
         EndpointText.Text = ConnectionDefaults.DisplayEndpoint;
-        DisplayNameBox.Text = _uiSettings.DisplayName;
+        if (DisplayNameBox is not null)
+            DisplayNameBox.Text = _uiSettings.DisplayName;
+        if (IdentityNameText is not null)
+            IdentityNameText.Text = string.IsNullOrWhiteSpace(_uiSettings.DisplayName)
+                ? "Victoria"
+                : _uiSettings.DisplayName.Trim();
         _stack = new LocalStackControl(_uiSettings.SoulCoreRepoRoot);
         InitLayoutChrome();
         InitPresenceUpdates();
@@ -163,7 +171,6 @@ public partial class MainWindow : Window
             CloseHerScreenOverlay();
             _desktopPopOut?.Close();
             _popOuts.CloseAll();
-            SaveDisplayNameFromEditor();
             await _ws.DisposeAsync();
             _notifications.Dispose();
             _health.Dispose();
@@ -278,51 +285,49 @@ public partial class MainWindow : Window
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 
-    private void IdentitySave_Click(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
-
-    private void DisplayNameBox_LostFocus(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
-
-    private void SaveDisplayNameFromEditor()
-    {
-        if (DisplayNameBox is null) return;
-        var name = (DisplayNameBox.Text ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(name))
-        {
-            name = "Victoria";
-            DisplayNameBox.Text = name;
-        }
-
-        if (string.Equals(_uiSettings.DisplayName, name, StringComparison.Ordinal))
-            return;
-
-        _uiSettings.DisplayName = name;
-        _uiSettings.Save();
-        UpdateIdentityDetail();
-    }
-
     private void UpdateIdentityDetail()
     {
-        if (IdentityDetailBox is null) return;
-
         var name = string.IsNullOrWhiteSpace(_uiSettings.DisplayName) ? "Victoria" : _uiSettings.DisplayName.Trim();
+        if (DisplayNameBox is not null)
+            DisplayNameBox.Text = name;
+        if (IdentityNameText is not null)
+            IdentityNameText.Text = name;
+
         var snap = _lastHealth;
         var charter = FormatCharterLine(snap);
-
-        IdentityDetailBox.Text =
-            $"{name}\n\n" +
-            "Persistent AI companion for House Victoria (SoulCore).\n" +
-            "She chats over the Presence WebSocket, keeps episodic memory in Host SQLite, " +
-            "and optionally drives desktop tools and an Unreal avatar.\n\n" +
-            "Identity anchors (persona / safety envelope) live in SoulCore charter storage. " +
-            "This shell shows Host-reported charter lock state and the local display name — " +
-            "it does not rewrite Host persona YAML.\n\n" +
-            $"Endpoint: {ConnectionDefaults.DisplayEndpoint}\n" +
-            $"Alive: {(snap.Alive ? "yes" : "no")} · Warm: {(snap.Warm ? "yes" : "no")}\n" +
-            $"SoulLoop: {FormatSoulLoop(snap)}\n" +
-            $"Charter: {charter}";
-
         if (IdentityCharterBox is not null)
             IdentityCharterBox.Text = charter;
+        if (IdentityDetailBox is not null)
+            IdentityDetailBox.Text = $"{name} · {charter}";
+
+        if (IdentityCharterKindsText is not null)
+        {
+            // Host /health reports counts only — per-kind rows await a richer charter endpoint.
+            IdentityCharterKindsText.Text =
+                "identity — in her prompt (Host ChatContextBuilder uses kind=identity only)\n" +
+                "safety / value / boundary / ritual — stored, not in the prompt yet\n\n" +
+                $"Host report: {charter}\n" +
+                "Per-anchor priority ranking needs Host charter detail (not invented here).";
+        }
+
+        if (IdentityStatsText is not null)
+        {
+            IdentityStatsText.Text =
+                "Memories — live / quarantined / newest: Host detail not on /health yet\n" +
+                "Books — feeling · animation · environment · life-hacks (life-hacks awaits PROP-17.2)\n" +
+                "SOP count — awaits PROP-17.2 store\n" +
+                "Tasks — released / suspended / in progress / done / parked: awaits PROP-17.1 ledger\n" +
+                "Workflows — not reported on /health yet\n" +
+                "Parked + next probe — awaits PROP-17.1\n" +
+                "Current interest — awaits PROP-17.3 R&R";
+        }
+
+        if (IdentityPromptMixText is not null)
+        {
+            IdentityPromptMixText.Text =
+                $"Alive {(snap.Alive ? "yes" : "no")} · Warm {(snap.Warm ? "yes" : "no")} · " +
+                $"SoulLoop {FormatSoulLoop(snap)} · Charter {charter}";
+        }
     }
 
     private static string FormatSoulLoop(SoulCoreHealthSnapshot snap) =>
@@ -376,6 +381,15 @@ public partial class MainWindow : Window
 
     private async void Send_Click(object? sender, RoutedEventArgs e) => await SendCurrentAsync();
 
+    private void ChatInput_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (ChatInput is null) return;
+        // Grow with draft; collapse toward one line when short.
+        var lines = Math.Max(1, (ChatInput.Text ?? string.Empty).Split('\n').Length);
+        var target = Math.Clamp(28 + lines * 18, 40, 140);
+        ChatInput.Height = target;
+    }
+
     private void CorrectEmotion_Click(object? sender, RoutedEventArgs e)
     {
         if (EmotionCorrectPanel.IsVisible)
@@ -387,6 +401,13 @@ public partial class MainWindow : Window
         SeedCorrectionEditorsFromLastSnapshot();
         EmotionCorrectPanel.IsVisible = true;
         CorrectNoteBox.Focus();
+    }
+
+    private void UpdateAvailableMark_Click(object? sender, RoutedEventArgs e)
+    {
+        ShowSettingsView();
+        if (SettingsTabs is not null && SystemTab is not null)
+            SettingsTabs.SelectedItem = SystemTab;
     }
 
     private void CorrectEmotionCancel_Click(object? sender, RoutedEventArgs e) =>
@@ -520,6 +541,7 @@ public partial class MainWindow : Window
             text = $"{text}\n[image] {IoPath.GetFileName(_pendingImagePath)}";
 
         ChatInput.Text = string.Empty;
+        ChatInput.Height = 40;
         _streamingAssistant = null;
         var quoted = _pendingQuote;
         ClearQuote();
@@ -561,7 +583,7 @@ public partial class MainWindow : Window
                 Role = "system",
                 Text =
                     "Host WS unavailable — message not sent. " +
-                    $"Start SoulCore.Host on {ConnectionDefaults.WsUri} (Presence auto-starts it when Auto-start is on), then Refresh. " +
+                    $"Start SoulCore.Host on {ConnectionDefaults.WsUri} (Presence auto-starts it when Auto-start is on), then Settings → System → Refresh. " +
                     $"Detail: {_ws.LastError}"
             };
             _messages.Add(err);

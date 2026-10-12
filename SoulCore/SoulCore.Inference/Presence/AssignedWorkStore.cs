@@ -1,28 +1,41 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SoulCore.Memory;
 
 namespace SoulCore.Inference.Presence;
 
 /// <summary>
-/// One piece of work Kayleigh asked for that should keep going while she is quiet.
-/// </summary>
-public sealed class AssignedWork
-{
-    public string Text { get; init; } = "";
-    public string Status { get; init; } = "active";
-    public string? Note { get; init; }
-    public DateTimeOffset UpdatedAt { get; init; }
-}
-
-/// <summary>
-/// Durable open assignment. Survives a host restart so a lesson does not die with the chat turn.
+/// PROP-17.1: durable pointer to the running victoria_tasks row.
+/// File shape is only <c>{ "runningId": &lt;long|null&gt; }</c>.
 /// </summary>
 public interface IAssignedWorkStore
 {
+    /// <summary>Currently running task id, or null when idle.</summary>
+    long? RunningId { get; }
+
+    /// <summary>Legacy view for chat activity lines (title + status derived from the ledger).</summary>
     AssignedWork? Current { get; }
-    void SetActive(string text);
-    void MarkWaiting(string note);
+
+    void SetRunning(long? id);
+    void Project(VictoriaTask task);
     void Clear();
+
+    /// <summary>
+    /// Migrate legacy active/waiting slot into a victoria_tasks row + pointer.
+    /// Safe to call at Host start.
+    /// </summary>
+    Task MigrateLegacyAsync(IVictoriaTaskStore tasks, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Compatibility projection used by activity / chat copy.</summary>
+public sealed class AssignedWork
+{
+    public long Id { get; init; }
+    public string Text { get; init; } = "";
+    public string Status { get; init; } = "in_progress";
+    public string? Note { get; init; }
+    public DateTimeOffset UpdatedAt { get; init; }
 }
 
 public sealed class FileAssignedWorkStore : IAssignedWorkStore
@@ -35,7 +48,9 @@ public sealed class FileAssignedWorkStore : IAssignedWorkStore
 
     private readonly string _path;
     private readonly object _gate = new();
-    private AssignedWork? _current;
+    private long? _runningId;
+    private AssignedWork? _projection;
+    private LegacyDto? _legacyPending;
 
     public FileAssignedWorkStore(string? path = null)
     {
@@ -45,7 +60,16 @@ public sealed class FileAssignedWorkStore : IAssignedWorkStore
                 "SoulCore",
                 "assigned-work.json")
             : path;
-        _current = Load();
+        Load();
+    }
+
+    public long? RunningId
+    {
+        get
+        {
+            lock (_gate)
+                return _runningId;
+        }
     }
 
     public AssignedWork? Current
@@ -53,44 +77,36 @@ public sealed class FileAssignedWorkStore : IAssignedWorkStore
         get
         {
             lock (_gate)
-                return _current;
+                return _projection;
         }
     }
 
-    public void SetActive(string text)
+    public void SetRunning(long? id)
     {
-        var body = (text ?? "").Trim();
-        if (body.Length == 0)
-            return;
         lock (_gate)
         {
-            _current = new AssignedWork
-            {
-                Text = body,
-                Status = "active",
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
-            Save();
+            _runningId = id is > 0 ? id : null;
+            if (_runningId is null)
+                _projection = null;
+            SavePointer();
         }
     }
 
-    public void MarkWaiting(string note)
+    /// <summary>Update the in-memory projection after loading a task row.</summary>
+    public void Project(VictoriaTask task)
     {
         lock (_gate)
         {
-            if (_current is null)
-                return;
-            var n = (note ?? "").Trim();
-            if (n.Length > 240)
-                n = n[..240];
-            _current = new AssignedWork
+            _runningId = task.Id;
+            _projection = new AssignedWork
             {
-                Text = _current.Text,
-                Status = "waiting",
-                Note = n,
+                Id = task.Id,
+                Text = string.IsNullOrWhiteSpace(task.Title) ? task.Description : task.Title,
+                Status = task.Status,
+                Note = string.IsNullOrWhiteSpace(task.ParkReason) ? task.Notes : task.ParkReason,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
-            Save();
+            SavePointer();
         }
     }
 
@@ -98,67 +114,110 @@ public sealed class FileAssignedWorkStore : IAssignedWorkStore
     {
         lock (_gate)
         {
-            _current = null;
-            SaveCleared();
+            _runningId = null;
+            _projection = null;
+            SavePointer();
         }
     }
 
-    private AssignedWork? Load()
+    public async Task MigrateLegacyAsync(IVictoriaTaskStore tasks, CancellationToken cancellationToken = default)
+    {
+        LegacyDto? legacy;
+        lock (_gate)
+        {
+            legacy = _legacyPending;
+            _legacyPending = null;
+        }
+
+        if (legacy is null || string.IsNullOrWhiteSpace(legacy.Text))
+            return;
+        if (!string.Equals(legacy.Status, "active", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(legacy.Status, "waiting", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var status = string.Equals(legacy.Status, "waiting", StringComparison.OrdinalIgnoreCase)
+            ? "blocked"
+            : "in_progress";
+        var id = await tasks.CreateAsync(
+            title: legacy.Text.Trim().Length > 80 ? legacy.Text.Trim()[..77] + "..." : legacy.Text.Trim(),
+            description: legacy.Text.Trim(),
+            priority: "high",
+            surface: InferSurface(legacy.Text),
+            ready: true,
+            status: status,
+            notes: legacy.Note,
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.Equals(status, "in_progress", StringComparison.OrdinalIgnoreCase))
+        {
+            var row = await tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
+            if (row is not null)
+                Project(row);
+            else
+                SetRunning(id);
+        }
+        else
+        {
+            Clear();
+        }
+    }
+
+    private void Load()
     {
         try
         {
             if (!File.Exists(_path))
-                return null;
-            var dto = JsonSerializer.Deserialize<FileDto>(File.ReadAllText(_path), Json);
-            if (dto is null || !string.Equals(dto.Status, "active", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(dto.Status, "waiting", StringComparison.OrdinalIgnoreCase))
-                return null;
-            if (string.IsNullOrWhiteSpace(dto.Text))
-                return null;
-            return new AssignedWork
+                return;
+            var raw = File.ReadAllText(_path);
+            using var doc = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return;
+
+            // New shape: { runningId }
+            if (root.TryGetProperty("runningId", out var rid))
             {
-                Text = dto.Text.Trim(),
-                Status = dto.Status.Trim().ToLowerInvariant(),
-                Note = dto.Note,
-                UpdatedAt = dto.UpdatedAt
+                if (rid.ValueKind == JsonValueKind.Null)
+                    _runningId = null;
+                else if (rid.ValueKind == JsonValueKind.Number && rid.TryGetInt64(out var n) && n > 0)
+                    _runningId = n;
+                else if (rid.ValueKind == JsonValueKind.String
+                         && long.TryParse(rid.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var s)
+                         && s > 0)
+                    _runningId = s;
+                return;
+            }
+
+            // Legacy shape: { text, status, note, updatedAt }
+            var legacy = JsonSerializer.Deserialize<LegacyDto>(raw, Json);
+            if (legacy is null || string.IsNullOrWhiteSpace(legacy.Text))
+                return;
+            if (!string.Equals(legacy.Status, "active", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(legacy.Status, "waiting", StringComparison.OrdinalIgnoreCase))
+                return;
+            _legacyPending = legacy;
+            // Temporary projection until MigrateLegacyAsync runs.
+            _projection = new AssignedWork
+            {
+                Text = legacy.Text.Trim(),
+                Status = legacy.Status.Trim().ToLowerInvariant(),
+                Note = legacy.Note,
+                UpdatedAt = legacy.UpdatedAt
             };
         }
         catch (Exception)
         {
-            return null;
+            // Corrupt pointer must not block Host start.
         }
     }
 
-    private void Save()
-    {
-        if (_current is null)
-        {
-            SaveCleared();
-            return;
-        }
-
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var dto = new FileDto
-        {
-            Text = _current.Text,
-            Status = _current.Status,
-            Note = _current.Note,
-            UpdatedAt = _current.UpdatedAt
-        };
-        File.WriteAllText(_path, JsonSerializer.Serialize(dto, Json));
-    }
-
-    private void SaveCleared()
+    private void SavePointer()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(new FileDto
-            {
-                Text = "",
-                Status = "cleared",
-                UpdatedAt = DateTimeOffset.UtcNow
-            }, Json));
+            var dto = new PointerDto { RunningId = _runningId };
+            File.WriteAllText(_path, JsonSerializer.Serialize(dto, Json));
         }
         catch (Exception)
         {
@@ -166,7 +225,27 @@ public sealed class FileAssignedWorkStore : IAssignedWorkStore
         }
     }
 
-    private sealed class FileDto
+    private static string InferSurface(string text)
+    {
+        var t = text.ToLowerInvariant();
+        if (t.Contains("maestro", StringComparison.Ordinal))
+            return "maestro";
+        if (t.Contains("browser", StringComparison.Ordinal) || t.Contains("firefox", StringComparison.Ordinal)
+            || t.Contains("http", StringComparison.Ordinal))
+            return "browser";
+        if (t.Contains("vm", StringComparison.Ordinal) || t.Contains("guest", StringComparison.Ordinal)
+            || t.Contains("sandbox", StringComparison.Ordinal))
+            return "vm";
+        return "local";
+    }
+
+    private sealed class PointerDto
+    {
+        [JsonPropertyName("runningId")]
+        public long? RunningId { get; set; }
+    }
+
+    private sealed class LegacyDto
     {
         [JsonPropertyName("text")]
         public string Text { get; set; } = "";

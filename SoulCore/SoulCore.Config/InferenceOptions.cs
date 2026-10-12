@@ -40,6 +40,13 @@ public sealed class InferenceOptions
     /// <summary>Smaller tool-loop model when Unreal is live (VRAM). Empty → <see cref="ToolModel"/> / chat.</summary>
     public string ToolModelUeLive { get; set; } = "";
 
+    /// <summary>
+    /// PROP-17.3: small local leisure / R&amp;R model. Default <c>qwen2.5:1.5b</c>.
+    /// Empty means R&amp;R stays quiet — never falls back to <see cref="Model"/> / <see cref="ToolModel"/> / cloud.
+    /// Routed only to <see cref="ResolveLeisureBaseUrl"/> (local <c>:11434</c>).
+    /// </summary>
+    public string LeisureModel { get; set; } = "qwen2.5:1.5b";
+
     /// <summary>Optional embedding model override when Unreal is live.</summary>
     public string EmbeddingModelUeLive { get; set; } = "";
 
@@ -179,5 +186,18 @@ public sealed class InferenceOptions
         if (IsCloudEndpoint)
             return "http://127.0.0.1:11434";
         return string.IsNullOrWhiteSpace(BaseUrl) ? "http://127.0.0.1:11434" : BaseUrl.Trim();
+    }
+
+    /// <summary>
+    /// PROP-17.3: leisure / R&amp;R base URL — embedding-style local only.
+    /// Never reuses a cloud <see cref="BaseUrl"/>. Missing pull → R&amp;R stays quiet.
+    /// </summary>
+    public string ResolveLeisureBaseUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(EmbeddingBaseUrl) && !IsOllamaCloudUrl(EmbeddingBaseUrl))
+            return EmbeddingBaseUrl.Trim();
+        if (!IsCloudEndpoint && !string.IsNullOrWhiteSpace(BaseUrl))
+            return BaseUrl.Trim();
+        return "http://127.0.0.1:11434";
     }
 }

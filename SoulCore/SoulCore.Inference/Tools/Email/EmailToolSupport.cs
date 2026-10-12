@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Email;
@@ -45,22 +46,15 @@ public static class EmailToolSupport
     public static bool IsDeleteAllowed(ToolsOptions options) =>
         options is not null && options.AllowEmailDelete;
 
-    public static bool IsConfirmed(JsonElement args)
-    {
-        if (args.ValueKind != JsonValueKind.Object)
-            return false;
-        if (!args.TryGetProperty("confirmed", out var prop))
-            return false;
+    /// <summary>
+    /// PROP-17.1: model-minted <c>confirmed</c> is never consent — only a host-side
+    /// <see cref="IOperatorConsentGate"/> grant (Kayleigh yes / companion token).
+    /// </summary>
+    public static bool IsConfirmed(IOperatorConsentGate? consent, string scope) =>
+        consent is not null && consent.TryConsume(scope);
 
-        return prop.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.String => IsTruthyString(prop.GetString()),
-            JsonValueKind.Number => prop.TryGetInt32(out var n) && n != 0,
-            _ => false
-        };
-    }
+    public static JsonElement StripModelConfirmed(JsonElement args) =>
+        ConsentArgs.StripModelConfirmed(args);
 
     public static JsonElement ParseSchema(string json) =>
         JsonDocument.Parse(json).RootElement.Clone();
@@ -195,12 +189,12 @@ public static class EmailToolSupport
             : DefaultFolder;
 
     public static string BuildSendConfirmPrompt(string accountId, IReadOnlyList<string> to, string subject) =>
-        $"confirm send from {accountId} to {string.Join(", ", to)} subject \"{subject}\"? reply yes, then recall with confirmed=true";
+        $"confirm send from {accountId} to {string.Join(", ", to)} subject \"{subject}\"? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true";
 
     public static string BuildDeleteConfirmPrompt(string accountId, string uid, string? subject) =>
         string.IsNullOrWhiteSpace(subject)
-            ? $"confirm delete message {uid} on {accountId}? reply yes, then recall with confirmed=true"
-            : $"confirm delete on {accountId}: \"{subject}\" (uid {uid})? reply yes, then recall with confirmed=true";
+            ? $"confirm delete message {uid} on {accountId}? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true"
+            : $"confirm delete on {accountId}: \"{subject}\" (uid {uid})? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true";
 
     public static string NormalizeFolderName(string? folder)
     {

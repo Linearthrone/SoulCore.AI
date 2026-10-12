@@ -30,6 +30,8 @@ internal static class MemoryServiceCollectionExtensions
         services.AddSingleton<IVictoriaWorkflowStore>(sp => sp.GetRequiredService<SqliteVictoriaWorkflowRepository>());
         services.AddSingleton<SqliteVictoriaJournalRepository>();
         services.AddSingleton<IVictoriaJournalStore>(sp => sp.GetRequiredService<SqliteVictoriaJournalRepository>());
+        services.AddSingleton<SqliteVictoriaSopRepository>();
+        services.AddSingleton<IVictoriaSopStore>(sp => sp.GetRequiredService<SqliteVictoriaSopRepository>());
         services.AddSingleton<SqliteMemoryStore>(sp => new SqliteMemoryStore(sp.GetRequiredService<SqliteMemorySession>()));
 
         // PROP-3 Wave 1: durable operator <-> Victoria transcript (migration 007), so a fresh

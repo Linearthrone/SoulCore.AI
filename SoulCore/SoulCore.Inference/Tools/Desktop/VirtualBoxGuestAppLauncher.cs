@@ -100,6 +100,14 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                 null);
         }
 
+        if (Browser.BrowserHygiene.LooksLikeBrowserProcess(resolved.Alias)
+            && !string.Equals(resolved.Alias, "firefox", StringComparison.OrdinalIgnoreCase))
+        {
+            var listed = await ListWindowsAsync(ct).ConfigureAwait(false);
+            if (listed.Success && Browser.BrowserHygiene.LooksLikeBrowserProcess(listed.Content))
+                return new DesktopOpResult(false, Browser.BrowserHygiene.SecondBrowserRefused, null);
+        }
+
         var started = await GuestStartAsync(exe, exeArgs, ct).ConfigureAwait(false);
         if (!started.Success)
             return started;

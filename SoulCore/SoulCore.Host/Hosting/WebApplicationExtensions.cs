@@ -265,7 +265,27 @@ internal static class WebApplicationExtensions
                 access.SetAllowEmailDelete(emailDelete);
 
             return Results.Json(ToolsSettingsDto(access));
-        });
+        }).AddEndpointFilter(CompanionEmailAuthFilter);
+
+        // PROP-17.1: host-side consent grant (companion token). Model cannot mint confirmed.
+        app.MapPost("/settings/consent", async (
+            HttpRequest request,
+            SoulCore.Inference.Presence.IOperatorConsentGate consent) =>
+        {
+            using var doc = await JsonDocument.ParseAsync(request.Body).ConfigureAwait(false);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("scope", out var scopeEl)
+                || scopeEl.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(scopeEl.GetString()))
+            {
+                return Results.BadRequest(new { error = "expected { scope: email_send|email_delete|mt4_write }" });
+            }
+
+            var scope = scopeEl.GetString()!.Trim().ToLowerInvariant();
+            consent.Grant(scope);
+            return Results.Json(new { ok = true, scope });
+        }).AddEndpointFilter(CompanionEmailAuthFilter);
 
         // Email account credentials (Presence Settings + companion). Passwords never echoed.
         // Auth mirrors companion API when SOULCORE_COMPANION_API_TOKEN is set.

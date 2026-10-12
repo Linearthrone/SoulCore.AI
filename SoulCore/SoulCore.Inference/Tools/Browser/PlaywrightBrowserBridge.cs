@@ -163,6 +163,26 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         try
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
+
+            if (_context is not null)
+            {
+                foreach (var existing in _context.Pages)
+                {
+                    if (existing.IsClosed)
+                        continue;
+                    if (!BrowserHygiene.UrlsMatch(existing.Url, uri.AbsoluteUri))
+                        continue;
+                    _page = existing;
+                    await existing.BringToFrontAsync().ConfigureAwait(false);
+                    var existingTitle = await existing.TitleAsync().ConfigureAwait(false);
+                    await PublishFrameAsync(existing, $"reuse tab {uri.Host}", ct).ConfigureAwait(false);
+                    return new BrowserBridgeResult(
+                        true,
+                        $"playwright reused existing tab {existing.Url} title='{existingTitle}'. one live tab per URL.",
+                        BrowserResultHonesty.Navigated(existing.Url, existingTitle, BackendId, goalComplete: false));
+                }
+            }
+
             var resp = await page.GotoAsync(uri.AbsoluteUri, new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.DOMContentLoaded,
@@ -181,8 +201,16 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             {
                 return new BrowserBridgeResult(
                     false,
-                    $"playwright navigate HTTP {resp.Status} for {uri}.",
-                    new { url = uri.AbsoluteUri, status = resp.Status, action_ok = false, goal_complete = false, backend = BackendId });
+                    $"playwright navigate HTTP {resp.Status} for {uri}. {BrowserHygiene.SiteDownParkHint}",
+                    new
+                    {
+                        url = uri.AbsoluteUri,
+                        status = resp.Status,
+                        action_ok = false,
+                        goal_complete = false,
+                        backend = BackendId,
+                        failure_code = "surface_browser_down"
+                    });
             }
 
             var title = await page.TitleAsync().ConfigureAwait(false);

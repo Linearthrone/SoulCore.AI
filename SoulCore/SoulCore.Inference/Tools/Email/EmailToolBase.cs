@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Email;
@@ -12,7 +13,7 @@ public abstract class EmailToolBase : ITool
     private readonly IToolsAccessSettings? _access;
 
     protected EmailToolBase(IEmailBridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, access: null)
+        : this(bridge, options, access: null, consent: null)
     {
     }
 
@@ -20,13 +21,25 @@ public abstract class EmailToolBase : ITool
         IEmailBridge bridge,
         IOptions<ToolsOptions> options,
         IToolsAccessSettings? access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    protected EmailToolBase(
+        IEmailBridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings? access,
+        IOperatorConsentGate? consent)
     {
         Bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _access = access;
+        Consent = consent;
     }
 
     protected IEmailBridge Bridge { get; }
+
+    protected IOperatorConsentGate? Consent { get; }
 
     protected ToolsOptions Options => _options.Value;
 

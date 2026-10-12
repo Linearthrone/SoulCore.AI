@@ -11,7 +11,6 @@ public sealed class LocalStackControl : IDisposable
 {
     public const string OllamaTagsUrl = "http://127.0.0.1:11434/api/tags";
     public const string ComfyUiUrl = "http://127.0.0.1:8188/system_stats";
-    public const string DefaultHostHealthUrl = "http://127.0.0.1:7700/health";
 
     /// <summary>Env override for repo root when Presence is installed outside the checkout.</summary>
     public const string RepoRootEnvName = "HOUSE_SOULCORE_REPO";
@@ -57,9 +56,10 @@ public sealed class LocalStackControl : IDisposable
         return ProbeUrlAsync(url, ct);
     }
 
-    /// <summary>
-    /// PROP-4: victoria-sandbox running? Loopback/local VBoxManage only.
-    /// </summary>
+    /// <summary>Guest VM name for operator Start / Save / Power off.</summary>
+    public const string SandboxVmName = "victoria-sandbox";
+
+    /// <summary>Is victoria-sandbox running? Loopback/local VBoxManage only.</summary>
     public async Task<bool> ProbeSandboxAsync(CancellationToken ct = default)
     {
         try
@@ -68,24 +68,79 @@ public sealed class LocalStackControl : IDisposable
             if (vbox is null)
                 return false;
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = vbox,
-                ArgumentList = { "list", "runningvms" },
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
+            using var proc = Process.Start(CreateVBoxPsi(vbox, new[] { "list", "runningvms" }));
             if (proc is null) return false;
             var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
             await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-            return stdout.Contains("victoria-sandbox", StringComparison.OrdinalIgnoreCase);
+            return stdout.Contains(SandboxVmName, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>Operator Start VM — never auto-called on Presence open.</summary>
+    public Task<LocalStackActionResult> StartSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "startvm", SandboxVmName, "--type", "gui" }, ct);
+
+    /// <summary>Save state (hibernate-style) for victoria-sandbox.</summary>
+    public Task<LocalStackActionResult> SaveSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "savestate" }, ct);
+
+    /// <summary>Power off victoria-sandbox (caller confirms).</summary>
+    public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
+        RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
+
+    private static ProcessStartInfo CreateVBoxPsi(string vbox, IReadOnlyList<string> args)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = vbox,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        foreach (var a in args)
+            psi.ArgumentList.Add(a);
+        return psi;
+    }
+
+    private async Task<LocalStackActionResult> RunVBoxManageAsync(
+        IReadOnlyList<string> args,
+        CancellationToken ct)
+    {
+        var vbox = FindVBoxManage();
+        if (vbox is null)
+        {
+            return new LocalStackActionResult(
+                false,
+                "VBoxManage not found — install VirtualBox or put VBoxManage on PATH.");
+        }
+
+        try
+        {
+            using var proc = Process.Start(CreateVBoxPsi(vbox, args));
+            if (proc is null)
+                return new LocalStackActionResult(false, "Failed to start VBoxManage");
+
+            var stdout = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+            var stderr = await proc.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+            var detail = string.Join(" ", new[] { stdout, stderr }
+                .Select(s => s.Trim())
+                .Where(s => s.Length > 0));
+            if (detail.Length > 240)
+                detail = detail[..240] + "…";
+            if (proc.ExitCode == 0)
+                return new LocalStackActionResult(true, string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            return new LocalStackActionResult(false,
+                string.IsNullOrWhiteSpace(detail) ? $"VBoxManage exit {proc.ExitCode}" : detail);
+        }
+        catch (Exception ex)
+        {
+            return new LocalStackActionResult(false, ex.Message);
         }
     }
 
@@ -181,14 +236,9 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             var counts = await RunGitAsync(
                 new[] { "rev-list", "--left-right", "--count", "@{u}...HEAD" },
                 ct).ConfigureAwait(false);
-            if (counts.Ok && TryParseRevListLeftRight(counts.Detail, out behind, out ahead))
-            {
-                // ok
-            }
-            else if (!counts.Ok)
-            {
+            if (!counts.Ok)
                 return LocalStackGitStatus.Unavailable($"git rev-list failed: {counts.Detail}");
-            }
+            _ = TryParseRevListLeftRight(counts.Detail, out behind, out ahead);
         }
 
         var porcelain = await RunGitAsync(new[] { "status", "--porcelain" }, ct).ConfigureAwait(false);
@@ -519,17 +569,35 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             if (!wait)
                 return LocalStackActionResult.Succeed($"started PID {proc.Id} (detached)");
 
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = proc.StandardError.ReadToEndAsync(ct);
-            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            var detail = TrimDetail(string.IsNullOrWhiteSpace(stdout) ? stderr : stdout);
-            if (proc.ExitCode != 0)
-                return LocalStackActionResult.Fail(string.IsNullOrWhiteSpace(detail)
-                    ? $"exit {proc.ExitCode}"
-                    : detail);
-            return LocalStackActionResult.Succeed(string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            try
+            {
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+                var stderrTask = proc.StandardError.ReadToEndAsync(ct);
+                await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+                var stdout = await stdoutTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(false);
+                var detail = TrimDetail(string.IsNullOrWhiteSpace(stdout) ? stderr : stdout);
+                if (proc.ExitCode != 0)
+                    return LocalStackActionResult.Fail(string.IsNullOrWhiteSpace(detail)
+                        ? $"exit {proc.ExitCode}"
+                        : detail);
+                return LocalStackActionResult.Succeed(string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancel during Host start must not leave the script process orphaned.
+                try
+                {
+                    if (!proc.HasExited)
+                        proc.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    /* best-effort */
+                }
+
+                return LocalStackActionResult.Fail("cancelled");
+            }
         }
         catch (Exception ex)
         {

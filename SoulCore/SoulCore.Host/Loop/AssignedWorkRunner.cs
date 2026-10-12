@@ -15,12 +15,15 @@ using SoulCore.Protocol;
 namespace SoulCore.Host.Loop;
 
 /// <summary>
-/// One tool-loop pass of the open assignment. The chat request can return;
-/// this is what keeps the lesson moving after Kayleigh goes quiet.
+/// One tool-loop pass of the open assignment (PROP-17.1).
+/// Reads the victoria_tasks row pointed by <see cref="IAssignedWorkStore.RunningId"/>.
+/// Never schedules parked/suspended. Parks after identical surface failures.
+/// A tool name in the transcript is not progress.
 /// </summary>
 public sealed class AssignedWorkRunner
 {
     private readonly IAssignedWorkStore _store;
+    private readonly IVictoriaTaskStore _tasks;
     private readonly IInferenceClient _inference;
     private readonly IChatContextBuilder _contextBuilder;
     private readonly IChatSessionHistoryStore _history;
@@ -33,10 +36,12 @@ public sealed class AssignedWorkRunner
     private readonly SpendMeter _spend;
     private readonly ILogger<AssignedWorkRunner> _logger;
     private int _noToolStreak;
-    private string? _streakFor;
+    private long? _streakFor;
+    private bool _probePass;
 
     public AssignedWorkRunner(
         IAssignedWorkStore store,
+        IVictoriaTaskStore tasks,
         IInferenceClient inference,
         IChatContextBuilder contextBuilder,
         IChatSessionHistoryStore history,
@@ -50,6 +55,7 @@ public sealed class AssignedWorkRunner
         IEmotionState? emotion = null)
     {
         _store = store;
+        _tasks = tasks;
         _inference = inference;
         _contextBuilder = contextBuilder;
         _history = history;
@@ -65,29 +71,59 @@ public sealed class AssignedWorkRunner
 
     public async Task<TimeSpan> RunOnePassAsync(CancellationToken cancellationToken)
     {
-        var work = _store.Current;
-        if (work is not { Status: "active" })
+        var runningId = _store.RunningId;
+        if (runningId is null or <= 0)
             return TimeSpan.FromSeconds(5);
+
+        var task = await _tasks.GetAsync(runningId.Value, cancellationToken).ConfigureAwait(false);
+        if (task is null)
+        {
+            _store.Clear();
+            return TimeSpan.FromSeconds(5);
+        }
+
+        if (VictoriaTaskRules.IsNeverStarted(task.Status))
+        {
+            if (string.Equals(task.Status, "parked", StringComparison.OrdinalIgnoreCase)
+                && await TryProbeParkedAsync(task, cancellationToken).ConfigureAwait(false) is { } probeDelay)
+                return probeDelay;
+
+            _store.Clear();
+            Note($"Parked — {task.ParkReason}".TrimEnd(' ', '—'));
+            return TimeSpan.FromSeconds(30);
+        }
+
+        if (!string.Equals(task.Status, "in_progress", StringComparison.OrdinalIgnoreCase))
+        {
+            _store.Clear();
+            return TimeSpan.FromSeconds(5);
+        }
+
+        _store.Project(task);
 
         if (_spend.GetSummary().CapExceeded)
         {
-            _store.MarkWaiting("Monthly spend cap. The assignment is saved.");
+            await _tasks.SuspendAsync(task.Id, "Monthly spend cap. The assignment is saved.", cancellationToken)
+                .ConfigureAwait(false);
+            _store.Clear();
             Note("Waiting on you — spend cap");
             await PushStatusAsync("Waiting on you — spend cap", "waiting", cancellationToken).ConfigureAwait(false);
             return TimeSpan.FromSeconds(30);
         }
 
-        if (!string.Equals(_streakFor, work.Text, StringComparison.Ordinal))
+        if (_streakFor != task.Id)
         {
-            _streakFor = work.Text;
+            _streakFor = task.Id;
             _noToolStreak = 0;
+            _probePass = false;
         }
 
-        var phrase = WorkContinuation.ActivityFor(work.Text);
+        var phrase = WorkContinuation.ActivityFor(task.Title);
         Note(phrase);
         await PushStatusAsync(phrase, "working", cancellationToken).ConfigureAwait(false);
 
-        var prompt = WorkContinuation.AssignmentPrompt(work.Text, _noToolStreak);
+        var assignmentText = string.IsNullOrWhiteSpace(task.Description) ? task.Title : task.Description;
+        var prompt = WorkContinuation.AssignmentPrompt(assignmentText, _noToolStreak);
         var context = await _contextBuilder
             .BuildAsync(prompt, useToolLoop: true, _access.DesktopTargetWindowTitle, cancellationToken)
             .ConfigureAwait(false);
@@ -105,7 +141,7 @@ public sealed class AssignedWorkRunner
             Note(toolPhrase);
         });
 
-        _logger.LogInformation("Assigned work pass starting. streak={Streak}", _noToolStreak);
+        _logger.LogInformation("Assigned work pass starting. id={Id} streak={Streak}", task.Id, _noToolStreak);
         var reply = await _inference
             .CompleteWithToolsAsync(messages, _tools.GetDefinitions(), noting, cancellationToken)
             .ConfigureAwait(false);
@@ -129,25 +165,72 @@ public sealed class AssignedWorkRunner
 
         var visible = WorkContinuation.VisibleText(reply, continuing: true);
         await ReflectEmotionAsync(visible, cancellationToken).ConfigureAwait(false);
-        var usedWork = noting.Names.Any(WorkContinuation.IsWorkTool);
-        if (usedWork)
+
+        var workResults = noting.Results
+            .Where(r => WorkContinuation.IsWorkTool(r.Name))
+            .ToList();
+        var anyWorkSuccess = workResults.Any(r => r.Success);
+        var surfaceFailures = workResults
+            .Where(r => !r.Success)
+            .Select(r => SurfaceFailureKey(r.Name, r.Content, task.Surface))
+            .OfType<string>()
+            .ToList();
+
+        if (anyWorkSuccess)
+        {
             _noToolStreak = 0;
+            await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
+            _probePass = false;
+        }
         else
+        {
             _noToolStreak++;
+        }
 
-        _history.AppendTurn(WorkContinuation.PresenceSessionId, new[]
+        if (surfaceFailures.Count > 0)
         {
-            new ChatMessage { Role = "user", Content = prompt },
-            new ChatMessage { Role = "assistant", Content = visible }
-        });
+            var key = surfaceFailures[0];
+            var count = await _tasks.RecordIdenticalFailureAsync(task.Id, key, cancellationToken)
+                .ConfigureAwait(false);
+            if (count >= VictoriaTaskRules.IdenticalFailureThreshold)
+            {
+                var cooldown = _probePass
+                    ? VictoriaTaskRules.ReparkCooldown
+                    : VictoriaTaskRules.ParkCooldown;
+                var reason = OneLineParkReason(key, count);
+                await _tasks.ParkAsync(task.Id, reason, DateTimeOffset.UtcNow.Add(cooldown), cancellationToken)
+                    .ConfigureAwait(false);
+                _store.Clear();
+                _probePass = false;
+                Note("Parked — " + reason);
+                await PushStatusAsync("Parked — " + reason, "parked", cancellationToken).ConfigureAwait(false);
+                await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation(
+                    "Assigned work parked. id={Id} reason={Reason} cooldownMin={Min}",
+                    task.Id, reason, cooldown.TotalMinutes);
+                return TimeSpan.FromSeconds(30);
+            }
+        }
 
-        if (WorkContinuation.IsCheckIn(reply) || WorkContinuation.NeedsKayleigh(reply))
+        if (WorkContinuation.NeedsKayleigh(reply))
         {
-            _store.MarkWaiting(visible);
+            await _tasks.UpdateStatusAsync(task.Id, "blocked", cancellationToken).ConfigureAwait(false);
+            _store.Clear();
             Note(WorkContinuation.WaitingLine);
             await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
             await PushStatusAsync(WorkContinuation.WaitingLine, "waiting", cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Assigned work checked in and is waiting");
+            _logger.LogInformation("Assigned work blocked waiting on Kayleigh");
+            return TimeSpan.FromSeconds(15);
+        }
+
+        var refreshed = await _tasks.GetAsync(task.Id, cancellationToken).ConfigureAwait(false);
+        if (refreshed is not null
+            && string.Equals(refreshed.Status, "done", StringComparison.OrdinalIgnoreCase))
+        {
+            _store.Clear();
+            Note("Assignment done");
+            await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
+            await PushStatusAsync("Assignment done", "done", cancellationToken).ConfigureAwait(false);
             return TimeSpan.FromSeconds(15);
         }
 
@@ -159,10 +242,113 @@ public sealed class AssignedWorkRunner
         await BroadcastAsync(visible, continuing: true, cancellationToken).ConfigureAwait(false);
         await PushStatusAsync(activity, stuck ? "waiting" : "working", cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
-            "Assigned work pass finished. tools={Tools} streak={Streak}",
+            "Assigned work pass finished. id={Id} tools={Tools} streak={Streak}",
+            task.Id,
             string.Join(',', noting.Names),
             _noToolStreak);
         return DelayForStreak();
+    }
+
+    /// <summary>
+    /// After park_until: one probe. Still down → repark 120m. Up → leave as parked for operator release
+    /// unless we set in_progress for the single probe attempt via running pointer.
+    /// </summary>
+    private async Task<TimeSpan?> TryProbeParkedAsync(VictoriaTask task, CancellationToken cancellationToken)
+    {
+        if (!LeisureEligibility.TryParseParkUntil(task.ParkUntil, out var until)
+            || until > DateTimeOffset.UtcNow)
+        {
+            return null;
+        }
+
+        await _tasks.UpdateStatusAsync(task.Id, "in_progress", cancellationToken).ConfigureAwait(false);
+        await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
+        var resumed = await _tasks.GetAsync(task.Id, cancellationToken).ConfigureAwait(false);
+        if (resumed is null)
+            return TimeSpan.FromSeconds(5);
+        _probePass = true;
+        _store.Project(resumed);
+        Note("Probe after park — " + task.Title);
+        await PushStatusAsync("Probe after park", "working", cancellationToken).ConfigureAwait(false);
+        return TimeSpan.FromSeconds(1);
+    }
+
+    private static string? SurfaceFailureKey(string name, string? content, string surface)
+    {
+        var c = content ?? "";
+        if (c.Contains("park", StringComparison.OrdinalIgnoreCase)
+            && c.Contains("site down", StringComparison.OrdinalIgnoreCase))
+            return "browser:site_down";
+
+        if (name.StartsWith("browser_", StringComparison.Ordinal)
+            && LooksLikeBrowserSurfaceFailure(c))
+            return "browser:" + ExtractUrlToken(c);
+
+        if (name.StartsWith("desktop_", StringComparison.Ordinal) || name.StartsWith("guest_", StringComparison.Ordinal))
+        {
+            if (c.Contains("Maestro", StringComparison.OrdinalIgnoreCase)
+                && (c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)
+                    || c.Contains("not running", StringComparison.OrdinalIgnoreCase)
+                    || c.Contains("failed", StringComparison.OrdinalIgnoreCase)))
+                return "maestro:unreachable";
+
+            if (LooksLikeVmSurfaceMention(c) && LooksLikeVmSurfaceDown(c))
+                return "vm:off";
+        }
+
+        if (!string.IsNullOrWhiteSpace(surface)
+            && (c.Contains("fail", StringComparison.OrdinalIgnoreCase)
+                || c.Contains("error", StringComparison.OrdinalIgnoreCase)
+                || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)))
+            return surface.Trim().ToLowerInvariant() + ":" + name;
+
+        return null;
+    }
+
+    private static bool LooksLikeBrowserSurfaceFailure(string c) =>
+        c.Contains("refused", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("ERR_", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("net::", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("HTTP 5", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("no response", StringComparison.OrdinalIgnoreCase)
+        || (c.Contains("health", StringComparison.OrdinalIgnoreCase)
+            && c.Contains("fail", StringComparison.OrdinalIgnoreCase));
+
+    private static bool LooksLikeVmSurfaceMention(string c) =>
+        c.Contains("VM", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("guestcontrol", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("not running", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeVmSurfaceDown(string c) =>
+        c.Contains("fail", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("not running", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("offline", StringComparison.OrdinalIgnoreCase)
+        || c.Contains("unreachable", StringComparison.OrdinalIgnoreCase);
+
+    private static string ExtractUrlToken(string content)
+    {
+        var idx = content.IndexOf("http", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+            return "health";
+        var end = idx;
+        while (end < content.Length && !char.IsWhiteSpace(content[end]) && content[end] != '"' && content[end] != '\'')
+            end++;
+        var url = content[idx..end];
+        return url.Length > 120 ? url[..120] : url;
+    }
+
+    private static string OneLineParkReason(string key, int count)
+    {
+        if (key.StartsWith("maestro:", StringComparison.Ordinal))
+            return $"Maestro unreachable ({count} identical failures)";
+        if (key.StartsWith("vm:", StringComparison.Ordinal))
+            return $"VM surface down ({count} identical failures)";
+        if (key.StartsWith("browser:", StringComparison.Ordinal))
+            return $"Browser/site down ({count} identical failures)";
+        return $"Surface failure ({count} identical): {key}";
     }
 
     private async Task ReflectEmotionAsync(string reply, CancellationToken cancellationToken)
@@ -264,6 +450,7 @@ public sealed class AssignedWorkRunner
         }
 
         public HashSet<string> Names { get; } = new(StringComparer.Ordinal);
+        public List<(string Name, bool Success, string Content)> Results { get; } = new();
 
         public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
 
@@ -271,7 +458,9 @@ public sealed class AssignedWorkRunner
         {
             Names.Add(name);
             _onTool(name);
-            return await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+            var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+            Results.Add((name, result.Success, result.Content ?? ""));
+            return result;
         }
     }
 }

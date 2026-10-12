@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Email;
 
@@ -144,9 +145,21 @@ public class EmailToolsTests
     }
 
     [Fact]
-    public async Task Delete_Confirmed_RemovesMessage()
+    public async Task Delete_ModelMintedConfirmed_IsIgnored()
     {
         var tool = CreateTool("email_delete", allowRead: true, allowSend: false, allowDelete: true, out var bridge);
+        var result = await tool.ExecuteAsync(Parse("""{"account":"personal","uid":"p1","confirmed":true}"""));
+        Assert.False(result.Success);
+        Assert.Contains("confirm delete", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(bridge.Calls);
+    }
+
+    [Fact]
+    public async Task Delete_OperatorConsent_RemovesMessage()
+    {
+        var tool = CreateTool(
+            "email_delete", allowRead: true, allowSend: false, allowDelete: true, out var bridge, out var consent);
+        consent.Grant(OperatorConsentGate.EmailDelete);
         var result = await tool.ExecuteAsync(Parse("""{"account":"personal","uid":"p1","confirmed":true}"""));
         Assert.True(result.Success);
         Assert.Contains("deleted", result.Content, StringComparison.Ordinal);
@@ -177,9 +190,22 @@ public class EmailToolsTests
     }
 
     [Fact]
-    public async Task Send_Confirmed_Dispatches()
+    public async Task Send_ModelMintedConfirmed_IsIgnored()
     {
         var tool = CreateTool("email_send", allowRead: true, allowSend: true, allowDelete: false, out var bridge);
+        var result = await tool.ExecuteAsync(Parse(
+            """{"account":"victoria","to":"Kayleigh@example.com","subject":"hi","body":"yo","confirmed":true}"""));
+        Assert.False(result.Success);
+        Assert.Contains("confirm send", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(bridge.Calls);
+    }
+
+    [Fact]
+    public async Task Send_OperatorConsent_Dispatches()
+    {
+        var tool = CreateTool(
+            "email_send", allowRead: true, allowSend: true, allowDelete: false, out var bridge, out var consent);
+        consent.Grant(OperatorConsentGate.EmailSend);
         var result = await tool.ExecuteAsync(Parse(
             """{"account":"victoria","to":"Kayleigh@example.com","subject":"hi","body":"yo","confirmed":true}"""));
         Assert.True(result.Success);
@@ -229,7 +255,7 @@ public class EmailToolsTests
         var services = new ServiceCollection();
         services.AddSingleton<IEmailBridge>(bridge);
         services.AddSingleton(options);
-        foreach (var t in CreateAllTools(bridge, options, access))
+        foreach (var t in CreateAllTools(bridge, options, access, new OperatorConsentGate()))
             services.AddSingleton<ITool>(t);
         services.AddSingleton<IToolRegistry, ToolRegistry>();
         var sp = services.BuildServiceProvider();
@@ -242,8 +268,18 @@ public class EmailToolsTests
         bool allowSend,
         bool allowDelete,
         out InMemoryEmailBridge bridge)
+        => CreateTool(name, allowRead, allowSend, allowDelete, out bridge, out _);
+
+    private static ITool CreateTool(
+        string name,
+        bool allowRead,
+        bool allowSend,
+        bool allowDelete,
+        out InMemoryEmailBridge bridge,
+        out OperatorConsentGate consent)
     {
         bridge = SeededBridge();
+        consent = new OperatorConsentGate();
         var options = Options.Create(new ToolsOptions
         {
             AllowEmailRead = allowRead,
@@ -259,13 +295,14 @@ public class EmailToolsTests
             allowEmailRead: allowRead,
             allowEmailSend: allowSend,
             allowEmailDelete: allowDelete);
-        return CreateAllTools(bridge, options, access).First(t => t.Definition.Name == name);
+        return CreateAllTools(bridge, options, access, consent).First(t => t.Definition.Name == name);
     }
 
     private static IEnumerable<ITool> CreateAllTools(
         IEmailBridge bridge,
         IOptions<ToolsOptions> options,
-        IToolsAccessSettings access) =>
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent = null) =>
         new ITool[]
         {
             new EmailAccountsTool(bridge, options, access),
@@ -274,8 +311,8 @@ public class EmailToolsTests
             new EmailSearchTool(bridge, options, access),
             new EmailFileTool(bridge, options, access),
             new EmailMarkTool(bridge, options, access),
-            new EmailDeleteTool(bridge, options, access),
-            new EmailSendTool(bridge, options, access)
+            new EmailDeleteTool(bridge, options, access, consent),
+            new EmailSendTool(bridge, options, access, consent)
         };
 
     private static InMemoryEmailBridge SeededBridge()

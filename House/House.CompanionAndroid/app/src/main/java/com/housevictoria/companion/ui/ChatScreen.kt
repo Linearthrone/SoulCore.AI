@@ -56,6 +56,7 @@ import com.housevictoria.companion.data.ChatMessage
 import com.housevictoria.companion.data.ChatStore
 import com.housevictoria.companion.data.CompanionPrefs
 import com.housevictoria.companion.data.MessageRole
+import com.housevictoria.companion.data.PresenceHud
 import com.housevictoria.companion.net.CompanionConnection
 import com.housevictoria.companion.net.WsConnectionState
 import kotlinx.coroutines.flow.collectLatest
@@ -75,6 +76,7 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
     val listState = rememberLazyListState()
 
     val connPair by CompanionConnection.state.collectAsState()
+    val presence by PresenceHud.state.collectAsState()
     val connLabel = when (connPair.first) {
         WsConnectionState.Connected -> "Connected"
         WsConnectionState.Connecting -> "Connecting…"
@@ -150,6 +152,23 @@ fun ChatScreen(onOpenSettings: () -> Unit) {
                 .padding(padding)
                 .imePadding()
         ) {
+            // Mood word + doing-line only — no Link redesign.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Mood — ${presence.moodWord}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Doing — ${presence.doingLine}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier

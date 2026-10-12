@@ -5,13 +5,20 @@ from: TT-01
 to: PM-01
 mode: idea
 environment: TINA-main
-status: Sent — awaiting TINA-main PM ticketing
+status: Accepted — PM ticketed PROP-17.1–17.5
 priority: P1
 created: 2026-10-12
 updated: 2026-10-12
 title: "[TINA-main] Victoria between talks — park, R&R, Presence shell"
 assignee_role: PM-01 (TINA)
 proposal: docs/agents/unexecuted_proposals/victoria-between-talks.md
+pm_accept: docs/agents/reports/PROP-17-PM01-accept.md
+pm_tickets:
+  - docs/agents/tasks/PROP-17.1-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.2-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.3-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.4-PM01-to-FED01.md
+  - docs/agents/tasks/PROP-17.5-PM01-to-FED01.md
 ---
 
 # PROP-17 : [TINA-main] Victoria between talks
@@ -61,4 +68,8 @@ None that block ticketing. PM may name the default small local model and tune co
 
 Ticket 17.1 before 17.3. Shell layout in 17.4 may start in parallel. Activity-band copy that claims she parked or is researching has to wait until those statuses exist.
 
-Activate **TINA-main PM-01** to ticket. TT-01 does not write FED/BED tickets.
+## PM disposition (2026-10-12)
+
+**Accepted.** Avenue A. Tickets issued — see `docs/agents/reports/PROP-17-PM01-accept.md`.
+
+PM locks: LeisureModel `qwen2.5:1.5b`; park 45m then probe, re-park 120m; threshold 3 identical failures. Same-day urgency: Victoria park-capable and shell operable today for bug-out; workable tomorrow.

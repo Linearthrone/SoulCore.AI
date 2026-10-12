@@ -1,6 +1,6 @@
 ---
 type: proposal
-status: sent-to-pm
+status: accepted-pm-ticketed
 tt_id: TT-01
 prop_id: PROP-17-victoria-between-talks
 created: 2026-10-12
@@ -9,7 +9,19 @@ title: Victoria between talks — park dead work, self-started R&R, Presence she
 need: She keeps existing between conversations, stops hammering a dead task, researches on her own without a creativity clock, and Presence settings match how LinearThrone actually uses the house
 sent_at: 2026-10-12
 pm_intake: docs/agents/tasks/PROP-17-TT01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-17-PM01-accept.md
 environment: TINA-main
+pm_tickets:
+  - docs/agents/tasks/PROP-17.1-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.2-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.3-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-17.4-PM01-to-FED01.md
+  - docs/agents/tasks/PROP-17.5-PM01-to-FED01.md
+pm_locks:
+  leisure_model: qwen2.5:1.5b
+  park_cooldown_min: 45
+  repark_cooldown_min: 120
+  identical_failure_threshold: 3
 ---
 
 # Victoria between talks

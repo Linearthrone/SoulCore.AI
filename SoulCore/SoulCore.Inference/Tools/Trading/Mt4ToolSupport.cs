@@ -48,47 +48,19 @@ public static class Mt4ToolSupport
     public static bool IsTradeAllowed(ToolsOptions options) =>
         options is not null && options.AllowMt4Trade;
 
-    public static bool IsConfirmed(JsonElement args)
-    {
-        if (args.ValueKind != JsonValueKind.Object)
-            return false;
-        if (!args.TryGetProperty("confirmed", out var prop))
-            return false;
-
-        return prop.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.String => IsTruthyString(prop.GetString()),
-            JsonValueKind.Number => prop.TryGetInt32(out var n) && n != 0,
-            _ => false
-        };
-    }
+    /// <summary>
+    /// PROP-17.1: model-minted <c>confirmed</c> never grants consent.
+    /// Host-side <see cref="Presence.IOperatorConsentGate"/> must grant first.
+    /// </summary>
+    public static bool IsConfirmed(Presence.IOperatorConsentGate? consent) =>
+        consent is not null && consent.TryConsume(Presence.OperatorConsentGate.Mt4Write);
 
     /// <summary>
-    /// Returns a clone of <paramref name="args"/> with SoulCore-only keys
-    /// (e.g. <c>confirmed</c>) removed before dispatch to the MCP bridge.
+    /// Clone of <paramref name="args"/> with SoulCore-only <c>confirmed</c> removed
+    /// before dispatch to the MCP bridge.
     /// </summary>
-    public static JsonElement StripConfirmed(JsonElement args)
-    {
-        if (args.ValueKind != JsonValueKind.Object)
-            return args;
-
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
-            writer.WriteStartObject();
-            foreach (var prop in args.EnumerateObject())
-            {
-                if (string.Equals(prop.Name, "confirmed", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                prop.WriteTo(writer);
-            }
-            writer.WriteEndObject();
-        }
-
-        return JsonDocument.Parse(stream.ToArray()).RootElement.Clone();
-    }
+    public static JsonElement StripConfirmed(JsonElement args) =>
+        Presence.ConsentArgs.StripModelConfirmed(args);
 
     public static bool TryGetRequiredString(
         JsonElement args,
@@ -260,15 +232,6 @@ public static class Mt4ToolSupport
 
     public static JsonElement ParseSchema(string json) =>
         JsonDocument.Parse(json).RootElement.Clone();
-
-    private static bool IsTruthyString(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s))
-            return false;
-        return s.Equals("true", StringComparison.OrdinalIgnoreCase)
-            || s.Equals("yes", StringComparison.OrdinalIgnoreCase)
-            || s.Equals("1", StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 /// <summary>
@@ -281,7 +244,7 @@ public abstract class Mt4ToolBase : ITool
     private readonly Desktop.IToolsAccessSettings? _access;
 
     protected Mt4ToolBase(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, access: null)
+        : this(bridge, options, access: null, consent: null)
     {
     }
 
@@ -289,13 +252,25 @@ public abstract class Mt4ToolBase : ITool
         IMt4Bridge bridge,
         IOptions<ToolsOptions> options,
         Desktop.IToolsAccessSettings? access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    protected Mt4ToolBase(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        Desktop.IToolsAccessSettings? access,
+        Presence.IOperatorConsentGate? consent)
     {
         Bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _access = access;
+        Consent = consent;
     }
 
     protected IMt4Bridge Bridge { get; }
+
+    protected Presence.IOperatorConsentGate? Consent { get; }
 
     protected ToolsOptions Options => _options.Value;
 
@@ -317,8 +292,8 @@ public abstract class Mt4ToolBase : ITool
     }
 
     /// <summary>
-    /// Two-phase write: master AllowMt4Trade gate,
-    /// then per-call <c>confirmed=true</c> gate, then bridge dispatch.
+    /// Two-phase write: master AllowMt4Trade gate, then host-side operator consent
+    /// (model-minted confirmed is stripped), then bridge dispatch.
     /// </summary>
     protected Task<ToolResult> ExecuteWriteAsync(
         JsonElement args,
@@ -331,12 +306,15 @@ public abstract class Mt4ToolBase : ITool
         if (!allowed)
             return Task.FromResult(new ToolResult(false, Mt4ToolSupport.TradeDeniedMessage, null));
 
-        if (!Mt4ToolSupport.IsConfirmed(args))
+        args = args.ValueKind == JsonValueKind.Object ? Mt4ToolSupport.StripConfirmed(args) : args;
+        if (!Mt4ToolSupport.IsConfirmed(Consent))
+        {
+            Consent?.NotePending(Presence.OperatorConsentGate.Mt4Write);
             return Task.FromResult(new ToolResult(false, confirmPrompt, null));
+        }
 
         var mcp = Mt4ToolSupport.ToMcpName(Definition.Name);
-        var payload = Mt4ToolSupport.StripConfirmed(
-            args.ValueKind == JsonValueKind.Object ? args : Mt4ToolSupport.ParseSchema("{}"));
+        var payload = args.ValueKind == JsonValueKind.Object ? args : Mt4ToolSupport.ParseSchema("{}");
         return Bridge.InvokeAsync(mcp, payload, ct);
     }
 }
