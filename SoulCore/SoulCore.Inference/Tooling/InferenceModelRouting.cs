@@ -28,6 +28,19 @@ public static class InferenceModelRouting
         return ResolveChatModel(options);
     }
 
+    /// <summary>
+    /// PROP-17.3: leisure / R&amp;R model. Returns <c>null</c> when
+    /// <see cref="InferenceOptions.LeisureModel"/> is empty — caller must stay quiet.
+    /// Never falls back to chat or tool model.
+    /// </summary>
+    public static string? ResolveLeisureModel(InferenceOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (string.IsNullOrWhiteSpace(options.LeisureModel))
+            return null;
+        return options.LeisureModel.Trim();
+    }
+
     public static string ResolveEmbeddingModel(InferenceOptions options, bool ueLive)
     {
         ArgumentNullException.ThrowIfNull(options);

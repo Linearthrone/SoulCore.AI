@@ -145,7 +145,7 @@ public sealed class GuestShellTool : ITool
         Description:
             "Run a command in the Ubuntu guest as user victoria, cwd under /home/victoria. " +
             "Use for npm, node, git, and builds in the VSCodium project. " +
-            "Refuses sudo/su (a password prompt hangs guest control). " +
+            "Refuses sudo/su, package install (apt/snap/flatpak), and pipe-to-bash (wget|bash). " +
             "Requires AllowComputerControl.",
         Parameters: Parameters);
 

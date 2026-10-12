@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Host.Loop;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
 using SoulCore.Host.Inference;
@@ -95,6 +96,17 @@ internal static class InferenceServiceCollectionExtensions
         {
             services.AddSingleton<IEmbeddingClient, NullEmbeddingClient>();
         }
+
+        // PROP-17.3: leisure / R&R always on local :11434 (never cloud BaseUrl).
+        services.AddHttpClient(LeisureRunner.HttpClientName, (sp, client) =>
+        {
+            var opts = sp.GetRequiredService<IOptions<InferenceOptions>>().Value;
+            OllamaHttpClientConfiguration.Configure(
+                client,
+                opts.ResolveLeisureBaseUrl(),
+                opts.TimeoutSeconds,
+                apiKey: null);
+        });
 
         // BED-158: in-memory per-sessionId chat/tool history for multi-turn pronouns.
         services.AddSingleton<IChatSessionHistoryStore>(sp =>

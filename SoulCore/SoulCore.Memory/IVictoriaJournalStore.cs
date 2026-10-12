@@ -1,13 +1,13 @@
 namespace SoulCore.Memory;
 
 /// <summary>
-/// Victoria's personal journals — three intentional notebooks distinct from
-/// general <c>episodic_memories</c>: feeling (moment mood), animation/expression
-/// wants, and environment wants (Home / buildings / vehicles / modules).
+/// Victoria's personal journals — intentional notebooks distinct from
+/// general <c>episodic_memories</c>: feeling, animation/expression wants,
+/// environment wants, and life_hacks (PROP-17.2). Do not pretend feeling is the life-hacks book.
 /// </summary>
 public interface IVictoriaJournalStore
 {
-    /// <summary>The three journal books (<c>feeling</c>, <c>animation</c>, <c>environment</c>).</summary>
+    /// <summary>Journal books: <c>feeling</c>, <c>animation</c>, <c>environment</c>, <c>life_hacks</c>.</summary>
     Task<IReadOnlyList<VictoriaJournalBook>> ListBooksAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Load one book by id, or <c>null</c> when missing.</summary>
@@ -36,7 +36,7 @@ public interface IVictoriaJournalStore
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>One of Victoria's three journal notebooks.</summary>
+/// <summary>One of Victoria's journal notebooks.</summary>
 public sealed record VictoriaJournalBook(
     string Id,
     string Title,

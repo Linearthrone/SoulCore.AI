@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Trading;
@@ -29,18 +30,27 @@ public sealed class ExecuteTradeTool : Mt4ToolBase
         """);
 
     public ExecuteTradeTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, new ComputerControlGate(options))
+        : this(bridge, options, new ComputerControlGate(options), consent: null)
     {
     }
 
     public ExecuteTradeTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
-        : base(bridge, options, access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    public ExecuteTradeTool(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent)
+        : base(bridge, options, access, consent)
     {
     }
 
     public override ToolDefinition Definition { get; } = new(
         Name: "execute_trade",
-        Description: "Open an MT4 market trade. Requires stop-loss (sl). First call returns a confirmation prompt; only executes when confirmed=true after the user agrees.",
+        Description: "Open an MT4 market trade. Requires stop-loss (sl). First call returns a confirmation prompt; only executes after Kayleigh replies yes (model cannot mint confirmed).",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -99,18 +109,27 @@ public sealed class ClosePositionTool : Mt4ToolBase
         """);
 
     public ClosePositionTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, new ComputerControlGate(options))
+        : this(bridge, options, new ComputerControlGate(options), consent: null)
     {
     }
 
     public ClosePositionTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
-        : base(bridge, options, access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    public ClosePositionTool(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent)
+        : base(bridge, options, access, consent)
     {
     }
 
     public override ToolDefinition Definition { get; } = new(
         Name: "close_position",
-        Description: "Close an open MT4 position by ticket. First call returns a confirmation prompt; only executes when confirmed=true after the user agrees.",
+        Description: "Close an open MT4 position by ticket. First call returns a confirmation prompt; only executes after Kayleigh replies yes (model cannot mint confirmed).",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -147,18 +166,27 @@ public sealed class RunBacktestTool : Mt4ToolBase
         """);
 
     public RunBacktestTool(IMt4Bridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, new ComputerControlGate(options))
+        : this(bridge, options, new ComputerControlGate(options), consent: null)
     {
     }
 
     public RunBacktestTool(IMt4Bridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
-        : base(bridge, options, access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    public RunBacktestTool(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent)
+        : base(bridge, options, access, consent)
     {
     }
 
     public override ToolDefinition Definition { get; } = new(
         Name: "run_backtest",
-        Description: "Run an MT4 Expert Advisor backtest. First call returns a confirmation prompt; only executes when confirmed=true after the user agrees.",
+        Description: "Run an MT4 Expert Advisor backtest. First call returns a confirmation prompt; only executes after Kayleigh replies yes (model cannot mint confirmed).",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

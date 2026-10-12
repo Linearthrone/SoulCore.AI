@@ -13,14 +13,35 @@ public sealed partial class VirtualBoxGuestAppLauncher
         if (target is null)
             return new DesktopOpResult(false, "browser_navigate needs an http(s) URL.", null);
 
+        // PROP-17.2: one live tab per URL — if Firefox already has this URL, focus it.
+        var tabs = await BrowserTabsAsync(ct).ConfigureAwait(false);
+        if (tabs.Success && !string.IsNullOrWhiteSpace(tabs.Content)
+            && tabs.Content.Contains(target, StringComparison.OrdinalIgnoreCase))
+        {
+            await TryFocusFirefoxAsync(ct).ConfigureAwait(false);
+            return new DesktopOpResult(
+                true,
+                $"Reused existing Firefox tab for {target} in the {GuestOpenedMarker} (one live tab per URL).",
+                BrowserResultHonesty.Navigated(target, "", "vbox-guest", goalComplete: false));
+        }
+
+        // PROP-17.2: refuse a second browser when Firefox is already open — reuse the process.
+        var listed = await ListWindowsAsync(ct).ConfigureAwait(false);
+        var firefoxOpen = listed.Success
+            && (listed.Content ?? "").Contains("Firefox", StringComparison.OrdinalIgnoreCase);
+
         var started = await GuestStartAsync("/usr/bin/firefox", new[] { target }, ct).ConfigureAwait(false);
         if (!started.Success)
             return started;
 
         await TryFocusFirefoxAsync(ct).ConfigureAwait(false);
         // BED-194: spawn ≠ loaded/logged-in. action_ok only; goal_complete=false.
+        var reuseNote = firefoxOpen
+            ? "Reused the open Firefox process (second browser refused). "
+            : "";
         return new DesktopOpResult(
             true,
+            reuseNote +
             $"Firefox launched toward {target} in the {GuestOpenedMarker} (not Kayleigh's Windows Chrome). " +
             "goal_complete=false — page load NOT verified. Call browser_snapshot / browser_click_text before claiming navigated or logged in.",
             BrowserResultHonesty.LaunchOnly(target, "vbox-guest"));

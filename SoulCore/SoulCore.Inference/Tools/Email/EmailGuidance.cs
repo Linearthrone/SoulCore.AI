@@ -18,7 +18,7 @@ public static class EmailGuidance
         "3) email_read(uid) before you summarize or reply. Quote facts from the tool result — do not invent mail.\n" +
         "4) Sort with email_file(uid, dest) (Archive / INBOX / a label). Mark read with email_mark.\n" +
         "5) email_delete and email_send are two-phase: first call returns a confirm prompt. " +
-        "Tell Kayleigh what you would send or delete and wait. Only call again with confirmed=true after they agree.\n" +
+        "Tell Kayleigh what you would send or delete and wait. She replies yes — model-minted confirmed=true is ignored.\n" +
         "Never send or delete on a first tool call. Never put passwords in chat. " +
         "If a tool says AllowEmailRead/Send/Delete is required, ask Kayleigh to enable it in Settings → Tools & Access.";
 

@@ -43,7 +43,11 @@ public sealed class ChatSendHandler
     private readonly IPresenceActivityHub? _presenceActivity;
     private readonly IChatTranscriptStore? _transcript;
     private readonly IAssignedWorkStore? _assigned;
+    private readonly IVictoriaTaskStore? _tasks;
+    private readonly IOperatorConsentGate? _consent;
     private readonly WorkTurnGate? _turnGate;
+    private readonly IInferenceLease? _lease;
+    private readonly ILeisureSession? _leisure;
     private readonly ILogger<ChatSendHandler> _logger;
 
     public ChatSendHandler(
@@ -63,7 +67,11 @@ public sealed class ChatSendHandler
         IPresenceActivityHub? presenceActivity = null,
         IChatTranscriptStore? transcript = null,
         IAssignedWorkStore? assigned = null,
-        WorkTurnGate? turnGate = null)
+        WorkTurnGate? turnGate = null,
+        IVictoriaTaskStore? tasks = null,
+        IOperatorConsentGate? consent = null,
+        IInferenceLease? lease = null,
+        ILeisureSession? leisure = null)
     {
         _inference = inference ?? throw new ArgumentNullException(nameof(inference));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -82,6 +90,10 @@ public sealed class ChatSendHandler
         _transcript = transcript;
         _assigned = assigned;
         _turnGate = turnGate;
+        _tasks = tasks;
+        _consent = consent;
+        _lease = lease;
+        _leisure = leisure;
     }
 
     public async Task HandleAsync(
@@ -108,7 +120,12 @@ public sealed class ChatSendHandler
             await _turnGate!.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-        RememberAssignment(text);
+        // PROP-17.3: human turn aborts in-flight R&R before the next preamble.
+        _lease?.Abort("human-chat");
+        _leisure?.Clear();
+
+        _consent?.TryGrantFromUserText(text);
+        await RememberAssignmentAsync(text, cancellationToken).ConfigureAwait(false);
 
         var quotedText = ExtractQuotedText(frame.Payload);
         var modelUserText = QuotedChatText.BuildUserText(text, quotedText);
@@ -254,8 +271,9 @@ public sealed class ChatSendHandler
             AppendPlainTurn(historySessionId, modelUserText, reply);
         }
 
-        NoteAssignmentOutcome(reply);
-        var stillOpen = _assigned?.Current is { Status: "active" };
+        await NoteAssignmentOutcomeAsync(reply, cancellationToken).ConfigureAwait(false);
+        var stillOpen = _assigned?.RunningId is > 0
+            && string.Equals(_assigned.Current?.Status, "in_progress", StringComparison.OrdinalIgnoreCase);
         var visible = WorkContinuation.VisibleText(reply, continuing: stillOpen);
         await SendReplyAsync(socket, frame.Id, visible, provider, usedStub, continuing: stillOpen, cancellationToken)
             .ConfigureAwait(false);
@@ -264,7 +282,8 @@ public sealed class ChatSendHandler
             _presenceActivity?.NoteTool(WorkContinuation.ActivityFor(_assigned!.Current!.Text));
         else if (pausedForBudget || WorkContinuation.HitToolCap(reply))
             _presenceActivity?.NoteTool(WorkContinuation.PausedActivity);
-        else if (WorkContinuation.IsHandoff(reply) || WorkContinuation.IsUserStop(text) || _assigned?.Current is { Status: "waiting" })
+        else if (WorkContinuation.IsHandoff(reply) || WorkContinuation.IsUserStop(text)
+                 || string.Equals(_assigned?.Current?.Status, "blocked", StringComparison.OrdinalIgnoreCase))
             _presenceActivity?.NoteTool(WorkContinuation.WaitingLine);
         else
             _presenceActivity?.NoteChat("assistant");
@@ -293,26 +312,56 @@ public sealed class ChatSendHandler
         }
     }
 
-    private void RememberAssignment(string userText)
+    private async Task RememberAssignmentAsync(string userText, CancellationToken cancellationToken)
     {
         if (_assigned is null)
             return;
         if (WorkContinuation.IsUserStop(userText))
         {
+            if (_assigned.RunningId is { } rid && _tasks is not null)
+                await _tasks.SuspendAsync(rid, "Stopped by Kayleigh.", cancellationToken).ConfigureAwait(false);
             _assigned.Clear();
             return;
         }
 
-        if (WorkContinuation.LooksLikeAssignment(userText))
-            _assigned.SetActive(userText.Trim());
+        if (!WorkContinuation.LooksLikeAssignment(userText) || _tasks is null)
+            return;
+
+        var body = userText.Trim();
+        var title = body.Length > 80 ? body[..77] + "..." : body;
+        var surface = InferSurface(body);
+        var id = await _tasks.CreateAsync(
+            title, body, "high", surface, ready: true, status: "in_progress", notes: null, cancellationToken)
+            .ConfigureAwait(false);
+        var row = await _tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
+        if (row is not null)
+            _assigned.Project(row);
+        else
+            _assigned.SetRunning(id);
     }
 
-    private void NoteAssignmentOutcome(string reply)
+    private async Task NoteAssignmentOutcomeAsync(string reply, CancellationToken cancellationToken)
     {
-        if (_assigned?.Current is not { Status: "active" })
+        if (_assigned?.RunningId is not { } id || _tasks is null)
             return;
-        if (WorkContinuation.IsCheckIn(reply) || WorkContinuation.NeedsKayleigh(reply))
-            _assigned.MarkWaiting(reply);
+        if (!WorkContinuation.NeedsKayleigh(reply))
+            return;
+        await _tasks.UpdateStatusAsync(id, "blocked", cancellationToken).ConfigureAwait(false);
+        _assigned.Clear();
+    }
+
+    private static string InferSurface(string text)
+    {
+        var t = text.ToLowerInvariant();
+        if (t.Contains("maestro", StringComparison.Ordinal))
+            return "maestro";
+        if (t.Contains("browser", StringComparison.Ordinal) || t.Contains("firefox", StringComparison.Ordinal)
+            || t.Contains("http", StringComparison.Ordinal))
+            return "browser";
+        if (t.Contains("vm", StringComparison.Ordinal) || t.Contains("guest", StringComparison.Ordinal)
+            || t.Contains("sandbox", StringComparison.Ordinal))
+            return "vm";
+        return "local";
     }
 
     /// <summary>

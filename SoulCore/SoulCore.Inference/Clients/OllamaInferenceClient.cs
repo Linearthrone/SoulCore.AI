@@ -209,7 +209,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
         var forceNudgeUsed = false;
 
         var ueLive = _ueLive.IsUeLive;
-        var toolModel = InferenceModelRouting.ResolveToolModel(_options, ueLive);
+        var toolModel = !string.IsNullOrWhiteSpace(loopOptions?.ModelOverride)
+            ? loopOptions!.ModelOverride!.Trim()
+            : InferenceModelRouting.ResolveToolModel(_options, ueLive);
         var toolNumCtx = InferenceModelRouting.ResolveToolNumCtx(_options, ueLive);
 
         _logger.LogInformation(

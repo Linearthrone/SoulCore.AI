@@ -24,6 +24,12 @@
     <EmbeddedResource Include="Schema\006_victoria_journals.sql" LogicalName="SoulCore.Memory.Schema.006_victoria_journals.sql" />
     <EmbeddedResource Include="Migrations\007_chat_transcript.sql" LogicalName="SoulCore.Memory.Migrations.007_chat_transcript.sql" />
     <EmbeddedResource Include="Schema\007_chat_transcript.sql" LogicalName="SoulCore.Memory.Schema.007_chat_transcript.sql" />
+    <EmbeddedResource Include="Migrations\008_victoria_tasks_park.sql" LogicalName="SoulCore.Memory.Migrations.008_victoria_tasks_park.sql" />
+    <EmbeddedResource Include="Schema\008_victoria_tasks_park.sql" LogicalName="SoulCore.Memory.Schema.008_victoria_tasks_park.sql" />
+    <EmbeddedResource Include="Migrations\009_victoria_sops.sql" LogicalName="SoulCore.Memory.Migrations.009_victoria_sops.sql" />
+    <EmbeddedResource Include="Schema\009_victoria_sops.sql" LogicalName="SoulCore.Memory.Schema.009_victoria_sops.sql" />
+    <EmbeddedResource Include="Migrations\010_life_hacks_journal.sql" LogicalName="SoulCore.Memory.Migrations.010_life_hacks_journal.sql" />
+    <EmbeddedResource Include="Schema\010_life_hacks_journal.sql" LogicalName="SoulCore.Memory.Schema.010_life_hacks_journal.sql" />
   </ItemGroup>
 
   <PropertyGroup>

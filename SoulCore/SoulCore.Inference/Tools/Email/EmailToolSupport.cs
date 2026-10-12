@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Email;
@@ -45,21 +46,42 @@ public static class EmailToolSupport
     public static bool IsDeleteAllowed(ToolsOptions options) =>
         options is not null && options.AllowEmailDelete;
 
+    /// <summary>
+    /// PROP-17.1: model-minted <c>confirmed</c> is never consent. Strip it, then
+    /// require a host-side <see cref="IOperatorConsentGate"/> grant (Kayleigh yes / companion token).
+    /// </summary>
+    public static bool IsConfirmed(JsonElement args, IOperatorConsentGate? consent, string scope)
+    {
+        _ = StripModelConfirmed(args);
+        return consent is not null && consent.TryConsume(scope);
+    }
+
+    /// <summary>Legacy signature — always false (model cannot mint consent).</summary>
     public static bool IsConfirmed(JsonElement args)
     {
-        if (args.ValueKind != JsonValueKind.Object)
-            return false;
-        if (!args.TryGetProperty("confirmed", out var prop))
-            return false;
+        _ = StripModelConfirmed(args);
+        return false;
+    }
 
-        return prop.ValueKind switch
+    public static JsonElement StripModelConfirmed(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object)
+            return args;
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
         {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.String => IsTruthyString(prop.GetString()),
-            JsonValueKind.Number => prop.TryGetInt32(out var n) && n != 0,
-            _ => false
-        };
+            writer.WriteStartObject();
+            foreach (var prop in args.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, "confirmed", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                prop.WriteTo(writer);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return JsonDocument.Parse(stream.ToArray()).RootElement.Clone();
     }
 
     public static JsonElement ParseSchema(string json) =>
@@ -195,12 +217,12 @@ public static class EmailToolSupport
             : DefaultFolder;
 
     public static string BuildSendConfirmPrompt(string accountId, IReadOnlyList<string> to, string subject) =>
-        $"confirm send from {accountId} to {string.Join(", ", to)} subject \"{subject}\"? reply yes, then recall with confirmed=true";
+        $"confirm send from {accountId} to {string.Join(", ", to)} subject \"{subject}\"? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true";
 
     public static string BuildDeleteConfirmPrompt(string accountId, string uid, string? subject) =>
         string.IsNullOrWhiteSpace(subject)
-            ? $"confirm delete message {uid} on {accountId}? reply yes, then recall with confirmed=true"
-            : $"confirm delete on {accountId}: \"{subject}\" (uid {uid})? reply yes, then recall with confirmed=true";
+            ? $"confirm delete message {uid} on {accountId}? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true"
+            : $"confirm delete on {accountId}: \"{subject}\" (uid {uid})? reply yes (Kayleigh/LinearThrone) — model cannot mint confirmed=true";
 
     public static string NormalizeFolderName(string? folder)
     {

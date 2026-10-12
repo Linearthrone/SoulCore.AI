@@ -30,11 +30,12 @@ updated: 2026-10-12
 
 | Split | Role | Status | Notes |
 | --- | --- | --- | --- |
-| PROP-17.1 | BED-01 | **START NOW** | Ledger, park, host rejects, Host Stop |
-| PROP-17.2 | BED-01 | **START NOW** (parallel) | Tab/browser invariants, SOP, life-hacks |
-| PROP-17.3 | BED-01 | Queued | After 17.1 + 17.2 Pass |
-| PROP-17.4 | FED-01 | **START NOW** (layout) | Band honesty after 17.1/17.3 |
-| PROP-17.5 | FED-01 | Pending | Mood/doing-line; Android email after 17.4 |
+| PROP-17.1 | BED-01 | **Partial** (park/rejects landed) | Avalonia Stop gap → 17.6 |
+| PROP-17.2 | BED-01 | **Pass** | Tab/browser, SOP, life-hacks |
+| PROP-17.3 | BED-01 | **Pass** (#150) | R&R LeisureModel |
+| PROP-17.4 | FED-01 | **Pass** (#149 merged) | Three-tab shell |
+| PROP-17.5 | FED-01 | **START NOW** | Mood/doing-line; Android email |
+| PROP-17.6 | FED-01 | **Pass** (#151) | Stop enabled while Starting Host |
 
 ## Activation (user relays)
 

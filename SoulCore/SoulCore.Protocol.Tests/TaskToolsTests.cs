@@ -29,7 +29,7 @@ public class TaskToolsTests
 
             // create
             var createArgs = JsonDocument.Parse(
-                """{"title":"Ship BED-140","description":"Wire task tools","priority":"high"}""")
+                """{"title":"Ship BED-140","description":"Wire task tools","priority":"high","ready":true}""")
                 .RootElement.Clone();
             var created = await create.ExecuteAsync(createArgs);
             Assert.True(created.Success);
@@ -162,6 +162,8 @@ public class TaskToolsTests
     [InlineData("in_progress")]
     [InlineData("done")]
     [InlineData("blocked")]
+    [InlineData("parked")]
+    [InlineData("suspended")]
     [InlineData("DONE")]
     public async Task TaskUpdateStatus_AllowedStatuses_Succeed(string status)
     {
@@ -169,7 +171,7 @@ public class TaskToolsTests
         try
         {
             await using var store = new SqliteMemoryStore(path);
-            var id = await store.CreateAsync("t", null, null);
+            var id = await store.CreateAsync("t", null, null, "local", ready: true, status: "todo", notes: null);
             var update = new TaskUpdateStatusTool(store);
 
             var result = await update.ExecuteAsync(
@@ -206,7 +208,7 @@ public class TaskToolsTests
     }
 
     [Fact]
-    public async Task TaskCreate_DefaultsStatusTodoAndPriorityMedium()
+    public async Task TaskCreate_DefaultsStatusSuspendedUnlessReady()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-tasks-defaults-{Guid.NewGuid():N}.db");
         try
@@ -218,14 +220,18 @@ public class TaskToolsTests
                 JsonDocument.Parse("""{"title":"only title"}""").RootElement.Clone());
 
             Assert.True(result.Success);
-            Assert.Equal("todo", GetDataString(result.Data!, "status"));
+            Assert.Equal("suspended", GetDataString(result.Data!, "status"));
             Assert.Equal("medium", GetDataString(result.Data!, "priority"));
 
             var id = GetDataLong(result.Data!, "id");
             var row = await store.GetAsync(id);
-            Assert.Equal("todo", row!.Status);
+            Assert.Equal("suspended", row!.Status);
             Assert.Equal("medium", row.Priority);
             Assert.Equal(string.Empty, row.Description);
+
+            var ready = await create.ExecuteAsync(
+                JsonDocument.Parse("""{"title":"ready one","ready":true}""").RootElement.Clone());
+            Assert.Equal("todo", GetDataString(ready.Data!, "status"));
         }
         finally
         {
@@ -382,10 +388,33 @@ public class TaskToolsTests
         public Task<long> CreateAsync(string title, string? description, string? priority, CancellationToken cancellationToken = default)
             => Task.FromResult(1L);
 
+        public Task<long> CreateAsync(
+            string title, string? description, string? priority, string? surface, bool ready, string? status, string? notes,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(1L);
+
         public Task<VictoriaTask?> GetAsync(long id, CancellationToken cancellationToken = default)
             => Task.FromResult<VictoriaTask?>(null);
 
         public Task<bool> UpdateStatusAsync(long id, string status, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<bool> ParkAsync(long id, string reason, DateTimeOffset parkUntil, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<bool> ReleaseAsync(long id, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<bool> SuspendAsync(long id, string? notes = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<int> RecordIdenticalFailureAsync(long id, string failureKey, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
+        public Task ClearFailureCounterAsync(long id, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<bool> UpdateDetailsAsync(long id, string? surface = null, string? notes = null, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
         public Task<IReadOnlyList<VictoriaTask>> ListAsync(string? status = null, CancellationToken cancellationToken = default)
