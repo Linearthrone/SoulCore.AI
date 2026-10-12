@@ -582,17 +582,36 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             if (!wait)
                 return LocalStackActionResult.Succeed($"started PID {proc.Id} (detached)");
 
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = proc.StandardError.ReadToEndAsync(ct);
-            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            var detail = TrimDetail(string.IsNullOrWhiteSpace(stdout) ? stderr : stdout);
-            if (proc.ExitCode != 0)
-                return LocalStackActionResult.Fail(string.IsNullOrWhiteSpace(detail)
-                    ? $"exit {proc.ExitCode}"
-                    : detail);
-            return LocalStackActionResult.Succeed(string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            try
+            {
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+                var stderrTask = proc.StandardError.ReadToEndAsync(ct);
+                await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+                var stdout = await stdoutTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(false);
+                var detail = TrimDetail(string.IsNullOrWhiteSpace(stdout) ? stderr : stdout);
+                if (proc.ExitCode != 0)
+                    return LocalStackActionResult.Fail(string.IsNullOrWhiteSpace(detail)
+                        ? $"exit {proc.ExitCode}"
+                        : detail);
+                return LocalStackActionResult.Succeed(string.IsNullOrWhiteSpace(detail) ? "ok" : detail);
+            }
+            catch (OperationCanceledException)
+            {
+                // PROP-17.6: cancel during Host start must not leave the script process orphaned —
+                // Presence Stop also calls stop-soulcore.ps1 for force-kill of listeners.
+                try
+                {
+                    if (!proc.HasExited)
+                        proc.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    /* best-effort */
+                }
+
+                return LocalStackActionResult.Fail("cancelled");
+            }
         }
         catch (Exception ex)
         {

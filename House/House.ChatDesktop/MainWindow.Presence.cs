@@ -100,7 +100,7 @@ public partial class MainWindow
         await RunServiceActionAsync("host-start").ConfigureAwait(true);
 
     private async void HostStop_Click(object? sender, RoutedEventArgs e) =>
-        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+        await InterruptOrStopHostAsync().ConfigureAwait(true);
 
     private async void HostRestart_Click(object? sender, RoutedEventArgs e) =>
         await RunServiceActionAsync("host-restart").ConfigureAwait(true);
@@ -476,7 +476,7 @@ public partial class MainWindow
         CancelSoulCoreHold(resetHint: false);
         if (LampSoulCoreHint is not null)
             LampSoulCoreHint.Text = "stopping…";
-        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+        await InterruptOrStopHostAsync().ConfigureAwait(true);
     }
 
     private void CancelSoulCoreHold(bool resetHint)
@@ -488,11 +488,63 @@ public partial class MainWindow
             LampSoulCoreHint.Text = _lastHealth.Alive ? "HOLD TO GUARD" : "CLICK TO START";
     }
 
+    /// <summary>
+    /// PROP-17.6: Stop stays available during “Starting Host…” and force-kills via LocalStackControl.
+    /// </summary>
+    private async Task InterruptOrStopHostAsync()
+    {
+        if (_servicesBusy && _activeServiceTag is "host-start" or "host-restart")
+        {
+            // Supersede the in-flight start/restart so its finally/status cannot stick “Starting Host…”.
+            var stopGen = ++_hostActionGeneration;
+            try { _hostActionCts?.Cancel(); } catch { /* ignore */ }
+
+            if (ServicesStatusText is not null)
+                ServicesStatusText.Text = "Stopping Host…";
+            if (HostStackStatusText is not null)
+                HostStackStatusText.Text = "Stopping Host…";
+
+            PersistStackSettingsFromUi();
+            LocalStackActionResult result;
+            try
+            {
+                result = await _stack.StopHostAsync().ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                result = LocalStackActionResult.Fail(ex.Message);
+            }
+
+            if (stopGen != _hostActionGeneration)
+                return;
+
+            var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
+            if (ServicesStatusText is not null)
+                ServicesStatusText.Text = msg;
+            if (HostStackStatusText is not null)
+                HostStackStatusText.Text = msg;
+
+            _servicesBusy = false;
+            _activeServiceTag = null;
+            SetHostStackButtonsBusy(false);
+            await ProbeHealthAsync().ConfigureAwait(true);
+            return;
+        }
+
+        await RunServiceActionAsync("host-stop").ConfigureAwait(true);
+    }
+
     private async Task RunServiceActionAsync(string tag)
     {
         if (_servicesBusy) return;
+
+        var gen = ++_hostActionGeneration;
         _servicesBusy = true;
-        SetHostStackButtonsBusy(true);
+        _activeServiceTag = tag;
+        DisposeHostActionCts();
+        var cts = new CancellationTokenSource();
+        _hostActionCts = cts;
+        SetHostStackButtonsBusy(true, tag);
         if (ServicesStatusText is not null)
             ServicesStatusText.Text = $"Running {tag}…";
         if (HostStackStatusText is not null)
@@ -512,7 +564,7 @@ public partial class MainWindow
                 case "host-start":
                 {
                     PersistStackSettingsFromUi();
-                    var ensure = await _stack.EnsureStackForChatAsync().ConfigureAwait(true);
+                    var ensure = await _stack.EnsureStackForChatAsync(cts.Token).ConfigureAwait(true);
                     result = ensure.Ok
                         ? LocalStackActionResult.Succeed(ensure.Detail)
                         : LocalStackActionResult.Fail(ensure.Detail);
@@ -520,14 +572,14 @@ public partial class MainWindow
                 }
                 case "host-stop":
                     PersistStackSettingsFromUi();
-                    result = await _stack.StopHostAsync().ConfigureAwait(true);
+                    result = await _stack.StopHostAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "host-restart":
                     PersistStackSettingsFromUi();
-                    result = await _stack.RestartHostAsync().ConfigureAwait(true);
+                    result = await _stack.RestartHostAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "ollama-start":
-                    result = await _stack.StartOllamaAsync().ConfigureAwait(true);
+                    result = await _stack.StartOllamaAsync(cts.Token).ConfigureAwait(true);
                     break;
                 case "cua-enable":
                 {
@@ -558,6 +610,10 @@ public partial class MainWindow
                     break;
             }
 
+            // PROP-17.6: if Stop interrupted this start/restart, do not restore “Starting Host…” / busy.
+            if (gen != _hostActionGeneration)
+                return;
+
             var msg = result.Ok ? $"OK: {result.Detail}" : $"Fail: {result.Detail}";
             if (ServicesStatusText is not null)
                 ServicesStatusText.Text = msg;
@@ -573,8 +629,21 @@ public partial class MainWindow
 
             await ProbeHealthAsync().ConfigureAwait(true);
         }
+        catch (OperationCanceledException)
+        {
+            if (gen != _hostActionGeneration)
+                return;
+            const string cancelled = "Cancelled — Host start stopped.";
+            if (ServicesStatusText is not null)
+                ServicesStatusText.Text = cancelled;
+            if (HostStackStatusText is not null
+                && tag is "host-start" or "host-stop" or "host-restart")
+                HostStackStatusText.Text = cancelled;
+        }
         catch (Exception ex)
         {
+            if (gen != _hostActionGeneration)
+                return;
             var err = $"Error: {ex.Message}";
             if (ServicesStatusText is not null)
                 ServicesStatusText.Text = err;
@@ -584,16 +653,37 @@ public partial class MainWindow
         }
         finally
         {
-            _servicesBusy = false;
-            SetHostStackButtonsBusy(false);
+            // Dispose only our CTS — Stop interrupt cancels but must not dispose while we still await.
+            if (ReferenceEquals(_hostActionCts, cts))
+                DisposeHostActionCts();
+
+            if (gen == _hostActionGeneration)
+            {
+                _servicesBusy = false;
+                _activeServiceTag = null;
+                SetHostStackButtonsBusy(false);
+            }
         }
     }
 
-    private void SetHostStackButtonsBusy(bool busy)
+    /// <summary>
+    /// PROP-17.6: while Starting/Restarting Host, Stop stays enabled for pull-the-plug force-kill.
+    /// </summary>
+    private void SetHostStackButtonsBusy(bool busy, string? activeTag = null)
     {
-        if (HostStartButton is not null) HostStartButton.IsEnabled = !busy;
-        if (HostStopButton is not null) HostStopButton.IsEnabled = !busy;
-        if (HostRestartButton is not null) HostRestartButton.IsEnabled = !busy;
+        if (HostStartButton is not null)
+            HostStartButton.IsEnabled = HostStackBusyPolicy.IsHostStartEnabled(busy);
+        if (HostRestartButton is not null)
+            HostRestartButton.IsEnabled = HostStackBusyPolicy.IsHostRestartEnabled(busy);
+        if (HostStopButton is not null)
+            HostStopButton.IsEnabled = HostStackBusyPolicy.IsHostStopEnabled(busy, activeTag);
+    }
+
+    private void DisposeHostActionCts()
+    {
+        if (_hostActionCts is null) return;
+        try { _hostActionCts.Dispose(); } catch { /* ignore */ }
+        _hostActionCts = null;
     }
 
     private async void ServicesRefresh_Click(object? sender, RoutedEventArgs e)
