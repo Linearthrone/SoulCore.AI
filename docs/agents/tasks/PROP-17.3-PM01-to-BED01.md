@@ -5,7 +5,7 @@ prop_root: PROP-17-victoria-between-talks
 from: PM-01
 to: BED-01
 priority: P0
-status: Pending
+status: Pass
 created: 2026-10-12
 updated: 2026-10-12
 wave: between-talks
@@ -65,14 +65,14 @@ When the assignment is dead, she either hammers it or goes quiet. There is no le
 
 ## Acceptance
 
-- [ ] LeisureModel loads only from local `:11434`; missing model → quiet R&R (test or config evidence)
-- [ ] R&R starts when no runnable released work; suspended does not block
-- [ ] Inference lease stops work runner ticks
-- [ ] Self-started research works without release; action proposals land `suspended`
-- [ ] Untrusted page text cannot poison next work preamble
-- [ ] Human/SMS aborts R&R; no continuation spam on `presence-local`
-- [ ] No wall-clock kill on a living research thread
-- [ ] Report: `docs/agents/reports/PROP-17.3-BED01-to-PM01.md`
+- [x] LeisureModel loads only from local `:11434`; missing model → quiet R&R (test or config evidence)
+- [x] R&R starts when no runnable released work; suspended does not block
+- [x] Inference lease stops work runner ticks
+- [x] Self-started research works without release; action proposals land `suspended`
+- [x] Untrusted page text cannot poison next work preamble
+- [x] Human/SMS aborts R&R; no continuation spam on `presence-local`
+- [x] No wall-clock kill on a living research thread
+- [x] Report: `docs/agents/reports/PROP-17.3-BED01-to-PM01.md`
 
 ## Handoff
 
