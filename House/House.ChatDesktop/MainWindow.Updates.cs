@@ -361,6 +361,16 @@ public partial class MainWindow
 
         SetUpdateStatus(result.Message);
 
+        if (UpdateAvailableMark is not null)
+        {
+            UpdateAvailableMark.IsVisible = result.Status == PresenceUpdateCheckResult.Kind.Available;
+            ToolTip.SetTip(
+                UpdateAvailableMark,
+                result.Status == PresenceUpdateCheckResult.Kind.Available
+                    ? $"{result.Message} — open Settings → System"
+                    : "Update available — open Settings → System");
+        }
+
         if (result.Status == PresenceUpdateCheckResult.Kind.Available && showToastIfAvailable)
             ShowUpdateToast(result.Message, showAction: true);
         else if (showToastIfAvailable && fromButton

@@ -5,9 +5,10 @@ prop_root: PROP-17-victoria-between-talks
 from: PM-01
 to: FED-01
 priority: P1
-status: Pending
+status: Pass
 created: 2026-10-12
 updated: 2026-10-12
+report: docs/agents/reports/PROP-17.4-FED01-to-PM01.md
 wave: between-talks
 title: Presence shell — three tabs, band, composer, VM, email dialog
 depends_on: none for layout; parked/interest band copy needs 17.1 / 17.3 phrases
@@ -69,14 +70,14 @@ No new tab. Health next to Hold to talk + System readout. Compact: enabled, voic
 
 ## Acceptance
 
-- [ ] Exactly three settings tabs; deleted tabs gone
-- [ ] Title strip without Update / Restart stack / Correct mood / Refresh; PROP-16 on System with update mark
-- [ ] Identity read-only portrait + stats as specified
-- [ ] Unlimited email accounts via dialog; no three-role cap in UI
-- [ ] System Host controls + VM Start/Save/Power off (confirm); no auto-start
-- [ ] Composer inside ChatPanel; band under main split with four lines
-- [ ] Parked/interest copy honest (real after 17.1/17.3; stub until then)
-- [ ] Report: `docs/agents/reports/PROP-17.4-FED01-to-PM01.md`
+- [x] Exactly three settings tabs; deleted tabs gone
+- [x] Title strip without Update / Restart stack / Correct mood / Refresh; PROP-16 on System with update mark
+- [x] Identity read-only portrait + stats as specified
+- [x] Unlimited email accounts via dialog; no three-role cap in UI
+- [x] System Host controls + VM Start/Save/Power off (confirm); no auto-start
+- [x] Composer inside ChatPanel; band under main split with four lines
+- [x] Parked/interest copy honest (real after 17.1/17.3; stub until then)
+- [x] Report: `docs/agents/reports/PROP-17.4-FED01-to-PM01.md`
 
 ## Handoff
 

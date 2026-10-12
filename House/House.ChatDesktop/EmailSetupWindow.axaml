@@ -1,0 +1,104 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="House.ChatDesktop.EmailSetupWindow"
+        Title="Email setup — House Victoria"
+        Width="520" Height="640"
+        MinWidth="420" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Foreground="{DynamicResource TextBrush}">
+  <Border Classes="metal glass" Margin="12" Padding="14">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <StackPanel Spacing="4" Margin="0,0,0,10">
+        <TextBlock Text="Mailbox setup" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                   Text="Operator-only. Add any mailbox id — no victoria / personal / business cap. Passwords are write-only and never listed on System."/>
+      </StackPanel>
+
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Mailbox id" FontWeight="SemiBold"/>
+          <TextBox x:Name="EmailIdBox" Classes="input" Height="36" Padding="10,0"
+                   VerticalContentAlignment="Center"
+                   Watermark="e.g. victoria, kayleigh-gmail, work-alias"/>
+          <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                     Text="Stable id Host stores under. Letters, numbers, hyphen. Pick an existing row below to edit."/>
+
+          <TextBlock Text="Existing mailboxes" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          <ComboBox x:Name="EmailAccountCombo" Classes="input" Height="40"
+                    SelectionChanged="EmailAccountCombo_SelectionChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Spacing="2" Margin="0,4">
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Subtitle}" FontSize="11"
+                             Foreground="{DynamicResource MutedBrush}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <Border Classes="carbon" Padding="10,8" Margin="0,4,0,0">
+            <TextBlock x:Name="EmailReadyBanner" TextWrapping="Wrap" FontSize="12"
+                       Text="Pick or create a mailbox."/>
+          </Border>
+
+          <CheckBox x:Name="EmailEnabledCheck" Content="Victoria may use this mailbox"
+                    Margin="0,4,0,0"/>
+
+          <TextBlock Text="Email address" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          <TextBox x:Name="EmailAddressBox" Classes="input" Height="36" Padding="10,0"
+                   VerticalContentAlignment="Center" Watermark="name@gmail.com"/>
+
+          <TextBlock Text="App password" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                     Text="Gmail: App passwords under 2-Step Verification. Leave blank to keep a saved password."/>
+          <TextBox x:Name="EmailPasswordBox" Classes="input" Height="36" Padding="10,0"
+                   PasswordChar="•" VerticalContentAlignment="Center"
+                   Watermark="Paste app password (leave blank to keep)"/>
+          <TextBlock x:Name="EmailPasswordHint" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                     Text="No password saved yet"/>
+
+          <TextBlock Text="Name on outgoing mail" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          <TextBox x:Name="EmailDisplayNameBox" Classes="input" Height="36" Padding="10,0"
+                   VerticalContentAlignment="Center" Watermark="e.g. Victoria or LinearThrone"/>
+          <TextBox x:Name="EmailUsernameBox" IsVisible="False"/>
+
+          <Expander x:Name="EmailAdvancedExpander" Header="Advanced server settings"
+                    Margin="0,8,0,0" IsExpanded="False">
+            <StackPanel Margin="0,8,0,0" Spacing="6">
+              <Button Classes="ghost" Content="Reset to Gmail defaults" HorizontalAlignment="Left"
+                      Click="EmailGmailDefaults_Click" Margin="0,0,0,6"/>
+              <TextBlock Text="Incoming (IMAP)" Foreground="{DynamicResource MutedBrush}"/>
+              <DockPanel>
+                <TextBox x:Name="EmailImapPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                         Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="993" Margin="8,0,0,0"/>
+                <TextBox x:Name="EmailImapHostBox" Classes="input" Height="34" Padding="8,0"
+                         VerticalContentAlignment="Center" Text="imap.gmail.com"/>
+              </DockPanel>
+              <CheckBox x:Name="EmailImapSslCheck" Content="Incoming SSL" IsChecked="True"/>
+              <TextBlock Text="Outgoing (SMTP)" Foreground="{DynamicResource MutedBrush}"/>
+              <DockPanel>
+                <TextBox x:Name="EmailSmtpPortBox" DockPanel.Dock="Right" Classes="input" Width="72"
+                         Height="34" Padding="8,0" VerticalContentAlignment="Center" Text="587" Margin="8,0,0,0"/>
+                <TextBox x:Name="EmailSmtpHostBox" Classes="input" Height="34" Padding="8,0"
+                         VerticalContentAlignment="Center" Text="smtp.gmail.com"/>
+              </DockPanel>
+              <CheckBox x:Name="EmailSmtpSslCheck"
+                        Content="Outgoing uses port 465 (rare). Leave off for Gmail 587."/>
+            </StackPanel>
+          </Expander>
+
+          <TextBlock x:Name="EmailSettingsStatusText" Foreground="{DynamicResource MutedBrush}"
+                     FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+        </StackPanel>
+      </ScrollViewer>
+
+      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0"
+                  HorizontalAlignment="Right">
+        <Button Classes="ghost" Content="Reload" Click="EmailAccountsRefresh_Click"/>
+        <Button Classes="ghost" Content="Close" Click="Close_Click"/>
+        <Button Classes="primary" Content="Save mailbox" Click="EmailAccountSave_Click"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
