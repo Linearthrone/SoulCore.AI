@@ -51,10 +51,13 @@ Only `Schema/001` is applied at runtime (fresh install). Schema/002+ companions 
 ```text
 dotnet test SoulCore/SoulCore.Protocol.Tests \
   --filter "FullyQualifiedName~Prop17|FullyQualifiedName~TaskTools|FullyQualifiedName~WorkContinuation|FullyQualifiedName~GuestWorkspace|FullyQualifiedName~EmailTools|FullyQualifiedName~Mt4Tools"
+
+Passed!  Failed: 0, Passed: 125, Skipped: 0, Total: 125
 ```
 
-(Results filled after run.)
+Log: `/opt/cursor/artifacts/sweep2-prop17-tests.log`  
+(+1 vs Sweep 1 from `ParkUntil_Parse_IsInvariantUtc`.)
 
 ## Sweep 3 recommendation
 
-**No** for SoulCore PROP-17 cleanup — deferred items are intentional leave-alones or out-of-scope refactors; no concrete low-risk same-purpose remnant remains in this surface.
+**SHOULD_SWEEP_3=no** — deferred items are intentional leave-alones or out-of-scope refactors; no concrete low-risk same-purpose remnant remains in this SoulCore PROP-17 surface.
