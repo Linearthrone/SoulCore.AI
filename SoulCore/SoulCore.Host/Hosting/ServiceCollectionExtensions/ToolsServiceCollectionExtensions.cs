@@ -70,6 +70,12 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ITool, TaskGetTool>();
         services.AddSingleton<ITool, TaskUpdateStatusTool>();
         services.AddSingleton<ITool, TaskListTool>();
+        services.AddSingleton<ITool, TaskReleaseTool>();
+        services.AddSingleton<ITool, TaskSuspendTool>();
+        // PROP-17.2 SOP store — recall only; cannot flip gates.
+        services.AddSingleton<ITool, SopListTool>();
+        services.AddSingleton<ITool, SopGetTool>();
+        services.AddSingleton<ITool, SopCreateTool>();
 
         // Workflow tools (BED-141): workflow_create / workflow_execute / workflow_get.
         // workflow_execute resolves IToolRegistry lazily via IServiceProvider (ListToolsTool pattern).

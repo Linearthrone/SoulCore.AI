@@ -1,4 +1,5 @@
 using SoulCore.Inference.Presence;
+using SoulCore.Memory;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -71,19 +72,69 @@ public class WorkContinuationTests
     }
 
     [Fact]
-    public void Assignment_round_trips_through_the_file()
+    public async Task Assignment_pointer_round_trips_runningId_only()
     {
         var path = Path.Combine(Path.GetTempPath(), "aw-" + Guid.NewGuid().ToString("N") + ".json");
-        var store = new FileAssignedWorkStore(path);
-        Assert.Null(store.Current);
-        store.SetActive("complete the next two lessons");
-        var again = new FileAssignedWorkStore(path);
-        Assert.Equal("active", again.Current!.Status);
-        Assert.Equal("complete the next two lessons", again.Current.Text);
-        again.MarkWaiting("Both lessons are done.");
-        var waiting = new FileAssignedWorkStore(path);
-        Assert.Equal("waiting", waiting.Current!.Status);
-        waiting.Clear();
-        Assert.Null(new FileAssignedWorkStore(path).Current);
+        var db = Path.Combine(Path.GetTempPath(), "aw-db-" + Guid.NewGuid().ToString("N") + ".db");
+        try
+        {
+            await using var tasks = new SqliteMemoryStore(db);
+            var store = new FileAssignedWorkStore(path);
+            Assert.Null(store.RunningId);
+
+            var id = await tasks.CreateAsync(
+                "complete the next two lessons",
+                "complete the next two lessons",
+                "high",
+                "maestro",
+                ready: true,
+                status: "in_progress",
+                notes: null);
+            var row = await tasks.GetAsync(id);
+            Assert.NotNull(row);
+            store.Project(row!);
+            Assert.Equal(id, store.RunningId);
+
+            var again = new FileAssignedWorkStore(path);
+            Assert.Equal(id, again.RunningId);
+            Assert.True(File.ReadAllText(path).Contains("runningId", StringComparison.Ordinal));
+            Assert.DoesNotContain("\"status\"", File.ReadAllText(path), StringComparison.Ordinal);
+
+            again.Clear();
+            Assert.Null(new FileAssignedWorkStore(path).RunningId);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+            try { File.Delete(db); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task Legacy_active_slot_migrates_to_task_row()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "aw-legacy-" + Guid.NewGuid().ToString("N") + ".json");
+        var db = Path.Combine(Path.GetTempPath(), "aw-legdb-" + Guid.NewGuid().ToString("N") + ".db");
+        try
+        {
+            File.WriteAllText(path,
+                """
+                {"text":"finish maestro lesson","status":"active","updatedAt":"2026-10-12T00:00:00Z"}
+                """);
+            await using var tasks = new SqliteMemoryStore(db);
+            var store = new FileAssignedWorkStore(path);
+            await store.MigrateLegacyAsync(tasks);
+            Assert.NotNull(store.RunningId);
+            var row = await tasks.GetAsync(store.RunningId!.Value);
+            Assert.NotNull(row);
+            Assert.Equal("in_progress", row!.Status);
+            Assert.Contains("maestro", row.Title, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.ReadAllText(path).Contains("runningId", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+            try { File.Delete(db); } catch { /* best-effort */ }
+        }
     }
 }

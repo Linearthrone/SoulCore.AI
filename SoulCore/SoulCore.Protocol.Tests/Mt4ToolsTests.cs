@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Inference.Clients;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
+using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Trading;
 
 namespace SoulCore.Protocol.Tests;
@@ -139,10 +141,25 @@ public class Mt4ToolsTests
     }
 
     [Fact]
-    public async Task ExecuteTrade_Phase2_ConfirmedTrue_DispatchesToBridge()
+    public async Task ExecuteTrade_ModelMintedConfirmed_IsIgnored()
     {
         var bridge = new RecordingMt4Bridge { NextResult = new ToolResult(true, "ticket=42", null) };
         var tool = CreateTool("execute_trade", bridge, allowRead: false, allowTrade: true);
+
+        var result = await tool.ExecuteAsync(Parse(
+            """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.0500,"tp":1.0800,"confirmed":true}"""));
+
+        Assert.False(result.Success);
+        Assert.Contains("confirm trade:", result.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(bridge.Calls);
+    }
+
+    [Fact]
+    public async Task ExecuteTrade_Phase2_OperatorConsent_DispatchesToBridge()
+    {
+        var bridge = new RecordingMt4Bridge { NextResult = new ToolResult(true, "ticket=42", null) };
+        var tool = CreateTool("execute_trade", bridge, allowRead: false, allowTrade: true, out var consent);
+        consent.Grant(OperatorConsentGate.Mt4Write);
 
         var result = await tool.ExecuteAsync(Parse(
             """{"symbol":"EURUSD","direction":"buy","volume":0.1,"sl":1.0500,"tp":1.0800,"confirmed":true}"""));
@@ -151,7 +168,6 @@ public class Mt4ToolsTests
         Assert.Equal("ticket=42", result.Content);
         Assert.Single(bridge.Calls);
         Assert.Equal("mt4_execute_trade", bridge.Calls[0].McpName);
-        // confirmed must be stripped before MCP dispatch
         Assert.False(bridge.Calls[0].Args.TryGetProperty("confirmed", out _));
         Assert.Equal("EURUSD", bridge.Calls[0].Args.GetProperty("symbol").GetString());
     }
@@ -171,10 +187,11 @@ public class Mt4ToolsTests
     }
 
     [Fact]
-    public async Task ClosePosition_Phase2_ConfirmedTrue_DispatchesToBridge()
+    public async Task ClosePosition_Phase2_OperatorConsent_DispatchesToBridge()
     {
         var bridge = new RecordingMt4Bridge { NextResult = new ToolResult(true, "closed", null) };
-        var tool = CreateTool("close_position", bridge, allowRead: false, allowTrade: true);
+        var tool = CreateTool("close_position", bridge, allowRead: false, allowTrade: true, out var consent);
+        consent.Grant(OperatorConsentGate.Mt4Write);
 
         var result = await tool.ExecuteAsync(Parse("""{"ticket":12345,"confirmed":true}"""));
 
@@ -199,10 +216,11 @@ public class Mt4ToolsTests
     }
 
     [Fact]
-    public async Task RunBacktest_Phase2_ConfirmedTrue_DispatchesToBridge()
+    public async Task RunBacktest_Phase2_OperatorConsent_DispatchesToBridge()
     {
         var bridge = new RecordingMt4Bridge { NextResult = new ToolResult(true, "pf=1.2", null) };
-        var tool = CreateTool("run_backtest", bridge, allowRead: false, allowTrade: true);
+        var tool = CreateTool("run_backtest", bridge, allowRead: false, allowTrade: true, out var consent);
+        consent.Grant(OperatorConsentGate.Mt4Write);
 
         var result = await tool.ExecuteAsync(Parse(
             """{"ea":"MyEA","symbol":"EURUSD","from":"2025-01-01","to":"2025-06-01","confirmed":true}"""));
@@ -296,30 +314,50 @@ public class Mt4ToolsTests
         IMt4Bridge bridge,
         bool allowRead,
         bool allowTrade)
+        => CreateTool(name, bridge, allowRead, allowTrade, out _);
+
+    private static ITool CreateTool(
+        string name,
+        IMt4Bridge bridge,
+        bool allowRead,
+        bool allowTrade,
+        out OperatorConsentGate consent)
     {
+        consent = new OperatorConsentGate();
         var options = Options.Create(new ToolsOptions
         {
             AllowMt4Read = allowRead,
             AllowMt4Trade = allowTrade,
             Mt4Backend = "hermes"
         });
-        return CreateAllTools(bridge, options)
+        var access = new ComputerControlGate(
+            allowDesktopCapture: false,
+            allowBrowserCapture: false,
+            allowComputerControl: false,
+            allowMt4Read: allowRead,
+            allowMt4Trade: allowTrade);
+        return CreateAllTools(bridge, options, access, consent)
             .Single(t => string.Equals(t.Definition.Name, name, StringComparison.Ordinal));
     }
 
-    private static IEnumerable<ITool> CreateAllTools(IMt4Bridge bridge, IOptions<ToolsOptions> options)
+    private static IEnumerable<ITool> CreateAllTools(
+        IMt4Bridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings? access = null,
+        IOperatorConsentGate? consent = null)
     {
-        yield return new Mt4StatusTool(bridge, options);
-        yield return new ListSymbolsTool(bridge, options);
-        yield return new GetMarketDataTool(bridge, options);
-        yield return new GetOpenPositionsTool(bridge, options);
-        yield return new ExecuteTradeTool(bridge, options);
-        yield return new ClosePositionTool(bridge, options);
-        yield return new VerifyTicketTool(bridge, options);
-        yield return new MarketWatchStatusTool(bridge, options);
-        yield return new ExportHistoryTool(bridge, options);
-        yield return new GetHistoricalBarsTool(bridge, options);
-        yield return new RunBacktestTool(bridge, options);
+        access ??= new ComputerControlGate(options);
+        yield return new Mt4StatusTool(bridge, options, access);
+        yield return new ListSymbolsTool(bridge, options, access);
+        yield return new GetMarketDataTool(bridge, options, access);
+        yield return new GetOpenPositionsTool(bridge, options, access);
+        yield return new ExecuteTradeTool(bridge, options, access, consent);
+        yield return new ClosePositionTool(bridge, options, access, consent);
+        yield return new VerifyTicketTool(bridge, options, access);
+        yield return new MarketWatchStatusTool(bridge, options, access);
+        yield return new ExportHistoryTool(bridge, options, access);
+        yield return new GetHistoricalBarsTool(bridge, options, access);
+        yield return new RunBacktestTool(bridge, options, access, consent);
     }
 
     private sealed class RecordingMt4Bridge : IMt4Bridge

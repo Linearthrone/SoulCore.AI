@@ -44,6 +44,10 @@ public partial class MainWindow : Window
     private string? _pendingQuote;
     private IReadOnlyList<EmailAccountSnapshot> _emailAccounts = Array.Empty<EmailAccountSnapshot>();
     private bool _servicesBusy;
+    /// <summary>PROP-17.6: supersede in-flight host start/restart when Stop force-kills.</summary>
+    private int _hostActionGeneration;
+    private string? _activeServiceTag;
+    private CancellationTokenSource? _hostActionCts;
     private bool _houseDrawerOpen;
     private DateTimeOffset? _soulCoreHoldStarted;
     private DispatcherTimer? _soulCoreHoldTimer;

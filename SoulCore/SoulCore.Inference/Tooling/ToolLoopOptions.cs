@@ -28,4 +28,11 @@ public sealed class ToolLoopOptions
     /// before any Ollama round-trip (BED-180).
     /// </summary>
     public string? ForceToolName { get; init; }
+
+    /// <summary>
+    /// PROP-17.3: when set, the tool-loop uses this model name instead of
+    /// <see cref="InferenceModelRouting.ResolveToolModel"/>. Used for local
+    /// LeisureModel passes — never a cloud / work-model substitute.
+    /// </summary>
+    public string? ModelOverride { get; init; }
 }

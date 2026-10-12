@@ -46,7 +46,7 @@ public class EmailToolIntentTests
     public void EmailGuidance_TellsHerNotToBrowseGmail()
     {
         Assert.Contains("do NOT open Gmail", EmailGuidance.Block, StringComparison.Ordinal);
-        Assert.Contains("confirmed=true", EmailGuidance.Block, StringComparison.Ordinal);
+        Assert.Contains("confirmed=true is ignored", EmailGuidance.Block, StringComparison.Ordinal);
         Assert.Contains("victoria", EmailGuidance.Block, StringComparison.OrdinalIgnoreCase);
     }
 }

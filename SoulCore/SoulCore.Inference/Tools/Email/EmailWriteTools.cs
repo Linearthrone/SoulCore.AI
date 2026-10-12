@@ -1,12 +1,14 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Inference.Tools.Email;
 
 /// <summary>
-/// <c>email_delete</c> — master AllowEmailDelete + <c>confirmed=true</c> two-phase.
+/// <c>email_delete</c> — master AllowEmailDelete + host-side operator consent (PROP-17.1).
+/// Model-minted <c>confirmed</c> is stripped and never grants consent.
 /// </summary>
 public sealed class EmailDeleteTool : EmailToolBase
 {
@@ -18,31 +20,42 @@ public sealed class EmailDeleteTool : EmailToolBase
             "account": { "type": "string", "description": "Mailbox id: victoria | personal | business." },
             "uid": { "type": "string", "description": "Message uid to delete." },
             "folder": { "type": "string", "description": "Folder, default INBOX." },
-            "confirmed": { "type": "boolean", "description": "Must be true on the second call after Kayleigh confirms.", "default": false }
+            "confirmed": { "type": "boolean", "description": "Ignored — model cannot mint consent. Kayleigh replies yes.", "default": false }
           },
           "required": ["uid"]
         }
         """);
 
     public EmailDeleteTool(IEmailBridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, new ComputerControlGate(options))
+        : this(bridge, options, new ComputerControlGate(options), consent: null)
     {
     }
 
     public EmailDeleteTool(IEmailBridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
-        : base(bridge, options, access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    public EmailDeleteTool(
+        IEmailBridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent)
+        : base(bridge, options, access, consent)
     {
     }
 
     public override ToolDefinition Definition { get; } = new(
         Name: "email_delete",
-        Description: "Delete a message. First call returns a confirmation prompt; only deletes when confirmed=true after Kayleigh agrees.",
+        Description: "Delete a message. First call returns a confirmation prompt; only deletes after Kayleigh replies yes (model cannot mint confirmed).",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
         if (!DeleteAllowed)
             return Task.FromResult(new ToolResult(false, EmailToolSupport.DeleteDeniedMessage, null));
+
+        args = EmailToolSupport.StripModelConfirmed(args);
 
         if (!EmailToolSupport.TryGetRequiredString(args, "uid", out var uid, out var err))
             return Task.FromResult(err!);
@@ -51,8 +64,9 @@ public sealed class EmailDeleteTool : EmailToolBase
         if (string.IsNullOrWhiteSpace(account))
             return Task.FromResult(new ToolResult(false, EmailToolSupport.NoAccountsMessage, null));
 
-        if (!EmailToolSupport.IsConfirmed(args))
+        if (!EmailToolSupport.IsConfirmed(args, Consent, OperatorConsentGate.EmailDelete))
         {
+            Consent?.NotePending(OperatorConsentGate.EmailDelete);
             return Task.FromResult(new ToolResult(
                 false,
                 EmailToolSupport.BuildDeleteConfirmPrompt(account, uid, subject: null),
@@ -69,7 +83,7 @@ public sealed class EmailDeleteTool : EmailToolBase
 }
 
 /// <summary>
-/// <c>email_send</c> — new mail or reply. Master AllowEmailSend + <c>confirmed=true</c>.
+/// <c>email_send</c> — master AllowEmailSend + host-side operator consent (PROP-17.1).
 /// </summary>
 public sealed class EmailSendTool : EmailToolBase
 {
@@ -85,31 +99,42 @@ public sealed class EmailSendTool : EmailToolBase
             "cc": { "type": "string", "description": "Optional CC recipients, comma-separated." },
             "reply_to_uid": { "type": "string", "description": "When set, send as a reply to this uid (sets In-Reply-To)." },
             "folder": { "type": "string", "description": "Folder of reply_to_uid, default INBOX." },
-            "confirmed": { "type": "boolean", "description": "Must be true on the second call after Kayleigh confirms.", "default": false }
+            "confirmed": { "type": "boolean", "description": "Ignored — model cannot mint consent. Kayleigh replies yes.", "default": false }
           },
           "required": ["to", "subject", "body"]
         }
         """);
 
     public EmailSendTool(IEmailBridge bridge, IOptions<ToolsOptions> options)
-        : this(bridge, options, new ComputerControlGate(options))
+        : this(bridge, options, new ComputerControlGate(options), consent: null)
     {
     }
 
     public EmailSendTool(IEmailBridge bridge, IOptions<ToolsOptions> options, IToolsAccessSettings access)
-        : base(bridge, options, access)
+        : this(bridge, options, access, consent: null)
+    {
+    }
+
+    public EmailSendTool(
+        IEmailBridge bridge,
+        IOptions<ToolsOptions> options,
+        IToolsAccessSettings access,
+        IOperatorConsentGate? consent)
+        : base(bridge, options, access, consent)
     {
     }
 
     public override ToolDefinition Definition { get; } = new(
         Name: "email_send",
-        Description: "Send or reply to email from victoria/personal/business. First call returns a confirmation prompt; only sends when confirmed=true after Kayleigh agrees.",
+        Description: "Send or reply to email. First call returns a confirmation prompt; only sends after Kayleigh replies yes (model cannot mint confirmed).",
         Parameters: Schema);
 
     public override Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
         if (!SendAllowed)
             return Task.FromResult(new ToolResult(false, EmailToolSupport.SendDeniedMessage, null));
+
+        args = EmailToolSupport.StripModelConfirmed(args);
 
         if (!EmailToolSupport.TryGetRequiredString(args, "to", out var toRaw, out var err))
             return Task.FromResult(err!);
@@ -126,8 +151,9 @@ public sealed class EmailSendTool : EmailToolBase
         if (string.IsNullOrWhiteSpace(account))
             return Task.FromResult(new ToolResult(false, EmailToolSupport.NoAccountsMessage, null));
 
-        if (!EmailToolSupport.IsConfirmed(args))
+        if (!EmailToolSupport.IsConfirmed(args, Consent, OperatorConsentGate.EmailSend))
         {
+            Consent?.NotePending(OperatorConsentGate.EmailSend);
             return Task.FromResult(new ToolResult(
                 false,
                 EmailToolSupport.BuildSendConfirmPrompt(account, to, subject),

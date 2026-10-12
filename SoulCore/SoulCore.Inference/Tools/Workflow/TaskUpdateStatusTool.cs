@@ -6,8 +6,9 @@ namespace SoulCore.Inference.Tools.Workflow;
 /// <summary>
 /// Model-callable <c>task_update_status</c> (BED-140). Updates
 /// <c>status</c> + <c>updated_at</c> on a <c>victoria_tasks</c> row.
-/// Allowed statuses (<c>todo|in_progress|done|blocked</c>) are enforced by
+/// Allowed statuses (<c>todo|in_progress|done|blocked|parked|suspended</c>) are enforced by
 /// <see cref="IVictoriaTaskStore.UpdateStatusAsync"/> (<see cref="ArgumentException"/>).
+/// There is no delete API (PROP-17.1).
 /// </summary>
 public sealed class TaskUpdateStatusTool : ITool
 {
@@ -44,7 +45,7 @@ public sealed class TaskUpdateStatusTool : ITool
         {
             return new ToolResult(
                 Success: false,
-                Content: "error: task_update_status requires 'status' (string: todo|in_progress|done|blocked).",
+                Content: "error: task_update_status requires 'status' (string: todo|in_progress|done|blocked|parked|suspended).",
                 Data: null);
         }
 
@@ -53,7 +54,7 @@ public sealed class TaskUpdateStatusTool : ITool
         {
             return new ToolResult(
                 Success: false,
-                Content: "error: task_update_status 'status' must be non-empty (todo|in_progress|done|blocked).",
+                Content: "error: task_update_status 'status' must be non-empty (todo|in_progress|done|blocked|parked|suspended).",
                 Data: null);
         }
 
@@ -113,7 +114,7 @@ public sealed class TaskUpdateStatusTool : ITool
             },
             "status": {
               "type": "string",
-              "description": "todo|in_progress|done|blocked"
+              "description": "todo|in_progress|done|blocked|parked|suspended"
             }
           },
           "required": ["id", "status"]

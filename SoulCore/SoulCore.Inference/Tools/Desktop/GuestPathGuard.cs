@@ -23,6 +23,22 @@ public static class GuestPathGuard
         @"(?:^|[;&|`\n])\s*(sudo|pkexec|su|passwd|doas)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    /// <summary>
+    /// PROP-17.1 / 17.2: refuse package install and pipe-to-bash in every mode
+    /// (apt, snap, flatpak, wget|bash / curl|bash). Compile/test under /home/victoria stays.
+    /// </summary>
+    private static readonly Regex DeniedPackageOrPipeBash = new(
+        @"\b(?:apt(?:-get)?|aptitude|snap|flatpak)\b.*\b(?:install|download|add)\b" +
+        @"|\b(?:install|download|add)\b.*\b(?:apt(?:-get)?|aptitude|snap|flatpak)\b" +
+        @"|\b(?:wget|curl)\b[^|;]*\|\s*(?:ba)?sh\b" +
+        @"|\b(?:wget|curl)\b[^;\n]*\s\|\s*(?:/bin/)?(?:ba)?sh\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex DeniedBrowserInstall = new(
+        @"\b(?:apt(?:-get)?|snap|flatpak)\b.*\b(?:firefox|chrome|chromium|brave|opera|vivaldi|microsoft-edge|google-chrome)\b" +
+        @"|\b(?:firefox|chrome|chromium|brave)\b.*\b(?:install)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static bool TryHome(string? username, out string home, out string error)
     {
         var user = (username ?? "").Trim();
@@ -134,6 +150,15 @@ public static class GuestPathGuard
                 "guest_shell will not run sudo, su, pkexec, doas, or passwd — " +
                 "a password prompt would hang the guest session. " +
                 "Ask Kayleigh before installing packages.";
+            return false;
+        }
+
+        if (DeniedPackageOrPipeBash.IsMatch(command) || DeniedBrowserInstall.IsMatch(command))
+        {
+            error =
+                "guest_shell refused: package install and pipe-to-bash are blocked in every mode " +
+                "(apt, snap, flatpak, wget|bash, curl|bash), including browser installs. " +
+                "Compile and test under /home/victoria stay allowed. Ask Kayleigh for host-side installs.";
             return false;
         }
 

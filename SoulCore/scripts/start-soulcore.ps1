@@ -255,8 +255,12 @@ $proc = Start-Process -FilePath "dotnet" `
 
 $proc.Id | Set-Content -LiteralPath $PidFile -Encoding ascii
 
+# PROP-17.1: start timeout — if Host never binds, force-kill and fail clearly
+# so Presence can clear "Starting Host…" (Stop also force-kills via stop-soulcore.ps1).
+$StartTimeoutSec = 45
 $ready = $false
-for ($i = 0; $i -lt 40; $i++) {
+$deadline = [datetime]::UtcNow.AddSeconds($StartTimeoutSec)
+while ([datetime]::UtcNow -lt $deadline) {
     Start-Sleep -Milliseconds 250
     if ($proc.HasExited) {
         $err = if (Test-Path "${LogFile}.err") { Get-Content "${LogFile}.err" -Raw } else { "" }
@@ -269,7 +273,10 @@ for ($i = 0; $i -lt 40; $i++) {
 }
 
 if (-not $ready) {
-    Write-Warning "Process started (PID $($proc.Id)) but port not confirmed listening yet."
+    Write-Warning "Host start timed out after ${StartTimeoutSec}s (PID $($proc.Id)) — force-killing stuck process."
+    try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch { }
+    if (Test-Path -LiteralPath $PidFile) { Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue }
+    throw "SoulCore.Host failed to listen on ${BindAddress}:${Port} within ${StartTimeoutSec}s (force-killed). Stop is always safe via stop-soulcore.ps1."
 }
 
 Write-Host "PID: $($proc.Id)"

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Inference.Clients;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
 using SoulCore.Inference.Tools.Body;
 using SoulCore.Inference.Tools.ChiefArchitect;
@@ -66,7 +67,8 @@ public sealed class ChatContextBuilder : IChatContextBuilder
 
         await Task.WhenAll(memoriesTask, identityTask, emotionTask).ConfigureAwait(false);
 
-        var recentMemories = await memoriesTask.ConfigureAwait(false);
+        var recentMemories = UntrustedObservation.StripFromPreamble(
+            await memoriesTask.ConfigureAwait(false));
         var identityAnchors = await identityTask.ConfigureAwait(false);
         var emotionPreamble = await emotionTask.ConfigureAwait(false);
 
@@ -104,9 +106,12 @@ public sealed class ChatContextBuilder : IChatContextBuilder
     {
         ArgumentNullException.ThrowIfNull(emotionPreamble);
 
+        // PROP-17.3: untrusted R&R page text must not poison work/chat preamble.
+        var safeMemories = UntrustedObservation.StripFromPreamble(recentMemories);
+
         var identityBlock = BuildIdentityBlock(identityAnchors);
         var (memoryBlock, droppedMemoryCount) = BuildMemoryBlock(
-            recentMemories,
+            safeMemories,
             ContextPreambleCharLimit - identityBlock.Length);
 
         if (droppedMemoryCount > 0)

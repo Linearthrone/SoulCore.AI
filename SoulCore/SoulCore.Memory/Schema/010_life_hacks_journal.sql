@@ -1,0 +1,2 @@
+-- Schema mirror for migration 010 (life_hacks journal book).
+-- Live DBs apply the recreate path in Migrations/010_life_hacks_journal.sql.
