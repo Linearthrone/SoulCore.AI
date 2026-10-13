@@ -14,7 +14,7 @@ namespace House.ChatDesktop.Controls;
 public sealed class VictoriaHerScreenOverlayWindow : Window
 {
     private readonly Canvas _cursorLayer;
-    private readonly Ellipse _cursor;
+    private readonly Avalonia.Controls.Shapes.Path _cursor;
     private readonly Border _badge;
     private readonly TextBlock _badgeText;
     private bool _clickThroughApplied;
@@ -38,13 +38,16 @@ public sealed class VictoriaHerScreenOverlayWindow : Window
         ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
         ExtendClientAreaTitleBarHeightHint = -1;
 
-        _cursor = new Ellipse
+        _cursor = new Avalonia.Controls.Shapes.Path
         {
-            Width = 28,
-            Height = 28,
+            Width = HerScreenCursorGlyph.DesignWidth,
+            Height = HerScreenCursorGlyph.DesignHeight,
+            Stretch = Stretch.Fill,
             Stroke = new SolidColorBrush(Color.Parse("#FF2D55")),
-            StrokeThickness = 3,
-            Fill = new SolidColorBrush(Color.Parse("#73FF2D55")),
+            StrokeThickness = 1.5,
+            StrokeJoin = PenLineJoin.Round,
+            Fill = new SolidColorBrush(Color.Parse("#E6FF2D55")),
+            Data = Geometry.Parse(HerScreenCursorGlyph.GeometryData),
             IsVisible = false
         };
         _cursorLayer = new Canvas { IsHitTestVisible = false };
@@ -120,8 +123,8 @@ public sealed class VictoriaHerScreenOverlayWindow : Window
         if (!visible)
             return;
 
-        _cursor.Width = size;
         _cursor.Height = size;
+        _cursor.Width = HerScreenCursorGlyph.WidthForHeight(size);
         _cursor.Stroke = stroke;
         _cursor.Fill = fill;
         Canvas.SetLeft(_cursor, left);
@@ -185,4 +188,14 @@ public static class HerScreenOverlayWin32
 
     public static int WithClickThrough(int exStyle) =>
         exStyle | WsExTransparent | WsExLayered | WsExNoActivate | WsExToolWindow;
+
+    /// <summary>
+    /// Extended style for the Win32 sibling drawn above the embedded VM.
+    /// WS_EX_TRANSPARENT is left off: on a child window that style makes
+    /// WM_NCHITTEST return HTTRANSPARENT to the parent, and the Avalonia host
+    /// does not forward the click into VirtualBox — so the whole Her screen
+    /// goes dead. The sibling is sized to the cursor (and a small badge)
+    /// instead of covering the guest.
+    /// </summary>
+    public static int ChildOverlayExStyle => WsExLayered | WsExNoActivate;
 }

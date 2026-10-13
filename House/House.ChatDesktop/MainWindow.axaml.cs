@@ -101,6 +101,7 @@ public partial class MainWindow : Window
     {
         PresenceStartupLog.Write("MainWindow ctor begin");
         InitializeComponent();
+        ChatInput.AddHandler(InputElement.KeyDownEvent, ChatInput_KeyDown, RoutingStrategies.Tunnel);
         PresenceStartupLog.Write("InitializeComponent done");
         TranscriptList.ItemsSource = _messages;
         EndpointText.Text = ConnectionDefaults.DisplayEndpoint;

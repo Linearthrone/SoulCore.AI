@@ -25,4 +25,13 @@ public class HerScreenOverlayWin32Tests
         Assert.Equal(existing, next & existing);
         Assert.True((next & HerScreenOverlayWin32.WsExTransparent) != 0);
     }
+
+    [Fact]
+    public void ChildOverlayExStyle_DoesNotSwallowClicksOnTheParent()
+    {
+        var style = HerScreenOverlayWin32.ChildOverlayExStyle;
+        Assert.NotEqual(0, style & HerScreenOverlayWin32.WsExLayered);
+        Assert.NotEqual(0, style & HerScreenOverlayWin32.WsExNoActivate);
+        Assert.Equal(0, style & HerScreenOverlayWin32.WsExTransparent);
+    }
 }

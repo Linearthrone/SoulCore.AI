@@ -328,7 +328,7 @@ public partial class MainWindow
             if (parent != 0)
             {
                 _herScreenHwndOverlay ??= new HerScreenHwndOverlay();
-                _herScreenHwndOverlay.Attach(parent);
+                _herScreenHwndOverlay.Attach(parent, (nint)_lastEmbedHwnd);
                 // Avalonia popup is redundant when HWND sibling works.
                 if (_herScreenOverlay is { IsVisible: true })
                     _herScreenOverlay.Hide();
@@ -527,7 +527,9 @@ public partial class MainWindow
             else
             {
                 _herScreenOverlay?.SyncToSurface(surface);
-                _herScreenOverlay?.SetSoftCursor(true, mapped.Value.Left, mapped.Value.Top, size, stroke, fill);
+                var hotX = mapped.Value.Left + size / 2;
+                var hotY = mapped.Value.Top + size / 2;
+                _herScreenOverlay?.SetSoftCursor(true, hotX, hotY, size, stroke, fill);
             }
 
             return;
@@ -536,10 +538,10 @@ public partial class MainWindow
         HideHerScreenOverlay();
         cursor.Stroke = stroke;
         cursor.Fill = fill;
-        cursor.Width = size;
         cursor.Height = size;
-        Canvas.SetLeft(cursor, mapped.Value.Left);
-        Canvas.SetTop(cursor, mapped.Value.Top);
+        cursor.Width = HerScreenCursorGlyph.WidthForHeight(size);
+        Canvas.SetLeft(cursor, mapped.Value.Left + size / 2);
+        Canvas.SetTop(cursor, mapped.Value.Top + size / 2);
         layer.Width = bounds.Width;
         layer.Height = bounds.Height;
         layer.IsVisible = true;

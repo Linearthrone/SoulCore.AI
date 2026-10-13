@@ -4,10 +4,12 @@ using House.ChatDesktop.Services;
 namespace House.ChatDesktop.Controls;
 
 /// <summary>
-/// Win32 layered child sibling of the SetParent'd VirtualBox HWND. Avalonia siblings
-/// and owned popups can sit under VirtualBox's GPU surface — this paints pink/teal
-/// soft cursor + coords badge in the same parent with HWND_TOP Z-order.
-/// Magenta color-key = transparent; WS_EX_TRANSPARENT keeps clicks on the VM.
+/// Win32 layered child siblings of the SetParent'd VirtualBox HWND. Avalonia siblings
+/// and owned popups can sit under VirtualBox's GPU surface — these paint the arrow
+/// cursor and coords badge in the same parent with HWND_TOP Z-order.
+/// Each window is only as big as what it draws. A full-client child with
+/// WS_EX_TRANSPARENT delivers clicks to the Avalonia parent, which never forwards
+/// them into the VM, so the guest looked click-dead.
 /// </summary>
 public sealed class HerScreenHwndOverlay : IDisposable
 {
@@ -15,8 +17,10 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private static bool _classRegistered;
     private static readonly WndProc WndProcKeepAlive = StaticWndProc;
 
-    private nint _hwnd;
+    private nint _cursorHwnd;
+    private nint _badgeHwnd;
     private nint _parent;
+    private nint _clickTarget;
     private GCHandle _selfHandle;
     private bool _cursorVisible;
     private int _cursorX;
@@ -26,14 +30,15 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private string? _badge;
     private bool _disposed;
 
-    public bool IsAttached => _hwnd != 0 && _parent != 0;
+    public bool IsAttached => _cursorHwnd != 0 && _parent != 0;
 
-    public void Attach(nint parentHwnd)
+    public void Attach(nint parentHwnd, nint clickTarget)
     {
         if (!OperatingSystem.IsWindows() || parentHwnd == 0)
             return;
 
-        if (_hwnd != 0 && _parent == parentHwnd)
+        _clickTarget = clickTarget;
+        if (_cursorHwnd != 0 && _parent == parentHwnd)
         {
             SyncToParent();
             return;
@@ -44,10 +49,26 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return;
 
         _parent = parentHwnd;
-        _hwnd = CreateWindowEx(
-            WsExLayered | WsExTransparent | WsExNoActivate,
+        _selfHandle = GCHandle.Alloc(this);
+        _cursorHwnd = CreateOverlayWindow(parentHwnd, "HerScreenCursor");
+        _badgeHwnd = CreateOverlayWindow(parentHwnd, "HerScreenBadge");
+        if (_cursorHwnd == 0)
+        {
+            PresenceStartupLog.Write(
+                $"HerScreenHwndOverlay CreateWindowEx failed err={Marshal.GetLastPInvokeError()}");
+            Detach();
+            return;
+        }
+
+        SyncToParent();
+    }
+
+    private nint CreateOverlayWindow(nint parentHwnd, string name)
+    {
+        var hwnd = CreateWindowEx(
+            HerScreenOverlayWin32.ChildOverlayExStyle,
             WindowClassName,
-            "HerScreenOverlay",
+            name,
             WsChild | WsVisible | WsClipSiblings,
             0,
             0,
@@ -57,91 +78,95 @@ public sealed class HerScreenHwndOverlay : IDisposable
             nint.Zero,
             GetModuleHandle(null),
             nint.Zero);
+        if (hwnd == 0)
+            return 0;
 
-        if (_hwnd == 0)
-        {
-            PresenceStartupLog.Write(
-                $"HerScreenHwndOverlay CreateWindowEx failed err={Marshal.GetLastPInvokeError()}");
-            _parent = 0;
-            return;
-        }
-
-        _selfHandle = GCHandle.Alloc(this);
-        SetWindowLongPtr(_hwnd, GwlpUserData, GCHandle.ToIntPtr(_selfHandle));
-        _ = SetLayeredWindowAttributes(_hwnd, ColorKeyMagenta, 0, LwaColorKey);
-        SyncToParent();
+        SetWindowLongPtr(hwnd, GwlpUserData, GCHandle.ToIntPtr(_selfHandle));
+        _ = SetLayeredWindowAttributes(hwnd, ColorKeyMagenta, 0, LwaColorKey);
+        return hwnd;
     }
 
     public void SyncToParent()
     {
-        if (!OperatingSystem.IsWindows() || _hwnd == 0 || _parent == 0)
+        if (!OperatingSystem.IsWindows() || _cursorHwnd == 0 || _parent == 0)
             return;
-        if (!GetClientRect(_parent, out var rc))
-            return;
-        var w = rc.Right - rc.Left;
-        var h = rc.Bottom - rc.Top;
-        if (w <= 1 || h <= 1)
-            return;
-
-        _ = SetWindowPos(_hwnd, HwndTop, 0, 0, w, h, SwpShowWindow | SwpNoActivate);
+        PositionCursorWindow();
+        PositionBadgeWindow();
         RaiseAboveSiblings();
-        Repaint();
     }
 
     public void RaiseAboveSiblings()
     {
-        if (!OperatingSystem.IsWindows() || _hwnd == 0)
+        if (!OperatingSystem.IsWindows())
             return;
-        _ = SetWindowPos(
-            _hwnd,
-            HwndTop,
-            0,
-            0,
-            0,
-            0,
-            SwpNoMove | SwpNoSize | SwpShowWindow | SwpNoActivate);
+        Raise(_cursorHwnd);
+        Raise(_badgeHwnd);
     }
 
-    /// <summary>Cursor center in parent client pixels.</summary>
-    public void SetSoftCursor(bool visible, int centerX, int centerY, int size, bool clickFlash)
+    /// <summary>Cursor tip (hotspot) in parent client pixels.</summary>
+    public void SetSoftCursor(bool visible, int tipX, int tipY, int size, bool clickFlash)
     {
         _cursorVisible = visible;
-        _cursorX = centerX;
-        _cursorY = centerY;
+        _cursorX = tipX;
+        _cursorY = tipY;
         _cursorSize = Math.Clamp(size, 12, 72);
         _clickFlash = clickFlash;
-        if (_hwnd != 0)
-            _ = ShowWindow(_hwnd, SwShow);
-        Repaint();
+        PositionCursorWindow();
     }
 
     public void SetBadge(string? text)
     {
         _badge = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
-        if (_hwnd != 0 && (_badge is not null || _cursorVisible))
-            _ = ShowWindow(_hwnd, SwShow);
-        Repaint();
+        PositionBadgeWindow();
     }
 
     public void Hide()
     {
-        if (!OperatingSystem.IsWindows() || _hwnd == 0)
+        if (!OperatingSystem.IsWindows())
             return;
-        _ = ShowWindow(_hwnd, SwHide);
+        if (_cursorHwnd != 0)
+            _ = ShowWindow(_cursorHwnd, SwHide);
+        if (_badgeHwnd != 0)
+            _ = ShowWindow(_badgeHwnd, SwHide);
     }
 
     public void Detach()
     {
-        if (_hwnd != 0 && OperatingSystem.IsWindows())
+        if (OperatingSystem.IsWindows())
         {
-            SetWindowLongPtr(_hwnd, GwlpUserData, nint.Zero);
-            _ = DestroyWindow(_hwnd);
+            DestroyOverlayWindow(ref _cursorHwnd);
+            DestroyOverlayWindow(ref _badgeHwnd);
         }
 
-        _hwnd = 0;
+        _cursorHwnd = 0;
+        _badgeHwnd = 0;
         _parent = 0;
+        _clickTarget = 0;
         if (_selfHandle.IsAllocated)
             _selfHandle.Free();
+    }
+
+    private static void DestroyOverlayWindow(ref nint hwnd)
+    {
+        if (hwnd == 0)
+            return;
+        SetWindowLongPtr(hwnd, GwlpUserData, nint.Zero);
+        _ = DestroyWindow(hwnd);
+        hwnd = 0;
+    }
+
+    private static void Raise(nint hwnd)
+    {
+        if (hwnd == 0 || !IsWindowVisible(hwnd))
+            return;
+        _ = SetWindowPos(
+            hwnd,
+            HwndTop,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpNoActivate);
     }
 
     public void Dispose()
@@ -152,24 +177,103 @@ public sealed class HerScreenHwndOverlay : IDisposable
         Detach();
     }
 
-    private void Repaint()
+    private void Repaint(nint hwnd)
     {
-        if (!OperatingSystem.IsWindows() || _hwnd == 0)
+        if (!OperatingSystem.IsWindows() || hwnd == 0)
             return;
-        _ = InvalidateRect(_hwnd, nint.Zero, true);
-        _ = UpdateWindow(_hwnd);
+        _ = InvalidateRect(hwnd, nint.Zero, true);
+        _ = UpdateWindow(hwnd);
     }
 
-    private void Paint(nint hdc)
+    private void PositionCursorWindow()
     {
-        if (!GetClientRect(_hwnd, out var rc))
+        if (!OperatingSystem.IsWindows() || _cursorHwnd == 0)
+            return;
+        if (!_cursorVisible)
+        {
+            _ = ShowWindow(_cursorHwnd, SwHide);
+            return;
+        }
+
+        var bounds = HerScreenCursorGlyph.BoundsAt(_cursorX, _cursorY, _cursorSize);
+        _ = SetWindowPos(
+            _cursorHwnd,
+            HwndTop,
+            bounds.X,
+            bounds.Y,
+            bounds.Width,
+            bounds.Height,
+            SwpShowWindow | SwpNoActivate);
+        ApplyCursorRegion(bounds);
+        Repaint(_cursorHwnd);
+    }
+
+    private void ApplyCursorRegion((int X, int Y, int Width, int Height) bounds)
+    {
+        var outline = HerScreenCursorGlyph.OutlineAt(_cursorX, _cursorY, _cursorSize);
+        var local = new POINT[outline.Length];
+        for (var i = 0; i < outline.Length; i++)
+        {
+            local[i] = new POINT
+            {
+                X = outline[i].X - bounds.X,
+                Y = outline[i].Y - bounds.Y
+            };
+        }
+
+        var region = CreatePolygonRgn(local, local.Length, Winding);
+        if (region == 0)
+            return;
+        // SetWindowRgn takes ownership of the region.
+        if (SetWindowRgn(_cursorHwnd, region, true) == 0)
+            DeleteObject(region);
+    }
+
+    private void PositionBadgeWindow()
+    {
+        if (!OperatingSystem.IsWindows() || _badgeHwnd == 0)
+            return;
+        if (_badge is null)
+        {
+            _ = ShowWindow(_badgeHwnd, SwHide);
+            return;
+        }
+
+        var hdc = GetDC(_badgeHwnd);
+        if (hdc == 0)
+            return;
+        var font = CreateFont(
+            -13, 0, 0, 0, 700, 0, 0, 0,
+            1, 0, 0, ClearTypeQuality, 0, "Segoe UI");
+        var oldFont = SelectObject(hdc, font);
+        _ = GetTextExtentPoint32(hdc, _badge, _badge.Length, out var size);
+        SelectObject(hdc, oldFont);
+        DeleteObject(font);
+        _ = ReleaseDC(_badgeHwnd, hdc);
+
+        const int pad = 6;
+        var width = Math.Max(24, size.cx + pad * 2);
+        var height = Math.Max(16, size.cy + pad * 2);
+        _ = SetWindowPos(
+            _badgeHwnd,
+            HwndTop,
+            8,
+            8,
+            width,
+            height,
+            SwpShowWindow | SwpNoActivate);
+        Repaint(_badgeHwnd);
+    }
+
+    private void Paint(nint hwnd, nint hdc)
+    {
+        if (!GetClientRect(hwnd, out var rc))
             return;
         var w = rc.Right - rc.Left;
         var h = rc.Bottom - rc.Top;
         if (w <= 1 || h <= 1)
             return;
 
-        FillRect(hdc, ref rc, GetStockObject(BlackBrush)); // overwritten by color-key fill
         var keyBrush = CreateSolidBrush(ColorKeyMagenta);
         try
         {
@@ -180,29 +284,43 @@ public sealed class HerScreenHwndOverlay : IDisposable
             DeleteObject(keyBrush);
         }
 
-        if (_cursorVisible)
+        if (hwnd == _cursorHwnd && _cursorVisible)
+            PaintCursor(hdc);
+        else if (hwnd == _badgeHwnd && _badge is not null)
+            PaintBadge(hdc, rc);
+    }
+
+    private void PaintCursor(nint hdc)
+    {
+        var bounds = HerScreenCursorGlyph.BoundsAt(_cursorX, _cursorY, _cursorSize);
+        var outline = HerScreenCursorGlyph.OutlineAt(_cursorX, _cursorY, _cursorSize);
+        var local = new POINT[outline.Length];
+        for (var i = 0; i < outline.Length; i++)
         {
-            var half = _cursorSize / 2;
-            var left = _cursorX - half;
-            var top = _cursorY - half;
-            var right = left + _cursorSize;
-            var bottom = top + _cursorSize;
-            var fill = _clickFlash ? ColorTealFill : ColorPinkFill;
-            var stroke = _clickFlash ? ColorTealStroke : ColorPinkStroke;
-            var fillBrush = CreateSolidBrush(fill);
-            var pen = CreatePen(PsSolid, 3, stroke);
-            var oldBrush = SelectObject(hdc, fillBrush);
-            var oldPen = SelectObject(hdc, pen);
-            Ellipse(hdc, left, top, right, bottom);
-            SelectObject(hdc, oldBrush);
-            SelectObject(hdc, oldPen);
-            DeleteObject(fillBrush);
-            DeleteObject(pen);
+            local[i] = new POINT
+            {
+                X = outline[i].X - bounds.X,
+                Y = outline[i].Y - bounds.Y
+            };
         }
 
+        var fill = _clickFlash ? ColorTealStroke : ColorPinkStroke;
+        var stroke = ColorWhite;
+        var fillBrush = CreateSolidBrush(fill);
+        var pen = CreatePen(PsSolid, 2, stroke);
+        var oldBrush = SelectObject(hdc, fillBrush);
+        var oldPen = SelectObject(hdc, pen);
+        Polygon(hdc, local, local.Length);
+        SelectObject(hdc, oldBrush);
+        SelectObject(hdc, oldPen);
+        DeleteObject(fillBrush);
+        DeleteObject(pen);
+    }
+
+    private void PaintBadge(nint hdc, RECT client)
+    {
         if (_badge is null)
             return;
-
         var text = _badge;
         var font = CreateFont(
             -13, 0, 0, 0, 700, 0, 0, 0,
@@ -210,28 +328,58 @@ public sealed class HerScreenHwndOverlay : IDisposable
         var oldFont = SelectObject(hdc, font);
         SetBkMode(hdc, Transparent);
         SetTextColor(hdc, ColorPinkStroke);
-        _ = GetTextExtentPoint32(hdc, text, text.Length, out var size);
         const int pad = 6;
-        var plate = new RECT
-        {
-            Left = 8,
-            Top = 8,
-            Right = 8 + size.cx + pad * 2,
-            Bottom = 8 + size.cy + pad * 2
-        };
         var plateBrush = CreateSolidBrush(ColorPlate);
         var platePen = CreatePen(PsSolid, 1, ColorPinkStroke);
         var oldB = SelectObject(hdc, plateBrush);
         var oldP = SelectObject(hdc, platePen);
-        RoundRect(hdc, plate.Left, plate.Top, plate.Right, plate.Bottom, 6, 6);
+        RoundRect(hdc, 0, 0, client.Right, client.Bottom, 6, 6);
         SelectObject(hdc, oldB);
         SelectObject(hdc, oldP);
         DeleteObject(plateBrush);
         DeleteObject(platePen);
-        TextOut(hdc, plate.Left + pad, plate.Top + pad, text, text.Length);
+        TextOut(hdc, pad, pad, text, text.Length);
         SelectObject(hdc, oldFont);
         DeleteObject(font);
     }
+
+    private void ForwardPointer(nint source, uint msg, nint wParam, nint lParam)
+    {
+        var target = _clickTarget;
+        if (target == 0 || source == 0 || !IsWindow(target))
+            return;
+
+        var pt = new POINT { X = SignedLow(lParam), Y = SignedHigh(lParam) };
+        _ = MapWindowPoints(source, target, ref pt, 1);
+
+        var dest = DeepestChild(target, ref pt);
+        var packed = MakeLParam(pt.X, pt.Y);
+        if (msg is WmLButtonDown or WmRButtonDown or WmMButtonDown)
+            _ = PostMessage(dest, WmMouseMove, nint.Zero, packed);
+        _ = PostMessage(dest, msg, wParam, packed);
+    }
+
+    private static nint DeepestChild(nint hwnd, ref POINT pt)
+    {
+        const uint skip = CwpSkipInvisible | CwpSkipDisabled | CwpSkipTransparent;
+        for (var i = 0; i < 12; i++)
+        {
+            var child = ChildWindowFromPointEx(hwnd, pt, skip);
+            if (child == 0 || child == hwnd)
+                return hwnd;
+            _ = MapWindowPoints(hwnd, child, ref pt, 1);
+            hwnd = child;
+        }
+
+        return hwnd;
+    }
+
+    private static int SignedLow(nint lParam) => (short)((long)lParam & 0xFFFF);
+
+    private static int SignedHigh(nint lParam) => (short)(((long)lParam >> 16) & 0xFFFF);
+
+    private static nint MakeLParam(int x, int y) =>
+        (nint)((ushort)(short)x | ((uint)(ushort)(short)y << 16));
 
     private static bool EnsureWindowClass()
     {
@@ -273,7 +421,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
                 {
                     var gch = GCHandle.FromIntPtr(ptr);
                     if (gch.IsAllocated && gch.Target is HerScreenHwndOverlay overlay)
-                        overlay.Paint(hdc);
+                        overlay.Paint(hWnd, hdc);
                 }
             }
             catch
@@ -288,19 +436,55 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return nint.Zero;
         }
 
+        if (msg is WmMouseMove or WmLButtonDown or WmLButtonUp or WmLButtonDblClk
+            or WmRButtonDown or WmRButtonUp or WmMButtonDown or WmMButtonUp or WmMouseWheel)
+        {
+            try
+            {
+                var ptr = GetWindowLongPtr(hWnd, GwlpUserData);
+                if (ptr != nint.Zero)
+                {
+                    var gch = GCHandle.FromIntPtr(ptr);
+                    if (gch.IsAllocated && gch.Target is HerScreenHwndOverlay overlay)
+                        overlay.ForwardPointer(hWnd, msg, wParam, lParam);
+                }
+            }
+            catch
+            {
+                // never throw from WndProc
+            }
+
+            return nint.Zero;
+        }
+
+        if (msg == WmMouseActivate)
+            return (nint)MaNoActivate;
+
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
     private const string WindowClassName = "House.HerScreenHwndOverlay.v1";
     private const int ErrorClassAlreadyExists = 1410;
     private const uint WmPaint = 0x000F;
+    private const uint WmMouseActivate = 0x0021;
+    private const uint WmMouseMove = 0x0200;
+    private const uint WmLButtonDown = 0x0201;
+    private const uint WmLButtonUp = 0x0202;
+    private const uint WmLButtonDblClk = 0x0203;
+    private const uint WmRButtonDown = 0x0204;
+    private const uint WmRButtonUp = 0x0205;
+    private const uint WmMButtonDown = 0x0207;
+    private const uint WmMButtonUp = 0x0208;
+    private const uint WmMouseWheel = 0x020A;
+    private const int MaNoActivate = 3;
+    private const int Winding = 2;
+    private const uint CwpSkipInvisible = 0x0001;
+    private const uint CwpSkipDisabled = 0x0002;
+    private const uint CwpSkipTransparent = 0x0004;
     private const int GwlpUserData = -21;
     private const int WsChild = 0x40000000;
     private const int WsVisible = 0x10000000;
     private const int WsClipSiblings = 0x04000000;
-    private const int WsExLayered = 0x00080000;
-    private const int WsExTransparent = 0x00000020;
-    private const int WsExNoActivate = 0x08000000;
     private const uint LwaColorKey = 0x00000001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoSize = 0x0001;
@@ -308,24 +492,28 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const uint SwpShowWindow = 0x0040;
     private static readonly nint HwndTop = nint.Zero;
     private const int SwHide = 0;
-    private const int SwShow = 5;
     private const int Transparent = 1;
     private const int PsSolid = 0;
-    private const int BlackBrush = 4;
     private const uint ClearTypeQuality = 5;
 
     // COLORREF 0x00BBGGRR
     private const uint ColorKeyMagenta = 0x00FF00FF;
     private const uint ColorPinkStroke = 0x00552DFF;
-    private const uint ColorPinkFill = 0x007A55AA;
     private const uint ColorTealStroke = 0x00B6C42E;
-    private const uint ColorTealFill = 0x0090B070;
     private const uint ColorPlate = 0x000A0A0A;
+    private const uint ColorWhite = 0x00FFFFFF;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
     {
         public int Left, Top, Right, Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -432,10 +620,34 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private static extern nint SelectObject(nint hdc, nint h);
 
     [DllImport("gdi32.dll")]
-    private static extern nint GetStockObject(int i);
+    private static extern bool Polygon(nint hdc, POINT[] apt, int cpt);
 
     [DllImport("gdi32.dll")]
-    private static extern bool Ellipse(nint hdc, int left, int top, int right, int bottom);
+    private static extern nint CreatePolygonRgn(POINT[] lppt, int cPoints, int fnPolyFillMode);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowRgn(nint hWnd, nint hRgn, bool bRedraw);
+
+    [DllImport("user32.dll")]
+    private static extern bool PostMessage(nint hWnd, uint msg, nint wParam, nint lParam);
+
+    [DllImport("user32.dll")]
+    private static extern int MapWindowPoints(nint hWndFrom, nint hWndTo, ref POINT lpPoints, uint cPoints);
+
+    [DllImport("user32.dll")]
+    private static extern nint ChildWindowFromPointEx(nint hwndParent, POINT pt, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(nint hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(nint hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetDC(nint hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern int ReleaseDC(nint hWnd, nint hDC);
 
     [DllImport("gdi32.dll")]
     private static extern bool RoundRect(nint hdc, int left, int top, int right, int bottom, int width, int height);
