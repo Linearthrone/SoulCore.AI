@@ -21,7 +21,7 @@ param(
     [int]$Port = 7700,
     [switch]$ForceRebuild,
     # Stop any Host already on this port (pid file + listeners) then start fresh.
-    # Needed after .env / branch changes — ALLSTART otherwise reuses a stale Host.
+    # Needed after .env / branch changes - ALLSTART otherwise reuses a stale Host.
     [switch]$RestartHost,
     # Opt-in: run `ollama pull <embed-model>` when the model is missing.
     [switch]$PullEmbedModel,
@@ -157,15 +157,15 @@ function Stop-SoulCoreOnPort {
 if ($RestartHost) {
     Write-Host "RestartHost: clearing any Host on ${BindAddress}:${Port}"
     Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
-    # Second pass — pid-file miss / slow exit used to leave the port busy, then the
+    # Second pass - pid-file miss / slow exit used to leave the port busy, then the
     # "already listening" early-exit skipped rebuild and left /health stuck (e.g. 0.1.6).
     if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
-        Write-Host "RestartHost: port still busy — forcing another stop..."
+        Write-Host "RestartHost: port still busy - forcing another stop..."
         Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
         Start-Sleep -Milliseconds 500
     }
     if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
-        throw "RestartHost could not free ${BindAddress}:${Port} — refuse to reuse stale Host (Update would lie)."
+        throw "RestartHost could not free ${BindAddress}:${Port} - refuse to reuse stale Host (Update would lie)."
     }
 }
 
@@ -255,8 +255,8 @@ $proc = Start-Process -FilePath "dotnet" `
 
 $proc.Id | Set-Content -LiteralPath $PidFile -Encoding ascii
 
-# PROP-17.1: start timeout — if Host never binds, force-kill and fail clearly
-# so Presence can clear "Starting Host…" (Stop also force-kills via stop-soulcore.ps1).
+# PROP-17.1: start timeout - if Host never binds, force-kill and fail clearly
+# so Presence can clear "Starting Host..." (Stop also force-kills via stop-soulcore.ps1).
 $StartTimeoutSec = 45
 $ready = $false
 $deadline = [datetime]::UtcNow.AddSeconds($StartTimeoutSec)
@@ -273,7 +273,7 @@ while ([datetime]::UtcNow -lt $deadline) {
 }
 
 if (-not $ready) {
-    Write-Warning "Host start timed out after ${StartTimeoutSec}s (PID $($proc.Id)) — force-killing stuck process."
+    Write-Warning "Host start timed out after ${StartTimeoutSec}s (PID $($proc.Id)) - force-killing stuck process."
     try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch { }
     if (Test-Path -LiteralPath $PidFile) { Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue }
     throw "SoulCore.Host failed to listen on ${BindAddress}:${Port} within ${StartTimeoutSec}s (force-killed). Stop is always safe via stop-soulcore.ps1."
