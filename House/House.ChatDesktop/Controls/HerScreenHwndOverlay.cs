@@ -4,23 +4,32 @@ using House.ChatDesktop.Services;
 namespace House.ChatDesktop.Controls;
 
 /// <summary>
-/// Win32 layered child siblings of the SetParent'd VirtualBox HWND. Avalonia siblings
-/// and owned popups can sit under VirtualBox's GPU surface — these paint the arrow
-/// cursor and coords badge in the same parent with HWND_TOP Z-order.
-/// Each window is only as big as what it draws. A full-client child with
-/// WS_EX_TRANSPARENT delivers clicks to the Avalonia parent, which never forwards
-/// them into the VM, so the guest looked click-dead.
+/// Win32 layered children of the SetParent'd VirtualBox HWND. The full-size
+/// input window is color-key invisible and receives operator clicks. Those clicks
+/// are injected with IMouse.putMouseEventAbsolute — the reparented Qt window
+/// does not forward Win32 button messages into the guest. The arrow and badge
+/// are smaller siblings drawn above that input window.
 /// </summary>
+public readonly record struct HerScreenPointerSample(
+    int X,
+    int Y,
+    int Width,
+    int Height,
+    int Buttons,
+    int WheelNotches,
+    bool ButtonChanged);
+
 public sealed class HerScreenHwndOverlay : IDisposable
 {
     private static readonly object ClassGate = new();
     private static bool _classRegistered;
     private static readonly WndProc WndProcKeepAlive = StaticWndProc;
 
+    private nint _inputHwnd;
     private nint _cursorHwnd;
     private nint _badgeHwnd;
     private nint _parent;
-    private nint _clickTarget;
+    private int _buttons;
     private GCHandle _selfHandle;
     private bool _cursorVisible;
     private int _cursorX;
@@ -32,12 +41,14 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
     public bool IsAttached => _cursorHwnd != 0 && _parent != 0;
 
-    public void Attach(nint parentHwnd, nint clickTarget)
+    /// <summary>Operator pointer over the embed, in parent-client pixels.</summary>
+    public Action<HerScreenPointerSample>? OnPointer { get; set; }
+
+    public void Attach(nint parentHwnd)
     {
         if (!OperatingSystem.IsWindows() || parentHwnd == 0)
             return;
 
-        _clickTarget = clickTarget;
         if (_cursorHwnd != 0 && _parent == parentHwnd)
         {
             SyncToParent();
@@ -50,9 +61,10 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
         _parent = parentHwnd;
         _selfHandle = GCHandle.Alloc(this);
+        _inputHwnd = CreateOverlayWindow(parentHwnd, "HerScreenInput");
         _cursorHwnd = CreateOverlayWindow(parentHwnd, "HerScreenCursor");
         _badgeHwnd = CreateOverlayWindow(parentHwnd, "HerScreenBadge");
-        if (_cursorHwnd == 0)
+        if (_inputHwnd == 0 || _cursorHwnd == 0)
         {
             PresenceStartupLog.Write(
                 $"HerScreenHwndOverlay CreateWindowEx failed err={Marshal.GetLastPInvokeError()}");
@@ -90,6 +102,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
     {
         if (!OperatingSystem.IsWindows() || _cursorHwnd == 0 || _parent == 0)
             return;
+        PositionInputWindow();
         PositionCursorWindow();
         PositionBadgeWindow();
         RaiseAboveSiblings();
@@ -99,6 +112,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
     {
         if (!OperatingSystem.IsWindows())
             return;
+        Raise(_inputHwnd);
         Raise(_cursorHwnd);
         Raise(_badgeHwnd);
     }
@@ -124,6 +138,8 @@ public sealed class HerScreenHwndOverlay : IDisposable
     {
         if (!OperatingSystem.IsWindows())
             return;
+        if (_inputHwnd != 0)
+            _ = ShowWindow(_inputHwnd, SwHide);
         if (_cursorHwnd != 0)
             _ = ShowWindow(_cursorHwnd, SwHide);
         if (_badgeHwnd != 0)
@@ -134,14 +150,16 @@ public sealed class HerScreenHwndOverlay : IDisposable
     {
         if (OperatingSystem.IsWindows())
         {
+            DestroyOverlayWindow(ref _inputHwnd);
             DestroyOverlayWindow(ref _cursorHwnd);
             DestroyOverlayWindow(ref _badgeHwnd);
         }
 
+        _inputHwnd = 0;
         _cursorHwnd = 0;
         _badgeHwnd = 0;
         _parent = 0;
-        _clickTarget = 0;
+        _buttons = 0;
         if (_selfHandle.IsAllocated)
             _selfHandle.Free();
     }
@@ -183,6 +201,27 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return;
         _ = InvalidateRect(hwnd, nint.Zero, true);
         _ = UpdateWindow(hwnd);
+    }
+
+    private void PositionInputWindow()
+    {
+        if (!OperatingSystem.IsWindows() || _inputHwnd == 0 || _parent == 0)
+            return;
+        if (!GetClientRect(_parent, out var rc))
+            return;
+        var w = rc.Right - rc.Left;
+        var h = rc.Bottom - rc.Top;
+        if (w <= 1 || h <= 1)
+            return;
+        _ = SetWindowPos(
+            _inputHwnd,
+            HwndTop,
+            0,
+            0,
+            w,
+            h,
+            SwpShowWindow | SwpNoActivate);
+        Repaint(_inputHwnd);
     }
 
     private void PositionCursorWindow()
@@ -284,6 +323,9 @@ public sealed class HerScreenHwndOverlay : IDisposable
             DeleteObject(keyBrush);
         }
 
+        if (hwnd == _inputHwnd)
+            return;
+
         if (hwnd == _cursorHwnd && _cursorVisible)
             PaintCursor(hdc);
         else if (hwnd == _badgeHwnd && _badge is not null)
@@ -343,43 +385,55 @@ public sealed class HerScreenHwndOverlay : IDisposable
         DeleteObject(font);
     }
 
-    private void ForwardPointer(nint source, uint msg, nint wParam, nint lParam)
+    private void ReportPointer(nint source, uint msg, nint wParam, nint lParam)
     {
-        var target = _clickTarget;
-        if (target == 0 || source == 0 || !IsWindow(target))
+        if (OnPointer is null || _parent == 0 || source == 0)
+            return;
+
+        var buttons = _buttons;
+        var wheel = 0;
+        if (msg == WmLButtonDown || msg == WmLButtonDblClk)
+            buttons |= VictoriaVmPointerPlan.Left;
+        else if (msg == WmLButtonUp)
+            buttons &= ~VictoriaVmPointerPlan.Left;
+        else if (msg == WmRButtonDown)
+            buttons |= VictoriaVmPointerPlan.Right;
+        else if (msg == WmRButtonUp)
+            buttons &= ~VictoriaVmPointerPlan.Right;
+        else if (msg == WmMButtonDown)
+            buttons |= VictoriaVmPointerPlan.Middle;
+        else if (msg == WmMButtonUp)
+            buttons &= ~VictoriaVmPointerPlan.Middle;
+        else if (msg == WmMouseWheel)
+            wheel = SignedHigh(wParam) / 120;
+
+        var changed = buttons != _buttons || wheel != 0;
+        _buttons = buttons;
+        if (buttons != 0)
+            _ = SetCapture(source);
+        else
+            _ = ReleaseCapture();
+
+        if (!changed && buttons == 0)
             return;
 
         var pt = new POINT { X = SignedLow(lParam), Y = SignedHigh(lParam) };
-        _ = MapWindowPoints(source, target, ref pt, 1);
+        if (msg == WmMouseWheel)
+            _ = ScreenToClient(source, ref pt);
+        _ = MapWindowPoints(source, _parent, ref pt, 1);
+        if (!GetClientRect(_parent, out var rc))
+            return;
+        var width = rc.Right - rc.Left;
+        var height = rc.Bottom - rc.Top;
+        if (width <= 1 || height <= 1)
+            return;
 
-        var dest = DeepestChild(target, ref pt);
-        var packed = MakeLParam(pt.X, pt.Y);
-        if (msg is WmLButtonDown or WmRButtonDown or WmMButtonDown)
-            _ = PostMessage(dest, WmMouseMove, nint.Zero, packed);
-        _ = PostMessage(dest, msg, wParam, packed);
-    }
-
-    private static nint DeepestChild(nint hwnd, ref POINT pt)
-    {
-        const uint skip = CwpSkipInvisible | CwpSkipDisabled | CwpSkipTransparent;
-        for (var i = 0; i < 12; i++)
-        {
-            var child = ChildWindowFromPointEx(hwnd, pt, skip);
-            if (child == 0 || child == hwnd)
-                return hwnd;
-            _ = MapWindowPoints(hwnd, child, ref pt, 1);
-            hwnd = child;
-        }
-
-        return hwnd;
+        OnPointer(new HerScreenPointerSample(pt.X, pt.Y, width, height, buttons, wheel, changed));
     }
 
     private static int SignedLow(nint lParam) => (short)((long)lParam & 0xFFFF);
 
     private static int SignedHigh(nint lParam) => (short)(((long)lParam >> 16) & 0xFFFF);
-
-    private static nint MakeLParam(int x, int y) =>
-        (nint)((ushort)(short)x | ((uint)(ushort)(short)y << 16));
 
     private static bool EnsureWindowClass()
     {
@@ -446,7 +500,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
                 {
                     var gch = GCHandle.FromIntPtr(ptr);
                     if (gch.IsAllocated && gch.Target is HerScreenHwndOverlay overlay)
-                        overlay.ForwardPointer(hWnd, msg, wParam, lParam);
+                        overlay.ReportPointer(hWnd, msg, wParam, lParam);
                 }
             }
             catch
@@ -478,9 +532,6 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const uint WmMouseWheel = 0x020A;
     private const int MaNoActivate = 3;
     private const int Winding = 2;
-    private const uint CwpSkipInvisible = 0x0001;
-    private const uint CwpSkipDisabled = 0x0002;
-    private const uint CwpSkipTransparent = 0x0004;
     private const int GwlpUserData = -21;
     private const int WsChild = 0x40000000;
     private const int WsVisible = 0x10000000;
@@ -629,19 +680,19 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private static extern int SetWindowRgn(nint hWnd, nint hRgn, bool bRedraw);
 
     [DllImport("user32.dll")]
-    private static extern bool PostMessage(nint hWnd, uint msg, nint wParam, nint lParam);
-
-    [DllImport("user32.dll")]
     private static extern int MapWindowPoints(nint hWndFrom, nint hWndTo, ref POINT lpPoints, uint cPoints);
 
     [DllImport("user32.dll")]
-    private static extern nint ChildWindowFromPointEx(nint hwndParent, POINT pt, uint flags);
+    private static extern nint SetCapture(nint hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern bool ScreenToClient(nint hWnd, ref POINT lpPoint);
 
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(nint hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsWindow(nint hWnd);
 
     [DllImport("user32.dll")]
     private static extern nint GetDC(nint hWnd);

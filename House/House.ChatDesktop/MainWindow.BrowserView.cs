@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+using Avalonia.Threading;
 using House.ChatDesktop.Controls;
 using House.ChatDesktop.Services;
 
@@ -328,7 +329,9 @@ public partial class MainWindow
             if (parent != 0)
             {
                 _herScreenHwndOverlay ??= new HerScreenHwndOverlay();
-                _herScreenHwndOverlay.Attach(parent, (nint)_lastEmbedHwnd);
+                _herScreenHwndOverlay.OnPointer = HandleHerScreenPointer;
+                _herScreenHwndOverlay.Attach(parent);
+                EnsureVmPointer(parent);
                 // Avalonia popup is redundant when HWND sibling works.
                 if (_herScreenOverlay is { IsVisible: true })
                     _herScreenOverlay.Hide();
@@ -390,6 +393,58 @@ public partial class MainWindow
         }
 
         _herScreenOverlay = null;
+        VictoriaVmPointer.Stop();
+    }
+
+    private bool _vmPointerFaultHooked;
+
+    private void EnsureVmPointer(nint parent)
+    {
+        if (!_vmPointerFaultHooked)
+        {
+            _vmPointerFaultHooked = true;
+            VictoriaVmPointer.Faulted += OnVmPointerFaulted;
+        }
+
+        VictoriaVmPointer.NoteHostWindow(parent);
+        VictoriaVmPointer.EnsureStarted(LocalStackControl.SandboxVmName);
+    }
+
+    private void OnVmPointerFaulted(string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (VictoriaBrowserActionText is not null)
+                VictoriaBrowserActionText.Text = message;
+        });
+    }
+
+    private void HandleHerScreenPointer(HerScreenPointerSample sample)
+    {
+        if (!sample.ButtonChanged && sample.Buttons == 0 && sample.WheelNotches == 0)
+            return;
+
+        EnsureGuestFrameSizeForEmbed();
+        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            sample.X,
+            sample.Y,
+            sample.Width,
+            sample.Height,
+            _browserImagePixelWidth,
+            _browserImagePixelHeight);
+        if (mapped is null)
+            return;
+
+        if (sample.WheelNotches != 0)
+        {
+            VictoriaVmPointer.Post(mapped.Value.X, mapped.Value.Y, 0, sample.WheelNotches);
+            return;
+        }
+
+        if (!sample.ButtonChanged || sample.Buttons == 0)
+            return;
+
+        VictoriaVmPointer.Post(mapped.Value.X, mapped.Value.Y, sample.Buttons, 0);
     }
 
     private void ApplyVictoriaBrowserSoftCursor(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed)
