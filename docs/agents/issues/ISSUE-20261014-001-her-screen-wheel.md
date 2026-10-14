@@ -3,8 +3,8 @@ issue_id: ISSUE-20261014-001
 discovered: 2026-10-14
 severity: P1 (Critical)
 status: Pending Fix
-reticket: TASK-20261014-210-PM01-to-QA01
-last_retest: TASK-20261014-204
+reticket: TASK-20261014-213-PM01-to-OPS01
+last_retest: TASK-20261014-211
 ---
 
 ## Problem Description
@@ -92,3 +92,25 @@ Startup log, one new line after 10:10:55:
 ```
 
 The 09:37 line is still in the file and does not count. The wheel is logged as delivered. The guest page still does not move up about one notch. Frames are in `tmpcode/qa-204/`. Command output is in `docs/agents/reports/TASK-20261014-204-QA01-to-PM01.md`. Pid 38476 was not stopped. The guest was not powered.
+
+## Retest TASK-20261014-211
+
+Still failing on a visible scrollable page. Release ChatDesktop pid 38920, started 10:45:41, was still running. `VMState="running"`. `ShowWindow(SW_RESTORE)` (9) was applied to `House Victoria - Presence 0.1.27` hwnd `0x31139A`. The window was already visible. Its rect was `2751,0 2374x1386`, which extends below the ticket box `0,0 7040x1152` (the live virtual screen is `0,0 7040x1440`, primary `5120x1440`). `SetWindowPos` moved it to the primary origin: `0,0 2374x1386`. It was not resized. The window is taller than 1152, so it still extends past that line, and it fits on the primary monitor. `HerScreenInput` hwnd `0xD01392` was on screen at `793,180 1528x881`.
+
+The before frame is not black (mean luminance 52.98, max 255). Firefox on the Ubuntu desktop is open to the Maestro lesson "The box model," a scrollable page about CSS padding and margin. It is not a login screen and not an empty desktop. No browser was opened for this run.
+
+One detent only (`WM_MOUSEMOVE` then `WM_MOUSEWHEEL` delta +120, `w=0x780000`, `WHEEL_SENT_COUNT=1`). Guest after-shot saved 46 ms later, at `2026-10-14T11:07:03.111-04:00`.
+
+Guest full frame: best shift 0, mean absolute error 0.016, changed fraction 0.0000. Body crop (x=182, y=140, 1155x611): best shift 0, error 0.000, changed fraction 0.0000. The lesson stayed in place. That is not one notch upward.
+
+Startup log, one new line after 10:51:24:
+
+```text
+2026-10-14 11:07:03.060 her-screen wheel notches=1 key=pageup sent
+```
+
+The 10:51:24 line is the previous run and does not count. The wheel is logged as delivered. The guest page still does not move up about one notch. Frames are in `tmpcode/qa-211/`. Command output is in `docs/agents/reports/TASK-20261014-211-QA01-to-PM01.md`. Pid 38920 was not stopped. The guest was not powered. Tester note uses LinearThrone.
+
+## Operator note (TASK-20261014-212)
+
+Same wheel, second reason the lesson stays put. Maestro only scrolls when the pointer is in the center vertical section of the window (the lesson column). A Page Up tap with the pointer elsewhere does not move that page. The fix seats the guest pointer at the framebuffer center and left-clicks there before the queued Page key. This is not a second issue.

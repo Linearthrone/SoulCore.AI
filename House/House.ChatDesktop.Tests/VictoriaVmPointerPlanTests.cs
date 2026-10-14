@@ -143,20 +143,85 @@ public class VictoriaVmPointerPlanTests
     public void Wheel_StartupLineIsOneLineWithNotchesAndSentOrDropped()
     {
         var dropped = VictoriaVmPointerPlan.FormatWheelStartupLine(1, null, null);
-        var sent = VictoriaVmPointerPlan.FormatWheelStartupLine(1, (12, 34), null);
-        var failed = VictoriaVmPointerPlan.FormatWheelStartupLine(-1, (8, 9), "RPC_E_DISCONNECTED\r\nsecond");
+        var sent = VictoriaVmPointerPlan.FormatWheelDeliveryLine(1, 640, 400, 10, null);
+        var toward = VictoriaVmPointerPlan.FormatWheelDeliveryLine(-1, 640, 400, 10, null);
+        var failed = VictoriaVmPointerPlan.FormatWheelDeliveryLine(-1, 640, 400, 0, "RPC_E_DISCONNECTED\r\nsecond");
+        var shortCount = VictoriaVmPointerPlan.FormatWheelDeliveryLine(1, 640, 400, 4, null);
 
         Assert.Equal("her-screen wheel notches=1 dropped-unmapped", dropped);
-        Assert.Equal("her-screen wheel notches=1 key=pageup sent", sent);
-        Assert.Equal("her-screen wheel notches=-1 key=pagedown COM error: RPC_E_DISCONNECTED second", failed);
+        Assert.Equal("her-screen wheel notches=1 key=pageup seat=640,400 stored=10 sent", sent);
+        Assert.Equal("her-screen wheel notches=-1 key=pagedown seat=640,400 stored=10 sent", toward);
+        Assert.Equal(
+            "her-screen wheel notches=-1 key=pagedown seat=640,400 stored=0 COM error: RPC_E_DISCONNECTED second",
+            failed);
+        Assert.Equal(
+            "her-screen wheel notches=1 key=pageup seat=640,400 stored=4 COM error: keyboard queue stored 4 of 10",
+            shortCount);
         Assert.Contains("key=pageup", sent, StringComparison.Ordinal);
         Assert.Contains("key=pagedown", failed, StringComparison.Ordinal);
+        Assert.Contains("stored=", sent, StringComparison.Ordinal);
+        Assert.Contains("seat=640,400", sent, StringComparison.Ordinal);
+        Assert.DoesNotContain("sent", shortCount, StringComparison.Ordinal);
+        Assert.Contains("COM error:", shortCount, StringComparison.Ordinal);
+        Assert.Contains("stored=4", shortCount, StringComparison.Ordinal);
         Assert.DoesNotContain("dz=", sent, StringComparison.Ordinal);
         Assert.DoesNotContain("\n", dropped, StringComparison.Ordinal);
         Assert.DoesNotContain("\n", sent, StringComparison.Ordinal);
         Assert.DoesNotContain("\n", failed, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n", shortCount, StringComparison.Ordinal);
         Assert.DoesNotContain("dropped-unmapped", sent, StringComparison.Ordinal);
         Assert.Equal(new byte[] { 0xE0, 0x49, 0xE0, 0xC9 }, VictoriaVmKeyPlan.WheelTap(1));
         Assert.Equal(new byte[] { 0xE0, 0x51, 0xE0, 0xD1 }, VictoriaVmKeyPlan.WheelTap(-1));
+    }
+
+    [Fact]
+    public void Wheel_SeatsFramebufferCenterThenLeftClicksWithoutDz()
+    {
+        Assert.Equal((640, 400), VictoriaVmPointerPlan.WheelSeat(0, 0));
+        Assert.Equal((640, 400), VictoriaVmPointerPlan.WheelSeat(1280, 800));
+        Assert.Equal((960, 540), VictoriaVmPointerPlan.WheelSeat(1920, 1080));
+        Assert.False(VictoriaVmPointerPlan.ShouldParkForWheel(1));
+        Assert.False(VictoriaVmPointerPlan.ShouldSeatCursorInsideEmbed(1));
+
+        var steps = VictoriaVmPointerPlan.WheelFocusSteps(1280, 800);
+        Assert.Equal(3, steps.Length);
+        Assert.All(steps, step =>
+        {
+            Assert.Equal(0, step.Dz);
+            Assert.Equal(640, step.X);
+            Assert.Equal(400, step.Y);
+        });
+        Assert.Equal(0, steps[0].Buttons);
+        Assert.Equal(VictoriaVmPointerPlan.Left, steps[1].Buttons);
+        Assert.Equal(0, steps[2].Buttons);
+    }
+
+    [Fact]
+    public void Wheel_PrefixOnceThenPageUpMakeGapBreak()
+    {
+        Assert.Equal(40, VictoriaVmKeyPlan.WheelMakeBreakGapMs);
+        Assert.Equal(new byte[] { 0xAA, 0xB6, 0x9D, 0xB8, 0xE0, 0xDB }, VictoriaVmKeyPlan.ModifierReleasePrefix);
+
+        var up = VictoriaVmKeyPlan.WheelKeyboardChunks(1);
+        Assert.Equal(3, up.Length);
+        Assert.Equal(VictoriaVmKeyPlan.ModifierReleasePrefix, up[0]);
+        Assert.Equal(new byte[] { 0xE0, 0x49 }, up[1]);
+        Assert.Equal(new byte[] { 0xE0, 0xC9 }, up[2]);
+        Assert.Equal(10, VictoriaVmKeyPlan.WheelStoredByteCount(1));
+
+        var down = VictoriaVmKeyPlan.WheelKeyboardChunks(-1);
+        Assert.Equal(new byte[] { 0xAA, 0xB6, 0x9D, 0xB8, 0xE0, 0xDB }, down[0]);
+        Assert.Equal(new byte[] { 0xE0, 0x51 }, down[1]);
+        Assert.Equal(new byte[] { 0xE0, 0xD1 }, down[2]);
+
+        var three = VictoriaVmKeyPlan.WheelKeyboardChunks(3);
+        Assert.Equal(7, three.Length);
+        Assert.Equal(VictoriaVmKeyPlan.ModifierReleasePrefix, three[0]);
+        Assert.Equal(new byte[] { 0xE0, 0x49 }, three[1]);
+        Assert.Equal(new byte[] { 0xE0, 0xC9 }, three[2]);
+        Assert.Equal(new byte[] { 0xE0, 0x49 }, three[5]);
+        Assert.Equal(new byte[] { 0xE0, 0xC9 }, three[6]);
+        Assert.Equal(18, VictoriaVmKeyPlan.WheelStoredByteCount(3));
+        Assert.Empty(VictoriaVmKeyPlan.WheelKeyboardChunks(0));
     }
 }

@@ -517,6 +517,7 @@ public partial class MainWindow
 
         if (sample.WheelNotches != 0)
         {
+            VictoriaVmPointer.NoteGuestFrame(_browserImagePixelWidth, _browserImagePixelHeight);
             VictoriaVmPointer.Post(mapped.Value.X, mapped.Value.Y, 0, sample.WheelNotches);
             return;
         }

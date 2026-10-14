@@ -46,6 +46,19 @@ public static class VictoriaVmKeyPlan
     }
 
     /// <summary>
+    /// Gap between a Page key make and its break so the guest sees a tap,
+    /// not one burst of make+break.
+    /// </summary>
+    public const int WheelMakeBreakGapMs = 40;
+
+    /// <summary>
+    /// Stuck-modifier release sent once per wheel, before any Page key.
+    /// Same six bytes as the Host console keyboard: left shift, right shift,
+    /// left ctrl, left alt, left super.
+    /// </summary>
+    public static readonly byte[] ModifierReleasePrefix = { 0xAA, 0xB6, 0x9D, 0xB8, 0xE0, 0xDB };
+
+    /// <summary>
     /// One Her-screen wheel detent is one Page Up or Page Down tap: make then
     /// break. Positive notches (wheel away, content up) are Page Up
     /// <c>E0 49</c> / <c>E0 C9</c>. Negative notches are Page Down
@@ -72,4 +85,44 @@ public static class VictoriaVmKeyPlan
     /// <summary>Startup-log key name for a wheel. Empty when there is no detent.</summary>
     public static string WheelKeyName(int notches) =>
         notches > 0 ? "pageup" : notches < 0 ? "pagedown" : "";
+
+    /// <summary>
+    /// Keyboard bytes VirtualBox must store for one wheel: the modifier-release
+    /// prefix once, then two make bytes and two break bytes per notch.
+    /// </summary>
+    public static int WheelStoredByteCount(int notches)
+    {
+        if (notches == 0)
+            return 0;
+        return ModifierReleasePrefix.Length + (Math.Abs(notches) * 4);
+    }
+
+    /// <summary>
+    /// One <c>putScancodes</c> array per chunk. Index 0 is the modifier-release
+    /// prefix (once per wheel). Each following pair is that notch's make, then
+    /// its break. The caller waits <see cref="WheelMakeBreakGapMs"/> between
+    /// the make and the break.
+    /// </summary>
+    public static byte[][] WheelKeyboardChunks(int notches)
+    {
+        if (notches == 0)
+            return Array.Empty<byte[]>();
+
+        var count = Math.Abs(notches);
+        var make = notches > 0
+            ? new byte[] { 0xE0, 0x49 }
+            : new byte[] { 0xE0, 0x51 };
+        var release = notches > 0
+            ? new byte[] { 0xE0, 0xC9 }
+            : new byte[] { 0xE0, 0xD1 };
+        var chunks = new byte[1 + (count * 2)][];
+        chunks[0] = (byte[])ModifierReleasePrefix.Clone();
+        for (var i = 0; i < count; i++)
+        {
+            chunks[1 + (i * 2)] = (byte[])make.Clone();
+            chunks[2 + (i * 2)] = (byte[])release.Clone();
+        }
+
+        return chunks;
+    }
 }

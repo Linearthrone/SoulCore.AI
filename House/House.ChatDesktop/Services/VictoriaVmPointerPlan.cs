@@ -3,7 +3,9 @@ namespace House.ChatDesktop.Services;
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
 /// <c>putMouseEventAbsolute</c> is pixel-based with the origin at (1,1).
-/// A wheel is not a mouse event: one detent is a Page Up or Page Down tap.
+/// A wheel seats the guest pointer in the center column, left-clicks there,
+/// then sends a Page Up or Page Down tap. It does not send a mouse-wheel
+/// <c>dz</c>.
 /// </summary>
 public static class VictoriaVmPointerPlan
 {
@@ -33,7 +35,40 @@ public static class VictoriaVmPointerPlan
         previousButtons != nextButtons;
 
     /// <summary>
-    /// A wheel does not park the cursor. Button presses still park outside.
+    /// One absolute pointer sample for the wheel focus sequence. <c>Dz</c> stays 0.
+    /// </summary>
+    public readonly record struct WheelFocusStep(int X, int Y, int Dz, int Dw, int Buttons);
+
+    /// <summary>
+    /// Center of the guest framebuffer. A non-positive size falls back to
+    /// <see cref="VictoriaBrowserCoordMap.DefaultGuestWidth"/> and
+    /// <see cref="VictoriaBrowserCoordMap.DefaultGuestHeight"/> (1280×800),
+    /// whose center is (640, 400).
+    /// </summary>
+    public static (int X, int Y) WheelSeat(int guestWidth, int guestHeight)
+    {
+        var width = guestWidth > 0 ? guestWidth : VictoriaBrowserCoordMap.DefaultGuestWidth;
+        var height = guestHeight > 0 ? guestHeight : VictoriaBrowserCoordMap.DefaultGuestHeight;
+        return (width / 2, height / 2);
+    }
+
+    /// <summary>
+    /// Seat the guest pointer, then a left click (down, then up), all with
+    /// <c>dz=0</c>. The Windows cursor is not parked for this sequence.
+    /// </summary>
+    public static WheelFocusStep[] WheelFocusSteps(int guestWidth, int guestHeight)
+    {
+        var (x, y) = WheelSeat(guestWidth, guestHeight);
+        return
+        [
+            new WheelFocusStep(x, y, 0, 0, 0),
+            new WheelFocusStep(x, y, 0, 0, Left),
+            new WheelFocusStep(x, y, 0, 0, 0),
+        ];
+    }
+
+    /// <summary>
+    /// A wheel does not park the Windows cursor. Button presses still park outside.
     /// </summary>
     public static bool ShouldParkForWheel(int wheelNotches)
     {
@@ -105,9 +140,9 @@ public static class VictoriaVmPointerPlan
     }
 
     /// <summary>
-    /// One startup-log line for a wheel. Unmapped wheels say <c>dropped-unmapped</c>.
-    /// A delivered wheel names <c>pageup</c> or <c>pagedown</c> and says <c>sent</c>.
-    /// A failed inject puts <c>COM error:</c> on that same line.
+    /// One startup-log line for a wheel that never reached the guest.
+    /// Unmapped wheels say <c>dropped-unmapped</c>. A mapped point without a
+    /// stored count is not <c>sent</c>.
     /// </summary>
     public static string FormatWheelStartupLine(int notches, (int X, int Y)? guestPoint, string? comError)
     {
@@ -115,15 +150,36 @@ public static class VictoriaVmPointerPlan
         if (guestPoint is null || key.Length == 0)
             return $"her-screen wheel notches={notches} dropped-unmapped";
 
-        if (comError is null)
-            return $"her-screen wheel notches={notches} key={key} sent";
+        return FormatWheelDeliveryLine(notches, guestPoint.Value.X, guestPoint.Value.Y, 0, comError);
+    }
 
-        var flat = comError.Replace("\r\n", " ", StringComparison.Ordinal)
+    /// <summary>
+    /// One startup-log line after a wheel inject. <c>sent</c> is written only
+    /// when <paramref name="stored"/> equals the prefix, make, and break bytes
+    /// handed to the keyboard. A short count is a <c>COM error:</c> line that
+    /// still includes <c>seat=</c> and <c>stored=</c>.
+    /// </summary>
+    public static string FormatWheelDeliveryLine(
+        int notches, int seatX, int seatY, int stored, string? comError)
+    {
+        var key = VictoriaVmKeyPlan.WheelKeyName(notches);
+        if (key.Length == 0)
+            return $"her-screen wheel notches={notches} dropped-unmapped";
+
+        var expected = VictoriaVmKeyPlan.WheelStoredByteCount(notches);
+        var head = $"her-screen wheel notches={notches} key={key} seat={seatX},{seatY} stored={stored}";
+        if (comError is null && stored == expected && expected > 0)
+            return head + " sent";
+
+        var reason = string.IsNullOrWhiteSpace(comError)
+            ? $"keyboard queue stored {stored} of {expected}"
+            : comError;
+        var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
             .Replace('\r', ' ')
             .Replace('\n', ' ')
             .Trim();
         if (flat.Length == 0)
             flat = "failed";
-        return $"her-screen wheel notches={notches} key={key} COM error: {flat}";
+        return head + " COM error: " + flat;
     }
 }
