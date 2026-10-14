@@ -3,7 +3,9 @@ issue_id: ISSUE-20261014-001
 discovered: 2026-10-14
 severity: P1 (Critical)
 status: Pending Fix
-reticket: TASK-20261014-213-PM01-to-OPS01
+reticket: TASK-20261014-215-PM01-to-QA01
+last_retest: TASK-20261014-215
+last_retest: TASK-20261014-214
 last_retest: TASK-20261014-211
 ---
 
@@ -110,6 +112,20 @@ Startup log, one new line after 10:51:24:
 ```
 
 The 10:51:24 line is the previous run and does not count. The wheel is logged as delivered. The guest page still does not move up about one notch. Frames are in `tmpcode/qa-211/`. Command output is in `docs/agents/reports/TASK-20261014-211-QA01-to-PM01.md`. Pid 38920 was not stopped. The guest was not powered. Tester note uses LinearThrone.
+
+## Retest TASK-20261014-215
+
+The wheel was not sent. Installed Presence pid 43588 was still running (`HouseVictoria.Presence\current\House.ChatDesktop.exe`, file version 0.1.28.0, started 11:35:40). The window `House Victoria - Presence 0.1.28` hwnd `0x39043A` was visible and not minimized, at `2774,0 2374x1386` on the virtual screen `0,0 7040x1440`. It was not moved and not resized.
+
+`HerScreenInput` (`House.HerScreenHwndOverlay.v1`) was absent for the full 15 second wait (`WAIT_ELAPSED_MS=15069`). The Presence window had no child windows. A desktop scan found no `HerScreenInput` and no visible `victoria-sandbox` window. `VMState="running"`. The Her screen pane was a JPEG fallback of Firefox on a scrollable Maestro CSS lesson (40% zoom, guest clock Oct 14 11:26), with the status line that no VirtualBox window matching victoria-sandbox is up yet. Not a login. Not an empty desktop. No browser was opened.
+
+No `WM_MOUSEMOVE` and no `WM_MOUSEWHEEL`. No guest shift. No after-shot. The newest startup-log wheel line is still the TASK-211 line, which is older than 11:35:40 and has no `seat=` and no `stored=`:
+
+```text
+2026-10-14 11:07:03.060 her-screen wheel notches=1 key=pageup sent
+```
+
+Command output is in `docs/agents/reports/TASK-20261014-215-QA01-to-PM01.md`. The screen grab is `tmpcode/qa-215/presence-screen.png`. Pid 43588 was not stopped. The guest was not powered. Tester note uses LinearThrone.
 
 ## Operator note (TASK-20261014-212)
 
