@@ -5,8 +5,10 @@ namespace House.ChatDesktop.Controls;
 
 /// <summary>
 /// Win32 layered children of the SetParent'd VirtualBox HWND. The full-size
-/// input window is color-key invisible and receives operator clicks and, once
-/// clicked, keyboard focus. Clicks go in through IMouse.putMouseEventAbsolute
+/// input window is color-key invisible and receives operator clicks, wheel, and
+/// keyboard focus. A pointer move over the embed focuses that HWND so
+/// WM_MOUSEWHEEL is delivered here instead of the chat transcript. Clicks go
+/// in through IMouse.putMouseEventAbsolute
 /// and keys through IKeyboard.putScancode — the reparented Qt window does not
 /// forward Win32 input into the guest. The arrow and badge are smaller siblings
 /// drawn above that input window.
@@ -414,11 +416,13 @@ public sealed class HerScreenHwndOverlay : IDisposable
         else if (msg == WmMButtonUp)
             buttons &= ~VictoriaVmPointerPlan.Middle;
         else if (msg == WmMouseWheel)
-            wheel = SignedHigh(wParam) / 120;
+            wheel = VictoriaVmPointerPlan.NotchesFromWheelDelta(SignedHigh(wParam));
 
         var changed = buttons != _buttons || wheel != 0;
         _buttons = buttons;
-        if (msg is WmLButtonDown or WmLButtonDblClk or WmRButtonDown or WmMButtonDown)
+        if (VictoriaVmPointerPlan.ShouldFocusEmbedForWheel(
+                pointerMovedOverEmbed: msg == WmMouseMove,
+                buttonPressed: msg is WmLButtonDown or WmLButtonDblClk or WmRButtonDown or WmMButtonDown))
             FocusForTyping();
         if (buttons != 0)
             _ = SetCapture(source);
@@ -444,8 +448,9 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
     private void FocusForTyping()
     {
-        if (_inputHwnd != 0)
-            _ = SetFocus(_inputHwnd);
+        if (_inputHwnd == 0 || GetFocus() == _inputHwnd)
+            return;
+        _ = SetFocus(_inputHwnd);
     }
 
     private void ReportKey(uint msg, nint lParam)
@@ -766,6 +771,9 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int MapWindowPoints(nint hWndFrom, nint hWndTo, ref POINT lpPoints, uint cPoints);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetFocus();
 
     [DllImport("user32.dll")]
     private static extern nint SetFocus(nint hWnd);

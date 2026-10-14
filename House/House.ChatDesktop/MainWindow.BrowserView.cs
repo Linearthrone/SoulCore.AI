@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
@@ -27,7 +28,6 @@ public partial class MainWindow
     private bool _browserCursorLayerHooked;
     private VictoriaHerScreenOverlayWindow? _herScreenOverlay;
     private HerScreenHwndOverlay? _herScreenHwndOverlay;
-    private VictoriaVmPowerButtonWindow? _vmPowerButton;
     private bool? _sandboxRunning;
     private bool _vmPowerBusy;
 
@@ -70,13 +70,11 @@ public partial class MainWindow
             _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             PositionVictoriaBrowserSoftCursor();
             UpdateEmbedHoverCoordsFromSystemCursor();
-            SyncVmPowerButton();
             return;
         }
 
         // Overlay is a separate HWND — hide when Her screen tab is not showing.
         HideHerScreenOverlay();
-        SyncVmPowerButton();
     }
 
     private void ApplyVictoriaBrowserView(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed = null)
@@ -405,51 +403,37 @@ public partial class MainWindow
     {
         _sandboxRunning = running;
         if (!_vmPowerBusy)
-            _vmPowerButton?.Apply(running, busy: false);
-        SyncVmPowerButton();
+            ApplyVmPowerButton(running, busy: false);
     }
 
-    private void SyncVmPowerButton()
+    private void ApplyVmPowerButton(bool? running, bool busy)
     {
-        if (!IsVisible || VictoriaBrowserSurface is null)
+        if (VmPowerButton is null)
             return;
 
-        if (!ShouldShowVmPowerButton())
+        VmPowerButton.IsEnabled = !busy;
+        if (busy)
         {
-            if (_vmPowerButton is { IsVisible: true })
-                _vmPowerButton.Hide();
+            VmPowerButton.Content = running == true ? "Stopping…" : "Starting…";
+            ToolTip.SetTip(VmPowerButton, running == true
+                ? "Saving victoria-sandbox state…"
+                : "Starting victoria-sandbox…");
             return;
         }
 
-        _vmPowerButton ??= CreateVmPowerButton();
-        if (!_vmPowerButton.IsVisible)
+        if (running == true)
         {
-            _vmPowerButton.Apply(_sandboxRunning, _vmPowerBusy);
-            _vmPowerButton.Show(this);
+            VmPowerButton.Content = "Stop";
+            ToolTip.SetTip(VmPowerButton, "Stop victoria-sandbox (save state — next Start resumes)");
+            return;
         }
 
-        _vmPowerButton.SyncToSurface(VictoriaBrowserSurface);
+        VmPowerButton.Content = "Start";
+        ToolTip.SetTip(VmPowerButton, "Start victoria-sandbox");
     }
 
-    private VictoriaVmPowerButtonWindow CreateVmPowerButton()
-    {
-        var window = new VictoriaVmPowerButtonWindow();
-        window.Clicked += async (_, _) => await ToggleSandboxVmAsync();
-        return window;
-    }
-
-    private bool ShouldShowVmPowerButton()
-    {
-        if (PresenceView is not { IsVisible: true })
-            return false;
-        if (WindowState == WindowState.Minimized)
-            return false;
-        if (HerScreenTab is not { IsSelected: true })
-            return false;
-        if (VictoriaBrowserSurface is not { IsEffectivelyVisible: true, Bounds.Width: > 48, Bounds.Height: > 32 })
-            return false;
-        return true;
-    }
+    private async void VmPowerButton_Click(object? sender, RoutedEventArgs e) =>
+        await ToggleSandboxVmAsync();
 
     private async Task ToggleSandboxVmAsync()
     {
@@ -458,7 +442,7 @@ public partial class MainWindow
 
         var stopping = _sandboxRunning == true;
         _vmPowerBusy = true;
-        _vmPowerButton?.Apply(stopping, busy: true);
+        ApplyVmPowerButton(stopping, busy: true);
 
         LocalStackActionResult result;
         try
@@ -481,22 +465,7 @@ public partial class MainWindow
 
         _vmPowerBusy = false;
         await RefreshServicesPanelAsync().ConfigureAwait(true);
-        _vmPowerButton?.Apply(_sandboxRunning, busy: false);
-        SyncVmPowerButton();
-    }
-
-    private void CloseVmPowerButton()
-    {
-        try
-        {
-            _vmPowerButton?.Close();
-        }
-        catch
-        {
-            // ignore
-        }
-
-        _vmPowerButton = null;
+        ApplyVmPowerButton(_sandboxRunning, busy: false);
     }
 
     private bool _vmPointerFaultHooked;

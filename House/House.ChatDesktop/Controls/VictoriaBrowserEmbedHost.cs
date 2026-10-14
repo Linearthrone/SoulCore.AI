@@ -157,6 +157,9 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
             Marshal.SetLastPInvokeError(0);
             if (SetParent(_hwnd, parent.Handle) == 0 && Marshal.GetLastPInvokeError() != 0)
             {
+                var err = Marshal.GetLastPInvokeError();
+                PresenceStartupLog.Write(
+                    $"VictoriaBrowserEmbedHost SetParent failed err={err} hwnd={_hwnd} parent={parent.Handle}");
                 _ = SetWindowLong(_hwnd, GWL_STYLE, _originalStyle);
                 _originalStyle = 0;
                 return CreateFallbackHost(parent);

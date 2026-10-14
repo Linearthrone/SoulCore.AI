@@ -153,9 +153,19 @@ public static class VictoriaVmPointer
                                 mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
                             });
                         }
-                        else if (pointer.WheelNotches != 0)
+                        else if (VictoriaVmPointerPlan.ShouldParkForWheel(pointer.WheelNotches))
                         {
-                            mouse.PutMouseEventAbsolute(ax, ay, pointer.WheelNotches, 0, 0);
+                            var steps = VictoriaVmPointerPlan.WheelSteps(pointer.WheelNotches);
+                            WithCursorParked(_excludeHwnd, () =>
+                            {
+                                for (var i = 0; i < steps.Count; i++)
+                                {
+                                    var step = steps[i];
+                                    mouse.PutMouseEventAbsolute(ax, ay, step.Dz, step.Dw, step.ButtonState);
+                                    if (i == 0 && steps.Count > 1)
+                                        Thread.Sleep(30);
+                                }
+                            });
                         }
                     }
 

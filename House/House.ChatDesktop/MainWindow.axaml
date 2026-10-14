@@ -284,6 +284,7 @@
         <!-- Her screen + What she saw, with doing/mood/tasks kept to this column. -->
         <Grid Grid.Column="2" RowDefinitions="*,Auto">
         <Border x:Name="PresenceSideSplit" Classes="metal glass" Padding="8" MinWidth="200" MinHeight="120">
+          <Grid>
           <TabControl x:Name="PresenceSideTabs" Classes="settings-tabs"
                       Background="Transparent" BorderThickness="0"
                       SelectionChanged="PresenceSideTabs_SelectionChanged">
@@ -386,6 +387,17 @@
               </Border>
             </TabItem>
           </TabControl>
+          <Button x:Name="VmPowerButton"
+                  Classes="chrome"
+                  Content="Start"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Padding="14,8"
+                  FontSize="12"
+                  FontWeight="SemiBold"
+                  Click="VmPowerButton_Click"
+                  ToolTip.Tip="Start victoria-sandbox"/>
+          </Grid>
         </Border>
 
         <!-- Doing / mood stay the left half. Tasks own the right half under Her screen. -->
