@@ -64,6 +64,44 @@ public class WorkContinuationTests
     }
 
     [Fact]
+    public void Go_ahead_starts_existing_work_and_is_not_a_new_task()
+    {
+        const string pulledUp = "the lesson is pulled up you can go ahead and start";
+        Assert.True(WorkContinuation.IsGreenLight(pulledUp));
+        Assert.True(WorkContinuation.IsGreenLight("go ahead"));
+        Assert.False(WorkContinuation.IsGreenLight("complete week 5 lesson 10"));
+        Assert.False(WorkContinuation.IsGreenLight("add a task to review the charter"));
+        Assert.True(WorkContinuation.IsChatLoggedAsTask(pulledUp));
+        Assert.True(WorkContinuation.IsChatLoggedAsTask(
+            "why don't you take a break for a while baby, you have done a lot"));
+        Assert.False(WorkContinuation.IsChatLoggedAsTask("Review the charter"));
+    }
+
+    [Fact]
+    public void Next_open_task_prefers_in_progress_then_todo_then_suspended()
+    {
+        var rows = new[]
+        {
+            Row(3, "suspended"),
+            Row(2, "todo"),
+            Row(9, "in_progress"),
+            Row(4, "done"),
+            Row(1, "parked"),
+        };
+
+        Assert.Equal(9, WorkContinuation.NextOpenTask(rows)!.Id);
+
+        var waiting = rows.Where(r => r.Id != 9).ToArray();
+        Assert.Equal(2, WorkContinuation.NextOpenTask(waiting)!.Id);
+
+        var held = waiting.Where(r => r.Id != 2).ToArray();
+        Assert.Equal(3, WorkContinuation.NextOpenTask(held)!.Id);
+    }
+
+    private static VictoriaTask Row(long id, string status) =>
+        new(id, "t" + id, "", status, "medium", "", "");
+
+    [Fact]
     public void Check_in_is_both_lessons_done_not_a_promise()
     {
         Assert.False(WorkContinuation.IsCheckIn("I'll let you know when both lessons are done."));

@@ -34,6 +34,7 @@ public sealed class AssignedWorkRunner
     private readonly IChatTranscriptStore? _transcript;
     private readonly IEmotionState? _emotion;
     private readonly SpendMeter _spend;
+    private readonly IBlockedAsideNotice _aside;
     private readonly ILogger<AssignedWorkRunner> _logger;
     private int _noToolStreak;
     private long? _streakFor;
@@ -50,6 +51,7 @@ public sealed class AssignedWorkRunner
         PresenceWsHub hub,
         SpendMeter spend,
         ILogger<AssignedWorkRunner> logger,
+        IBlockedAsideNotice aside,
         IPresenceActivityHub? activity = null,
         IChatTranscriptStore? transcript = null,
         IEmotionState? emotion = null)
@@ -63,6 +65,7 @@ public sealed class AssignedWorkRunner
         _access = access;
         _hub = hub;
         _spend = spend;
+        _aside = aside;
         _logger = logger;
         _activity = activity;
         _transcript = transcript;
@@ -178,6 +181,8 @@ public sealed class AssignedWorkRunner
 
         if (anyWorkSuccess)
         {
+            if (!_probePass)
+                _aside.WorkCanRun();
             _noToolStreak = 0;
             await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
             _probePass = false;
@@ -204,7 +209,7 @@ public sealed class AssignedWorkRunner
                 _probePass = false;
                 Note("Parked — " + reason);
                 await PushStatusAsync("Parked — " + reason, "parked", cancellationToken).ConfigureAwait(false);
-                await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
+                await AnnounceAsideOnceAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation(
                     "Assigned work parked. id={Id} reason={Reason} cooldownMin={Min}",
                     task.Id, reason, cooldown.TotalMinutes);
@@ -217,7 +222,7 @@ public sealed class AssignedWorkRunner
             await _tasks.UpdateStatusAsync(task.Id, "blocked", cancellationToken).ConfigureAwait(false);
             _store.Clear();
             Note(WorkContinuation.WaitingLine);
-            await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
+            await AnnounceAsideOnceAsync(cancellationToken).ConfigureAwait(false);
             await PushStatusAsync(WorkContinuation.WaitingLine, "waiting", cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Assigned work blocked waiting on Kayleigh");
             return TimeSpan.FromSeconds(15);
@@ -239,7 +244,8 @@ public sealed class AssignedWorkRunner
             ? "Stuck on the assignment — still trying"
             : phrase;
         Note(activity);
-        await BroadcastAsync(visible, continuing: true, cancellationToken).ConfigureAwait(false);
+        if (stuck)
+            await AnnounceAsideOnceAsync(cancellationToken).ConfigureAwait(false);
         await PushStatusAsync(activity, stuck ? "waiting" : "working", cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "Assigned work pass finished. id={Id} tools={Tools} streak={Streak}",
@@ -385,6 +391,13 @@ public sealed class AssignedWorkRunner
     }
 
     private void Note(string phrase) => _activity?.NoteTool(phrase);
+
+    private async Task AnnounceAsideOnceAsync(CancellationToken cancellationToken)
+    {
+        if (!_aside.TryClaim())
+            return;
+        await BroadcastAsync(BlockedAside.Line, continuing: false, cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task BroadcastAsync(string text, bool continuing, CancellationToken cancellationToken)
     {

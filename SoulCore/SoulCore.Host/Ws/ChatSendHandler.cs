@@ -323,20 +323,23 @@ public sealed class ChatSendHandler
             return;
         }
 
-        if (!WorkContinuation.LooksLikeAssignment(userText) || _tasks is null)
+        if (!WorkContinuation.IsGreenLight(userText) || _tasks is null)
             return;
 
-        var body = userText.Trim();
-        var title = body.Length > 80 ? body[..77] + "..." : body;
-        var surface = InferSurface(body);
-        var id = await _tasks.CreateAsync(
-            title, body, "high", surface, ready: true, status: "in_progress", notes: null, cancellationToken)
-            .ConfigureAwait(false);
-        var row = await _tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
-        if (row is not null)
-            _assigned.Project(row);
-        else
-            _assigned.SetRunning(id);
+        var rows = await _tasks.ListAsync(null, cancellationToken).ConfigureAwait(false);
+        var next = WorkContinuation.NextOpenTask(rows);
+        if (next is null)
+            return;
+
+        if (!string.Equals(next.Status, "in_progress", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(next.Status, "suspended", StringComparison.OrdinalIgnoreCase))
+                await _tasks.ReleaseAsync(next.Id, cancellationToken).ConfigureAwait(false);
+            await _tasks.UpdateStatusAsync(next.Id, "in_progress", cancellationToken).ConfigureAwait(false);
+            next = await _tasks.GetAsync(next.Id, cancellationToken).ConfigureAwait(false) ?? next;
+        }
+
+        _assigned.Project(next);
     }
 
     private async Task NoteAssignmentOutcomeAsync(string reply, CancellationToken cancellationToken)
@@ -347,20 +350,6 @@ public sealed class ChatSendHandler
             return;
         await _tasks.UpdateStatusAsync(id, "blocked", cancellationToken).ConfigureAwait(false);
         _assigned.Clear();
-    }
-
-    private static string InferSurface(string text)
-    {
-        var t = text.ToLowerInvariant();
-        if (t.Contains("maestro", StringComparison.Ordinal))
-            return "maestro";
-        if (t.Contains("browser", StringComparison.Ordinal) || t.Contains("firefox", StringComparison.Ordinal)
-            || t.Contains("http", StringComparison.Ordinal))
-            return "browser";
-        if (t.Contains("vm", StringComparison.Ordinal) || t.Contains("guest", StringComparison.Ordinal)
-            || t.Contains("sandbox", StringComparison.Ordinal))
-            return "vm";
-        return "local";
     }
 
     /// <summary>

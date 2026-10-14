@@ -27,6 +27,9 @@ public partial class MainWindow
     private bool _browserCursorLayerHooked;
     private VictoriaHerScreenOverlayWindow? _herScreenOverlay;
     private HerScreenHwndOverlay? _herScreenHwndOverlay;
+    private VictoriaVmPowerButtonWindow? _vmPowerButton;
+    private bool? _sandboxRunning;
+    private bool _vmPowerBusy;
 
     // PROP-14.1 palette — match PlaywrightClickCursor IdleHex / ClickHex.
     private static readonly IBrush SoftCursorIdleStroke = new SolidColorBrush(Color.Parse("#FF2D55"));
@@ -67,11 +70,13 @@ public partial class MainWindow
             _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             PositionVictoriaBrowserSoftCursor();
             UpdateEmbedHoverCoordsFromSystemCursor();
+            SyncVmPowerButton();
             return;
         }
 
         // Overlay is a separate HWND — hide when Her screen tab is not showing.
         HideHerScreenOverlay();
+        SyncVmPowerButton();
     }
 
     private void ApplyVictoriaBrowserView(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed = null)
@@ -394,6 +399,104 @@ public partial class MainWindow
 
         _herScreenOverlay = null;
         VictoriaVmPointer.Stop();
+    }
+
+    private void NoteSandboxRunning(bool running)
+    {
+        _sandboxRunning = running;
+        if (!_vmPowerBusy)
+            _vmPowerButton?.Apply(running, busy: false);
+        SyncVmPowerButton();
+    }
+
+    private void SyncVmPowerButton()
+    {
+        if (!IsVisible || VictoriaBrowserSurface is null)
+            return;
+
+        if (!ShouldShowVmPowerButton())
+        {
+            if (_vmPowerButton is { IsVisible: true })
+                _vmPowerButton.Hide();
+            return;
+        }
+
+        _vmPowerButton ??= CreateVmPowerButton();
+        if (!_vmPowerButton.IsVisible)
+        {
+            _vmPowerButton.Apply(_sandboxRunning, _vmPowerBusy);
+            _vmPowerButton.Show(this);
+        }
+
+        _vmPowerButton.SyncToSurface(VictoriaBrowserSurface);
+    }
+
+    private VictoriaVmPowerButtonWindow CreateVmPowerButton()
+    {
+        var window = new VictoriaVmPowerButtonWindow();
+        window.Clicked += async (_, _) => await ToggleSandboxVmAsync();
+        return window;
+    }
+
+    private bool ShouldShowVmPowerButton()
+    {
+        if (PresenceView is not { IsVisible: true })
+            return false;
+        if (WindowState == WindowState.Minimized)
+            return false;
+        if (HerScreenTab is not { IsSelected: true })
+            return false;
+        if (VictoriaBrowserSurface is not { IsEffectivelyVisible: true, Bounds.Width: > 48, Bounds.Height: > 32 })
+            return false;
+        return true;
+    }
+
+    private async Task ToggleSandboxVmAsync()
+    {
+        if (_vmPowerBusy)
+            return;
+
+        var stopping = _sandboxRunning == true;
+        _vmPowerBusy = true;
+        _vmPowerButton?.Apply(stopping, busy: true);
+
+        LocalStackActionResult result;
+        try
+        {
+            result = stopping
+                ? await _stack.SaveSandboxVmAsync().ConfigureAwait(true)
+                : await _stack.StartSandboxVmAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            result = LocalStackActionResult.Fail(ex.Message);
+        }
+
+        var verb = stopping ? "Stop" : "Start";
+        var line = result.Ok ? $"{verb}: {result.Detail}" : $"{verb} failed: {result.Detail}";
+        if (VmStatusText is not null)
+            VmStatusText.Text = line;
+        if (VictoriaBrowserActionText is not null)
+            VictoriaBrowserActionText.Text = line;
+
+        _vmPowerBusy = false;
+        await RefreshServicesPanelAsync().ConfigureAwait(true);
+        _vmPowerButton?.Apply(_sandboxRunning, busy: false);
+        SyncVmPowerButton();
+    }
+
+    private void CloseVmPowerButton()
+    {
+        try
+        {
+            _vmPowerButton?.Close();
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _vmPowerButton = null;
     }
 
     private bool _vmPointerFaultHooked;

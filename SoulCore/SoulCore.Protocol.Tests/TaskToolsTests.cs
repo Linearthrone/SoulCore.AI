@@ -78,6 +78,12 @@ public class TaskToolsTests
             Assert.True(emptyFilter.Success);
             Assert.Equal(0, GetDataInt(emptyFilter.Data!, "count"));
             Assert.Contains("no tasks with status=done", emptyFilter.Content, StringComparison.Ordinal);
+
+            var chat = await create.ExecuteAsync(JsonDocument.Parse(
+                """{"title":"the lesson is pulled up you can go ahead and start"}""").RootElement.Clone());
+            Assert.False(chat.Success);
+            Assert.Contains("not a to-do", chat.Content, StringComparison.Ordinal);
+            Assert.Single(await store.ListAsync());
         }
         finally
         {

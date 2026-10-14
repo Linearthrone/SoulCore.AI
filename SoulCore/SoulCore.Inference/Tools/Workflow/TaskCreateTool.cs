@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SoulCore.Inference.Presence;
 using SoulCore.Memory;
 
 namespace SoulCore.Inference.Tools.Workflow;
@@ -22,7 +23,7 @@ public sealed class TaskCreateTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "task_create",
-        Description: "Create a task for Victoria to track.",
+        Description: "Add one concrete to-do with a short title. Do not file Kayleigh's chat or a go-ahead. A go-ahead means work a task already on the list.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
@@ -49,6 +50,14 @@ public sealed class TaskCreateTool : ITool
             return new ToolResult(
                 Success: false,
                 Content: "error: task_create 'title' must be non-empty.",
+                Data: null);
+        }
+
+        if (WorkContinuation.IsChatLoggedAsTask(title))
+        {
+            return new ToolResult(
+                Success: false,
+                Content: "error: task_create refused. That is chat, not a to-do. A go-ahead means work an existing task. Do not file her message as a new task.",
                 Data: null);
         }
 

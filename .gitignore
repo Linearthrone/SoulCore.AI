@@ -27,6 +27,7 @@ project.lock.json
 __pycache__/
 *.py[cod]
 .ruff_cache/
+House/House.Voice/models/
 
 # OS / editor
 Thumbs.db

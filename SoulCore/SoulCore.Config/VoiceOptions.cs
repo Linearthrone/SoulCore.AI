@@ -1,7 +1,7 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// Local STT (faster-whisper) + TTS (Chatterbox) knobs. Prefer loopback; $0 cloud.
+/// Local STT and TTS (both in House/House.Voice) knobs. Prefer loopback; $0 cloud.
 /// </summary>
 public sealed class VoiceOptions
 {
@@ -10,13 +10,13 @@ public sealed class VoiceOptions
     /// <summary>When false, STT/TTS APIs no-op and speak stays UE-log-only.</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>faster-whisper base URL (no trailing slash).</summary>
+    /// <summary>faster-whisper base URL (no trailing slash). POST /transcribe returns {"text"}.</summary>
     public string SttUrl { get; set; } = "http://127.0.0.1:8000";
 
-    /// <summary>Chatterbox TTS base URL (no trailing slash).</summary>
+    /// <summary>Kokoro TTS base URL (no trailing slash). POST / returns WAV.</summary>
     public string TtsUrl { get; set; } = "http://127.0.0.1:8881";
 
-    /// <summary>Default Chatterbox voice name (Media/ChatterboxVoices/{name}.wav).</summary>
+    /// <summary>Voice id. "default" is Kokoro af_heart.</summary>
     public string DefaultVoice { get; set; } = "default";
 
     /// <summary>Play synthesized WAV on the Host PC speakers after speak.</summary>

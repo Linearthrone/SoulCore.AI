@@ -356,6 +356,7 @@ public partial class MainWindow
         SetLamp(LampComfy, GlowComfy, comfyUp ? "blue" : "off");
         SetLamp(LampCua, GlowCua, !snap.Reachable ? "red" : cuaOn ? "blue" : cuaWarn ? "warn" : "off");
         SetLamp(LampSandbox, GlowSandbox, sandboxUp ? "blue" : "off");
+        NoteSandboxRunning(sandboxUp);
 
         if (LampSoulCoreHint is not null)
             LampSoulCoreHint.Text = snap.Alive ? "HOLD TO GUARD" : "CLICK TO START";

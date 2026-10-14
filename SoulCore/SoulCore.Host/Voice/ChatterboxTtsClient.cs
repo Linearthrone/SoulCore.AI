@@ -6,6 +6,10 @@ using SoulCore.Config;
 
 namespace SoulCore.Host.Voice;
 
+/// <summary>
+/// Posts {text, voice} to the local TTS server and reads a WAV body.
+/// The server in House/House.Voice is Kokoro. This client still accepts the old voice name "default".
+/// </summary>
 public sealed class ChatterboxTtsClient : ITtsClient
 {
     private readonly HttpClient _http;

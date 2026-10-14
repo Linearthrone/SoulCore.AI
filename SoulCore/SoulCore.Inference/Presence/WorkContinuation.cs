@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using SoulCore.Inference.Clients;
+using SoulCore.Memory;
 
 namespace SoulCore.Inference.Presence;
 
@@ -77,6 +78,56 @@ public static class WorkContinuation
            && !string.IsNullOrWhiteSpace(userText)
            && Assignment.IsMatch(userText);
 
+    private static readonly Regex GreenLight = new(
+        @"\b(?:go ahead|keep working|keep going|you can start|start working|get started)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ExplicitNewTodo = new(
+        @"\b(?:add|create|make|remember|put) (?:this |a |an |the )?(?:task|to-?do)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ChatLead = new(
+        @"^(?:great\b|why don'?t\b|that is probably\b|those dates\b|baby[, ])",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Permission to start work already on the list. Not a new to-do.
+    /// </summary>
+    public static bool IsGreenLight(string? userText)
+        => !string.IsNullOrWhiteSpace(userText)
+           && !IsUserStop(userText)
+           && !ExplicitNewTodo.IsMatch(userText)
+           && GreenLight.IsMatch(userText);
+
+    /// <summary>
+    /// True when a proposed title is Kayleigh's chat, not a to-do.
+    /// </summary>
+    public static bool IsChatLoggedAsTask(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return true;
+        var t = title.Trim();
+        if (IsGreenLight(t) || ChatLead.IsMatch(t))
+            return true;
+        var words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length >= 12
+               && t.Contains(" you ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Next real to-do: an in-progress row, else the oldest todo, else the oldest suspended row.
+    /// Parked and done rows stay put.
+    /// </summary>
+    public static VictoriaTask? NextOpenTask(IReadOnlyList<VictoriaTask> rows)
+    {
+        static VictoriaTask? Oldest(IEnumerable<VictoriaTask> src) =>
+            src.OrderBy(t => t.Id).FirstOrDefault();
+
+        return Oldest(rows.Where(t => string.Equals(t.Status, "in_progress", StringComparison.OrdinalIgnoreCase)))
+               ?? Oldest(rows.Where(t => string.Equals(t.Status, "todo", StringComparison.OrdinalIgnoreCase)))
+               ?? Oldest(rows.Where(t => string.Equals(t.Status, "suspended", StringComparison.OrdinalIgnoreCase)));
+    }
+
     /// <summary>
     /// She is done with the assignment and handing it back. A promise to check in later does not count.
     /// </summary>
@@ -105,6 +156,7 @@ public static class WorkContinuation
                + (assignment ?? "").Trim()
                + ". Keep working until that assignment is actually finished. "
                + "Check in with her only when it says to, or you truly cannot proceed without her. "
+               + "Do not write her a status note about why you are not working. "
                + "Do not stop just because she has not typed."
                + extra;
     }

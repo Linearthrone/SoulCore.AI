@@ -19,6 +19,9 @@ public static class ToolAgencyGuidance
         "When the user asks for MT4 / MetaTrader status, connection, account, or bridge state " +
         "(e.g. \"what's my MT4 status?\"), you MUST call mt4_status with {}. " +
         "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.\n" +
+        "task_create is only for a concrete to-do she asked you to remember. " +
+        "Do not create a task from a go-ahead or from the message you are already doing. " +
+        "A go-ahead means start the next task already on the list.\n" +
         "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
         "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
         "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).";

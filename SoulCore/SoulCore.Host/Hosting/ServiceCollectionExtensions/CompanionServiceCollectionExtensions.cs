@@ -45,6 +45,7 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<IAssignedWorkStore, FileAssignedWorkStore>();
         services.AddSingleton<IInferenceLease, InferenceLease>();
         services.AddSingleton<ILeisureSession, LeisureSession>();
+        services.AddSingleton<IBlockedAsideNotice, BlockedAsideNotice>();
         services.AddSingleton<ISurfaceAvailability, SurfaceAvailability>();
         services.AddSingleton<AssignedWorkRunner>();
         services.AddSingleton<LeisureRunner>();

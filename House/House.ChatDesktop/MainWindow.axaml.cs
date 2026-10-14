@@ -116,6 +116,9 @@ public partial class MainWindow : Window
         InitLayoutChrome();
         InitPresenceUpdates();
         InitStackSettingsUi();
+        PositionChanged += (_, _) => SyncVmPowerButton();
+        if (VictoriaBrowserSurface is not null)
+            VictoriaBrowserSurface.LayoutUpdated += (_, _) => SyncVmPowerButton();
 
         _okBrush = Res("OkBrush");
         _warnBrush = Res("WarnBrush");
@@ -163,6 +166,7 @@ public partial class MainWindow : Window
             await RefreshDesktopViewAsync();
             await RefreshVictoriaBrowserViewAsync();
             await EnsureDesktopBrowserDefaultsAsync();
+            SyncVmPowerButton();
         };
 
         Closed += async (_, _) =>
@@ -171,6 +175,7 @@ public partial class MainWindow : Window
             _desktopViewTimer.Stop();
             _browserViewTimer.Stop();
             CloseHerScreenOverlay();
+            CloseVmPowerButton();
             _desktopPopOut?.Close();
             _popOuts.CloseAll();
             await _ws.DisposeAsync();
@@ -250,6 +255,7 @@ public partial class MainWindow : Window
         Title = "House Victoria — Presence";
         _ = RefreshDesktopViewAsync();
         _ = RefreshVictoriaBrowserViewAsync();
+        SyncVmPowerButton();
     }
 
     private void ShowSettingsView()
@@ -257,6 +263,7 @@ public partial class MainWindow : Window
         if (PresenceView is null || SettingsView is null) return;
         PresenceView.IsVisible = false;
         SettingsView.IsVisible = true;
+        SyncVmPowerButton();
         if (NavSettings is not null && !NavSettings.Classes.Contains("active"))
             NavSettings.Classes.Add("active");
         if (NavPresence is not null)

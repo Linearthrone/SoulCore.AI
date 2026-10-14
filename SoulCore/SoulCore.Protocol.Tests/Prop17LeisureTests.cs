@@ -153,6 +153,39 @@ public class Prop17LeisureTests
     }
 
     [Fact]
+    public void BlockedAside_SaysSoOnceUntilWorkMoves()
+    {
+        var notice = new BlockedAsideNotice();
+        Assert.True(notice.TryClaim());
+        Assert.False(notice.TryClaim());
+        notice.WorkCanRun();
+        Assert.True(notice.TryClaim());
+        Assert.Equal("I'll do my own thing until that block is fixed.", BlockedAside.Line);
+    }
+
+    [Fact]
+    public void BlockedAside_UnfinishedWork_IsNotASuspendedProposal()
+    {
+        Assert.True(BlockedAside.CountsAsUnfinishedBlock(Row("parked")));
+        Assert.True(BlockedAside.CountsAsUnfinishedBlock(Row("blocked")));
+        Assert.True(BlockedAside.CountsAsUnfinishedBlock(Row("todo")));
+        Assert.False(BlockedAside.CountsAsUnfinishedBlock(Row("suspended")));
+        Assert.False(BlockedAside.CountsAsUnfinishedBlock(Row("done")));
+    }
+
+    [Fact]
+    public void BlockedAside_Excuse_IsNotAResearchFind()
+    {
+        Assert.True(BlockedAside.IsWhySheIsntWorking(
+            "I can't work on the lesson because Maestro is down, so I'm not working on anything right now."));
+        Assert.False(BlockedAside.IsWhySheIsntWorking(
+            "Reading a paper on neural interfaces and how spike timing carries a signal."));
+    }
+
+    private static VictoriaTask Row(string status) =>
+        new(1, "t", "", status, "medium", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z");
+
+    [Fact]
     public void LeisureSession_SelfStartsWithoutRelease()
     {
         var session = new LeisureSession();

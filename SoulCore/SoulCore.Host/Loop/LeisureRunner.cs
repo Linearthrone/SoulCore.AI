@@ -31,6 +31,7 @@ public sealed class LeisureRunner
     private readonly IPresenceActivityHub? _activity;
     private readonly PresenceWsHub _hub;
     private readonly IUeLiveSignal _ueLive;
+    private readonly IBlockedAsideNotice _aside;
     private readonly ILogger<LeisureRunner> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
@@ -45,6 +46,7 @@ public sealed class LeisureRunner
         IUeLiveSignal ueLive,
         ILogger<LeisureRunner> logger,
         ILoggerFactory loggerFactory,
+        IBlockedAsideNotice aside,
         IPresenceActivityHub? activity = null,
         IVictoriaJournalStore? journals = null)
     {
@@ -56,6 +58,7 @@ public sealed class LeisureRunner
         _session = session;
         _hub = hub;
         _ueLive = ueLive;
+        _aside = aside;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _activity = activity;
@@ -93,6 +96,7 @@ public sealed class LeisureRunner
         var phrase = _session.ActivityLine();
         _activity?.NoteTool(phrase);
         await PushStatusAsync(phrase, "leisure", abortToken).ConfigureAwait(false);
+        await AnnounceUnfinishedWorkOnceAsync(abortToken).ConfigureAwait(false);
 
         if (!await ModelPresentLocalAsync(leisureModel, abortToken).ConfigureAwait(false))
         {
@@ -187,7 +191,7 @@ public sealed class LeisureRunner
             _session.NoteUntrustedSummary(summary);
             await WriteJournalNoteAsync(summary, abortToken).ConfigureAwait(false);
         }
-        else if (LooksLikeWorthReading(reply))
+        else if (LooksLikeWorthReading(reply) && !BlockedAside.IsWhySheIsntWorking(reply))
         {
             var summary = UntrustedObservation.KeepSummary(reply, interest);
             _session.NoteUntrustedSummary(summary);
@@ -250,6 +254,31 @@ public sealed class LeisureRunner
 
     private static string VisibleFind(string reply) =>
         reply.Length > 400 ? reply[..397] + "…" : reply;
+
+    private async Task AnnounceUnfinishedWorkOnceAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<VictoriaTask> rows;
+        try
+        {
+            rows = await _tasks.ListAsync(null, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "R&R aside skipped — task list failed");
+            return;
+        }
+
+        if (!rows.Any(BlockedAside.CountsAsUnfinishedBlock))
+            return;
+        if (!_aside.TryClaim())
+            return;
+
+        await BroadcastFindAsync(BlockedAside.Line, cancellationToken).ConfigureAwait(false);
+    }
 
     private void NoteQuiet()
     {
