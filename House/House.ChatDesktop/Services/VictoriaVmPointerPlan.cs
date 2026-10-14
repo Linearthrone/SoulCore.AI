@@ -3,7 +3,7 @@ namespace House.ChatDesktop.Services;
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
 /// <c>putMouseEventAbsolute</c> is pixel-based with the origin at (1,1).
-/// Wheel <c>dz</c> is one notch per Windows detent (<c>HIWORD / 120</c>).
+/// A wheel is not a mouse event: one detent is a Page Up or Page Down tap.
 /// </summary>
 public static class VictoriaVmPointerPlan
 {
@@ -12,7 +12,13 @@ public static class VictoriaVmPointerPlan
     public const int Middle = 0x04;
     public const int LockTypeShared = 1;
 
-    /// <summary>One Windows wheel detent. Guest <c>dz</c> stays in notches, not this unit.</summary>
+    /// <summary>VirtualBox <c>MachineState_Running</c>.</summary>
+    public const int MachineStateRunning = 5;
+
+    /// <summary>VirtualBox <c>SessionState_Locked</c>.</summary>
+    public const int SessionStateLocked = 2;
+
+    /// <summary>One Windows <c>WM_MOUSEWHEEL</c> detent in the high word of <c>wParam</c>.</summary>
     public const int WindowsWheelDetent = 120;
 
     public static (int X, int Y) ToAbsolute(int guestX, int guestY) =>
@@ -27,10 +33,36 @@ public static class VictoriaVmPointerPlan
         previousButtons != nextButtons;
 
     /// <summary>
-    /// A non-zero wheel is cleared the same way as a button press while the Windows
-    /// cursor sits over Presence. Park before sending <c>dz</c>.
+    /// A wheel does not park the cursor. Button presses still park outside.
     /// </summary>
-    public static bool ShouldParkForWheel(int wheelNotches) => wheelNotches != 0;
+    public static bool ShouldParkForWheel(int wheelNotches)
+    {
+        _ = wheelNotches;
+        return false;
+    }
+
+    /// <summary>
+    /// A wheel is a key tap. It does not move the Windows cursor into the embed.
+    /// </summary>
+    public static bool ShouldSeatCursorInsideEmbed(int wheelNotches)
+    {
+        _ = wheelNotches;
+        return false;
+    }
+
+    /// <summary>
+    /// Center of the embed window rectangle. The point stays inside a non-empty
+    /// rect, including a one-pixel window on a monitor with negative coordinates.
+    /// </summary>
+    public static (int X, int Y)? EmbedCursorSeat(int left, int top, int right, int bottom)
+    {
+        var width = right - left;
+        var height = bottom - top;
+        if (width <= 0 || height <= 0)
+            return null;
+
+        return (left + (width / 2), top + (height / 2));
+    }
 
     /// <summary>
     /// Windows delivers <c>WM_MOUSEWHEEL</c> to the focused HWND. A move (or a
@@ -47,31 +79,51 @@ public static class VictoriaVmPointerPlan
     public static int NotchesFromWheelDelta(int wheelDelta) => wheelDelta / WindowsWheelDetent;
 
     /// <summary>
-    /// Guest <c>dz</c> for already-counted notches. One detent stays ±1.
-    /// Live check on victoria-sandbox: raw <c>dz=-1</c> moved guest content up
-    /// by about one notch, and raw <c>dz=+1</c> moved it down. Windows away is
-    /// a positive detent, so the sign is negated to scroll content up.
-    /// Do not scale by <see cref="WindowsWheelDetent"/> — 120 jumps many pages.
+    /// Re-open the shared console lock before injecting. A lock held across
+    /// save / abort / start is not <see cref="MachineStateRunning"/>, is no
+    /// longer <see cref="SessionStateLocked"/>, has no console mouse, or points
+    /// at a different VM process. A missing process id does not by itself drop
+    /// a lock that otherwise looks live.
     /// </summary>
-    public static int GuestWheelDz(int notches) => -notches;
+    public static bool NeedsConsoleReconnect(
+        int? machineState,
+        bool sessionLocked,
+        bool consolePresent,
+        bool mousePresent,
+        int? lockedSessionPid,
+        int? currentSessionPid)
+    {
+        if (machineState != MachineStateRunning
+            || !sessionLocked
+            || !consolePresent
+            || !mousePresent)
+            return true;
+
+        return lockedSessionPid is > 0
+            && currentSessionPid is > 0
+            && lockedSessionPid != currentSessionPid;
+    }
 
     /// <summary>
-    /// Move to the point with no wheel and no buttons, then send <c>dz</c>.
-    /// Never a click.
+    /// One startup-log line for a wheel. Unmapped wheels say <c>dropped-unmapped</c>.
+    /// A delivered wheel names <c>pageup</c> or <c>pagedown</c> and says <c>sent</c>.
+    /// A failed inject puts <c>COM error:</c> on that same line.
     /// </summary>
-    public static IReadOnlyList<AbsolutePointerStep> WheelSteps(int notches)
+    public static string FormatWheelStartupLine(int notches, (int X, int Y)? guestPoint, string? comError)
     {
-        if (notches == 0)
-            return [];
+        var key = VictoriaVmKeyPlan.WheelKeyName(notches);
+        if (guestPoint is null || key.Length == 0)
+            return $"her-screen wheel notches={notches} dropped-unmapped";
 
-        var dz = GuestWheelDz(notches);
-        return
-        [
-            new AbsolutePointerStep(0, 0, 0),
-            new AbsolutePointerStep(dz, 0, 0)
-        ];
+        if (comError is null)
+            return $"her-screen wheel notches={notches} key={key} sent";
+
+        var flat = comError.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+        if (flat.Length == 0)
+            flat = "failed";
+        return $"her-screen wheel notches={notches} key={key} COM error: {flat}";
     }
 }
-
-/// <summary>One <c>putMouseEventAbsolute</c> wheel/button payload at an already-mapped point.</summary>
-public readonly record struct AbsolutePointerStep(int Dz, int Dw, int ButtonState);

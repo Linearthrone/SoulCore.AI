@@ -44,4 +44,32 @@ public static class VictoriaVmKeyPlan
         var code = (byte)(make | 0x80);
         return extended ? new byte[] { 0xE0, code } : new byte[] { code };
     }
+
+    /// <summary>
+    /// One Her-screen wheel detent is one Page Up or Page Down tap: make then
+    /// break. Positive notches (wheel away, content up) are Page Up
+    /// <c>E0 49</c> / <c>E0 C9</c>. Negative notches are Page Down
+    /// <c>E0 51</c> / <c>E0 D1</c>. Several notches are several taps, not a held key.
+    /// </summary>
+    public static byte[] WheelTap(int notches)
+    {
+        if (notches == 0)
+            return Array.Empty<byte>();
+
+        var one = notches > 0
+            ? new byte[] { 0xE0, 0x49, 0xE0, 0xC9 }
+            : new byte[] { 0xE0, 0x51, 0xE0, 0xD1 };
+        var count = Math.Abs(notches);
+        if (count == 1)
+            return one;
+
+        var all = new byte[one.Length * count];
+        for (var i = 0; i < count; i++)
+            one.CopyTo(all, i * one.Length);
+        return all;
+    }
+
+    /// <summary>Startup-log key name for a wheel. Empty when there is no detent.</summary>
+    public static string WheelKeyName(int notches) =>
+        notches > 0 ? "pageup" : notches < 0 ? "pagedown" : "";
 }

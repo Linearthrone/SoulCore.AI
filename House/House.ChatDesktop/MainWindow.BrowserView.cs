@@ -505,7 +505,15 @@ public partial class MainWindow
             _browserImagePixelWidth,
             _browserImagePixelHeight);
         if (mapped is null)
+        {
+            if (sample.WheelNotches != 0)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatWheelStartupLine(sample.WheelNotches, null, null));
+            }
+
             return;
+        }
 
         if (sample.WheelNotches != 0)
         {
