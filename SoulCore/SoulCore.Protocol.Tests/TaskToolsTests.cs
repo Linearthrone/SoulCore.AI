@@ -327,7 +327,7 @@ public class TaskToolsTests
     }
 
     [Fact]
-    public void HostDi_RegistersTaskStoreAndTools()
+    public async Task HostDi_RegistersTaskStoreAndTools()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-tasks-di-{Guid.NewGuid():N}.db");
         try
@@ -352,8 +352,14 @@ public class TaskToolsTests
             Assert.Contains("task_get", names);
             Assert.Contains("task_update_status", names);
             Assert.Contains("task_list", names);
+            Assert.DoesNotContain("task_delete", names);
 
             var store = sp.GetRequiredService<IVictoriaTaskStore>();
+            var created = await store.CreateAsync("delete-me", "operator only", "medium").ConfigureAwait(true);
+            Assert.NotNull(await store.GetAsync(created).ConfigureAwait(true));
+            Assert.True(await store.DeleteAsync(created).ConfigureAwait(true));
+            Assert.Null(await store.GetAsync(created).ConfigureAwait(true));
+            Assert.False(await store.DeleteAsync(created).ConfigureAwait(true));
             Assert.Same(sp.GetRequiredService<SqliteVictoriaTaskRepository>(), store);
         }
         finally
@@ -419,5 +425,8 @@ public class TaskToolsTests
 
         public Task<IReadOnlyList<VictoriaTask>> ListAsync(string? status = null, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<VictoriaTask>>(Array.Empty<VictoriaTask>());
+
+        public Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 }

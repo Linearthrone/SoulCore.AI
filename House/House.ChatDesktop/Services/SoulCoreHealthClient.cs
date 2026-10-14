@@ -51,6 +51,9 @@ public sealed class SoulCoreHealthSnapshot
     /// <summary>Source of currentActivity: chat | tool | desktop | life.</summary>
     public string? ActivitySource { get; init; }
 
+    /// <summary>Leisure interest line for the band. Quiet when she is not researching.</summary>
+    public string? OnHerMind { get; init; }
+
     /// <summary>SoulCore.Host assembly version from /health (verify Host fix is running).</summary>
     public string? HostVersion { get; init; }
 
@@ -135,6 +138,7 @@ public sealed class SoulCoreHealthClient : IDisposable
                 CuaDriverPath = dto?.Tools?.CuaDriverPath,
                 CurrentActivity = dto?.Presence?.CurrentActivity,
                 ActivitySource = dto?.Presence?.ActivitySource,
+                OnHerMind = dto?.Presence?.OnHerMind,
                 HostVersion = dto?.Version,
                 Detail = null
             };
@@ -198,6 +202,9 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("activitySource")]
         public string? ActivitySource { get; set; }
+
+        [JsonPropertyName("onHerMind")]
+        public string? OnHerMind { get; set; }
     }
 
     private sealed class ToolsDto

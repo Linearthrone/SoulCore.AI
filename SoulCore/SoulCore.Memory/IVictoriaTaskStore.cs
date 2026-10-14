@@ -7,8 +7,9 @@ namespace SoulCore.Memory;
 /// orchestration tickets. Victoria's tasks are model-managed work items she
 /// creates and updates via the <c>task_*</c> agent-loop tools.
 /// <para>
-/// PROP-17.1: statuses include <c>parked</c> and <c>suspended</c>. There is
-/// <b>no delete API</b> — rows stay for memory.
+/// PROP-17.1: statuses include <c>parked</c> and <c>suspended</c>.
+/// <see cref="DeleteAsync"/> is for Kayleigh in Presence only. Model tools
+/// must not delete a row.
 /// </para>
 /// </summary>
 public interface IVictoriaTaskStore
@@ -82,6 +83,12 @@ public interface IVictoriaTaskStore
     Task<IReadOnlyList<VictoriaTask>> ListAsync(
         string? status = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Permanently remove a task. Operator path only — there is no
+    /// <c>task_delete</c> tool. Returns <c>false</c> when the id is missing.
+    /// </summary>
+    Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>One row from <c>victoria_tasks</c>.</summary>

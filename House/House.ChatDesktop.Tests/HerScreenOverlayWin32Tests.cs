@@ -34,4 +34,13 @@ public class HerScreenOverlayWin32Tests
         Assert.NotEqual(0, style & HerScreenOverlayWin32.WsExNoActivate);
         Assert.Equal(0, style & HerScreenOverlayWin32.WsExTransparent);
     }
+
+    [Fact]
+    public void InputOverlayExStyle_CanTakeKeyboardFocus()
+    {
+        var style = HerScreenOverlayWin32.InputOverlayExStyle;
+        Assert.NotEqual(0, style & HerScreenOverlayWin32.WsExLayered);
+        Assert.Equal(0, style & HerScreenOverlayWin32.WsExNoActivate);
+        Assert.Equal(0, style & HerScreenOverlayWin32.WsExTransparent);
+    }
 }

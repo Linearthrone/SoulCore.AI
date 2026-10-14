@@ -198,4 +198,11 @@ public static class HerScreenOverlayWin32
     /// instead of covering the guest.
     /// </summary>
     public static int ChildOverlayExStyle => WsExLayered | WsExNoActivate;
+
+    /// <summary>
+    /// Full-size input child. WS_EX_NOACTIVATE is left off so a click can
+    /// move keyboard focus here; otherwise every key stays in the chat box.
+    /// WS_EX_TRANSPARENT stays off so the child still receives the click.
+    /// </summary>
+    public static int InputOverlayExStyle => WsExLayered;
 }

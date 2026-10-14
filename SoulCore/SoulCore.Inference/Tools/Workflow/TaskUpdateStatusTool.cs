@@ -8,7 +8,7 @@ namespace SoulCore.Inference.Tools.Workflow;
 /// <c>status</c> + <c>updated_at</c> on a <c>victoria_tasks</c> row.
 /// Allowed statuses (<c>todo|in_progress|done|blocked|parked|suspended</c>) are enforced by
 /// <see cref="IVictoriaTaskStore.UpdateStatusAsync"/> (<see cref="ArgumentException"/>).
-/// There is no delete API (PROP-17.1).
+/// The model cannot delete a task. Kayleigh removes rows from Presence.
 /// </summary>
 public sealed class TaskUpdateStatusTool : ITool
 {
@@ -23,7 +23,7 @@ public sealed class TaskUpdateStatusTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "task_update_status",
-        Description: "Update task status.",
+        Description: "Update task status (todo, in_progress, done, blocked, parked, suspended). You cannot delete a task.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

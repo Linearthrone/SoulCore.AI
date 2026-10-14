@@ -95,6 +95,7 @@ public sealed class SqliteMemoryStore :
         _tasks.UpdateDetailsAsync(id, surface, notes, ct);
     public Task<IReadOnlyList<VictoriaTask>> ListAsync(string? s = null, CancellationToken ct = default) =>
         _tasks.ListAsync(s, ct);
+    public Task<bool> DeleteAsync(long id, CancellationToken ct = default) => _tasks.DeleteAsync(id, ct);
 
     public Task<long> CreateAsync(string name, IReadOnlyList<WorkflowStep> steps, CancellationToken ct = default) =>
         _workflows.CreateAsync(name, steps, ct);

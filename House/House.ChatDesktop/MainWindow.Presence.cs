@@ -231,6 +231,7 @@ public partial class MainWindow
         ApplyServiceIndicators(snap);
         await RefreshServicesPanelAsync(snap).ConfigureAwait(true);
         ApplyHonestActivity(preferHost: true);
+        await RefreshBandTasksAsync().ConfigureAwait(true);
         UpdateIdentityDetail();
         UpdateEngagementState();
 
@@ -1304,19 +1305,68 @@ public partial class MainWindow
         if (BandDoingText is not null)
             BandDoingText.Text = $"Doing — {doing}";
 
-        // Never restamp last order as work; do not invent Host interest phrases.
+        var mind = string.IsNullOrWhiteSpace(_lastHealth.OnHerMind)
+            ? "quiet between talks"
+            : _lastHealth.OnHerMind.Trim();
         if (BandOnHerMindText is not null)
-            BandOnHerMindText.Text =
-                "On her mind — quiet between talks (research interest awaits PROP-17.3; not inventing Host phrases)";
+            BandOnHerMindText.Text = $"On her mind — {mind}";
 
         if (BandInfluencesText is not null)
-            BandInfluencesText.Text = "Influences — none yet (≤3 when Host reports)";
-
-        if (BandTasksText is not null)
-            BandTasksText.Text =
-                "Ledger: title / surface / status / why — awaits PROP-17.1. Add / Suspend / Release disabled until then.";
+            BandInfluencesText.Text = "Influences — none yet";
 
         RefreshBandMoodLine();
+    }
+
+    private bool _taskDeleteBusy;
+
+    private async Task RefreshBandTasksAsync()
+    {
+        var fetch = await _taskClient.ListAsync().ConfigureAwait(true);
+        if (BandTaskList is not null)
+            BandTaskList.ItemsSource = fetch.Tasks;
+        if (BandTasksText is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(fetch.Problem))
+        {
+            BandTasksText.IsVisible = true;
+            BandTasksText.Text = fetch.Problem;
+            return;
+        }
+
+        BandTasksText.IsVisible = fetch.Tasks.Count == 0;
+        BandTasksText.Text = "No tasks.";
+    }
+
+    private async void BandTaskDelete_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskDeleteBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        var title = string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title.Trim();
+        var ok = await ConfirmYesNoAsync(
+            $"Delete task #{row.Id} permanently?\n\n{title}\n\nOnly you can do this. Victoria cannot restore it.",
+            "Delete task").ConfigureAwait(true);
+        if (!ok)
+            return;
+
+        _taskDeleteBusy = true;
+        try
+        {
+            var removed = await _taskClient.DeleteAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!removed && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = $"Could not delete task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskDeleteBusy = false;
+        }
     }
 
     private void RefreshBandMoodLine()

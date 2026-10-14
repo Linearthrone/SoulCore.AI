@@ -21,6 +21,7 @@ public partial class MainWindow : Window
 {
     private readonly ObservableCollection<ChatMessage> _messages = new();
     private readonly SoulCoreHealthClient _health = new();
+    private readonly SoulCoreTaskClient _taskClient = new();
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
     private readonly SoulCoreEmailSettingsClient _emailSettings = new();
@@ -317,10 +318,10 @@ public partial class MainWindow : Window
                 "Memories — live / quarantined / newest: Host detail not on /health yet\n" +
                 "Books — feeling · animation · environment · life-hacks (life-hacks awaits PROP-17.2)\n" +
                 "SOP count — awaits PROP-17.2 store\n" +
-                "Tasks — released / suspended / in progress / done / parked: awaits PROP-17.1 ledger\n" +
+                "Tasks — listed under Her screen; only you can delete one\n" +
                 "Workflows — not reported on /health yet\n" +
-                "Parked + next probe — awaits PROP-17.1\n" +
-                "Current interest — awaits PROP-17.3 R&R";
+                "Parked + next probe — shown on the task row when the Host reports it\n" +
+                "Current interest — On her mind, in the band under Her screen";
         }
 
         if (IdentityPromptMixText is not null)

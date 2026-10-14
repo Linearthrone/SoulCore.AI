@@ -396,6 +396,21 @@ public sealed class SqliteVictoriaTaskRepository : IVictoriaTaskStore
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+            return false;
+
+        return await _session.RunDbAsync(async ct =>
+        {
+            await using var cmd = _session.Connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM victoria_tasks WHERE id = $id;";
+            cmd.Parameters.AddWithValue("$id", id);
+            return await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false) > 0;
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
     private static string ResolveCreateStatus(string? status, bool ready)
     {
         if (!string.IsNullOrWhiteSpace(status))

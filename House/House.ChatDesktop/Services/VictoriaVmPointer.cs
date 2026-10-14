@@ -4,14 +4,15 @@ using System.Runtime.Versioning;
 namespace House.ChatDesktop.Services;
 
 /// <summary>
-/// Injects operator pointer events into victoria-sandbox through VirtualBox COM.
-/// The reparented VirtualBox window receives Win32 clicks and does not forward
-/// them into the guest; <c>IMouse.putMouseEventAbsolute</c> does.
+/// Injects operator pointer and keyboard events into victoria-sandbox through
+/// VirtualBox COM. The reparented VirtualBox window receives Win32 input and
+/// does not forward it into the guest; <c>IMouse.putMouseEventAbsolute</c> and
+/// <c>IKeyboard.putScancode</c> do.
 /// </summary>
 public static class VictoriaVmPointer
 {
     private static readonly object Gate = new();
-    private static readonly List<PointerCmd> Pending = new();
+    private static readonly List<WorkItem> Pending = new();
     private static readonly AutoResetEvent Signal = new(false);
     private static Thread? _thread;
     private static string _vmName = LocalStackControl.SandboxVmName;
@@ -68,11 +69,27 @@ public static class VictoriaVmPointer
         if (guestX < 0 || guestY < 0)
             return;
 
+        Enqueue(new PointerWork(guestX, guestY, buttons, wheelNotches));
+    }
+
+    public static void PostKeys(ReadOnlySpan<byte> scancodes)
+    {
+        if (!OperatingSystem.IsWindows() || scancodes.IsEmpty)
+            return;
+
+        Enqueue(new KeyWork(scancodes.ToArray()));
+    }
+
+    private static void Enqueue(WorkItem item)
+    {
         lock (Gate)
         {
-            Pending.Add(new PointerCmd(guestX, guestY, buttons, wheelNotches));
-            if (Pending.Count > 32)
-                Pending.RemoveAt(0);
+            Pending.Add(item);
+            while (Pending.Count > 64)
+            {
+                var drop = Pending.FindIndex(work => work is PointerWork);
+                Pending.RemoveAt(drop >= 0 ? drop : 0);
+            }
         }
 
         Signal.Set();
@@ -84,12 +101,12 @@ public static class VictoriaVmPointer
         dynamic? vbox = null;
         dynamic? session = null;
         dynamic? mouse = null;
+        dynamic? keyboard = null;
         try
         {
             while (true)
             {
-                PointerCmd cmd = default;
-                var have = false;
+                WorkItem? cmd = null;
                 lock (Gate)
                 {
                     if (_stop && Pending.Count == 0)
@@ -98,11 +115,10 @@ public static class VictoriaVmPointer
                     {
                         cmd = Pending[0];
                         Pending.RemoveAt(0);
-                        have = true;
                     }
                 }
 
-                if (!have)
+                if (cmd is null)
                 {
                     Signal.WaitOne(200);
                     continue;
@@ -110,34 +126,47 @@ public static class VictoriaVmPointer
 
                 try
                 {
-                    if (mouse is null)
-                        mouse = TryOpenMouse(ref vbox, ref session);
-                    if (mouse is null)
-                        continue;
+                    if (mouse is null || keyboard is null)
+                        TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
 
-                    var (ax, ay) = VictoriaVmPointerPlan.ToAbsolute(cmd.X, cmd.Y);
-                    if (cmd.Buttons != 0)
+                    if (cmd is KeyWork keys)
                     {
-                        WithCursorParked(_excludeHwnd, () =>
-                        {
-                            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
-                            Thread.Sleep(30);
-                            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, cmd.Buttons);
-                            Thread.Sleep(40);
-                            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
-                        });
+                        if (keyboard is null)
+                            continue;
+                        SendScancodes(keyboard, keys.Codes);
                     }
-                    else if (cmd.WheelNotches != 0)
+                    else if (cmd is PointerWork pointer)
                     {
-                        mouse.PutMouseEventAbsolute(ax, ay, cmd.WheelNotches, 0, 0);
+                        if (mouse is null)
+                            continue;
+
+                        var (ax, ay) = VictoriaVmPointerPlan.ToAbsolute(pointer.X, pointer.Y);
+                        if (pointer.Buttons != 0)
+                        {
+                            var buttons = pointer.Buttons;
+                            WithCursorParked(_excludeHwnd, () =>
+                            {
+                                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
+                                Thread.Sleep(30);
+                                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, buttons);
+                                Thread.Sleep(40);
+                                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
+                            });
+                        }
+                        else if (pointer.WheelNotches != 0)
+                        {
+                            mouse.PutMouseEventAbsolute(ax, ay, pointer.WheelNotches, 0, 0);
+                        }
                     }
 
                     _lastFault = null;
                 }
                 catch (Exception ex)
                 {
-                    ReportFault($"VM click failed: {ex.Message}");
+                    var kind = cmd is KeyWork ? "VM key failed" : "VM click failed";
+                    ReportFault($"{kind}: {ex.Message}");
                     mouse = null;
+                    keyboard = null;
                     Release(ref session, ref vbox);
                 }
             }
@@ -149,31 +178,40 @@ public static class VictoriaVmPointer
     }
 
     [SupportedOSPlatform("windows")]
-    private static dynamic? TryOpenMouse(ref dynamic? vbox, ref dynamic? session)
+    private static void SendScancodes(dynamic keyboard, byte[] codes)
+    {
+        foreach (var code in codes)
+            keyboard.PutScancode((int)code);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void TryOpenConsole(
+        ref dynamic? vbox, ref dynamic? session, ref dynamic? mouse, ref dynamic? keyboard)
     {
         var vboxType = Type.GetTypeFromProgID("VirtualBox.VirtualBox");
         var sessionType = Type.GetTypeFromProgID("VirtualBox.Session");
         if (vboxType is null || sessionType is null)
         {
-            ReportFault("VM click failed: VirtualBox COM is not registered.");
-            return null;
+            ReportFault("VM input failed: VirtualBox COM is not registered.");
+            return;
         }
 
         vbox = Activator.CreateInstance(vboxType);
         session = Activator.CreateInstance(sessionType);
         if (vbox is null || session is null)
         {
-            ReportFault("VM click failed: could not create the VirtualBox session.");
-            return null;
+            ReportFault("VM input failed: could not create the VirtualBox session.");
+            return;
         }
 
         dynamic machine = vbox.FindMachine(_vmName);
         machine.LockMachine(session, VictoriaVmPointerPlan.LockTypeShared);
         dynamic console = session.Console
             ?? throw new InvalidOperationException("VirtualBox session has no console.");
-        dynamic mouse = console.Mouse
+        mouse = console.Mouse
             ?? throw new InvalidOperationException("VirtualBox console has no mouse.");
-        return mouse;
+        keyboard = console.Keyboard
+            ?? throw new InvalidOperationException("VirtualBox console has no keyboard.");
     }
 
     private static void Release(ref dynamic? session, ref dynamic? vbox)
@@ -249,7 +287,11 @@ public static class VictoriaVmPointer
     private static bool Contains(RECT rc, int x, int y) =>
         x >= rc.Left && x < rc.Right && y >= rc.Top && y < rc.Bottom;
 
-    private readonly record struct PointerCmd(int X, int Y, int Buttons, int WheelNotches);
+    private abstract record WorkItem;
+
+    private sealed record PointerWork(int X, int Y, int Buttons, int WheelNotches) : WorkItem;
+
+    private sealed record KeyWork(byte[] Codes) : WorkItem;
 
     private const uint GaRoot = 2;
 

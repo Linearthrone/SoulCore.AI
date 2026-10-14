@@ -85,6 +85,7 @@ internal static class WebApplicationExtensions
             SpendMeter spendMeter,
             CharterService charter,
             SoulCore.Inference.Presence.IPresenceActivityHub presenceActivity,
+            SoulCore.Inference.Presence.ILeisureSession leisure,
             CancellationToken cancellationToken) =>
         {
             var inferenceOptions = inferenceOpts.Value;
@@ -181,7 +182,7 @@ internal static class WebApplicationExtensions
                     connected = unreal.IsConnected
                 },
                 // PROP-4 BED: Presence HUD activity — short doing-now line (never loop.want slogans).
-                presence = PresenceDto(presenceActivity.GetSnapshot()),
+                presence = PresenceDto(presenceActivity.GetSnapshot(), leisure),
                 tools = ToolsSettingsDto(access),
                 charter = new
                 {
@@ -210,6 +211,42 @@ internal static class WebApplicationExtensions
                 // PROP-1.4: SMS gateway status — bool/length only (no MDNs/tokens).
                 sms = SmsHealthSnapshot.Build(smsOpts.Value)
             });
+        });
+
+        // Operator ledger. Not a model tool — Victoria cannot call DELETE.
+        app.MapGet("/tasks", async (IVictoriaTaskStore tasks, CancellationToken cancellationToken) =>
+        {
+            var rows = await tasks.ListAsync(null, cancellationToken).ConfigureAwait(false);
+            return Results.Json(new
+            {
+                tasks = rows.Select(t => new
+                {
+                    id = t.Id,
+                    title = t.Title,
+                    status = t.Status,
+                    surface = t.Surface,
+                    priority = t.Priority
+                })
+            });
+        });
+
+        app.MapDelete("/tasks/{id:long}", async (
+            long id,
+            IVictoriaTaskStore tasks,
+            SoulCore.Inference.Presence.IAssignedWorkStore assigned,
+            CancellationToken cancellationToken) =>
+        {
+            if (id <= 0)
+                return Results.Json(new { error = "id must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var removed = await tasks.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
+            if (!removed)
+                return Results.Json(new { error = "task not found", id }, statusCode: StatusCodes.Status404NotFound);
+
+            if (assigned.RunningId == id)
+                assigned.Clear();
+
+            return Results.Json(new { deleted = id });
         });
 
         app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
@@ -674,11 +711,14 @@ internal static class WebApplicationExtensions
         return app;
     }
 
-    private static object PresenceDto(SoulCore.Inference.Presence.PresenceActivitySnapshot snap) => new
+    private static object PresenceDto(
+        SoulCore.Inference.Presence.PresenceActivitySnapshot snap,
+        SoulCore.Inference.Presence.ILeisureSession leisure) => new
     {
         currentActivity = snap.Phrase,
         activitySource = snap.Source,
-        activityUpdatedAt = snap.UpdatedAt
+        activityUpdatedAt = snap.UpdatedAt,
+        onHerMind = leisure.ActivityLine()
     };
 
     private static object ToolsSettingsDto(IToolsAccessSettings access)

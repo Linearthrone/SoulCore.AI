@@ -5,10 +5,11 @@ namespace House.ChatDesktop.Controls;
 
 /// <summary>
 /// Win32 layered children of the SetParent'd VirtualBox HWND. The full-size
-/// input window is color-key invisible and receives operator clicks. Those clicks
-/// are injected with IMouse.putMouseEventAbsolute — the reparented Qt window
-/// does not forward Win32 button messages into the guest. The arrow and badge
-/// are smaller siblings drawn above that input window.
+/// input window is color-key invisible and receives operator clicks and, once
+/// clicked, keyboard focus. Clicks go in through IMouse.putMouseEventAbsolute
+/// and keys through IKeyboard.putScancode — the reparented Qt window does not
+/// forward Win32 input into the guest. The arrow and badge are smaller siblings
+/// drawn above that input window.
 /// </summary>
 public readonly record struct HerScreenPointerSample(
     int X,
@@ -30,6 +31,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private nint _badgeHwnd;
     private nint _parent;
     private int _buttons;
+    private readonly HashSet<int> _heldKeys = new();
     private GCHandle _selfHandle;
     private bool _cursorVisible;
     private int _cursorX;
@@ -61,9 +63,10 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
         _parent = parentHwnd;
         _selfHandle = GCHandle.Alloc(this);
-        _inputHwnd = CreateOverlayWindow(parentHwnd, "HerScreenInput");
-        _cursorHwnd = CreateOverlayWindow(parentHwnd, "HerScreenCursor");
-        _badgeHwnd = CreateOverlayWindow(parentHwnd, "HerScreenBadge");
+        _inputHwnd = CreateOverlayWindow(
+            parentHwnd, "HerScreenInput", HerScreenOverlayWin32.InputOverlayExStyle, acceptsKeys: true);
+        _cursorHwnd = CreateOverlayWindow(parentHwnd, "HerScreenCursor", HerScreenOverlayWin32.ChildOverlayExStyle);
+        _badgeHwnd = CreateOverlayWindow(parentHwnd, "HerScreenBadge", HerScreenOverlayWin32.ChildOverlayExStyle);
         if (_inputHwnd == 0 || _cursorHwnd == 0)
         {
             PresenceStartupLog.Write(
@@ -75,13 +78,16 @@ public sealed class HerScreenHwndOverlay : IDisposable
         SyncToParent();
     }
 
-    private nint CreateOverlayWindow(nint parentHwnd, string name)
+    private nint CreateOverlayWindow(nint parentHwnd, string name, int exStyle, bool acceptsKeys = false)
     {
+        var style = WsChild | WsVisible | WsClipSiblings;
+        if (acceptsKeys)
+            style |= WsTabStop;
         var hwnd = CreateWindowEx(
-            HerScreenOverlayWin32.ChildOverlayExStyle,
+            exStyle,
             WindowClassName,
             name,
-            WsChild | WsVisible | WsClipSiblings,
+            style,
             0,
             0,
             1,
@@ -138,6 +144,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
     {
         if (!OperatingSystem.IsWindows())
             return;
+        ReleaseHeldKeys();
         if (_inputHwnd != 0)
             _ = ShowWindow(_inputHwnd, SwHide);
         if (_cursorHwnd != 0)
@@ -148,6 +155,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
     public void Detach()
     {
+        ReleaseHeldKeys();
         if (OperatingSystem.IsWindows())
         {
             DestroyOverlayWindow(ref _inputHwnd);
@@ -160,6 +168,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
         _badgeHwnd = 0;
         _parent = 0;
         _buttons = 0;
+        _heldKeys.Clear();
         if (_selfHandle.IsAllocated)
             _selfHandle.Free();
     }
@@ -409,6 +418,8 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
         var changed = buttons != _buttons || wheel != 0;
         _buttons = buttons;
+        if (msg is WmLButtonDown or WmLButtonDblClk or WmRButtonDown or WmMButtonDown)
+            FocusForTyping();
         if (buttons != 0)
             _ = SetCapture(source);
         else
@@ -429,6 +440,34 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return;
 
         OnPointer(new HerScreenPointerSample(pt.X, pt.Y, width, height, buttons, wheel, changed));
+    }
+
+    private void FocusForTyping()
+    {
+        if (_inputHwnd != 0)
+            _ = SetFocus(_inputHwnd);
+    }
+
+    private void ReportKey(uint msg, nint lParam)
+    {
+        if (!VictoriaVmKeyPlan.TryFromKeyMessage(msg, lParam, out var codes, out var holdId, out var isUp))
+            return;
+
+        if (isUp)
+            _heldKeys.Remove(holdId);
+        else
+            _heldKeys.Add(holdId);
+
+        VictoriaVmPointer.PostKeys(codes);
+    }
+
+    private void ReleaseHeldKeys()
+    {
+        if (_heldKeys.Count == 0)
+            return;
+        foreach (var holdId in _heldKeys)
+            VictoriaVmPointer.PostKeys(VictoriaVmKeyPlan.Break(holdId));
+        _heldKeys.Clear();
     }
 
     private static int SignedLow(nint lParam) => (short)((long)lParam & 0xFFFF);
@@ -461,6 +500,15 @@ public sealed class HerScreenHwndOverlay : IDisposable
             _classRegistered = true;
             return true;
         }
+    }
+
+    private static HerScreenHwndOverlay? OverlayFromHwnd(nint hWnd)
+    {
+        var ptr = GetWindowLongPtr(hWnd, GwlpUserData);
+        if (ptr == nint.Zero)
+            return null;
+        var gch = GCHandle.FromIntPtr(ptr);
+        return gch.IsAllocated && gch.Target is HerScreenHwndOverlay overlay ? overlay : null;
     }
 
     private static nint StaticWndProc(nint hWnd, uint msg, nint wParam, nint lParam)
@@ -511,8 +559,38 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return nint.Zero;
         }
 
+        if (msg is WmKeyDown or WmKeyUp or WmSysKeyDown or WmSysKeyUp)
+        {
+            try
+            {
+                if (OverlayFromHwnd(hWnd) is { } overlay)
+                    overlay.ReportKey(msg, lParam);
+            }
+            catch
+            {
+                // never throw from WndProc
+            }
+
+            return nint.Zero;
+        }
+
+        if (msg == WmKillFocus)
+        {
+            try
+            {
+                OverlayFromHwnd(hWnd)?.ReleaseHeldKeys();
+            }
+            catch
+            {
+                // never throw from WndProc
+            }
+        }
+
         if (msg == WmMouseActivate)
-            return (nint)MaNoActivate;
+        {
+            var activate = OverlayFromHwnd(hWnd) is { } overlay && hWnd == overlay._inputHwnd;
+            return (nint)(activate ? MaActivate : MaNoActivate);
+        }
 
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
@@ -520,6 +598,11 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const string WindowClassName = "House.HerScreenHwndOverlay.v1";
     private const int ErrorClassAlreadyExists = 1410;
     private const uint WmPaint = 0x000F;
+    private const uint WmKeyDown = VictoriaVmKeyPlan.WmKeyDown;
+    private const uint WmKeyUp = VictoriaVmKeyPlan.WmKeyUp;
+    private const uint WmSysKeyDown = VictoriaVmKeyPlan.WmSysKeyDown;
+    private const uint WmSysKeyUp = VictoriaVmKeyPlan.WmSysKeyUp;
+    private const uint WmKillFocus = 0x0008;
     private const uint WmMouseActivate = 0x0021;
     private const uint WmMouseMove = 0x0200;
     private const uint WmLButtonDown = 0x0201;
@@ -530,12 +613,14 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const uint WmMButtonDown = 0x0207;
     private const uint WmMButtonUp = 0x0208;
     private const uint WmMouseWheel = 0x020A;
+    private const int MaActivate = 1;
     private const int MaNoActivate = 3;
     private const int Winding = 2;
     private const int GwlpUserData = -21;
     private const int WsChild = 0x40000000;
     private const int WsVisible = 0x10000000;
     private const int WsClipSiblings = 0x04000000;
+    private const int WsTabStop = 0x00010000;
     private const uint LwaColorKey = 0x00000001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoSize = 0x0001;
@@ -681,6 +766,9 @@ public sealed class HerScreenHwndOverlay : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int MapWindowPoints(nint hWndFrom, nint hWndTo, ref POINT lpPoints, uint cPoints);
+
+    [DllImport("user32.dll")]
+    private static extern nint SetFocus(nint hWnd);
 
     [DllImport("user32.dll")]
     private static extern nint SetCapture(nint hWnd);
