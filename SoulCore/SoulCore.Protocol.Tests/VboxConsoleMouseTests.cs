@@ -28,4 +28,17 @@ public class VboxConsoleMouseTests
         var result = VboxConsoleMouse.TryClick("victoria-sandbox", 510, 510, 1, 1);
         Assert.Null(result);
     }
+
+    [Theory]
+    [InlineData(120, 0, -1, 0)]   // tool scroll-up → VBox dz negative
+    [InlineData(-120, 0, 1, 0)]  // tool scroll-down → VBox dz positive
+    [InlineData(1, 0, -1, 0)]    // already a notch
+    [InlineData(0, 120, 0, 1)]   // horizontal keeps sign
+    [InlineData(0, -120, 0, -1)]
+    public void PlanWheel_ScrollUpIsNegativeDz(int deltaY, int deltaX, int expectDz, int expectDw)
+    {
+        var (dz, dw) = VboxConsoleMouse.PlanWheel(deltaY, deltaX);
+        Assert.Equal(expectDz, dz);
+        Assert.Equal(expectDw, dw);
+    }
 }

@@ -39,9 +39,16 @@ public static class VictoriaVmPointerPlan
     public readonly record struct WheelStep(int X, int Y, int Dz, int Dw, int Buttons);
 
     /// <summary>
+    /// VirtualBox <c>dz</c> for a Windows wheel notch count. Windows away (+notches)
+    /// must become negative <c>dz</c>: VBox positive <c>dz</c> is clockwise and moves
+    /// guest content down. Live TASK-193: raw <c>dz=-1</c> scrolled the page up.
+    /// </summary>
+    public static int GuestWheelDz(int notches) => -notches;
+
+    /// <summary>
     /// Move to the real guest point with no button, then one wheel event there.
-    /// <paramref name="notches"/> is the <c>dz</c> detent count. Positive is away
-    /// from the operator.
+    /// <paramref name="notches"/> keeps the Windows sign (positive = away from the
+    /// operator); <see cref="GuestWheelDz"/> converts that to VBox <c>dz</c>.
     /// </summary>
     public static WheelStep[] WheelSteps(int guestX, int guestY, int notches)
     {
@@ -49,10 +56,11 @@ public static class VictoriaVmPointerPlan
             return Array.Empty<WheelStep>();
 
         var (x, y) = ToAbsolute(guestX, guestY);
+        var dz = GuestWheelDz(notches);
         return
         [
             new WheelStep(x, y, 0, 0, 0),
-            new WheelStep(x, y, notches, 0, 0),
+            new WheelStep(x, y, dz, 0, 0),
         ];
     }
 
@@ -151,7 +159,7 @@ public static class VictoriaVmPointerPlan
         if (notches == 0)
             return $"her-screen wheel notches={notches} dropped-unmapped";
 
-        var head = $"her-screen wheel notches={notches} point={x},{y} dz={notches}";
+        var head = $"her-screen wheel notches={notches} point={x},{y} dz={GuestWheelDz(notches)}";
         if (sent && string.IsNullOrWhiteSpace(comError))
             return head + " sent";
 

@@ -38,6 +38,8 @@ public static class VboxConsoleMouse
     /// <summary>
     /// One detent per notch. Deltas of 1–5 are already notches. Larger values
     /// are Windows wheel units (120 per detent). Never a button click.
+    /// Tool contract: positive <paramref name="deltaY"/> = scroll up. VirtualBox
+    /// positive <c>dz</c> is clockwise and moves content down, so vertical is negated.
     /// </summary>
     public static (int Dz, int Dw) PlanWheel(int deltaY, int deltaX)
     {
@@ -52,7 +54,8 @@ public static class VboxConsoleMouse
             return delta > 0 ? steps : -steps;
         }
 
-        return (Steps(deltaY), Steps(deltaX));
+        // Negate vertical only — same GuestWheelDz convention as Presence.
+        return (-Steps(deltaY), Steps(deltaX));
     }
 
     /// <summary>

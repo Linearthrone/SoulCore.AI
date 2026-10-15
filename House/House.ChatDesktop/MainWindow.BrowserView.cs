@@ -581,7 +581,19 @@ public partial class MainWindow
         if (!sample.ButtonChanged && sample.Buttons == 0 && sample.WheelNotches == 0)
             return;
 
-        EnsureGuestFrameSizeForEmbed();
+        // Live HWND embed is SetWindowPos'd to the slot; Guest Additions Auto-resize
+        // makes the guest FB match that client size. Mapping against a stale JPEG
+        // default (1280x800) is why clicks miss. Prefer the live client rect.
+        if (IsVictoriaVmEmbedLive() && sample.Width > 1 && sample.Height > 1)
+        {
+            _browserImagePixelWidth = sample.Width;
+            _browserImagePixelHeight = sample.Height;
+        }
+        else
+        {
+            EnsureGuestFrameSizeForEmbed();
+        }
+
         var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
             sample.X,
             sample.Y,
