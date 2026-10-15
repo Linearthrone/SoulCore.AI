@@ -310,21 +310,21 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest scroll ({x},{y}) is off the Ubuntu screen.", null);
 
-        using (HostPointerPark.BeginAwayFromVm())
-        {
-            var console = await Task.Run(
+        // Do not park the host cursor away from the VM for console wheel — MI drops
+        // dz when Absolute reports "outside" (TASK-199). Clicks still park.
+        var console = await Task.Run(
                 () => VboxConsoleMouse.TryScroll(_vmName, x, y, deltaY, deltaX),
-                ct).ConfigureAwait(false);
-            if (console is null)
-            {
-                return new DesktopOpResult(
-                    false,
-                    "desktop_scroll failed: VirtualBox console mouse unavailable.",
-                    null);
-            }
-
-            return console;
+                ct)
+            .ConfigureAwait(false);
+        if (console is null)
+        {
+            return new DesktopOpResult(
+                false,
+                "desktop_scroll failed: VirtualBox console mouse unavailable.",
+                null);
         }
+
+        return console;
     }
 
     public async Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)

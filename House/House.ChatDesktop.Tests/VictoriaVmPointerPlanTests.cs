@@ -37,7 +37,7 @@ public class VictoriaVmPointerPlanTests
         Assert.Equal(0, steps[0].Dz);
         Assert.Equal(0, steps[0].Buttons);
         Assert.Equal((101, 201), (steps[1].X, steps[1].Y));
-        Assert.Equal(notches, steps[1].Dz);
+        Assert.Equal(VictoriaVmPointerPlan.GuestWheelDz(notches), steps[1].Dz);
         Assert.Equal(0, steps[1].Dw);
         Assert.Equal(0, steps[1].Buttons);
     }
@@ -80,18 +80,20 @@ public class VictoriaVmPointerPlanTests
     }
 
     [Fact]
-    public void Wheel_AwayFromOperatorIsPositiveDz()
+    public void Wheel_AwayFromOperatorBecomesNegativeDz()
     {
+        // Windows away (+120) must become VBox dz=-1 (content scrolls up).
         const int away = 120;
         var notches = VictoriaVmPointerPlan.NotchesFromWheelDelta(away);
         Assert.Equal(1, notches);
+        Assert.Equal(-1, VictoriaVmPointerPlan.GuestWheelDz(notches));
         var steps = VictoriaVmPointerPlan.WheelSteps(10, 20, notches);
-        Assert.Equal(1, steps[1].Dz);
+        Assert.Equal(-1, steps[1].Dz);
         Assert.Equal(0, steps[1].Buttons);
 
         var toward = VictoriaVmPointerPlan.NotchesFromWheelDelta(-120);
         Assert.Equal(-1, toward);
-        Assert.Equal(-1, VictoriaVmPointerPlan.WheelSteps(10, 20, toward)[1].Dz);
+        Assert.Equal(1, VictoriaVmPointerPlan.WheelSteps(10, 20, toward)[1].Dz);
     }
 
     [Fact]
@@ -145,15 +147,15 @@ public class VictoriaVmPointerPlanTests
         var unsent = VictoriaVmPointerPlan.FormatWheelDeliveryLine(1, 100, 200, sent: false, null);
 
         Assert.Equal("her-screen wheel notches=1 dropped-unmapped", dropped);
-        Assert.Equal("her-screen wheel notches=1 point=100,200 dz=1 sent", sent);
-        Assert.Equal("her-screen wheel notches=-1 point=100,200 dz=-1 sent", toward);
+        Assert.Equal("her-screen wheel notches=1 point=100,200 dz=-1 sent", sent);
+        Assert.Equal("her-screen wheel notches=-1 point=100,200 dz=1 sent", toward);
         Assert.Equal(
-            "her-screen wheel notches=-1 point=100,200 dz=-1 COM error: RPC_E_DISCONNECTED second",
+            "her-screen wheel notches=-1 point=100,200 dz=1 COM error: RPC_E_DISCONNECTED second",
             failed);
         Assert.Equal(
-            "her-screen wheel notches=1 point=100,200 dz=1 COM error: console wheel failed",
+            "her-screen wheel notches=1 point=100,200 dz=-1 COM error: console wheel failed",
             unsent);
-        Assert.Contains("dz=1", sent, StringComparison.Ordinal);
+        Assert.Contains("dz=-1", sent, StringComparison.Ordinal);
         Assert.Contains("point=100,200", sent, StringComparison.Ordinal);
         Assert.DoesNotContain("pageup", sent, StringComparison.Ordinal);
         Assert.DoesNotContain("pagedown", failed, StringComparison.Ordinal);
@@ -181,6 +183,6 @@ public class VictoriaVmPointerPlanTests
             Assert.Equal(0, step.Buttons);
         });
         Assert.Equal(0, steps[0].Dz);
-        Assert.Equal(2, steps[1].Dz);
+        Assert.Equal(-2, steps[1].Dz);
     }
 }
