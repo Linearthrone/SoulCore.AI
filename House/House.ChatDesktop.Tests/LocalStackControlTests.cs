@@ -133,6 +133,14 @@ public class LocalStackControlTests
     }
 
     [Fact]
+    public void ForceUnlockSandboxRelativeScript_IsUnderHouseScripts()
+    {
+        Assert.Equal(
+            "House\\scripts\\force-unlock-victoria-sandbox.ps1",
+            LocalStackControl.ForceUnlockSandboxRelativeScript);
+    }
+
+    [Fact]
     public void BumpVersionsRelativeScript_IsUnderHouseScripts()
     {
         Assert.Equal("House\\scripts\\bump-versions.ps1", LocalStackControl.BumpVersionsRelativeScript);

@@ -492,20 +492,20 @@ public partial class MainWindow
         {
             VmPowerButton.Content = "Recover UI";
             ToolTip.SetTip(VmPowerButton,
-                "VM is running but its window is gone (common after Presence exit without detach). "
-                + "Save state then start GUI so Her screen can re-embed.");
+                "VM is running but its window is gone, or start/poweroff is wedged. "
+                + "Tries save+start, then force-unlock (emergencystop / discardstate) if needed.");
             return;
         }
 
         if (running == true)
         {
             VmPowerButton.Content = "Stop";
-            ToolTip.SetTip(VmPowerButton, "Stop victoria-sandbox (save state — next Start resumes)");
+            ToolTip.SetTip(VmPowerButton, "Stop victoria-sandbox (save state - next Start resumes)");
             return;
         }
 
         VmPowerButton.Content = "Start";
-        ToolTip.SetTip(VmPowerButton, "Start victoria-sandbox");
+        ToolTip.SetTip(VmPowerButton, "Start victoria-sandbox (force-unlocks if the session is stuck)");
     }
 
     private async void VmPowerButton_Click(object? sender, RoutedEventArgs e) =>
@@ -529,7 +529,21 @@ public partial class MainWindow
             else if (stopping)
                 result = await _stack.SaveSandboxVmAsync().ConfigureAwait(true);
             else
+            {
                 result = await _stack.StartSandboxVmAsync().ConfigureAwait(true);
+                // Stuck saved/locked session: plain startvm refuses — escalate once.
+                if (!result.Ok)
+                {
+                    var hard = await _stack.ForceUnlockSandboxVmAsync().ConfigureAwait(true);
+                    if (hard.Ok)
+                        result = LocalStackActionResult.Succeed(
+                            "Start escalated to force-unlock: " + hard.Detail);
+                    else
+                        result = LocalStackActionResult.Fail(
+                            "Start failed (" + result.Detail + "); force-unlock failed: "
+                            + hard.Detail);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -549,7 +563,7 @@ public partial class MainWindow
         _vmPowerBusy = false;
         await RefreshServicesPanelAsync().ConfigureAwait(true);
         ApplyVmPowerButton(_sandboxRunning, busy: false);
-        if (result.Ok && recover)
+        if (result.Ok && (recover || !stopping))
             await RefreshVictoriaBrowserViewAsync().ConfigureAwait(true);
     }
 
