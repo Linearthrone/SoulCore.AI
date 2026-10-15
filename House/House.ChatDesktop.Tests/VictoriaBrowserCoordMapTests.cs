@@ -124,6 +124,24 @@ public class VictoriaBrowserCoordMapTests
     }
 
     [Fact]
+    public void TryMapStretchFill_HalfGuestPixel_RoundsNearestNotFloor()
+    {
+        // 2× stretch: each guest pixel is 0.5 surface px. Midway (0.25) → 0.5 guest
+        // → Round AwayFromZero = 1 (Floor would keep the up-left bias at 0).
+        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            pointerX: 0.25,
+            pointerY: 0.25,
+            surfaceWidth: 640,
+            surfaceHeight: 400,
+            imagePixelWidth: 1280,
+            imagePixelHeight: 800);
+
+        Assert.NotNull(mapped);
+        Assert.Equal(1, mapped!.Value.X);
+        Assert.Equal(1, mapped.Value.Y);
+    }
+
+    [Fact]
     public void TryMapStretchFill_Outside_ReturnsNull()
     {
         var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(

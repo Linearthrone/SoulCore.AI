@@ -65,8 +65,9 @@ public static class VictoriaBrowserCoordMap
             || pointerX > surfaceWidth || pointerY > surfaceHeight)
             return null;
 
-        var x = (int)Math.Floor(pointerX / surfaceWidth * imagePixelWidth);
-        var y = (int)Math.Floor(pointerY / surfaceHeight * imagePixelHeight);
+        // Round to nearest guest pixel (Floor biased clicks half a pixel up-left).
+        var x = (int)Math.Round(pointerX / surfaceWidth * imagePixelWidth, MidpointRounding.AwayFromZero);
+        var y = (int)Math.Round(pointerY / surfaceHeight * imagePixelHeight, MidpointRounding.AwayFromZero);
         x = Math.Clamp(x, 0, imagePixelWidth - 1);
         y = Math.Clamp(y, 0, imagePixelHeight - 1);
         return (x, y);

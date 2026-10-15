@@ -564,7 +564,47 @@ public partial class MainWindow
         await RefreshServicesPanelAsync().ConfigureAwait(true);
         ApplyVmPowerButton(_sandboxRunning, busy: false);
         if (result.Ok && (recover || !stopping))
+            await ReattachHerScreenAfterVmStartAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// After start / force-unlock the VM is a floating top-level window and Host may
+    /// have been restarted. Force Her screen visible, drop stale embed HWND, and poll
+    /// /browser/embed until SetParent sticks (or give up with an honest line).
+    /// </summary>
+    private async Task ReattachHerScreenAfterVmStartAsync()
+    {
+        ShowPresenceSide(herScreen: true);
+        _lastEmbedHwnd = 0;
+        _lastEmbedMode = null;
+        DestroyVictoriaBrowserEmbedHost();
+        HideHerScreenOverlay();
+
+        if (VictoriaBrowserWaitingText is not null)
+        {
+            VictoriaBrowserWaitingText.Text = "Re-embedding victoria-sandbox into Her screen…";
+            VictoriaBrowserWaitingText.IsVisible = true;
+        }
+
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            await Task.Delay(500).ConfigureAwait(true);
             await RefreshVictoriaBrowserViewAsync().ConfigureAwait(true);
+            if (IsVictoriaVmEmbedLive())
+            {
+                _needsVmGuiRecover = false;
+                if (VictoriaBrowserActionText is not null)
+                    VictoriaBrowserActionText.Text = "Her screen: VirtualBox embedded";
+                return;
+            }
+        }
+
+        if (VictoriaBrowserWaitingText is not null)
+        {
+            VictoriaBrowserWaitingText.Text =
+                "VM is up but not embedded yet — confirm Settings → Embed VirtualBox, Host /health, and that a victoria-sandbox window is visible.";
+            VictoriaBrowserWaitingText.IsVisible = true;
+        }
     }
 
     private bool _vmPointerFaultHooked;

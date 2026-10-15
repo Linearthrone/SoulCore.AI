@@ -2,7 +2,9 @@ namespace House.ChatDesktop.Services;
 
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
-/// <c>putMouseEventAbsolute</c> is pixel-based with the origin at (1,1).
+/// <c>putMouseEventAbsolute</c> is guest-framebuffer pixels with origin (0,0)
+/// top-left — same space as Victoria tools. Do not add +1 (that biased every
+/// click a pixel down-right for both operator and her).
 /// A wheel is two absolute samples at the real point: a move with no button,
 /// then the same point with <c>dz</c> set to the notch count. No Page key.
 /// </summary>
@@ -23,7 +25,7 @@ public static class VictoriaVmPointerPlan
     public const int WindowsWheelDetent = 120;
 
     public static (int X, int Y) ToAbsolute(int guestX, int guestY) =>
-        (Math.Max(0, guestX) + 1, Math.Max(0, guestY) + 1);
+        (Math.Max(0, guestX), Math.Max(0, guestY));
 
     /// <summary>
     /// Mouse Integration keeps rewriting the guest pointer while the Windows cursor
