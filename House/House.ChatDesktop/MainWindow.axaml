@@ -319,6 +319,8 @@
             <TabControl.Template>
               <ControlTemplate>
                 <ContentPresenter x:Name="PART_SelectedContentHost"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"
                                   Content="{TemplateBinding SelectedContent}"
                                   ContentTemplate="{TemplateBinding SelectedContentTemplate}"/>
               </ControlTemplate>

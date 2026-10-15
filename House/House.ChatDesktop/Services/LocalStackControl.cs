@@ -92,6 +92,28 @@ public sealed class LocalStackControl : IDisposable
     public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
+    /// <summary>
+    /// VM process can stay "running" after Presence exits without detaching the SetParent'd
+    /// HWND — the guest window is gone and plain startvm refuses. Save state then start GUI
+    /// so a fresh top-level victoria-sandbox window exists for Her screen embed.
+    /// </summary>
+    public async Task<LocalStackActionResult> RecoverSandboxVmGuiAsync(CancellationToken ct = default)
+    {
+        var save = await SaveSandboxVmAsync(ct).ConfigureAwait(false);
+        if (!save.Ok)
+            return LocalStackActionResult.Fail("Recover UI: save state failed — " + save.Detail);
+
+        // Let VirtualBox release the session lock before startvm.
+        await Task.Delay(900, ct).ConfigureAwait(false);
+
+        var start = await StartSandboxVmAsync(ct).ConfigureAwait(false);
+        if (!start.Ok)
+            return LocalStackActionResult.Fail("Recover UI: start failed — " + start.Detail);
+
+        return LocalStackActionResult.Succeed(
+            "Recovered GUI (save state → start) — Her screen should re-embed shortly");
+    }
+
     private static ProcessStartInfo CreateVBoxPsi(string vbox, IReadOnlyList<string> args)
     {
         var psi = new ProcessStartInfo
