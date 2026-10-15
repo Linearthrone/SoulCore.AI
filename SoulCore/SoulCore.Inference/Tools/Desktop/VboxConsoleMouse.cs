@@ -19,12 +19,13 @@ public static class VboxConsoleMouse
     public const int LockTypeShared = 1;
 
     /// <summary>
-    /// Guest framebuffer (0,0) → VBox absolute (1,1) origin; button mask for down/up.
+    /// Guest framebuffer (0,0) top-left → VBox absolute pixels (same origin).
+    /// Do not add +1 — that biased every click a pixel down-right.
     /// </summary>
     public static (int Ax, int Ay, int DownFlags) PlanAbsolutePress(int x, int y, int xdotoolButton)
     {
-        var ax = Math.Max(0, x) + 1;
-        var ay = Math.Max(0, y) + 1;
+        var ax = Math.Max(0, x);
+        var ay = Math.Max(0, y);
         var flags = xdotoolButton switch
         {
             1 => LeftButton,

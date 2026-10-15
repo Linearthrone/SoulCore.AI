@@ -5,10 +5,10 @@ namespace House.ChatDesktop.Tests;
 public class VictoriaVmPointerPlanTests
 {
     [Theory]
-    [InlineData(0, 0, 1, 1)]
-    [InlineData(509, 399, 510, 400)]
-    [InlineData(-4, 12, 1, 13)]
-    public void ToAbsolute_UsesOneBasedPixels(int x, int y, int ax, int ay)
+    [InlineData(0, 0, 0, 0)]
+    [InlineData(509, 399, 509, 399)]
+    [InlineData(-4, 12, 0, 12)]
+    public void ToAbsolute_UsesGuestFramebufferOrigin(int x, int y, int ax, int ay)
     {
         var abs = VictoriaVmPointerPlan.ToAbsolute(x, y);
         Assert.Equal(ax, abs.X);
@@ -178,8 +178,8 @@ public class VictoriaVmPointerPlanTests
         Assert.Equal(2, steps.Length);
         Assert.All(steps, step =>
         {
-            Assert.Equal(640, step.X);
-            Assert.Equal(400, step.Y);
+            Assert.Equal(639, step.X);
+            Assert.Equal(399, step.Y);
             Assert.Equal(0, step.Buttons);
         });
         Assert.Equal(0, steps[0].Dz);
