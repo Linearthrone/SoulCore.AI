@@ -47,8 +47,8 @@ public partial class MainWindow
     {
         if (_browserViewBusy) return;
         if (PresenceView is { IsVisible: false }) return;
-        // Skip Host poll while What she saw tab is selected (HWND embed stays attached).
-        if (PresenceSideTabs is { SelectedItem: TabItem tab } && !ReferenceEquals(tab, HerScreenTab))
+        // Skip Host poll while What she saw is showing (HWND embed stays attached).
+        if (!IsHerScreenSideVisible())
             return;
 
         _browserViewBusy = true;
@@ -66,23 +66,39 @@ public partial class MainWindow
         }
     }
 
-    private void HerScreenHeader_Click(object? sender, RoutedEventArgs e)
-    {
-        if (PresenceSideTabs is not null)
-            PresenceSideTabs.SelectedItem = HerScreenTab;
-    }
+    private void HerScreenHeader_Click(object? sender, RoutedEventArgs e) =>
+        ShowPresenceSide(herScreen: true);
 
-    private void SightHeader_Click(object? sender, RoutedEventArgs e)
+    private void SightHeader_Click(object? sender, RoutedEventArgs e) =>
+        ShowPresenceSide(herScreen: false);
+
+    private bool IsHerScreenSideVisible() =>
+        VictoriaBrowserPanel is null || VictoriaBrowserPanel.IsVisible;
+
+    private void ShowPresenceSide(bool herScreen)
     {
-        if (PresenceSideTabs is not null)
-            PresenceSideTabs.SelectedItem = SightTab;
+        if (VictoriaBrowserPanel is not null)
+            VictoriaBrowserPanel.IsVisible = herScreen;
+        if (ScreenPanel is not null)
+            ScreenPanel.IsVisible = !herScreen;
+        SyncPresenceSideHeader();
+        if (herScreen)
+        {
+            _ = RefreshVictoriaBrowserViewAsync();
+            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+            PositionVictoriaBrowserSoftCursor();
+            UpdateEmbedHoverCoordsFromSystemCursor();
+            return;
+        }
+
+        HideHerScreenOverlay();
     }
 
     private void SyncPresenceSideHeader()
     {
-        var selected = PresenceSideTabs?.SelectedItem as TabItem;
-        SetSideTabSelected(HerScreenHeaderButton, ReferenceEquals(selected, HerScreenTab));
-        SetSideTabSelected(SightHeaderButton, ReferenceEquals(selected, SightTab));
+        var her = IsHerScreenSideVisible();
+        SetSideTabSelected(HerScreenHeaderButton, her);
+        SetSideTabSelected(SightHeaderButton, !her);
     }
 
     private static void SetSideTabSelected(Button? button, bool selected)
@@ -98,23 +114,6 @@ public partial class MainWindow
         {
             button.Classes.Remove("selected");
         }
-    }
-
-    private void PresenceSideTabs_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        SyncPresenceSideHeader();
-        if (PresenceSideTabs?.SelectedItem is TabItem tab && ReferenceEquals(tab, HerScreenTab))
-        {
-            // Re-measure embed after the tab becomes visible again.
-            _ = RefreshVictoriaBrowserViewAsync();
-            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
-            PositionVictoriaBrowserSoftCursor();
-            UpdateEmbedHoverCoordsFromSystemCursor();
-            return;
-        }
-
-        // Overlay is a separate HWND — hide when Her screen tab is not showing.
-        HideHerScreenOverlay();
     }
 
     private void ApplyVictoriaBrowserView(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed = null)

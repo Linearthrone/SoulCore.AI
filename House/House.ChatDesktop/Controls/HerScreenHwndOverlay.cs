@@ -5,13 +5,11 @@ namespace House.ChatDesktop.Controls;
 
 /// <summary>
 /// Win32 layered children of the SetParent'd VirtualBox HWND. The full-size
-/// input window is color-key invisible and receives operator clicks, wheel, and
-/// keyboard focus. A pointer move over the embed focuses that HWND so
-/// WM_MOUSEWHEEL is delivered here instead of the chat transcript. Clicks go
-/// in through IMouse.putMouseEventAbsolute
-/// and keys through IKeyboard.putScancode — the reparented Qt window does not
-/// forward Win32 input into the guest. The arrow and badge are smaller siblings
-/// drawn above that input window.
+/// input window uses LWA_ALPHA=1 (nearly invisible) so VirtualBox's GPU surface
+/// still shows through — color-key magenta over D3D often painted a solid blank
+/// pane. It still receives operator clicks, wheel, and keyboard focus. Clicks go
+/// through IMouse.putMouseEventAbsolute and keys through IKeyboard.putScancode.
+/// Cursor/badge siblings stay color-keyed above that input window.
 /// </summary>
 public readonly record struct HerScreenPointerSample(
     int X,
@@ -66,9 +64,15 @@ public sealed class HerScreenHwndOverlay : IDisposable
         _parent = parentHwnd;
         _selfHandle = GCHandle.Alloc(this);
         _inputHwnd = CreateOverlayWindow(
-            parentHwnd, "HerScreenInput", HerScreenOverlayWin32.InputOverlayExStyle, acceptsKeys: true);
-        _cursorHwnd = CreateOverlayWindow(parentHwnd, "HerScreenCursor", HerScreenOverlayWin32.ChildOverlayExStyle);
-        _badgeHwnd = CreateOverlayWindow(parentHwnd, "HerScreenBadge", HerScreenOverlayWin32.ChildOverlayExStyle);
+            parentHwnd,
+            "HerScreenInput",
+            HerScreenOverlayWin32.InputOverlayExStyle,
+            acceptsKeys: true,
+            useNearInvisibleAlpha: true);
+        _cursorHwnd = CreateOverlayWindow(
+            parentHwnd, "HerScreenCursor", HerScreenOverlayWin32.ChildOverlayExStyle);
+        _badgeHwnd = CreateOverlayWindow(
+            parentHwnd, "HerScreenBadge", HerScreenOverlayWin32.ChildOverlayExStyle);
         if (_inputHwnd == 0 || _cursorHwnd == 0)
         {
             PresenceStartupLog.Write(
@@ -80,7 +84,12 @@ public sealed class HerScreenHwndOverlay : IDisposable
         SyncToParent();
     }
 
-    private nint CreateOverlayWindow(nint parentHwnd, string name, int exStyle, bool acceptsKeys = false)
+    private nint CreateOverlayWindow(
+        nint parentHwnd,
+        string name,
+        int exStyle,
+        bool acceptsKeys = false,
+        bool useNearInvisibleAlpha = false)
     {
         var style = WsChild | WsVisible | WsClipSiblings;
         if (acceptsKeys)
@@ -102,7 +111,12 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return 0;
 
         SetWindowLongPtr(hwnd, GwlpUserData, GCHandle.ToIntPtr(_selfHandle));
-        _ = SetLayeredWindowAttributes(hwnd, ColorKeyMagenta, 0, LwaColorKey);
+        // Input catcher: alpha=1 keeps hit-testing but does not blank the VM GPU.
+        // Cursor/badge: color-key magenta so only the painted glyph shows.
+        if (useNearInvisibleAlpha)
+            _ = SetLayeredWindowAttributes(hwnd, 0, InputOverlayAlpha, LwaAlpha);
+        else
+            _ = SetLayeredWindowAttributes(hwnd, ColorKeyMagenta, 0, LwaColorKey);
         return hwnd;
     }
 
@@ -324,6 +338,10 @@ public sealed class HerScreenHwndOverlay : IDisposable
         if (w <= 1 || h <= 1)
             return;
 
+        // Input catcher: do not paint (LWA_ALPHA=1). Magenta fill over D3D blanked Her screen.
+        if (hwnd == _inputHwnd)
+            return;
+
         var keyBrush = CreateSolidBrush(ColorKeyMagenta);
         try
         {
@@ -333,9 +351,6 @@ public sealed class HerScreenHwndOverlay : IDisposable
         {
             DeleteObject(keyBrush);
         }
-
-        if (hwnd == _inputHwnd)
-            return;
 
         if (hwnd == _cursorHwnd && _cursorVisible)
             PaintCursor(hdc);
@@ -627,6 +642,9 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const int WsClipSiblings = 0x04000000;
     private const int WsTabStop = 0x00010000;
     private const uint LwaColorKey = 0x00000001;
+    private const uint LwaAlpha = 0x00000002;
+    /// <summary>Nearly invisible but still hit-testable (classic layered click-catcher).</summary>
+    private const byte InputOverlayAlpha = 1;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoActivate = 0x0010;
