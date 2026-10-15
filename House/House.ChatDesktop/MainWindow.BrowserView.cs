@@ -30,6 +30,11 @@ public partial class MainWindow
     private HerScreenHwndOverlay? _herScreenHwndOverlay;
     private bool? _sandboxRunning;
     private bool _vmPowerBusy;
+    /// <summary>
+    /// Guest VM process is up but Host cannot find a victoria-sandbox HWND (orphaned after
+    /// Presence exit without detach). Power button becomes Recover UI.
+    /// </summary>
+    private bool _needsVmGuiRecover;
 
     // PROP-14.1 palette — match PlaywrightClickCursor IdleHex / ClickHex.
     private static readonly IBrush SoftCursorIdleStroke = new SolidColorBrush(Color.Parse("#FF2D55"));
@@ -142,6 +147,7 @@ public partial class MainWindow
 
         var when = snap.UpdatedAt?.ToLocalTime().ToString("h:mm:ss tt") ?? "-";
         var embedded = embed is { Mode: "embedded", Hwnd: > 0 } && OperatingSystem.IsWindows();
+        UpdateVmGuiRecoverHint(embedded, embed);
         var modeLabel = embedded
             ? (string.IsNullOrWhiteSpace(embed!.Surface) || embed.Surface == "none"
                 ? "embedded"
@@ -247,7 +253,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(snap.Detail))
             return snap.Detail!;
         if (snap.EmbedPane)
-            return "Waiting for VirtualBox victoria-sandbox (visible, not minimized) — or a desktop_screenshot JPEG fallback.";
+            return "Waiting for VirtualBox victoria-sandbox (visible, not minimized). If the VM is already running with no window, use Recover UI.";
         return "Waiting for Victoria's browser — pink cursor idle, teal on click";
     }
 
@@ -437,8 +443,28 @@ public partial class MainWindow
     private void NoteSandboxRunning(bool running)
     {
         _sandboxRunning = running;
+        if (!running)
+            _needsVmGuiRecover = false;
         if (!_vmPowerBusy)
             ApplyVmPowerButton(running, busy: false);
+    }
+
+    private void UpdateVmGuiRecoverHint(bool embedded, BrowserEmbedSnapshot? embed)
+    {
+        // Running VM + Host "no window matching" = orphaned HWND. Offer Recover UI.
+        var missingWindow = !embedded
+            && embed is { Mode: "fallback", Surface: not null }
+            && string.Equals(embed.Surface, "vm", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(embed.Detail)
+            && embed.Detail!.Contains("No VirtualBox window matching", StringComparison.OrdinalIgnoreCase);
+
+        var next = missingWindow && _sandboxRunning == true;
+        if (next == _needsVmGuiRecover)
+            return;
+
+        _needsVmGuiRecover = next;
+        if (!_vmPowerBusy)
+            ApplyVmPowerButton(_sandboxRunning, busy: false);
     }
 
     private void ApplyVmPowerButton(bool? running, bool busy)
@@ -449,10 +475,26 @@ public partial class MainWindow
         VmPowerButton.IsEnabled = !busy;
         if (busy)
         {
+            if (_needsVmGuiRecover)
+            {
+                VmPowerButton.Content = "Recovering…";
+                ToolTip.SetTip(VmPowerButton, "Save state then restart victoria-sandbox GUI…");
+                return;
+            }
+
             VmPowerButton.Content = running == true ? "Stopping…" : "Starting…";
             ToolTip.SetTip(VmPowerButton, running == true
                 ? "Saving victoria-sandbox state…"
                 : "Starting victoria-sandbox…");
+            return;
+        }
+
+        if (_needsVmGuiRecover && running == true)
+        {
+            VmPowerButton.Content = "Recover UI";
+            ToolTip.SetTip(VmPowerButton,
+                "VM is running but its window is gone (common after Presence exit without detach). "
+                + "Save state then start GUI so Her screen can re-embed.");
             return;
         }
 
@@ -475,23 +517,30 @@ public partial class MainWindow
         if (_vmPowerBusy)
             return;
 
-        var stopping = _sandboxRunning == true;
+        var recover = _needsVmGuiRecover && _sandboxRunning == true;
+        var stopping = !recover && _sandboxRunning == true;
         _vmPowerBusy = true;
-        ApplyVmPowerButton(stopping, busy: true);
+        ApplyVmPowerButton(stopping || recover, busy: true);
 
         LocalStackActionResult result;
         try
         {
-            result = stopping
-                ? await _stack.SaveSandboxVmAsync().ConfigureAwait(true)
-                : await _stack.StartSandboxVmAsync().ConfigureAwait(true);
+            if (recover)
+                result = await _stack.RecoverSandboxVmGuiAsync().ConfigureAwait(true);
+            else if (stopping)
+                result = await _stack.SaveSandboxVmAsync().ConfigureAwait(true);
+            else
+                result = await _stack.StartSandboxVmAsync().ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             result = LocalStackActionResult.Fail(ex.Message);
         }
 
-        var verb = stopping ? "Stop" : "Start";
+        if (result.Ok && recover)
+            _needsVmGuiRecover = false;
+
+        var verb = recover ? "Recover UI" : stopping ? "Stop" : "Start";
         var line = result.Ok ? $"{verb}: {result.Detail}" : $"{verb} failed: {result.Detail}";
         if (VmStatusText is not null)
             VmStatusText.Text = line;
@@ -501,6 +550,8 @@ public partial class MainWindow
         _vmPowerBusy = false;
         await RefreshServicesPanelAsync().ConfigureAwait(true);
         ApplyVmPowerButton(_sandboxRunning, busy: false);
+        if (result.Ok && recover)
+            await RefreshVictoriaBrowserViewAsync().ConfigureAwait(true);
     }
 
     private bool _vmPointerFaultHooked;

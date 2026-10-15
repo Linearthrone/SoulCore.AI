@@ -2,7 +2,7 @@
 issue_id: ISSUE-20261014-001
 discovered: 2026-10-14
 severity: P1 (Critical)
-status: Pending Fix
+status: Open — wheel still pending; blank Her screen (no HWND) addressed in Presence 0.1.31 (detach-on-close + Recover UI)
 reticket: TASK-20261014-215-PM01-to-QA01
 last_retest: TASK-20261014-215
 last_retest: TASK-20261014-214

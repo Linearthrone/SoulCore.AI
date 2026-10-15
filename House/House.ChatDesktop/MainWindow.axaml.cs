@@ -165,6 +165,16 @@ public partial class MainWindow : Window
             await EnsureDesktopBrowserDefaultsAsync();
         };
 
+        // Detach SetParent'd VirtualBox BEFORE the Avalonia host HWND dies. Closing only
+        // disposed the overlay — the guest window stayed a child of a dying parent and was
+        // destroyed while the VM process kept "running" (JPEG forever, no HerScreenInput).
+        Closing += (_, _) =>
+        {
+            try { _browserViewTimer.Stop(); } catch { /* ignore */ }
+            try { DestroyVictoriaBrowserEmbedHost(); } catch { /* ignore */ }
+            try { CloseHerScreenOverlay(); } catch { /* ignore */ }
+        };
+
         Closed += async (_, _) =>
         {
             _pollTimer.Stop();
