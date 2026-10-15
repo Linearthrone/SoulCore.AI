@@ -33,10 +33,10 @@ public class VictoriaVmPointerPlanTests
         Assert.False(VictoriaVmPointerPlan.ShouldParkForWheel(notches));
         var steps = VictoriaVmPointerPlan.WheelSteps(100, 200, notches);
         Assert.Equal(2, steps.Length);
-        Assert.Equal((101, 201), (steps[0].X, steps[0].Y));
+        Assert.Equal((100, 200), (steps[0].X, steps[0].Y));
         Assert.Equal(0, steps[0].Dz);
         Assert.Equal(0, steps[0].Buttons);
-        Assert.Equal((101, 201), (steps[1].X, steps[1].Y));
+        Assert.Equal((100, 200), (steps[1].X, steps[1].Y));
         Assert.Equal(VictoriaVmPointerPlan.GuestWheelDz(notches), steps[1].Dz);
         Assert.Equal(0, steps[1].Dw);
         Assert.Equal(0, steps[1].Buttons);
