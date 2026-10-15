@@ -120,5 +120,23 @@ if ($code -ne 0) {
     exit $code
 }
 
-Write-Host "OK - $VmName GUI start requested. Reopen Presence Her screen."
+# Give the top-level victoria-sandbox window a moment to appear before Host looks it up.
+Start-Sleep -Seconds 2
+
+# We killed Host above so COM locks would release. Bring one Host back so Presence
+# /browser/embed can SetParent the new GUI into Her screen (otherwise it stays floating).
+$startHost = Join-Path $PSScriptRoot "..\..\SoulCore\scripts\start-soulcore.ps1"
+$startHost = [System.IO.Path]::GetFullPath($startHost)
+if (Test-Path -LiteralPath $startHost) {
+    Write-Host "Restarting SoulCore.Host so Her screen can re-embed..."
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $startHost -RestartHost 2>&1 |
+        ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Host restart failed (exit $LASTEXITCODE). Run ALLSTART or reopen Presence with Auto-start."
+    }
+} else {
+    Write-Warning "start-soulcore.ps1 not found at $startHost - start Host manually, then open Her screen."
+}
+
+Write-Host "OK - $VmName GUI up + Host restarted. Focus Presence on Her screen (Embed VirtualBox on)."
 exit 0
