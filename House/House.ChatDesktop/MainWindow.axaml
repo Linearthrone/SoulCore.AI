@@ -313,19 +313,9 @@
                     Click="VmPowerButton_Click"
                     ToolTip.Tip="Start victoria-sandbox"/>
           </Grid>
-          <TabControl x:Name="PresenceSideTabs" Grid.Row="1" Classes="settings-tabs"
-                      Background="Transparent" BorderThickness="0"
-                      SelectionChanged="PresenceSideTabs_SelectionChanged">
-            <TabControl.Template>
-              <ControlTemplate>
-                <ContentPresenter x:Name="PART_SelectedContentHost"
-                                  HorizontalAlignment="Stretch"
-                                  VerticalAlignment="Stretch"
-                                  Content="{TemplateBinding SelectedContent}"
-                                  ContentTemplate="{TemplateBinding SelectedContentTemplate}"/>
-              </ControlTemplate>
-            </TabControl.Template>
-            <TabItem x:Name="HerScreenTab" Header="Her screen">
+          <!-- Plain Grid (not TabControl) so Her screen always measures to full slot —
+               custom TabControl templates left the embed host at 0×0 / blank. -->
+          <Grid Grid.Row="1">
               <Border x:Name="VictoriaBrowserPanel" Background="Transparent" Padding="0">
                 <Grid RowDefinitions="*,Auto">
                   <Border x:Name="VictoriaBrowserSurface" Classes="carbon inset" ClipToBounds="True" MinHeight="90"
@@ -369,11 +359,9 @@
                   </StackPanel>
                 </Grid>
               </Border>
-            </TabItem>
 
-            <TabItem x:Name="SightTab" Header="What she saw">
               <!-- PROP-4 sight: frame + stamp + folder (same column as Her screen). -->
-              <Border x:Name="ScreenPanel" Background="Transparent" Padding="0">
+              <Border x:Name="ScreenPanel" Background="Transparent" Padding="0" IsVisible="False">
                 <Grid RowDefinitions="Auto,*,Auto">
                   <DockPanel Margin="0,0,0,6">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
@@ -412,8 +400,7 @@
                   </DockPanel>
                 </Grid>
               </Border>
-            </TabItem>
-          </TabControl>
+          </Grid>
           </Grid>
         </Border>
 
