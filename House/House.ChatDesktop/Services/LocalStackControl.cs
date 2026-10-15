@@ -93,26 +93,51 @@ public sealed class LocalStackControl : IDisposable
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
     /// <summary>
-    /// VM process can stay "running" after Presence exits without detaching the SetParent'd
-    /// HWND — the guest window is gone and plain startvm refuses. Save state then start GUI
-    /// so a fresh top-level victoria-sandbox window exists for Her screen embed.
+    /// Soft recover: save state then start GUI (window gone but session still healthy).
     /// </summary>
     public async Task<LocalStackActionResult> RecoverSandboxVmGuiAsync(CancellationToken ct = default)
     {
         var save = await SaveSandboxVmAsync(ct).ConfigureAwait(false);
         if (!save.Ok)
-            return LocalStackActionResult.Fail("Recover UI: save state failed — " + save.Detail);
+        {
+            // Save often fails when the session is already wedged — escalate.
+            var hard = await ForceUnlockSandboxVmAsync(ct).ConfigureAwait(false);
+            return hard.Ok
+                ? LocalStackActionResult.Succeed("Recover UI escalated to force-unlock: " + hard.Detail)
+                : LocalStackActionResult.Fail(
+                    "Recover UI: save state failed (" + save.Detail + "); force-unlock also failed: "
+                    + hard.Detail);
+        }
 
-        // Let VirtualBox release the session lock before startvm.
         await Task.Delay(900, ct).ConfigureAwait(false);
 
         var start = await StartSandboxVmAsync(ct).ConfigureAwait(false);
-        if (!start.Ok)
-            return LocalStackActionResult.Fail("Recover UI: start failed — " + start.Detail);
+        if (start.Ok)
+        {
+            return LocalStackActionResult.Succeed(
+                "Recovered GUI (save state -> start) - Her screen should re-embed shortly");
+        }
 
-        return LocalStackActionResult.Succeed(
-            "Recovered GUI (save state → start) — Her screen should re-embed shortly");
+        var unlocked = await ForceUnlockSandboxVmAsync(ct).ConfigureAwait(false);
+        return unlocked.Ok
+            ? LocalStackActionResult.Succeed(
+                "Recover UI: start failed (" + start.Detail + "); force-unlock OK: " + unlocked.Detail)
+            : LocalStackActionResult.Fail(
+                "Recover UI: start failed (" + start.Detail + "); force-unlock failed: "
+                + unlocked.Detail);
     }
+
+    /// <summary>Relative path for stuck-session recovery (tests + ForceUnlockSandboxVmAsync).</summary>
+    public const string ForceUnlockSandboxRelativeScript =
+        "House\\scripts\\force-unlock-victoria-sandbox.ps1";
+
+    /// <summary>
+    /// Hard recover for stuck saved/locked sessions: run
+    /// <c>House/scripts/force-unlock-victoria-sandbox.ps1</c> (kills Host COM holders,
+    /// emergencystop/poweroff, discardstate if needed, start GUI).
+    /// </summary>
+    public Task<LocalStackActionResult> ForceUnlockSandboxVmAsync(CancellationToken ct = default) =>
+        RunScriptAsync(ForceUnlockSandboxRelativeScript, Array.Empty<string>(), ct, wait: true);
 
     private static ProcessStartInfo CreateVBoxPsi(string vbox, IReadOnlyList<string> args)
     {
