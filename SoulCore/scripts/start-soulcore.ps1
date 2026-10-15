@@ -56,6 +56,92 @@ function Test-PortListening {
     }
 }
 
+function Get-LoopbackListenerPids {
+    param([int]$LocalPort, [string]$Address)
+    try {
+        $conns = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalAddress -eq $Address }
+        if (-not $conns) { return @() }
+        return @($conns | Select-Object -ExpandProperty OwningProcess -Unique)
+    } catch {
+        return @()
+    }
+}
+
+function Get-SoulCoreHostPids {
+    $pids = New-Object 'System.Collections.Generic.HashSet[int]'
+    Get-CimInstance Win32_Process -Filter "Name='dotnet.exe' OR Name='SoulCore.Host.exe'" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $cl = [string]$_.CommandLine
+            if ([string]::IsNullOrWhiteSpace($cl)) { return }
+            if ($cl -notmatch 'SoulCore\.Host(\.dll|\.exe)?') { return }
+            if ($cl -match '(?i)[\\/]Cursor[\\/]|cursor-agent') { return }
+            [void]$pids.Add([int]$_.ProcessId)
+        }
+    return @($pids)
+}
+
+function Stop-PidSafe {
+    param([int]$ProcId, [string]$Reason)
+    if ($ProcId -le 0) { return $false }
+    $p = Get-Process -Id $ProcId -ErrorAction SilentlyContinue
+    if ($null -eq $p) { return $false }
+    if ($p.ProcessName -match '(?i)^Cursor$') {
+        Write-Warning "Skipping Cursor PID $ProcId ($Reason)"
+        return $false
+    }
+    Write-Host "Stopping PID $ProcId ($($p.ProcessName)) - $Reason"
+    Stop-Process -Id $ProcId -Force -ErrorAction SilentlyContinue
+    return $true
+}
+
+<#
+  Inventory before start: keep at most one healthy :Port Host.
+  Kill every other SoulCore.Host process (the herd that caused 11 orphans).
+#>
+function Stop-SoulCoreHostOrphans {
+    param(
+        [int]$LocalPort,
+        [string]$Address,
+        [switch]$KillListenerToo
+    )
+    $listeners = @(Get-LoopbackListenerPids -LocalPort $LocalPort -Address $Address)
+    $hosts = @(Get-SoulCoreHostPids)
+    $keep = @()
+    if (-not $KillListenerToo -and $listeners.Count -eq 1) {
+        $keep = @($listeners[0])
+    }
+
+    $killed = 0
+    foreach ($procId in $hosts) {
+        if ($keep -contains $procId) { continue }
+        if (Stop-PidSafe -ProcId $procId -Reason "orphan SoulCore.Host (not sole :$LocalPort listener)") {
+            $killed++
+        }
+    }
+
+    if ($KillListenerToo) {
+        foreach ($procId in $listeners) {
+            if (Stop-PidSafe -ProcId $procId -Reason "listener on ${Address}:${LocalPort}") {
+                $killed++
+            }
+        }
+    } elseif ($listeners.Count -gt 1) {
+        Write-Warning "Multiple listeners on ${Address}:${LocalPort} - clearing all and requiring a fresh start"
+        foreach ($procId in $listeners) {
+            if (Stop-PidSafe -ProcId $procId -Reason "duplicate listener") { $killed++ }
+        }
+    }
+
+    if ($killed -gt 0) {
+        Write-Host "Reaped $killed leftover Host process(es) before start"
+        Start-Sleep -Milliseconds 600
+    } else {
+        Write-Host "Host inventory: $($hosts.Count) process(es), $($listeners.Count) listener(s) on :$LocalPort"
+    }
+    return $killed
+}
+
 # TASK-112: Advisory Ollama/embed preflight. Never hard-fails Host start.
 # Probes <OllamaUrl>/api/tags and confirms the embedding model is available.
 function Invoke-InferencePreflight {
@@ -122,40 +208,16 @@ function Invoke-InferencePreflight {
 
 function Stop-SoulCoreOnPort {
     param([int]$LocalPort, [string]$Address, [string]$PidPath)
-    $stopped = $false
+    # Full clear: every Host process + listener (RestartHost / failed bind recovery).
+    [void](Stop-SoulCoreHostOrphans -LocalPort $LocalPort -Address $Address -KillListenerToo)
     if (Test-Path -LiteralPath $PidPath) {
-        $raw = (Get-Content -LiteralPath $PidPath -ErrorAction SilentlyContinue | Select-Object -First 1)
-        $oldPid = 0
-        if ([int]::TryParse("$raw", [ref]$oldPid) -and $oldPid -gt 0) {
-            try {
-                $p = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
-                if ($null -ne $p) {
-                    Write-Host "Stopping SoulCore.Host PID $oldPid (from pid file) ..."
-                    Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
-                    $stopped = $true
-                }
-            } catch { }
-        }
         Remove-Item -LiteralPath $PidPath -Force -ErrorAction SilentlyContinue
     }
-    try {
-        $conns = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue |
-            Where-Object { $_.LocalAddress -eq $Address }
-        foreach ($c in @($conns)) {
-            $ow = [int]$c.OwningProcess
-            if ($ow -le 0) { continue }
-            Write-Host "Stopping listener PID $ow on ${Address}:${LocalPort} ..."
-            Stop-Process -Id $ow -Force -ErrorAction SilentlyContinue
-            $stopped = $true
-        }
-    } catch { }
-    if ($stopped) {
-        Start-Sleep -Milliseconds 800
-    }
+    Start-Sleep -Milliseconds 400
 }
 
 if ($RestartHost) {
-    Write-Host "RestartHost: clearing any Host on ${BindAddress}:${Port}"
+    Write-Host "RestartHost: clearing every SoulCore.Host (+ :${Port} listener)"
     Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
     # Second pass - pid-file miss / slow exit used to leave the port busy, then the
     # "already listening" early-exit skipped rebuild and left /health stuck (e.g. 0.1.6).
@@ -164,17 +226,26 @@ if ($RestartHost) {
         Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
         Start-Sleep -Milliseconds 500
     }
-    if (Test-PortListening -LocalPort $Port -Address $BindAddress) {
-        throw "RestartHost could not free ${BindAddress}:${Port} - refuse to reuse stale Host (Update would lie)."
+    if ((@(Get-SoulCoreHostPids)).Count -gt 0 -or (Test-PortListening -LocalPort $Port -Address $BindAddress)) {
+        throw "RestartHost could not free SoulCore.Host / ${BindAddress}:${Port} - refuse to reuse stale Host (Update would lie)."
     }
+} else {
+    # Always inventory first: reap orphans, keep a single healthy listener if present.
+    [void](Stop-SoulCoreHostOrphans -LocalPort $Port -Address $BindAddress)
 }
 
-# Only skip work when operator did not ask for rebuild/restart.
+# Only skip work when operator did not ask for rebuild/restart AND one clean Host owns the port.
 if (-not $ForceRebuild -and -not $RestartHost -and (Test-PortListening -LocalPort $Port -Address $BindAddress)) {
-    Write-Host "SoulCore already listening on ${BindAddress}:${Port}"
-    Write-Host "Health: $HealthUrl"
-    Write-Host "Tip: after changing SoulCore/.env or source, re-run with -RestartHost (rebuilds Host) so the process reloads."
-    exit 0
+    $listeners = @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)
+    $hosts = @(Get-SoulCoreHostPids)
+    if ($listeners.Count -eq 1 -and $hosts.Count -le 1) {
+        Write-Host "SoulCore already listening on ${BindAddress}:${Port} (PID $($listeners[0])) - reusing, not starting another"
+        Write-Host "Health: $HealthUrl"
+        Write-Host "Tip: after changing SoulCore/.env or source, re-run with -RestartHost (rebuilds Host) so the process reloads."
+        exit 0
+    }
+    Write-Warning "Port :${Port} busy but Host inventory is messy (listeners=$($listeners.Count) hosts=$($hosts.Count)) - clearing and starting fresh"
+    Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
 }
 
 $dll = Join-Path $SoulCoreRoot "SoulCore.Host\bin\Debug\net8.0\SoulCore.Host.dll"

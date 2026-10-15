@@ -1,9 +1,10 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop the SoulCore.Host process bound to loopback :7700.
+  Stop every local SoulCore.Host process (loopback :7700 listener + orphans).
 .NOTES
-  Safe local only: only targets listeners on 127.0.0.1 (never 0.0.0.0).
+  Safe local only: only targets 127.0.0.1 listeners and processes whose command
+  line is SoulCore.Host. Never touches Cursor or non-loopback occupants.
 #>
 [CmdletBinding()]
 param(
@@ -23,45 +24,71 @@ function Get-LoopbackListenerPids {
     return @($conns | Select-Object -ExpandProperty OwningProcess -Unique)
 }
 
-$pids = @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)
-
-# Also honor PID file if process still alive and matches loopback listener (or orphaned).
-if (Test-Path -LiteralPath $PidFile) {
-    $filePid = [int](Get-Content -LiteralPath $PidFile -Raw).Trim()
-    if ($filePid -gt 0) {
-        $proc = Get-Process -Id $filePid -ErrorAction SilentlyContinue
-        if ($proc) {
-            if ($pids -notcontains $filePid) {
-                # Only kill PID-file process if it is still the loopback :Port owner,
-                # or if nothing is listening (orphaned host that failed to bind).
-                if ($pids.Count -eq 0) {
-                    Write-Host "Stopping orphaned SoulCore PID from file: $filePid"
-                    Stop-Process -Id $filePid -Force -ErrorAction SilentlyContinue
-                }
-            }
+function Get-SoulCoreHostPids {
+    $pids = New-Object 'System.Collections.Generic.HashSet[int]'
+    Get-CimInstance Win32_Process -Filter "Name='dotnet.exe' OR Name='SoulCore.Host.exe'" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $cl = [string]$_.CommandLine
+            if ([string]::IsNullOrWhiteSpace($cl)) { return }
+            if ($cl -notmatch 'SoulCore\.Host(\.dll|\.exe)?') { return }
+            # Never kill Cursor / agent hosts that merely mention the string in args elsewhere.
+            if ($cl -match '(?i)[\\/]Cursor[\\/]|cursor-agent') { return }
+            [void]$pids.Add([int]$_.ProcessId)
         }
+    return @($pids)
+}
+
+function Stop-PidSafe {
+    param([int]$ProcId, [string]$Reason)
+    if ($ProcId -le 0) { return $false }
+    $p = Get-Process -Id $ProcId -ErrorAction SilentlyContinue
+    if ($null -eq $p) { return $false }
+    $name = $p.ProcessName
+    if ($name -match '(?i)^Cursor$') {
+        Write-Warning "Skipping Cursor PID $ProcId ($Reason)"
+        return $false
+    }
+    Write-Host "Stopping PID $ProcId ($name) - $Reason"
+    Stop-Process -Id $ProcId -Force -ErrorAction SilentlyContinue
+    return $true
+}
+
+$stopped = 0
+
+# 1) Command-line Host orphans (the herd that never held :7700).
+foreach ($procId in @(Get-SoulCoreHostPids)) {
+    if (Stop-PidSafe -ProcId $procId -Reason "SoulCore.Host process") {
+        $stopped++
     }
 }
 
-if ($pids.Count -eq 0) {
-    Write-Host "No process listening on ${BindAddress}:${Port}"
-    if (Test-Path -LiteralPath $PidFile) { Remove-Item -LiteralPath $PidFile -Force }
-    exit 0
+# 2) Pid file (may already be dead after step 1).
+if (Test-Path -LiteralPath $PidFile) {
+    $raw = (Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue | Select-Object -First 1)
+    $filePid = 0
+    if ([int]::TryParse("$raw", [ref]$filePid) -and $filePid -gt 0) {
+        if (Stop-PidSafe -ProcId $filePid -Reason "pid file") { $stopped++ }
+    }
+    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
 
-# Refuse to touch non-loopback owners: we only collected 127.0.0.1 listeners.
-foreach ($procId in $pids) {
-    $p = Get-Process -Id $procId -ErrorAction SilentlyContinue
-    $name = if ($p) { $p.ProcessName } else { "?" }
-    Write-Host "Stopping PID $procId ($name) bound to ${BindAddress}:${Port}"
-    Stop-Process -Id $procId -Force
+# 3) Anything still listening on loopback :Port (belt/suspenders).
+foreach ($procId in @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)) {
+    if (Stop-PidSafe -ProcId $procId -Reason "listener on ${BindAddress}:${Port}") {
+        $stopped++
+    }
 }
 
-Start-Sleep -Milliseconds 400
-$still = @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)
-if ($still.Count -gt 0) {
-    throw "Port ${BindAddress}:${Port} still has listeners: $($still -join ', ')"
+if ($stopped -gt 0) {
+    Start-Sleep -Milliseconds 500
 }
 
-if (Test-Path -LiteralPath $PidFile) { Remove-Item -LiteralPath $PidFile -Force }
-Write-Host "SoulCore stopped (${BindAddress}:${Port} free)"
+$stillHost = @(Get-SoulCoreHostPids)
+$stillListen = @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)
+if ($stillHost.Count -gt 0 -or $stillListen.Count -gt 0) {
+    throw ("SoulCore.Host still present after stop - hosts=[{0}] listeners=[{1}]" -f `
+        ($stillHost -join ','), ($stillListen -join ','))
+}
+
+Write-Host "SoulCore stopped (no Host processes; ${BindAddress}:${Port} free)"
+exit 0
