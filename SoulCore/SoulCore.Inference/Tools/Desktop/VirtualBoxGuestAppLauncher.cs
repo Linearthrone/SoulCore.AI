@@ -223,65 +223,19 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest click ({x},{y}) is off the Ubuntu screen (origin 0,0).", null);
 
-        // 1) AT-SPI do_action — no mouse; immune to Absolute pointing (left single only).
-        if (clicks == 1 && btn == 1)
-        {
-            var atspi = await TryAtspiClickXyAsync(x, y, ct).ConfigureAwait(false);
-            if (atspi is not null)
-                return atspi;
-        }
-
-        // 2) VirtualBox console mouse (COM) — no guestcontrol/xdotool; park host cursor
-        // so Presence Absolute does not override mid-click.
         using (HostPointerPark.BeginAwayFromVm())
         {
             var console = await TryVboxConsoleClickAsync(x, y, btn, clicks, ct).ConfigureAwait(false);
-            if (console is not null && console.Success)
-                return console;
-
-            // 3) Parked xdotool last — needs Guest Additions + password + DISPLAY.
-            var move = await XdotoolAsync(
-                    new[]
-                    {
-                        "mousemove", "--sync",
-                        x.ToString(CultureInfo.InvariantCulture),
-                        y.ToString(CultureInfo.InvariantCulture)
-                    },
-                    ct)
-                .ConfigureAwait(false);
-            if (!move.Success)
+            if (console is null)
             {
-                var prefix = console is null
-                    ? ""
-                    : console.Content + " | ";
                 return new DesktopOpResult(
                     false,
-                    prefix + move.Content,
-                    move.Data);
+                    "desktop_click failed: VirtualBox console mouse unavailable.",
+                    null);
             }
 
-            await Task.Delay(40, ct).ConfigureAwait(false);
-
-            var clickArgs = new List<string> { "click", "--clearmodifiers" };
-            if (clicks == 2)
-                clickArgs.AddRange(new[] { "--repeat", "2", "--delay", "80" });
-            clickArgs.Add(btn.ToString(CultureInfo.InvariantCulture));
-
-            var result = await XdotoolAsync(clickArgs, ct).ConfigureAwait(false);
-            if (!result.Success)
-            {
-                var prefix = console is null
-                    ? ""
-                    : console.Content + " | ";
-                return new DesktopOpResult(false, prefix + result.Content, result.Data);
-            }
+            return console;
         }
-
-        var label = clicks == 2 ? "double-clicked" : "clicked";
-        return new DesktopOpResult(
-            true,
-            $"{label} {button} at guest ({x},{y}) in the {GuestOpenedMarker} (not Windows).",
-            new { x, y, button, clicks, coords = "guest-framebuffer", method = "xdotool" });
     }
 
     private Task<DesktopOpResult?> TryVboxConsoleClickAsync(
@@ -290,69 +244,8 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         return Task.Run<DesktopOpResult?>(() =>
         {
             ct.ThrowIfCancellationRequested();
-            var result = VboxConsoleMouse.TryClick(_vmName, x, y, xdotoolButton, clicks);
-            // null = COM unavailable; failed DesktopOpResult = tried and failed (still allow xdotool).
-            if (result is null)
-                return null;
-            if (!result.Success)
-            {
-                TimingLog($"vbox console mouse fallback: {result.Content}");
-                return result;
-            }
-
-            return result;
+            return VboxConsoleMouse.TryClick(_vmName, x, y, xdotoolButton, clicks);
         }, ct);
-    }
-
-    /// <summary>
-    /// Guest AT-SPI click at framebuffer point. Returns null when unavailable so
-    /// caller can fall back to parked xdotool.
-    /// </summary>
-    private async Task<DesktopOpResult?> TryAtspiClickXyAsync(int x, int y, CancellationToken ct)
-    {
-        try
-        {
-            await EnsureGuestBrowserScriptAsync(ct).ConfigureAwait(false);
-            await TryEnableA11yAsync(ct).ConfigureAwait(false);
-            var raw = await GuestPythonAsync(
-                    new[]
-                    {
-                        GuestBrowserScript.GuestPath,
-                        "click_xy",
-                        x.ToString(CultureInfo.InvariantCulture),
-                        y.ToString(CultureInfo.InvariantCulture)
-                    },
-                    ct)
-                .ConfigureAwait(false);
-            if (!raw.Success)
-                return null;
-            if (!TryReadAction(raw.Content, out var action))
-                return null;
-            if (string.Equals(action, "click_xy_atspi", StringComparison.Ordinal))
-            {
-                return new DesktopOpResult(
-                    true,
-                    $"clicked via AT-SPI do_action at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
-                    + raw.Content,
-                    new { x, y, coords = "guest-framebuffer", method = "atspi" });
-            }
-
-            if (string.Equals(action, "click_xy_atspi_mouse", StringComparison.Ordinal))
-            {
-                return new DesktopOpResult(
-                    true,
-                    $"clicked via AT-SPI generate_mouse_event at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
-                    + raw.Content,
-                    new { x, y, coords = "guest-framebuffer", method = "atspi-mouse" });
-            }
-
-            return null;
-        }
-        catch (Exception ex)
-        {
-            TimingLog($"atspi click_xy fallback: {ex.GetType().Name}: {ex.Message}");
-            return null;
-        }
     }
 
     public async Task<DesktopOpResult> DragAsync(
@@ -362,26 +255,19 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             return new DesktopOpResult(false, err, null);
         using (HostPointerPark.BeginAwayFromVm())
         {
-            var result = await XdotoolAsync(
-                    new[]
-                    {
-                        "mousemove", "--sync",
-                        x1.ToString(CultureInfo.InvariantCulture), y1.ToString(CultureInfo.InvariantCulture),
-                        "mousedown", btn.ToString(CultureInfo.InvariantCulture),
-                        "mousemove", "--sync",
-                        x2.ToString(CultureInfo.InvariantCulture), y2.ToString(CultureInfo.InvariantCulture),
-                        "mouseup", btn.ToString(CultureInfo.InvariantCulture)
-                    },
-                    ct)
-                .ConfigureAwait(false);
-            if (!result.Success)
-                return result;
-        }
+            var console = await Task.Run(
+                () => VboxConsoleMouse.TryDrag(_vmName, x1, y1, x2, y2, btn),
+                ct).ConfigureAwait(false);
+            if (console is null)
+            {
+                return new DesktopOpResult(
+                    false,
+                    "desktop_drag failed: VirtualBox console mouse unavailable.",
+                    null);
+            }
 
-        return new DesktopOpResult(
-            true,
-            $"dragged {button} guest ({x1},{y1})→({x2},{y2}) in the {GuestOpenedMarker}.",
-            new { x1, y1, x2, y2, button, coords = "guest-framebuffer" });
+            return console;
+        }
     }
 
     public async Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default)
@@ -389,41 +275,33 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (string.IsNullOrEmpty(text))
             return new DesktopOpResult(true, "typed nothing", null);
 
-        // Wayland clients (guest Firefox) ignore xdotool. PS/2 scancodes do not.
-        if (VboxConsoleKeyboard.TryPlanText(text, out var codes, out _))
-        {
-            return await PutScancodesAsync(
-                    codes,
-                    $"typed {text.Length} chars in the {GuestOpenedMarker}.",
-                    ct)
-                .ConfigureAwait(false);
-        }
+        if (!VboxConsoleKeyboard.TryPlanText(text, out var codes, out var planError) || codes.Length == 0)
+            return new DesktopOpResult(false, planError ?? "desktop_type could not plan console scancodes.", null);
 
-        var result = await XdotoolAsync(new[] { "type", "--clearmodifiers", "--", text }, ct)
+        return await PutScancodesAsync(
+                codes,
+                $"typed {text.Length} chars in the {GuestOpenedMarker}.",
+                ct)
             .ConfigureAwait(false);
-        if (!result.Success)
-            return result;
-        return new DesktopOpResult(true, $"typed {text.Length} chars in the {GuestOpenedMarker}.", null);
     }
 
     public async Task<DesktopOpResult> KeyAsync(string key, CancellationToken ct = default)
     {
         if (!TryMapXdotoolKey(key, out var xd, out var err))
             return new DesktopOpResult(false, err, null);
-        if (VboxConsoleKeyboard.TryPlanKey(key, out var codes, out _))
+        if (!VboxConsoleKeyboard.TryPlanKey(key, out var codes, out var planError) || codes.Length == 0)
         {
-            return await PutScancodesAsync(
-                    codes,
-                    $"key '{key}' in the {GuestOpenedMarker} ({xd}).",
-                    ct)
-                .ConfigureAwait(false);
+            return new DesktopOpResult(
+                false,
+                planError ?? $"desktop_key could not plan console scancodes for '{key}'.",
+                null);
         }
 
-        var result = await XdotoolAsync(new[] { "key", "--clearmodifiers", xd }, ct)
+        return await PutScancodesAsync(
+                codes,
+                $"key '{key}' in the {GuestOpenedMarker} ({xd}).",
+                ct)
             .ConfigureAwait(false);
-        if (!result.Success)
-            return result;
-        return new DesktopOpResult(true, $"key '{key}' in the {GuestOpenedMarker} ({xd}).", null);
     }
 
     public async Task<DesktopOpResult> ScrollAsync(
@@ -432,35 +310,21 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest scroll ({x},{y}) is off the Ubuntu screen.", null);
 
-        var stepsY = Math.Clamp(Math.Abs(deltaY) <= 5 ? Math.Abs(deltaY) : Math.Abs(deltaY) / 120, 1, 12);
-        var wheelY = deltaY >= 0 ? "4" : "5";
-        var args = new List<string>
-        {
-            "mousemove", "--sync",
-            x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture),
-            "click", "--repeat", stepsY.ToString(CultureInfo.InvariantCulture), "--delay", "30", wheelY
-        };
-        if (deltaX != 0)
-        {
-            var stepsX = Math.Clamp(Math.Abs(deltaX) <= 5 ? Math.Abs(deltaX) : Math.Abs(deltaX) / 120, 1, 12);
-            args.AddRange(new[]
-            {
-                "click", "--repeat", stepsX.ToString(CultureInfo.InvariantCulture), "--delay", "30",
-                deltaX >= 0 ? "6" : "7"
-            });
-        }
-
         using (HostPointerPark.BeginAwayFromVm())
         {
-            var result = await XdotoolAsync(args, ct).ConfigureAwait(false);
-            if (!result.Success)
-                return result;
-        }
+            var console = await Task.Run(
+                () => VboxConsoleMouse.TryScroll(_vmName, x, y, deltaY, deltaX),
+                ct).ConfigureAwait(false);
+            if (console is null)
+            {
+                return new DesktopOpResult(
+                    false,
+                    "desktop_scroll failed: VirtualBox console mouse unavailable.",
+                    null);
+            }
 
-        return new DesktopOpResult(
-            true,
-            $"scrolled guest ({x},{y}) dY={deltaY} dX={deltaX} in the {GuestOpenedMarker}.",
-            new { x, y, deltaY, deltaX, coords = "guest-framebuffer" });
+            return console;
+        }
     }
 
     public async Task<DesktopOpResult> ListWindowsAsync(CancellationToken ct = default)
@@ -727,9 +591,6 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         "Do not paste the password in chat. The VirtualBox window can stay minimized — this uses Guest Additions, not host clicks.",
         null);
 
-    private Task<DesktopOpResult> XdotoolAsync(IReadOnlyList<string> args, CancellationToken ct)
-        => GuestRunAsync("/usr/bin/xdotool", args, wait: true, ct);
-
     private async Task<DesktopOpResult> PutScancodesAsync(
         string[] codes, string okMessage, CancellationToken ct)
     {
@@ -757,6 +618,69 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             new { method = "keyboardputscancode", vm = _vmName });
     }
 
+    private static readonly SemaphoreSlim GuestChannel = new(1, 1);
+    private static int _guestChannelWedged;
+
+    internal const string GuestChannelStuck =
+        "guest channel stuck. Savestate the VM to recover. Do not power it off.";
+
+    private async Task<(int Exit, string Stdout, string Stderr)> RunGuestControlAsync(
+        IReadOnlyList<string> argv, CancellationToken ct)
+    {
+        if (!await GuestChannel.WaitAsync(TimeSpan.FromSeconds(12), ct).ConfigureAwait(false))
+            return (1, "", GuestChannelStuck);
+
+        try
+        {
+            if (Volatile.Read(ref _guestChannelWedged) == 1)
+            {
+                if (!await ProbeGuestChannelAsync(ct).ConfigureAwait(false))
+                    return (1, "", GuestChannelStuck);
+                Volatile.Write(ref _guestChannelWedged, 0);
+            }
+
+            var result = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+            var blob = (result.Stdout ?? "") + (result.Stderr ?? "");
+            if (blob.Contains("VERR_TIMEOUT", StringComparison.Ordinal)
+                || blob.Contains("VERR_NOT_FOUND", StringComparison.Ordinal))
+            {
+                Volatile.Write(ref _guestChannelWedged, 1);
+                return (1, "", GuestChannelStuck);
+            }
+
+            return result;
+        }
+        finally
+        {
+            GuestChannel.Release();
+        }
+    }
+
+    private async Task<bool> ProbeGuestChannelAsync(CancellationToken ct)
+    {
+        var auth = RequirePassword();
+        if (auth.Error is not null || string.IsNullOrWhiteSpace(auth.Password))
+            return false;
+
+        using var passFile = new PasswordFile(auth.Password);
+        var argv = BuildGuestControl(
+            _vmName,
+            "run",
+            auth.User,
+            passFile.Path,
+            "/usr/bin/whoami",
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            waitOutput: true,
+            timeoutMs: 3000);
+        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var blob = (stdout ?? "") + (stderr ?? "");
+        if (blob.Contains("VERR_TIMEOUT", StringComparison.Ordinal)
+            || blob.Contains("VERR_NOT_FOUND", StringComparison.Ordinal))
+            return false;
+        return exit == 0;
+    }
+
     private async Task<DesktopOpResult> GuestStartAsync(
         string exe, IReadOnlyList<string> exeArgs, CancellationToken ct)
     {
@@ -775,7 +699,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             putenv,
             exeArgs,
             waitOutput: false);
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
             return new DesktopOpResult(
@@ -807,7 +731,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             exeArgs,
             waitOutput: wait,
             timeoutMs: timeoutMs);
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
             return new DesktopOpResult(
@@ -837,7 +761,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             "--target-directory", destDir,
             guestPath
         };
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
             return new DesktopOpResult(
@@ -1003,7 +927,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             Array.Empty<string>(),
             exeArgs,
             waitOutput: true);
-        return await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        return await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
     }
 
     public static List<string> BuildGuestControl(
@@ -1037,7 +961,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             argv.Add("--wait-stdout");
             argv.Add("--wait-stderr");
             argv.Add("--timeout");
-            argv.Add(Math.Max(1000, timeoutMs).ToString(CultureInfo.InvariantCulture));
+            argv.Add(Math.Clamp(timeoutMs, 1000, 8000).ToString(CultureInfo.InvariantCulture));
         }
 
         argv.Add("--");

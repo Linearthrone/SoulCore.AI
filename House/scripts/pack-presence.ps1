@@ -12,6 +12,7 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/pack-presence.ps1 -Version 0.1.2 -Publish
 #
 # Output:
+#   House/artifacts/presence-bin/         compile output (not bin\Release, so a running Presence does not lock the pack)
 #   House/artifacts/presence-publish/     published app
 #   House/artifacts/presence-releases/  Setup.exe + nupkg + releases.*.json
 #
@@ -54,11 +55,13 @@ if (-not $Version) {
 
 $publishDir = Join-Path $repo 'House\artifacts\presence-publish'
 $releaseDir = Join-Path $repo 'House\artifacts\presence-releases'
+$buildRoot = Join-Path $repo 'House\artifacts\presence-bin\'
 $ico = Join-Path $repo 'House\House.ChatDesktop\Assets\house-victoria.ico'
 
 Write-Host "Publishing Presence $Version ..."
 if (Test-Path $publishDir) { Remove-Item -Recurse -Force $publishDir }
-dotnet publish $csproj -c Release -r win-x64 --self-contained true -o $publishDir /p:Version=$Version /p:InformationalVersion=$Version
+# Keep compile output out of bin\Release. A running Presence locks that folder.
+dotnet publish $csproj -c Release -r win-x64 --self-contained true -o $publishDir /p:Version=$Version /p:InformationalVersion=$Version /p:BaseOutputPath=$buildRoot
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
 
 $vpk = Get-Command vpk -ErrorAction SilentlyContinue

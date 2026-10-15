@@ -93,7 +93,7 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
                 "desktop_click did not activate the Ubuntu guest UI. "
                 + guest.Content
                 + " (Host-window PostMessage fallback stays off — it cannot press guest widgets. "
-                + "Need VirtualBox console mouse / AT-SPI / xdotool via Guest Additions.)",
+                + " (Host-window PostMessage stays off. The console mouse is the only click path.)",
                 guest.Data);
         }
 

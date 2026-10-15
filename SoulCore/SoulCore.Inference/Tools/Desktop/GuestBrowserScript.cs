@@ -230,50 +230,12 @@ def click_text(query, nth):
             count=len(hits), elements=[e for _, e in hits[:20]])
         return
     node, el = hits[idx]
-    activated = activate_node(node)
-    if activated is not None:
-        out(True, action="click_text_atspi", count=len(hits), picked=el,
-            elements=[e for _, e in hits[:20]], method="atspi")
-        return
-    Atspi = load_atspi()
-    if atspi_mouse_click(Atspi, el.get("cx", 0), el.get("cy", 0)):
-        out(True, action="click_text_atspi_mouse", count=len(hits), picked=el,
-            elements=[e for _, e in hits[:20]], method="atspi-mouse")
-        return
     out(True, action="click_text", count=len(hits), picked=el,
         elements=[e for _, e in hits[:20]], method="coords")
 
-def atspi_mouse_click(Atspi, x, y):
-    # In-guest synthetic mouse via AT-SPI — does not use host Absolute pointing.
-    try:
-        Atspi.generate_mouse_event(int(x), int(y), "b1c")
-        return True
-    except Exception:
-        pass
-    try:
-        Atspi.generate_mouse_event(int(x), int(y), "abs")
-        Atspi.generate_mouse_event(int(x), int(y), "b1p")
-        Atspi.generate_mouse_event(int(x), int(y), "b1r")
-        return True
-    except Exception:
-        return False
-
 def click_xy(x, y):
-    # Prefer AT-SPI do_action; then AT-SPI synthetic mouse; else coords for xdotool.
-    Atspi = load_atspi()
-    target = node_at_point(Atspi, x, y)
-    activated = activate_node(target) if target is not None else None
-    if activated is not None:
-        role = (activated.get_role_name() or "").strip()
-        name = (activated.get_name() or "").strip()
-        out(True, action="click_xy_atspi", x=int(x), y=int(y),
-            role=role, name=name, method="atspi")
-        return
-    if atspi_mouse_click(Atspi, x, y):
-        out(True, action="click_xy_atspi_mouse", x=int(x), y=int(y), method="atspi-mouse")
-        return
-    out(False, action="click_xy", x=int(x), y=int(y), method="coords",
-        error="no AT-SPI action at point — use xdotool")
+    out(False, action="click_xy", x=int(x), y=int(y),
+        error="guest click is refused; the host console mouse owns clicks")
 
 def fill(query, value):
     hits = match_node_pairs(query)
@@ -285,8 +247,6 @@ def fill(query, value):
         out(False, error=f"no field matching '{query}'")
         return
     node, el = pick[0]
-    # Focus via AT-SPI when possible so Absolute mouse is not required.
-    try_do_action(node)
     out(True, action="fill", picked=el, typed_len=len(value or ""), value_set=False)
 
 def tabs():

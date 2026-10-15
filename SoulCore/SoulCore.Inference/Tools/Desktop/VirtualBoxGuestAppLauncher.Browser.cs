@@ -75,28 +75,13 @@ public sealed partial class VirtualBoxGuestAppLauncher
         if (!TryReadPicked(raw.Content, out var x, out var y, out var label, out var err))
             return new DesktopOpResult(false, err ?? raw.Content, null);
 
-        // AT-SPI already activated (do_action or generate_mouse_event) — no xdotool.
-        if (TryReadAction(raw.Content, out var action)
-            && (string.Equals(action, "click_text_atspi", StringComparison.Ordinal)
-                || string.Equals(action, "click_text_atspi_mouse", StringComparison.Ordinal)))
-        {
-            var method = string.Equals(action, "click_text_atspi_mouse", StringComparison.Ordinal)
-                ? "atspi-mouse"
-                : "atspi";
-            return new DesktopOpResult(
-                true,
-                $"clicked '{label}' via AT-SPI at guest ({x},{y}) in the {GuestOpenedMarker}.\n"
-                + raw.Content,
-                new { x, y, text = label, coords = "guest-framebuffer", method });
-        }
-
         var click = await ClickAsync(x, y, "left", 1, ct).ConfigureAwait(false);
         if (!click.Success)
             return click;
         return new DesktopOpResult(
             true,
             $"clicked '{label}' at guest ({x},{y}) in the {GuestOpenedMarker}.\n" + raw.Content,
-            new { x, y, text = label, coords = "guest-framebuffer", method = "xdotool" });
+            new { x, y, text = label, coords = "guest-framebuffer", method = "vbox-console-mouse" });
     }
 
     public async Task<DesktopOpResult> BrowserFillAsync(
@@ -224,7 +209,7 @@ public sealed partial class VirtualBoxGuestAppLauncher
             "--target-directory", guestDir,
             hostPath
         };
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
             return new DesktopOpResult(

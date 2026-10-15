@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -8,11 +7,10 @@ namespace House.ChatDesktop.Services;
 /// Injects operator pointer and keyboard events into victoria-sandbox through
 /// VirtualBox COM. The reparented VirtualBox window receives Win32 input and
 /// does not forward it into the guest; <c>IMouse.putMouseEventAbsolute</c> and
-/// <c>IKeyboard.putScancodes</c> do. A wheel seats the guest pointer in the
-/// center column, left-clicks there, then sends one Page Up or Page Down tap.
-/// It does not send a mouse-wheel <c>dz</c> and does not park the Windows cursor.
-/// The shared console lock stays on this STA thread and is reopened when it is
-/// no longer a live Running console.
+/// <c>IKeyboard.putScancodes</c> do. A wheel is one
+/// <c>putMouseEventAbsolute</c> at the real point with <c>dz</c> set to the
+/// notch count and no button down. The console lock is taken for that gesture
+/// and released before the next one. A failed call is not retried.
 /// </summary>
 public static class VictoriaVmPointer
 {
@@ -33,8 +31,7 @@ public static class VictoriaVmPointer
     public static void NoteHostWindow(nint hwnd) => _excludeHwnd = hwnd;
 
     /// <summary>
-    /// Last known guest framebuffer size. A wheel seats at its center.
-    /// Non-positive sizes are ignored so the plan can fall back to 1280×800.
+    /// Last known guest framebuffer size. Used when mapping the embed, not as a wheel target.
     /// </summary>
     public static void NoteGuestFrame(int width, int height)
     {
@@ -94,21 +91,7 @@ public static class VictoriaVmPointer
 
         if (wheelNotches != 0)
         {
-            int guestWidth;
-            int guestHeight;
-            lock (Gate)
-            {
-                guestWidth = _guestWidth;
-                guestHeight = _guestHeight;
-            }
-
-            Enqueue(new WheelKeyWork(
-                guestX,
-                guestY,
-                wheelNotches,
-                VictoriaVmKeyPlan.WheelTap(wheelNotches),
-                guestWidth,
-                guestHeight));
+            Enqueue(new WheelKeyWork(guestX, guestY, wheelNotches));
             return;
         }
 
@@ -171,12 +154,7 @@ public static class VictoriaVmPointer
                 {
                     try
                     {
-                        if (keyboard is null)
-                        {
-                            DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
-                            TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
-                        }
-
+                        TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
                         if (keyboard is null)
                             continue;
                         SendScancodes(keyboard, keys.Codes);
@@ -185,6 +163,9 @@ public static class VictoriaVmPointer
                     catch (Exception ex)
                     {
                         ReportFault($"VM key failed: {ex.Message}");
+                    }
+                    finally
+                    {
                         DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
                     }
 
@@ -193,7 +174,7 @@ public static class VictoriaVmPointer
 
                 if (cmd is WheelKeyWork wheel)
                 {
-                    DeliverWheelKeys(ref vbox, ref session, ref mouse, ref keyboard, wheel);
+                    DeliverWheel(ref vbox, ref session, ref mouse, ref keyboard, wheel);
                     continue;
                 }
 
@@ -215,26 +196,25 @@ public static class VictoriaVmPointer
         ref dynamic? keyboard,
         PointerWork pointer)
     {
-        for (var attempt = 0; attempt < 2; attempt++)
+        if (pointer.Buttons == 0)
+            return;
+
+        try
         {
-            try
-            {
-                if (attempt > 0)
-                    DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
+            TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
+            if (mouse is null)
+                throw new InvalidOperationException("VirtualBox console has no mouse.");
 
-                EnsureLiveConsole(ref vbox, ref session, ref mouse, ref keyboard);
-                if (mouse is null)
-                    throw new InvalidOperationException("VirtualBox console has no mouse.");
-
-                InjectPointer(mouse, pointer);
-                _lastFault = null;
-                return;
-            }
-            catch (Exception ex)
-            {
-                ReportFault($"VM click failed: {ex.Message}");
-                DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
-            }
+            InjectPointer(mouse, pointer);
+            _lastFault = null;
+        }
+        catch (Exception ex)
+        {
+            ReportFault($"VM click failed: {ex.Message}");
+        }
+        finally
+        {
+            DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
         }
     }
 
@@ -257,100 +237,55 @@ public static class VictoriaVmPointer
     }
 
     /// <summary>
-    /// One wheel seats the guest pointer at the framebuffer center, left-clicks
-    /// that column, then sends the modifier-release prefix once and each Page
-    /// key as a make array, a short gap, and a break array. <c>sent</c> is
-    /// logged only when VirtualBox's stored count matches the bytes handed
-    /// over. The Windows cursor is not parked, and no mouse-wheel <c>dz</c>
-    /// is sent.
+    /// One move to the real point, then one wheel event there. No button.
+    /// The console is released when this returns. A failure is not retried.
     /// </summary>
     [SupportedOSPlatform("windows")]
-    private static void DeliverWheelKeys(
+    private static void DeliverWheel(
         ref dynamic? vbox,
         ref dynamic? session,
         ref dynamic? mouse,
         ref dynamic? keyboard,
         WheelKeyWork wheel)
     {
-        var seat = VictoriaVmPointerPlan.WheelSeat(wheel.GuestWidth, wheel.GuestHeight);
-        Exception? failure = null;
-        var stored = 0;
-        for (var attempt = 0; attempt < 2; attempt++)
+        try
         {
-            try
+            TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
+            if (mouse is null)
+                throw new InvalidOperationException("VirtualBox console has no mouse.");
+
+            var steps = VictoriaVmPointerPlan.WheelSteps(wheel.X, wheel.Y, wheel.Notches);
+            for (var i = 0; i < steps.Length; i++)
             {
-                if (attempt > 0)
-                    DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
-
-                if (keyboard is null || mouse is null)
-                {
-                    DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
-                    TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
-                }
-
-                if (mouse is null)
-                    throw new InvalidOperationException("VirtualBox console has no mouse.");
-                if (keyboard is null)
-                    throw new InvalidOperationException("VirtualBox console has no keyboard.");
-
-                stored = 0;
-                FocusGuestColumn(mouse, wheel.GuestWidth, wheel.GuestHeight);
-                var chunks = VictoriaVmKeyPlan.WheelKeyboardChunks(wheel.Notches);
-                var arrayApi = true;
-                for (var i = 0; i < chunks.Length; i++)
-                {
-                    stored += PutScancodeChunk(keyboard, chunks[i], ref arrayApi);
-                    var isMake = i >= 1 && (i % 2) == 1 && i + 1 < chunks.Length;
-                    if (isMake)
-                        Thread.Sleep(VictoriaVmKeyPlan.WheelMakeBreakGapMs);
-                }
-                var expected = VictoriaVmKeyPlan.WheelStoredByteCount(wheel.Notches);
-                string? comError = stored == expected
-                    ? null
-                    : $"keyboard queue stored {stored} of {expected}";
-                PresenceStartupLog.Write(
-                    VictoriaVmPointerPlan.FormatWheelDeliveryLine(
-                        wheel.Notches,
-                        seat.X,
-                        seat.Y,
-                        stored,
-                        comError));
-                _lastFault = null;
-                return;
+                var step = steps[i];
+                mouse.PutMouseEventAbsolute(step.X, step.Y, step.Dz, step.Dw, step.Buttons);
+                if (i == 0)
+                    Thread.Sleep(30);
             }
-            catch (Exception ex)
-            {
-                failure = ex;
-                ReportFault($"VM key failed: {ex.Message}");
-                DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
-            }
+
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatWheelDeliveryLine(
+                    wheel.Notches,
+                    wheel.X,
+                    wheel.Y,
+                    sent: true,
+                    comError: null));
+            _lastFault = null;
         }
-
-        PresenceStartupLog.Write(
-            VictoriaVmPointerPlan.FormatWheelDeliveryLine(
-                wheel.Notches,
-                seat.X,
-                seat.Y,
-                stored,
-                failure?.Message ?? "putScancodes failed"));
-    }
-
-    /// <summary>
-    /// One absolute move to the lesson column, then left button down and up.
-    /// <c>dz</c> stays 0. The Windows cursor stays where it is.
-    /// </summary>
-    [SupportedOSPlatform("windows")]
-    private static void FocusGuestColumn(dynamic mouse, int guestWidth, int guestHeight)
-    {
-        var steps = VictoriaVmPointerPlan.WheelFocusSteps(guestWidth, guestHeight);
-        for (var i = 0; i < steps.Length; i++)
+        catch (Exception ex)
         {
-            var step = steps[i];
-            mouse.PutMouseEventAbsolute(step.X, step.Y, 0, step.Dw, step.Buttons);
-            if (i == 0)
-                Thread.Sleep(30);
-            else if (step.Buttons != 0)
-                Thread.Sleep(40);
+            ReportFault($"VM wheel failed: {ex.Message}");
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatWheelDeliveryLine(
+                    wheel.Notches,
+                    wheel.X,
+                    wheel.Y,
+                    sent: false,
+                    comError: ex.Message));
+        }
+        finally
+        {
+            DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
         }
     }
 
@@ -388,107 +323,6 @@ public static class VictoriaVmPointer
     {
         foreach (var code in codes)
             keyboard.PutScancode((int)code);
-    }
-
-    /// <summary>
-    /// Hands one scancode array to <c>IKeyboard.putScancodes</c> and returns
-    /// the stored count. If that method is missing, each byte goes through
-    /// <c>putScancode</c> and those stored counts are added up.
-    /// </summary>
-    [SupportedOSPlatform("windows")]
-    private static int PutScancodeChunk(object keyboard, byte[] codes, ref bool arrayApi)
-    {
-        if (arrayApi)
-        {
-            try
-            {
-                return InvokeStoredCount(keyboard, "putScancodes", ToScancodeArgs(codes));
-            }
-            catch (Exception ex) when (IsMissingMember(ex))
-            {
-                arrayApi = false;
-            }
-        }
-
-        var stored = 0;
-        foreach (var code in codes)
-            stored += InvokeStoredCount(keyboard, "putScancode", new object[] { (int)code });
-        return stored;
-    }
-
-    private static object[] ToScancodeArgs(byte[] codes)
-    {
-        var longs = new int[codes.Length];
-        for (var i = 0; i < codes.Length; i++)
-            longs[i] = codes[i];
-        return new object[] { longs };
-    }
-
-    private static int InvokeStoredCount(object keyboard, string method, object[] args)
-    {
-        object? result;
-        try
-        {
-            result = keyboard.GetType().InvokeMember(
-                method,
-                BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Instance,
-                null,
-                keyboard,
-                args);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            throw ex.InnerException;
-        }
-
-        return ReadStoredCount(result);
-    }
-
-    private static int ReadStoredCount(object? result)
-    {
-        switch (result)
-        {
-            case null:
-            case Missing:
-            case Array:
-                return 0;
-            case int value:
-                return value;
-            case uint value:
-                return value > int.MaxValue ? int.MaxValue : (int)value;
-            case long value:
-                return value > int.MaxValue ? int.MaxValue : (int)value;
-            case short value:
-                return value;
-            case ushort value:
-                return value;
-            case byte value:
-                return value;
-            default:
-                try
-                {
-                    return Convert.ToInt32(result, System.Globalization.CultureInfo.InvariantCulture);
-                }
-                catch
-                {
-                    return 0;
-                }
-        }
-    }
-
-    private static bool IsMissingMember(Exception ex)
-    {
-        for (var current = ex; current is not null; current = current.InnerException)
-        {
-            if (current is MissingMethodException)
-                return true;
-            const int dispMemberNotFound = unchecked((int)0x80020003);
-            const int dispUnknownName = unchecked((int)0x80020006);
-            if (current.HResult is dispMemberNotFound or dispUnknownName)
-                return true;
-        }
-
-        return false;
     }
 
     [SupportedOSPlatform("windows")]
@@ -787,8 +621,7 @@ public static class VictoriaVmPointer
 
     private sealed record KeyWork(byte[] Codes) : WorkItem;
 
-    private sealed record WheelKeyWork(
-        int X, int Y, int Notches, byte[] Codes, int GuestWidth, int GuestHeight) : WorkItem;
+    private sealed record WheelKeyWork(int X, int Y, int Notches) : WorkItem;
 
     private const uint GaRoot = 2;
 

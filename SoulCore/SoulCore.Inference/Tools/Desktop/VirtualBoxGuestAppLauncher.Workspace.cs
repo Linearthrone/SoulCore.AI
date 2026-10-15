@@ -237,7 +237,7 @@ public sealed partial class VirtualBoxGuestAppLauncher
             hostFile,
             guestPath
         };
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         if (exit != 0)
         {
             return new DesktopOpResult(
@@ -268,7 +268,7 @@ public sealed partial class VirtualBoxGuestAppLauncher
             exeArgs,
             waitOutput: true,
             timeoutMs: timeoutMs);
-        var (exit, stdout, stderr) = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
+        var (exit, stdout, stderr) = await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
         var text = CombineGuestText(stdout, stderr);
         if (exit != 0)
         {
