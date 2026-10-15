@@ -61,8 +61,43 @@ public partial class MainWindow
         }
     }
 
+    private void HerScreenHeader_Click(object? sender, RoutedEventArgs e)
+    {
+        if (PresenceSideTabs is not null)
+            PresenceSideTabs.SelectedItem = HerScreenTab;
+    }
+
+    private void SightHeader_Click(object? sender, RoutedEventArgs e)
+    {
+        if (PresenceSideTabs is not null)
+            PresenceSideTabs.SelectedItem = SightTab;
+    }
+
+    private void SyncPresenceSideHeader()
+    {
+        var selected = PresenceSideTabs?.SelectedItem as TabItem;
+        SetSideTabSelected(HerScreenHeaderButton, ReferenceEquals(selected, HerScreenTab));
+        SetSideTabSelected(SightHeaderButton, ReferenceEquals(selected, SightTab));
+    }
+
+    private static void SetSideTabSelected(Button? button, bool selected)
+    {
+        if (button is null)
+            return;
+        if (selected)
+        {
+            if (!button.Classes.Contains("selected"))
+                button.Classes.Add("selected");
+        }
+        else
+        {
+            button.Classes.Remove("selected");
+        }
+    }
+
     private void PresenceSideTabs_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        SyncPresenceSideHeader();
         if (PresenceSideTabs?.SelectedItem is TabItem tab && ReferenceEquals(tab, HerScreenTab))
         {
             // Re-measure embed after the tab becomes visible again.
@@ -854,28 +889,10 @@ public partial class MainWindow
         var text = VictoriaBrowserCoordMap.FormatCoordBadge(
             _browserCursorX, _browserCursorY, _hoverGuestX, _hoverGuestY);
 
-        if (IsVictoriaVmEmbedLive())
-        {
-            // Badge under HWND is invisible — drive the click-through overlay.
-            if (VictoriaBrowserCoordBadge is not null)
-                VictoriaBrowserCoordBadge.IsVisible = false;
-            EnsureHerScreenOverlay();
-            if (_herScreenHwndOverlay is { IsAttached: true })
-            {
-                _herScreenHwndOverlay.SyncToParent();
-                _herScreenHwndOverlay.SetBadge(text);
-            }
-            else
-            {
-                if (VictoriaBrowserSurface is not null)
-                    _herScreenOverlay?.SyncToSurface(VictoriaBrowserSurface);
-                _herScreenOverlay?.SetBadge(text);
-            }
+        // Coords live in the header row, above the VM HWND, so the overlay badge stays off.
+        _herScreenHwndOverlay?.SetBadge(null);
+        _herScreenOverlay?.SetBadge(null);
 
-            return;
-        }
-
-        HideHerScreenOverlay();
         if (text is null)
         {
             if (VictoriaBrowserCoordBadge is not null)
