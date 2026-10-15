@@ -690,7 +690,8 @@
                 <StackPanel>
                   <TextBlock Text="System" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
                   <CheckBox x:Name="AutoStartStackCheck" Content="Auto-start Host + Ollama when Presence opens"
-                            IsChecked="True" Margin="0,0,0,8" Click="AutoStartStackCheck_Click"/>
+                            IsChecked="True" Margin="0,0,0,8" Click="AutoStartStackCheck_Click"
+                            ToolTip.Tip="On open: inventory SoulCore.Host processes, reap orphans, reuse one healthy :7700 Host or start a single new one. Never piles another Host on top of zombies."/>
                   <!-- Repo path kept for code-behind resolve; not shown (PROP-17.4) -->
                   <TextBox x:Name="SoulCoreRepoRootBox" IsVisible="False"
                            LostFocus="SoulCoreRepoRootBox_LostFocus"/>

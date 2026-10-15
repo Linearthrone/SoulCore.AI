@@ -481,21 +481,28 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             progress?.Report("Ollama already up");
         }
 
+        // Always run start-soulcore.ps1: it inventories SoulCore.Host processes, reaps
+        // orphans (the 11-dotnet herd), and reuses a single healthy :7700 listener.
+        // Skipping this when /health was up left zombies forever.
         var hostWasUp = await ProbeHostHealthAsync(ct).ConfigureAwait(false);
-        if (hostWasUp)
-        {
-            progress?.Report("Host already up");
-            return LocalStackEnsureResult.Succeed(
-                hostStarted: false,
-                ollamaStarted: !ollamaWasUp,
-                detail: "Host already listening; stack ready.");
-        }
-
-        progress?.Report("Starting SoulCore.Host…");
+        progress?.Report(hostWasUp
+            ? "Checking Host (reap orphans, reuse if clean)..."
+            : "Starting SoulCore.Host...");
         var start = await StartHostAsync(ct).ConfigureAwait(false);
         if (!start.Ok)
         {
             return LocalStackEnsureResult.Fail($"Host start failed: {start.Detail}");
+        }
+
+        if (hostWasUp && await ProbeHostHealthAsync(ct).ConfigureAwait(false))
+        {
+            progress?.Report("Host ready (reused)");
+            return LocalStackEnsureResult.Succeed(
+                hostStarted: false,
+                ollamaStarted: !ollamaWasUp,
+                detail: string.IsNullOrWhiteSpace(start.Detail)
+                    ? "Host already listening; orphans reaped if any."
+                    : start.Detail);
         }
 
         var deadline = DateTime.UtcNow.AddSeconds(Math.Clamp(hostReadyTimeoutSec, 15, 300));
