@@ -28,6 +28,29 @@ public static class VictoriaVmPointerPlan
         (Math.Max(0, guestX), Math.Max(0, guestY));
 
     /// <summary>
+    /// Guest framebuffer size for Absolute mapping. Prefer live VirtualBox display
+    /// size, then Host hub / screenshot size, then the JPEG default. Never use the
+    /// HWND client size — Auto-resize often lags, and Absolute is framebuffer pixels
+    /// (treating the slot as the FB made clicks land far from the cursor).
+    /// </summary>
+    public static (int Width, int Height) ResolveGuestFramebuffer(
+        int hubWidth,
+        int hubHeight,
+        int? displayWidth,
+        int? displayHeight)
+    {
+        if (displayWidth is > 0 && displayHeight is > 0)
+            return (displayWidth.Value, displayHeight.Value);
+
+        if (hubWidth > 0 && hubHeight > 0)
+            return (hubWidth, hubHeight);
+
+        return (
+            VictoriaBrowserCoordMap.DefaultGuestWidth,
+            VictoriaBrowserCoordMap.DefaultGuestHeight);
+    }
+
+    /// <summary>
     /// Mouse Integration keeps rewriting the guest pointer while the Windows cursor
     /// sits over Presence. A button change has to be sent with the cursor parked
     /// outside that window or the press is cleared before the guest sees it.

@@ -16,6 +16,43 @@ public class VictoriaVmPointerPlanTests
     }
 
     [Fact]
+    public void ResolveGuestFramebuffer_PrefersDisplayOverHubAndNeverUsesSurfaceAsGuest()
+    {
+        // HWND slot 900×600 must not become Absolute space when FB is 1280×800.
+        var resolved = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+            hubWidth: 1280,
+            hubHeight: 800,
+            displayWidth: 1600,
+            displayHeight: 900);
+        Assert.Equal((1600, 900), resolved);
+
+        var hubOnly = VictoriaVmPointerPlan.ResolveGuestFramebuffer(1280, 800, null, null);
+        Assert.Equal((1280, 800), hubOnly);
+
+        var defaults = VictoriaVmPointerPlan.ResolveGuestFramebuffer(0, 0, null, null);
+        Assert.Equal(
+            (VictoriaBrowserCoordMap.DefaultGuestWidth, VictoriaBrowserCoordMap.DefaultGuestHeight),
+            defaults);
+    }
+
+    [Fact]
+    public void StretchFill_SlotVsGuestFramebuffer_MapsCenterCorrectly()
+    {
+        // Regression: treating slot 900×600 as the FB sent Absolute(450,300) for a
+        // center click; real FB 1280×800 must map center → (640,400).
+        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            pointerX: 450,
+            pointerY: 300,
+            surfaceWidth: 900,
+            surfaceHeight: 600,
+            imagePixelWidth: 1280,
+            imagePixelHeight: 800);
+        Assert.NotNull(mapped);
+        Assert.Equal(640, mapped!.Value.X);
+        Assert.Equal(400, mapped.Value.Y);
+    }
+
+    [Fact]
     public void ShouldPark_WhenTheButtonMaskChanges()
     {
         Assert.True(VictoriaVmPointerPlan.ShouldPark(0, VictoriaVmPointerPlan.Left));

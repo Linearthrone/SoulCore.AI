@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -31,7 +33,7 @@ public static class VictoriaVmPointer
     public static void NoteHostWindow(nint hwnd) => _excludeHwnd = hwnd;
 
     /// <summary>
-    /// Last known guest framebuffer size. Used when mapping the embed, not as a wheel target.
+    /// Last known guest framebuffer size (hub / screenshot seed). Display COM may override.
     /// </summary>
     public static void NoteGuestFrame(int width, int height)
     {
@@ -42,6 +44,50 @@ public static class VictoriaVmPointer
             _guestWidth = width;
             _guestHeight = height;
         }
+    }
+
+    /// <summary>
+    /// Cached guest framebuffer from the last successful display read or <see cref="NoteGuestFrame"/>.
+    /// </summary>
+    public static bool TryGetCachedGuestFrame(out int width, out int height)
+    {
+        lock (Gate)
+        {
+            width = _guestWidth;
+            height = _guestHeight;
+            return width > 0 && height > 0;
+        }
+    }
+
+    /// <summary>
+    /// Map Her-screen HWND client pixels → guest Absolute. Display size is read from
+    /// VirtualBox COM on the inject thread (never treat the slot size as the FB).
+    /// </summary>
+    public static void PostFromSurface(
+        int surfaceX,
+        int surfaceY,
+        int surfaceWidth,
+        int surfaceHeight,
+        int buttons,
+        int wheelNotches)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        if (surfaceWidth <= 1 || surfaceHeight <= 1)
+            return;
+        if (surfaceX < 0 || surfaceY < 0)
+            return;
+
+        if (wheelNotches != 0)
+        {
+            Enqueue(new SurfaceWheelWork(surfaceX, surfaceY, surfaceWidth, surfaceHeight, wheelNotches));
+            return;
+        }
+
+        if (buttons == 0)
+            return;
+
+        Enqueue(new SurfacePointerWork(surfaceX, surfaceY, surfaceWidth, surfaceHeight, buttons));
     }
 
     public static void EnsureStarted(string vmName)
@@ -178,6 +224,18 @@ public static class VictoriaVmPointer
                     continue;
                 }
 
+                if (cmd is SurfaceWheelWork surfaceWheel)
+                {
+                    DeliverSurfaceWheel(ref vbox, ref session, ref mouse, ref keyboard, surfaceWheel);
+                    continue;
+                }
+
+                if (cmd is SurfacePointerWork surfacePointer)
+                {
+                    DeliverSurfacePointer(ref vbox, ref session, ref mouse, ref keyboard, surfacePointer);
+                    continue;
+                }
+
                 if (cmd is PointerWork pointer)
                     DeliverPointer(ref vbox, ref session, ref mouse, ref keyboard, pointer);
             }
@@ -205,7 +263,7 @@ public static class VictoriaVmPointer
             if (mouse is null)
                 throw new InvalidOperationException("VirtualBox console has no mouse.");
 
-            InjectPointer(mouse, pointer);
+            InjectPointer(mouse, pointer.X, pointer.Y, pointer.Buttons);
             _lastFault = null;
         }
         catch (Exception ex)
@@ -219,13 +277,171 @@ public static class VictoriaVmPointer
     }
 
     [SupportedOSPlatform("windows")]
-    private static void InjectPointer(dynamic mouse, PointerWork pointer)
+    private static void DeliverSurfacePointer(
+        ref dynamic? vbox,
+        ref dynamic? session,
+        ref dynamic? mouse,
+        ref dynamic? keyboard,
+        SurfacePointerWork surface)
     {
-        if (pointer.Buttons == 0)
+        try
+        {
+            TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
+            if (mouse is null || session is null)
+                throw new InvalidOperationException("VirtualBox console has no mouse.");
+
+            var mapped = MapSurfaceToGuest(session, surface.X, surface.Y, surface.Width, surface.Height);
+            if (mapped is null)
+                return;
+
+            InjectPointer(mouse, mapped.Value.X, mapped.Value.Y, surface.Buttons);
+            _lastFault = null;
+        }
+        catch (Exception ex)
+        {
+            ReportFault($"VM click failed: {ex.Message}");
+        }
+        finally
+        {
+            DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void DeliverSurfaceWheel(
+        ref dynamic? vbox,
+        ref dynamic? session,
+        ref dynamic? mouse,
+        ref dynamic? keyboard,
+        SurfaceWheelWork surface)
+    {
+        try
+        {
+            TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
+            if (mouse is null || session is null)
+                throw new InvalidOperationException("VirtualBox console has no mouse.");
+
+            var mapped = MapSurfaceToGuest(session, surface.X, surface.Y, surface.Width, surface.Height);
+            if (mapped is null)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatWheelStartupLine(surface.Notches, null, null));
+                return;
+            }
+
+            var steps = VictoriaVmPointerPlan.WheelSteps(mapped.Value.X, mapped.Value.Y, surface.Notches);
+            for (var i = 0; i < steps.Length; i++)
+            {
+                var step = steps[i];
+                mouse.PutMouseEventAbsolute(step.X, step.Y, step.Dz, step.Dw, step.Buttons);
+                if (i == 0)
+                    Thread.Sleep(30);
+            }
+
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatWheelDeliveryLine(
+                    surface.Notches,
+                    mapped.Value.X,
+                    mapped.Value.Y,
+                    sent: true,
+                    comError: null));
+            _lastFault = null;
+        }
+        catch (Exception ex)
+        {
+            ReportFault($"VM wheel failed: {ex.Message}");
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatWheelDeliveryLine(
+                    surface.Notches, surface.X, surface.Y, sent: false, comError: ex.Message));
+        }
+        finally
+        {
+            DropConsole(ref vbox, ref session, ref mouse, ref keyboard);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static (int X, int Y)? MapSurfaceToGuest(
+        dynamic session, int surfaceX, int surfaceY, int surfaceW, int surfaceH)
+    {
+        int hubW;
+        int hubH;
+        lock (Gate)
+        {
+            hubW = _guestWidth;
+            hubH = _guestHeight;
+        }
+
+        int? displayW = null;
+        int? displayH = null;
+        try
+        {
+            dynamic console = session.Console;
+            var display = TryReadDisplaySize(console);
+            if (display is not null)
+            {
+                displayW = display.Value.Width;
+                displayH = display.Value.Height;
+                NoteGuestFrame(display.Value.Width, display.Value.Height);
+            }
+        }
+        catch
+        {
+            // Hub / default seed below.
+        }
+
+        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(hubW, hubH, displayW, displayH);
+        return VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            surfaceX, surfaceY, surfaceW, surfaceH, guest.Width, guest.Height);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static (int Width, int Height)? TryReadDisplaySize(dynamic console)
+    {
+        try
+        {
+            dynamic display = console.Display;
+            if (display is null)
+                return null;
+
+            // IDisplay.getScreenResolution(screenId, out w, out h, out bpp, out xOrigin, out yOrigin)
+            object[] args = { 0, 0u, 0u, 0u, 0, 0 };
+            var modifiers = new ParameterModifier(6);
+            modifiers[1] = true;
+            modifiers[2] = true;
+            modifiers[3] = true;
+            modifiers[4] = true;
+            modifiers[5] = true;
+            display.GetType().InvokeMember(
+                "GetScreenResolution",
+                BindingFlags.InvokeMethod,
+                binder: null,
+                target: display,
+                args: args,
+                modifiers: new[] { modifiers },
+                culture: CultureInfo.InvariantCulture,
+                namedParameters: null);
+
+            var w = Convert.ToInt32(args[1], CultureInfo.InvariantCulture);
+            var h = Convert.ToInt32(args[2], CultureInfo.InvariantCulture);
+            if (w > 0 && h > 0)
+                return (w, h);
+        }
+        catch
+        {
+            // Older COM shapes / missing display — caller falls back to hub size.
+        }
+
+        return null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void InjectPointer(dynamic mouse, int guestX, int guestY, int buttons)
+    {
+        if (buttons == 0)
             return;
 
-        var (ax, ay) = VictoriaVmPointerPlan.ToAbsolute(pointer.X, pointer.Y);
-        var buttons = pointer.Buttons;
+        var (ax, ay) = VictoriaVmPointerPlan.ToAbsolute(guestX, guestY);
         WithCursorParked(_excludeHwnd, () =>
         {
             mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
@@ -618,6 +834,10 @@ public static class VictoriaVmPointer
     private abstract record WorkItem;
 
     private sealed record PointerWork(int X, int Y, int Buttons) : WorkItem;
+
+    private sealed record SurfacePointerWork(int X, int Y, int Width, int Height, int Buttons) : WorkItem;
+
+    private sealed record SurfaceWheelWork(int X, int Y, int Width, int Height, int Notches) : WorkItem;
 
     private sealed record KeyWork(byte[] Codes) : WorkItem;
 

@@ -635,48 +635,47 @@ public partial class MainWindow
         if (!sample.ButtonChanged && sample.Buttons == 0 && sample.WheelNotches == 0)
             return;
 
-        // Live HWND embed is SetWindowPos'd to the slot; Guest Additions Auto-resize
-        // makes the guest FB match that client size. Mapping against a stale JPEG
-        // default (1280x800) is why clicks miss. Prefer the live client rect.
-        if (IsVictoriaVmEmbedLive() && sample.Width > 1 && sample.Height > 1)
-        {
-            _browserImagePixelWidth = sample.Width;
-            _browserImagePixelHeight = sample.Height;
-        }
-        else
-        {
-            EnsureGuestFrameSizeForEmbed();
-        }
-
-        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
-            sample.X,
-            sample.Y,
-            sample.Width,
-            sample.Height,
-            _browserImagePixelWidth,
-            _browserImagePixelHeight);
-        if (mapped is null)
-        {
-            if (sample.WheelNotches != 0)
-            {
-                PresenceStartupLog.Write(
-                    VictoriaVmPointerPlan.FormatWheelStartupLine(sample.WheelNotches, null, null));
-            }
-
-            return;
-        }
+        // Absolute is guest framebuffer pixels. Map HWND client → FB via stretch-fill.
+        // Do not treat the embed slot as the FB (that made clicks land far from the cursor
+        // when Auto-resize lagged). Live display size is read on the inject STA thread.
+        SyncGuestFramebufferFromHubAndCom();
+        VictoriaVmPointer.NoteGuestFrame(_browserImagePixelWidth, _browserImagePixelHeight);
 
         if (sample.WheelNotches != 0)
         {
-            VictoriaVmPointer.NoteGuestFrame(_browserImagePixelWidth, _browserImagePixelHeight);
-            VictoriaVmPointer.Post(mapped.Value.X, mapped.Value.Y, 0, sample.WheelNotches);
+            VictoriaVmPointer.PostFromSurface(
+                sample.X, sample.Y, sample.Width, sample.Height, 0, sample.WheelNotches);
             return;
         }
 
         if (!sample.ButtonChanged || sample.Buttons == 0)
             return;
 
-        VictoriaVmPointer.Post(mapped.Value.X, mapped.Value.Y, sample.Buttons, 0);
+        VictoriaVmPointer.PostFromSurface(
+            sample.X, sample.Y, sample.Width, sample.Height, sample.Buttons, 0);
+    }
+
+    /// <summary>
+    /// Soft-cursor / hover badge guest size: COM cache when known, else hub/screenshot.
+    /// </summary>
+    private void SyncGuestFramebufferFromHubAndCom()
+    {
+        EnsureGuestFrameSizeForEmbed();
+        int? displayW = null;
+        int? displayH = null;
+        if (VictoriaVmPointer.TryGetCachedGuestFrame(out var comW, out var comH))
+        {
+            displayW = comW;
+            displayH = comH;
+        }
+
+        var resolved = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+            _browserImagePixelWidth,
+            _browserImagePixelHeight,
+            displayW,
+            displayH);
+        _browserImagePixelWidth = resolved.Width;
+        _browserImagePixelHeight = resolved.Height;
     }
 
     private void ApplyVictoriaBrowserSoftCursor(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed)
@@ -692,7 +691,7 @@ public partial class MainWindow
         }
 
         // Prefer Host cursor; if she hasn't aimed yet, seed center so pink is visible on embed.
-        EnsureGuestFrameSizeForEmbed();
+        SyncGuestFramebufferFromHubAndCom();
         var cx = snap.CursorX ?? (_browserImagePixelWidth > 0 ? _browserImagePixelWidth / 2 : null);
         var cy = snap.CursorY ?? (_browserImagePixelHeight > 0 ? _browserImagePixelHeight / 2 : null);
         if (cx is null || cy is null)
@@ -848,7 +847,7 @@ public partial class MainWindow
             return;
         }
 
-        EnsureGuestFrameSizeForEmbed();
+        SyncGuestFramebufferFromHubAndCom();
         var local = HerScreenCursorProbe.TryGetPointerInSurface(VictoriaBrowserSurface);
         if (local is null)
         {
