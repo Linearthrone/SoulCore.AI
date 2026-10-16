@@ -124,6 +124,10 @@ public class Prop17ParkAndSopTests
     {
         Assert.False(GuestPathGuard.TryValidateCommand(command, out var error), command);
         Assert.False(string.IsNullOrWhiteSpace(error));
+        // Even with AllowGuestSudo, apt/snap/pipe-bash stay refused.
+        Assert.False(
+            GuestPathGuard.TryValidateCommand(command, out _, allowElevatedShell: true),
+            command);
     }
 
     [Fact]

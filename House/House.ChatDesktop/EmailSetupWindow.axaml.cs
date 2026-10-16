@@ -193,7 +193,18 @@ public partial class EmailSetupWindow : Window
             (snap.Detail.StartsWith("HTTP", StringComparison.Ordinal) ||
              snap.Detail.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)))
         {
-            SetEmailStatus(snap.Detail, bad: true);
+            var detail = snap.Detail.Contains("401", StringComparison.Ordinal)
+                ? "HTTP 401 — save companion token in Settings → System, then reopen Email setup."
+                : snap.Detail;
+            SetEmailStatus(detail, bad: true);
+            return;
+        }
+
+        if (snap.Reachable && _emailAccounts.Count == 0)
+        {
+            SetEmailStatus(
+                "No mailboxes yet — type an id (any label), address, App Password, then Save.",
+                bad: false);
             return;
         }
 

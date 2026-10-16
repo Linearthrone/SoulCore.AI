@@ -20,7 +20,11 @@ public sealed class UnavailableGuestWorkspace : IGuestWorkspace
         => Refuse();
 
     public Task<DesktopOpResult> ShellAsync(
-        string command, string? cwd, int timeoutSeconds, CancellationToken ct = default)
+        string command,
+        string? cwd,
+        int timeoutSeconds,
+        CancellationToken ct = default,
+        bool allowElevatedShell = false)
         => Refuse();
 
     private static Task<DesktopOpResult> Refuse()

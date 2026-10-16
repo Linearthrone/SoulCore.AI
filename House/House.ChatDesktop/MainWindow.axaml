@@ -656,6 +656,10 @@
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsAllowEmailDeleteCheck" Content="Allow email delete (still asks for confirmation)"
                           Margin="0,0,0,8" Click="ToolsAccessToggle_Click"/>
+                <TextBlock Text="Guest VM shell" FontWeight="SemiBold" Margin="0,8,0,6"/>
+                <CheckBox x:Name="ToolsAllowGuestSudoCheck" Content="Allow guest sudo (NOPASSWD required in VM; apt/snap still blocked)"
+                          Margin="0,0,0,8" Click="ToolsAccessToggle_Click"
+                          ToolTip.Tip="Lets guest_shell run sudo/su when the guest user has passwordless sudo. Package install and pipe-to-bash stay refused."/>
                 <Button Classes="primary" Content="Email setup…" HorizontalAlignment="Left"
                         Click="EmailSetup_Click" Margin="0,0,0,16"
                         ToolTip.Tip="One dialog — unlimited accounts, no three-role cap"/>

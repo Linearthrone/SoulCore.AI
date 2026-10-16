@@ -18,6 +18,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     private int _allowEmailRead;
     private int _allowEmailSend;
     private int _allowEmailDelete;
+    private int _allowGuestSudo;
     private int _softCursorRestore;
     private int _vmEmbedPane;
 
@@ -33,6 +34,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowEmailRead = opts.AllowEmailRead ? 1 : 0;
         _allowEmailSend = opts.AllowEmailSend ? 1 : 0;
         _allowEmailDelete = opts.AllowEmailDelete ? 1 : 0;
+        _allowGuestSudo = opts.AllowGuestSudo ? 1 : 0;
         _softCursorRestore = opts.SoftCursorRestore ? 1 : 0;
         _vmEmbedPane = opts.VmEmbedPane ? 1 : 0;
             DesktopBackend = string.IsNullOrWhiteSpace(opts.DesktopBackend)
@@ -73,7 +75,8 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         bool allowEmailRead = false,
         bool allowEmailSend = false,
         bool allowEmailDelete = false,
-        bool vmEmbedPane = true)
+        bool vmEmbedPane = true,
+        bool allowGuestSudo = false)
     {
         _allowDesktopCapture = allowDesktopCapture ? 1 : 0;
         _allowBrowserCapture = allowBrowserCapture ? 1 : 0;
@@ -83,6 +86,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
         _allowEmailRead = allowEmailRead ? 1 : 0;
         _allowEmailSend = allowEmailSend ? 1 : 0;
         _allowEmailDelete = allowEmailDelete ? 1 : 0;
+        _allowGuestSudo = allowGuestSudo ? 1 : 0;
         _softCursorRestore = softCursorRestore ? 1 : 0;
         _vmEmbedPane = vmEmbedPane ? 1 : 0;
         DesktopBackend = desktopBackend;
@@ -99,6 +103,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public bool AllowEmailRead => Read(ref _allowEmailRead);
     public bool AllowEmailSend => Read(ref _allowEmailSend);
     public bool AllowEmailDelete => Read(ref _allowEmailDelete);
+    public bool AllowGuestSudo => Read(ref _allowGuestSudo);
     public bool SoftCursorRestore => Read(ref _softCursorRestore);
     public bool VmEmbedPane => Read(ref _vmEmbedPane);
 
@@ -117,6 +122,7 @@ public sealed class ComputerControlGate : IComputerControlGate, IToolsAccessSett
     public void SetAllowEmailRead(bool enabled) => Write(ref _allowEmailRead, enabled);
     public void SetAllowEmailSend(bool enabled) => Write(ref _allowEmailSend, enabled);
     public void SetAllowEmailDelete(bool enabled) => Write(ref _allowEmailDelete, enabled);
+    public void SetAllowGuestSudo(bool enabled) => Write(ref _allowGuestSudo, enabled);
     public void SetSoftCursorRestore(bool enabled) => Write(ref _softCursorRestore, enabled);
     public void SetVmEmbedPane(bool enabled) => Write(ref _vmEmbedPane, enabled);
 

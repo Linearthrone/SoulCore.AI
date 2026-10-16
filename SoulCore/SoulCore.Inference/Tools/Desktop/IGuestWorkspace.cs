@@ -14,5 +14,9 @@ public interface IGuestWorkspace
     Task<DesktopOpResult> WriteAsync(string path, string content, CancellationToken ct = default);
 
     Task<DesktopOpResult> ShellAsync(
-        string command, string? cwd, int timeoutSeconds, CancellationToken ct = default);
+        string command,
+        string? cwd,
+        int timeoutSeconds,
+        CancellationToken ct = default,
+        bool allowElevatedShell = false);
 }

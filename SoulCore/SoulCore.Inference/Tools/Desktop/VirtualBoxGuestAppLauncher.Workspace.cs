@@ -157,9 +157,13 @@ public sealed partial class VirtualBoxGuestAppLauncher
     }
 
     public async Task<DesktopOpResult> ShellAsync(
-        string command, string? cwd, int timeoutSeconds, CancellationToken ct = default)
+        string command,
+        string? cwd,
+        int timeoutSeconds,
+        CancellationToken ct = default,
+        bool allowElevatedShell = false)
     {
-        if (!GuestPathGuard.TryValidateCommand(command, out var commandError))
+        if (!GuestPathGuard.TryValidateCommand(command, out var commandError, allowElevatedShell))
             return new DesktopOpResult(false, commandError, null);
         if (!GuestPathGuard.TryHome(_username(), out var home, out var homeError))
             return new DesktopOpResult(false, homeError, null);

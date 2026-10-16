@@ -74,7 +74,8 @@ public static class ComputerUseGuidance
         "Read and edit the guest project with guest_list_dir, guest_read_file, and guest_write_file, " +
         "and run builds with guest_shell. Paths stay under /home/victoria. " +
         "node and npm, when installed, are on PATH via ~/.local/node/bin. " +
-        "guest_shell will not run sudo. Use desktop_click only for IDE or page UI those tools cannot reach.\n" +
+        "guest_shell runs sudo only when Kayleigh enables Allow guest sudo (and the guest has NOPASSWD). " +
+        "Package install and pipe-to-bash stay refused. Use desktop_click only for IDE or page UI those tools cannot reach.\n" +
         "Disk is truth and the tab is a view. guest_read_file wins when it disagrees with a screenshot of the editor. " +
         "Re-read the file before you edit it.\n" +
         "Kayleigh wants you in the guest project for the work she assigned, including the course folder. " +

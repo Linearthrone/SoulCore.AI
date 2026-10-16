@@ -985,7 +985,8 @@ public partial class MainWindow
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
             || ToolsAllowEmailSendCheck is null
-            || ToolsAllowEmailDeleteCheck is null)
+            || ToolsAllowEmailDeleteCheck is null
+            || ToolsAllowGuestSudoCheck is null)
         {
             return;
         }
@@ -1003,7 +1004,8 @@ public partial class MainWindow
             allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true,
             allowEmailRead: ToolsAllowEmailReadCheck.IsChecked == true,
             allowEmailSend: ToolsAllowEmailSendCheck.IsChecked == true,
-            allowEmailDelete: ToolsAllowEmailDeleteCheck.IsChecked == true).ConfigureAwait(true);
+            allowEmailDelete: ToolsAllowEmailDeleteCheck.IsChecked == true,
+            allowGuestSudo: ToolsAllowGuestSudoCheck.IsChecked == true).ConfigureAwait(true);
 
         ApplyToolsAccess(snap, saved: true);
     }
@@ -1028,8 +1030,22 @@ public partial class MainWindow
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
             || ToolsAllowEmailSendCheck is null
-            || ToolsAllowEmailDeleteCheck is null)
+            || ToolsAllowEmailDeleteCheck is null
+            || ToolsAllowGuestSudoCheck is null)
         {
+            return;
+        }
+
+        // HTTP 401/4xx: keep current checkbox state (empty DTO defaults would snap everything off).
+        if (snap.IsHttpError)
+        {
+            if (ToolsAccessStatusText is not null)
+            {
+                ToolsAccessStatusText.Text = snap.Detail ?? "HTTP error";
+                ToolsAccessStatusText.Foreground = _badBrush;
+            }
+
+            ApplyServiceIndicators(tools: snap);
             return;
         }
 
@@ -1046,6 +1062,7 @@ public partial class MainWindow
             ToolsAllowEmailReadCheck.IsChecked = snap.AllowEmailRead;
             ToolsAllowEmailSendCheck.IsChecked = snap.AllowEmailSend;
             ToolsAllowEmailDeleteCheck.IsChecked = snap.AllowEmailDelete;
+            ToolsAllowGuestSudoCheck.IsChecked = snap.AllowGuestSudo;
 
             if (EmailGateReadCheck is not null) EmailGateReadCheck.IsChecked = snap.AllowEmailRead;
             if (EmailGateSendCheck is not null) EmailGateSendCheck.IsChecked = snap.AllowEmailSend;
@@ -1076,14 +1093,6 @@ public partial class MainWindow
         if (!snap.Reachable)
         {
             ToolsAccessStatusText.Text = snap.Detail ?? "Host unreachable — UI defaults shown checked";
-            ToolsAccessStatusText.Foreground = _badBrush;
-            ApplyServiceIndicators(tools: snap);
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(snap.Detail) && snap.Detail.StartsWith("HTTP", StringComparison.Ordinal))
-        {
-            ToolsAccessStatusText.Text = snap.Detail;
             ToolsAccessStatusText.Foreground = _badBrush;
             ApplyServiceIndicators(tools: snap);
             return;

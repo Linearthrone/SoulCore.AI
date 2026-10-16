@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -18,6 +19,7 @@ public sealed class ToolsAccessSnapshot
     public bool AllowEmailRead { get; init; }
     public bool AllowEmailSend { get; init; }
     public bool AllowEmailDelete { get; init; }
+    public bool AllowGuestSudo { get; init; }
     public string? DesktopBackend { get; init; }
     public string? BrowserBackend { get; init; }
     public string? Mt4Backend { get; init; }
@@ -27,6 +29,11 @@ public sealed class ToolsAccessSnapshot
     public string? Note { get; init; }
     public bool Reachable { get; init; }
     public string? Detail { get; init; }
+
+    /// <summary>True when Host returned an HTTP error body (do not apply empty gate defaults).</summary>
+    public bool IsHttpError =>
+        !string.IsNullOrWhiteSpace(Detail)
+        && Detail.StartsWith("HTTP", StringComparison.Ordinal);
 }
 
 public sealed class SoulCoreToolsSettingsClient : IDisposable
@@ -59,13 +66,15 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
 
         try
         {
-            using var response = await _http.GetAsync(SettingsUri, cancellationToken).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Get, SettingsUri);
+            AttachAuth(request);
+            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 return new ToolsAccessSnapshot
                 {
                     Reachable = true,
-                    Detail = $"HTTP {(int)response.StatusCode}"
+                    Detail = FormatHttpDetail(response.StatusCode)
                 };
             }
 
@@ -90,6 +99,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         bool? allowEmailRead = null,
         bool? allowEmailSend = null,
         bool? allowEmailDelete = null,
+        bool? allowGuestSudo = null,
         CancellationToken cancellationToken = default)
     {
         if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
@@ -114,17 +124,21 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
             if (allowEmailRead is { } er) doc["allowEmailRead"] = er;
             if (allowEmailSend is { } es) doc["allowEmailSend"] = es;
             if (allowEmailDelete is { } ed) doc["allowEmailDelete"] = ed;
+            if (allowGuestSudo is { } sudo) doc["allowGuestSudo"] = sudo;
 
             var json = JsonSerializer.Serialize(doc);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var response = await _http.PostAsync(SettingsUri, content, cancellationToken)
-                .ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Post, SettingsUri)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            AttachAuth(request);
+            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 return new ToolsAccessSnapshot
                 {
                     Reachable = true,
-                    Detail = $"HTTP {(int)response.StatusCode}"
+                    Detail = FormatHttpDetail(response.StatusCode)
                 };
             }
 
@@ -137,6 +151,23 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
             return new ToolsAccessSnapshot { Reachable = false, Detail = ex.Message };
         }
     }
+
+    /// <summary>
+    /// Same Bearer + X-Api-Key as email settings — Host POST /settings/tools requires companion auth (PROP-17.1).
+    /// </summary>
+    private static void AttachAuth(HttpRequestMessage request)
+    {
+        var token = CompanionToken.Resolve();
+        if (string.IsNullOrEmpty(token))
+            return;
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.TryAddWithoutValidation("X-Api-Key", token);
+    }
+
+    private static string FormatHttpDetail(System.Net.HttpStatusCode status) =>
+        (int)status == 401
+            ? "HTTP 401 — save companion token in Settings → System (SOULCORE_COMPANION_API_TOKEN), then retry."
+            : $"HTTP {(int)status}";
 
     private static ToolsAccessSnapshot FromDto(ToolsDto? dto, bool reachable) => new()
     {
@@ -151,6 +182,7 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
         AllowEmailRead = dto?.AllowEmailRead ?? false,
         AllowEmailSend = dto?.AllowEmailSend ?? false,
         AllowEmailDelete = dto?.AllowEmailDelete ?? false,
+        AllowGuestSudo = dto?.AllowGuestSudo ?? false,
         DesktopBackend = dto?.DesktopBackend,
         BrowserBackend = dto?.BrowserBackend,
         Mt4Backend = dto?.Mt4Backend,
@@ -193,6 +225,9 @@ public sealed class SoulCoreToolsSettingsClient : IDisposable
 
         [JsonPropertyName("allowEmailDelete")]
         public bool AllowEmailDelete { get; set; }
+
+        [JsonPropertyName("allowGuestSudo")]
+        public bool AllowGuestSudo { get; set; }
 
         [JsonPropertyName("desktopBackend")]
         public string? DesktopBackend { get; set; }
