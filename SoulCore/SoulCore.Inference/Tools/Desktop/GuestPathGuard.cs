@@ -124,7 +124,14 @@ public static class GuestPathGuard
         return true;
     }
 
-    public static bool TryValidateCommand(string? command, out string error)
+    /// <param name="allowElevatedShell">
+    /// When true (Settings → Allow guest sudo), skip the sudo/su/pkexec/doas/passwd refuse.
+    /// Package install and pipe-to-bash stay refused in every mode.
+    /// </param>
+    public static bool TryValidateCommand(
+        string? command,
+        out string error,
+        bool allowElevatedShell = false)
     {
         if (string.IsNullOrWhiteSpace(command))
         {
@@ -144,12 +151,13 @@ public static class GuestPathGuard
             return false;
         }
 
-        if (DeniedShell.IsMatch(command))
+        if (!allowElevatedShell && DeniedShell.IsMatch(command))
         {
             error =
                 "guest_shell will not run sudo, su, pkexec, doas, or passwd — " +
                 "a password prompt would hang the guest session. " +
-                "Ask Kayleigh before installing packages.";
+                "Enable Allow guest sudo in Settings → Tools & Access (and NOPASSWD in the guest), " +
+                "or ask Kayleigh before elevating.";
             return false;
         }
 

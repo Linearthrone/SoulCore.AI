@@ -128,15 +128,20 @@ public sealed class GuestShellTool : ITool
 {
     private static readonly JsonElement Parameters = JsonDocument.Parse(
         """
-        {"type":"object","properties":{"command":{"type":"string","description":"Shell command to run as the guest user. No sudo."},"cwd":{"type":"string","description":"Working directory under /home/victoria. Defaults to the home directory."},"timeout_seconds":{"type":"integer","description":"1-180. Default 60."}},"required":["command"]}
+        {"type":"object","properties":{"command":{"type":"string","description":"Shell command to run as the guest user. Sudo only when AllowGuestSudo is on."},"cwd":{"type":"string","description":"Working directory under /home/victoria. Defaults to the home directory."},"timeout_seconds":{"type":"integer","description":"1-180. Default 60."}},"required":["command"]}
         """).RootElement.Clone();
 
     private readonly IComputerControlGate _gate;
+    private readonly IToolsAccessSettings _access;
     private readonly IGuestWorkspace _workspace;
 
-    public GuestShellTool(IComputerControlGate gate, IGuestWorkspace workspace)
+    public GuestShellTool(
+        IComputerControlGate gate,
+        IToolsAccessSettings access,
+        IGuestWorkspace workspace)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
+        _access = access ?? throw new ArgumentNullException(nameof(access));
         _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
     }
 
@@ -145,7 +150,8 @@ public sealed class GuestShellTool : ITool
         Description:
             "Run a command in the Ubuntu guest as user victoria, cwd under /home/victoria. " +
             "Use for npm, node, git, and builds in the VSCodium project. " +
-            "Refuses sudo/su, package install (apt/snap/flatpak), and pipe-to-bash (wget|bash). " +
+            "Sudo/su require AllowGuestSudo (Settings → Tools & Access) and NOPASSWD in the guest. " +
+            "Package install (apt/snap/flatpak) and pipe-to-bash stay refused. " +
             "Requires AllowComputerControl.",
         Parameters: Parameters);
 
@@ -166,7 +172,12 @@ public sealed class GuestShellTool : ITool
             timeout = seconds;
         }
 
-        var result = await _workspace.ShellAsync(command, cwd, timeout, ct).ConfigureAwait(false);
+        var result = await _workspace.ShellAsync(
+            command,
+            cwd,
+            timeout,
+            ct,
+            allowElevatedShell: _access.AllowGuestSudo).ConfigureAwait(false);
         return DesktopToolGate.FromBackend(result);
     }
 }

@@ -113,6 +113,13 @@ public sealed class ToolsOptions
     public bool AllowEmailDelete { get; set; }
 
     /// <summary>
+    /// When false (default), guest_shell refuses sudo/su/pkexec/doas/passwd.
+    /// Package install and pipe-to-bash stay blocked even when this is true.
+    /// Guest must allow passwordless sudo for the command or the shell will hang.
+    /// </summary>
+    public bool AllowGuestSudo { get; set; }
+
+    /// <summary>
     /// MT4 backend: <c>llmod</c> (default) → LLMOD MCP HTTP on shadow;
     /// <c>hermes</c> → Hermes gateway fallback; <c>native</c> aliases <c>llmod</c>.
     /// </summary>

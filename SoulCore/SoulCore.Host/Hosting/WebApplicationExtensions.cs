@@ -300,6 +300,8 @@ internal static class WebApplicationExtensions
                 access.SetAllowEmailSend(emailSend);
             if (ReadBool(root, "allowEmailDelete") is { } emailDelete)
                 access.SetAllowEmailDelete(emailDelete);
+            if (ReadBool(root, "allowGuestSudo") is { } guestSudo)
+                access.SetAllowGuestSudo(guestSudo);
 
             return Results.Json(ToolsSettingsDto(access));
         }).AddEndpointFilter(CompanionEmailAuthFilter);
@@ -736,6 +738,7 @@ internal static class WebApplicationExtensions
             allowEmailRead = access.AllowEmailRead,
             allowEmailSend = access.AllowEmailSend,
             allowEmailDelete = access.AllowEmailDelete,
+            allowGuestSudo = access.AllowGuestSudo,
             desktopBackend = access.DesktopBackend,
             browserBackend = access.BrowserBackend,
             mt4Backend = access.Mt4Backend,

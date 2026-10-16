@@ -15,6 +15,9 @@ public interface IToolsAccessSettings
     bool AllowEmailSend { get; }
     bool AllowEmailDelete { get; }
 
+    /// <summary>When true, guest_shell may run sudo/su (package install still refused).</summary>
+    bool AllowGuestSudo { get; }
+
     /// <summary>Restore user cursor after Victoria's native click (soft cursor mode).</summary>
     bool SoftCursorRestore { get; }
 
@@ -41,6 +44,7 @@ public interface IToolsAccessSettings
     void SetAllowEmailRead(bool enabled);
     void SetAllowEmailSend(bool enabled);
     void SetAllowEmailDelete(bool enabled);
+    void SetAllowGuestSudo(bool enabled);
     void SetSoftCursorRestore(bool enabled);
     void SetVmEmbedPane(bool enabled);
 }

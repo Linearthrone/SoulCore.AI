@@ -30,11 +30,11 @@ public partial class MainWindow
         }
 
         RefreshBuildVersionChrome(hostVersion: null);
-        _ = RefreshUpdateStatusAsync(showToastIfAvailable: false, fromButton: false);
-
-        // Quiet background Presence check (installed builds only).
-        if (_updates.IsInstalled)
-            _ = CheckForUpdatesAsync(showToastIfAvailable: true, fromButton: false);
+        // One status pass only — concurrent CheckForUpdates raced _updateBusy and
+        // made the Settings Check button appear to do nothing.
+        _ = RefreshUpdateStatusAsync(
+            showToastIfAvailable: _updates.IsInstalled,
+            fromButton: false);
     }
 
     private void RefreshBuildVersionChrome(string? hostVersion)
@@ -94,8 +94,15 @@ public partial class MainWindow
     /// <summary>Settings "Check for updates" — status only (git + Host /health + Presence feed).</summary>
     private async Task RefreshUpdateStatusAsync(bool showToastIfAvailable, bool fromButton)
     {
-        if (_updateBusy || _stackRestartBusy || _updates is null)
+        if (_updates is null)
             return;
+
+        if (_updateBusy || _stackRestartBusy)
+        {
+            if (fromButton)
+                SetUpdateStatus("Already checking…");
+            return;
+        }
 
         _updateBusy = true;
         SetUpdateUiBusy(true, fromButton ? "Checking for updates…" : null);
@@ -123,11 +130,18 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Quiet Presence-only check used at startup for installed builds.</summary>
+    /// <summary>Quiet Presence-only check (optional callers).</summary>
     private async Task CheckForUpdatesAsync(bool showToastIfAvailable, bool fromButton)
     {
-        if (_updateBusy || _stackRestartBusy || _updates is null)
+        if (_updates is null)
             return;
+
+        if (_updateBusy || _stackRestartBusy)
+        {
+            if (fromButton)
+                SetUpdateStatus("Already checking…");
+            return;
+        }
 
         _updateBusy = true;
         try
@@ -376,7 +390,8 @@ public partial class MainWindow
         else if (showToastIfAvailable && fromButton
                  && result.Status is PresenceUpdateCheckResult.Kind.Failed
                      or PresenceUpdateCheckResult.Kind.FeedEmpty
-                     or PresenceUpdateCheckResult.Kind.DevBuild)
+                     or PresenceUpdateCheckResult.Kind.DevBuild
+                     or PresenceUpdateCheckResult.Kind.UpToDate)
             ShowUpdateToast(result.Message, showAction: false);
     }
 

@@ -26,18 +26,33 @@ public sealed class GuestWorkspaceTests
     }
 
     [Fact]
-    public void Sudo_is_refused()
+    public void Sudo_is_refused_by_default()
     {
-        Assert.False(GuestPathGuard.TryValidateCommand("sudo apt install npm", out var error));
+        Assert.False(GuestPathGuard.TryValidateCommand("sudo systemctl restart nginx", out var error));
         Assert.Contains("sudo", error, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Shell_sudo_does_not_call_vbox()
+    public void Sudo_is_allowed_when_elevated_shell_enabled()
+    {
+        Assert.True(GuestPathGuard.TryValidateCommand(
+            "sudo systemctl restart nginx", out _, allowElevatedShell: true));
+    }
+
+    [Fact]
+    public void Package_install_stays_refused_even_with_elevated_shell()
+    {
+        Assert.False(GuestPathGuard.TryValidateCommand(
+            "sudo apt-get install nodejs", out var error, allowElevatedShell: true));
+        Assert.Contains("package install", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Shell_sudo_does_not_call_vbox_when_elevated_off()
     {
         var calls = new List<string>();
         var launcher = Launcher(calls, (_, _) => (0, "", ""));
-        var result = await launcher.ShellAsync("sudo apt-get install nodejs", null, 30);
+        var result = await launcher.ShellAsync("sudo systemctl status", null, 30);
         Assert.False(result.Success);
         Assert.Contains("sudo", result.Content, StringComparison.Ordinal);
         Assert.Empty(calls);
