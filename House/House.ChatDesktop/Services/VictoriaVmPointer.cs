@@ -390,9 +390,19 @@ public static class VictoriaVmPointer
             // Hub / default seed below.
         }
 
-        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(hubW, hubH, displayW, displayH);
-        return VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+            hubW, hubH, displayW, displayH, surfaceW, surfaceH);
+        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
             surfaceX, surfaceY, surfaceW, surfaceH, guest.Width, guest.Height);
+        if (mapped is not null)
+        {
+            PresenceStartupLog.Write(
+                $"her-screen click map surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} " +
+                $"guest={guest.Width}x{guest.Height} abs={mapped.Value.X + 1},{mapped.Value.Y + 1}" +
+                (displayW is > 0 ? " display=ok" : " display=fallback"));
+        }
+
+        return mapped;
     }
 
     [SupportedOSPlatform("windows")]
@@ -404,14 +414,34 @@ public static class VictoriaVmPointer
             if (display is null)
                 return null;
 
-            // IDisplay.getScreenResolution(screenId, out w, out h, out bpp, out xOrigin, out yOrigin)
-            object[] args = { 0, 0u, 0u, 0u, 0, 0 };
-            var modifiers = new ParameterModifier(6);
-            modifiers[1] = true;
-            modifiers[2] = true;
-            modifiers[3] = true;
-            modifiers[4] = true;
-            modifiers[5] = true;
+            // VBox 7+: getScreenResolution(..., out GuestMonitorStatus). Older: 6 args.
+            var size = TryInvokeScreenResolution(display, includeMonitorStatus: true)
+                       ?? TryInvokeScreenResolution(display, includeMonitorStatus: false);
+            if (size is not null)
+                return size;
+        }
+        catch
+        {
+            // Caller falls back to surface / hub size.
+        }
+
+        return null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static (int Width, int Height)? TryInvokeScreenResolution(
+        dynamic display, bool includeMonitorStatus)
+    {
+        try
+        {
+            // screenId, w, h, bpp, xOrigin, yOrigin [, guestMonitorStatus]
+            var args = includeMonitorStatus
+                ? new object[] { 0, 0u, 0u, 0u, 0, 0, 0 }
+                : new object[] { 0, 0u, 0u, 0u, 0, 0 };
+            var modifiers = new ParameterModifier(args.Length);
+            for (var i = 1; i < args.Length; i++)
+                modifiers[i] = true;
+
             display.GetType().InvokeMember(
                 "GetScreenResolution",
                 BindingFlags.InvokeMethod,
@@ -429,7 +459,7 @@ public static class VictoriaVmPointer
         }
         catch
         {
-            // Older COM shapes / missing display — caller falls back to hub size.
+            // Try the other arity.
         }
 
         return null;

@@ -6,10 +6,10 @@ namespace SoulCore.Protocol.Tests;
 public class VboxConsoleMouseTests
 {
     [Theory]
-    [InlineData(0, 0, 1, 0, 0, VboxConsoleMouse.LeftButton)]
-    [InlineData(509, 509, 1, 509, 509, VboxConsoleMouse.LeftButton)]
-    [InlineData(10, 20, 3, 10, 20, VboxConsoleMouse.RightButton)]
-    [InlineData(10, 20, 2, 10, 20, VboxConsoleMouse.MiddleButton)]
+    [InlineData(0, 0, 1, 1, 1, VboxConsoleMouse.LeftButton)]
+    [InlineData(509, 509, 1, 510, 510, VboxConsoleMouse.LeftButton)]
+    [InlineData(10, 20, 3, 11, 21, VboxConsoleMouse.RightButton)]
+    [InlineData(10, 20, 2, 11, 21, VboxConsoleMouse.MiddleButton)]
     public void PlanAbsolutePress_MapsOriginAndButtons(
         int x, int y, int btn, int expectAx, int expectAy, int expectFlags)
     {

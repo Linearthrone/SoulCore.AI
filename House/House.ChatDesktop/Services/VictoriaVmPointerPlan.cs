@@ -2,9 +2,9 @@ namespace House.ChatDesktop.Services;
 
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
-/// <c>putMouseEventAbsolute</c> is guest-framebuffer pixels with origin (0,0)
-/// top-left — same space as Victoria tools. Do not add +1 (that biased every
-/// click a pixel down-right for both operator and her).
+/// <c>putMouseEventAbsolute</c> is guest-display pixels starting at <c>[1,1]</c>
+/// top-left (VirtualBox SDK). Guest tools / stretch-fill stay 0-based; Absolute
+/// adds +1 at the last step.
 /// A wheel is two absolute samples at the real point: a move with no button,
 /// then the same point with <c>dz</c> set to the notch count. No Page key.
 /// </summary>
@@ -24,23 +24,31 @@ public static class VictoriaVmPointerPlan
     /// <summary>One Windows <c>WM_MOUSEWHEEL</c> detent in the high word of <c>wParam</c>.</summary>
     public const int WindowsWheelDetent = 120;
 
+    /// <summary>
+    /// Guest 0-based framebuffer pixel → Absolute [1,1] origin (SDK).
+    /// </summary>
     public static (int X, int Y) ToAbsolute(int guestX, int guestY) =>
-        (Math.Max(0, guestX), Math.Max(0, guestY));
+        (Math.Max(0, guestX) + 1, Math.Max(0, guestY) + 1);
 
     /// <summary>
-    /// Guest framebuffer size for Absolute mapping. Prefer live VirtualBox display
-    /// size, then Host hub / screenshot size, then the JPEG default. Never use the
-    /// HWND client size — Auto-resize often lags, and Absolute is framebuffer pixels
-    /// (treating the slot as the FB made clicks land far from the cursor).
+    /// Guest framebuffer size for stretch-fill. Prefer live <c>IDisplay</c> size,
+    /// then the live HWND slot (Auto-resize usually matches), then hub/screenshot,
+    /// then the JPEG default. A stale hub default of 1280×800 against a different
+    /// slot warps every click when display COM fails.
     /// </summary>
     public static (int Width, int Height) ResolveGuestFramebuffer(
         int hubWidth,
         int hubHeight,
         int? displayWidth,
-        int? displayHeight)
+        int? displayHeight,
+        int surfaceWidth = 0,
+        int surfaceHeight = 0)
     {
         if (displayWidth is > 0 && displayHeight is > 0)
             return (displayWidth.Value, displayHeight.Value);
+
+        if (surfaceWidth > 1 && surfaceHeight > 1)
+            return (surfaceWidth, surfaceHeight);
 
         if (hubWidth > 0 && hubHeight > 0)
             return (hubWidth, hubHeight);
