@@ -46,6 +46,17 @@ class HouseLampsTest {
     }
 
     @Test
+    fun `unreachable host turns every lamp off`() {
+        val cleared = HouseLamps.hostUnreachable()
+        assertEquals(LampLight.Off, cleared.soulcore)
+        assertEquals(LampLight.Off, cleared.ollama)
+        assertEquals(LampLight.Off, cleared.unreal)
+        assertEquals(LampLight.Off, cleared.comfy)
+        assertEquals(LampLight.Off, cleared.cua)
+        assertEquals(LampLight.Off, cleared.sandbox)
+    }
+
+    @Test
     fun `blank body is not a reading`() {
         assertNull(HouseLamps.parse("not-json"))
         assertNull(HouseLamps.parse("{}"))

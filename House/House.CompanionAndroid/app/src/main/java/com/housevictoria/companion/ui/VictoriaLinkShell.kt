@@ -44,7 +44,7 @@ fun VictoriaLinkShell() {
                 lamps.copy(soulcore = LampLight.On)
             connPair.first == WsConnectionState.Failed ||
                 connPair.first == WsConnectionState.Disconnected ->
-                lamps.copy(soulcore = LampLight.Off)
+                HouseLamps.hostUnreachable()
             else -> lamps
         }
     }

@@ -23,6 +23,19 @@ data class HouseLamps(
     companion object {
         fun unknown(): HouseLamps = HouseLamps()
 
+        /**
+         * Host `/health` did not answer and the chat socket is down.
+         * Every well goes off so a dead house cannot leave Ollama, Unreal, or CUA lit.
+         */
+        fun hostUnreachable(): HouseLamps = HouseLamps(
+            soulcore = LampLight.Off,
+            ollama = LampLight.Off,
+            unreal = LampLight.Off,
+            comfy = LampLight.Off,
+            cua = LampLight.Off,
+            sandbox = LampLight.Off
+        )
+
         /** Null when the body is not a health object. */
         fun parse(healthJson: String): HouseLamps? {
             val root = try {
