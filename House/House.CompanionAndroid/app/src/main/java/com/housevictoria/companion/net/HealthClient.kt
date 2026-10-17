@@ -1,5 +1,6 @@
 package com.housevictoria.companion.net
 
+import com.housevictoria.companion.data.HouseLamps
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -52,6 +53,20 @@ object HealthClient {
                 val body = resp.body?.string().orEmpty()
                 if (body.isBlank()) return@use null
                 parseCurrentActivity(body)
+            }
+        }.getOrNull()
+    }
+
+    /** House drawer lights from `/health`. Null when the house did not answer. */
+    fun readHouseLamps(wsUrl: String): HouseLamps? {
+        val url = healthUrlFromWs(wsUrl) ?: return null
+        return runCatching {
+            val req = Request.Builder().url(url).get().build()
+            http.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@use null
+                val body = resp.body?.string().orEmpty()
+                if (body.isBlank()) return@use null
+                HouseLamps.parse(body)
             }
         }.getOrNull()
     }

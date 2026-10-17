@@ -1,60 +1,73 @@
 package com.housevictoria.companion.ui
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-
-private data class LinkDest(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val destinations = listOf(
-    LinkDest("home", "Home", Icons.Default.Chat),
-    LinkDest("call", "Call", Icons.Default.Videocam),
-    LinkDest("mediagen", "MediaGen", Icons.Default.AutoAwesome),
-    LinkDest("gallery", "Gallery", Icons.Default.PhotoLibrary),
-    LinkDest("settings", "Settings", Icons.Default.Settings)
-)
+import com.housevictoria.companion.data.CompanionPrefs
+import com.housevictoria.companion.data.HouseLamps
+import com.housevictoria.companion.data.LampLight
+import com.housevictoria.companion.net.CompanionConnection
+import com.housevictoria.companion.net.HealthClient
+import com.housevictoria.companion.net.WsConnectionState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun VictoriaLinkShell() {
+    val context = LocalContext.current
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
+    var houseOpen by remember { mutableStateOf(false) }
+    var lamps by remember { mutableStateOf(HouseLamps.unknown()) }
+    val connPair by CompanionConnection.state.collectAsState()
+
+    LaunchedEffect(connPair.first, houseOpen) {
+        val wsUrl = CompanionPrefs.load(context).wsUrl
+        val read = withContext(Dispatchers.IO) { HealthClient.readHouseLamps(wsUrl) }
+        lamps = when {
+            read != null -> read
+            connPair.first == WsConnectionState.Connected ->
+                lamps.copy(soulcore = LampLight.On)
+            connPair.first == WsConnectionState.Failed ||
+                connPair.first == WsConnectionState.Disconnected ->
+                lamps.copy(soulcore = LampLight.Off)
+            else -> lamps
+        }
+    }
+
+    fun go(route: String) {
+        houseOpen = false
+        nav.navigate(route) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     Scaffold(
+        containerColor = HousePalette.Ink,
         bottomBar = {
-            NavigationBar {
-                destinations.forEach { dest ->
-                    NavigationBarItem(
-                        selected = current == dest.route,
-                        onClick = {
-                            nav.navigate(dest.route) {
-                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label) }
-                    )
-                }
-            }
+            HouseDrawer(
+                open = houseOpen,
+                lamps = lamps,
+                currentRoute = current,
+                onToggle = { houseOpen = !houseOpen },
+                onNavigate = { route -> go(route) }
+            )
         }
     ) { padding ->
         NavHost(
@@ -62,7 +75,7 @@ fun VictoriaLinkShell() {
             startDestination = "home",
             modifier = Modifier.padding(padding)
         ) {
-            composable("home") { ChatScreen(onOpenSettings = { nav.navigate("settings") }) }
+            composable("home") { ChatScreen() }
             composable("call") { VideoCallScreen() }
             composable("mediagen") { MediaGenScreen() }
             composable("gallery") { GalleryScreen() }
