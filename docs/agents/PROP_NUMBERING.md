@@ -57,6 +57,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Sent to PM** 2026-10-05 — Kurt-locked; execute on `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
 | PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **Code complete** 2026-10-12 — 17.2–17.6 Pass; 17.1 Partial+17.6; PRs #149–#152; Windows/device smoke remaining | 17.1–17.6 |
+| PROP-18-chronology-and-felt-persistence | Dated memory compose + felt persistence (HUD / while-you-were-gone); dual-path beyond relevance pile | **Unexecuted** — parked pending Kurt Q1–Q4 (proof of life, tape shape, idle ceiling, voice wake) | 18.1–18.5 suggested |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -67,7 +68,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **18**.
+Next free `N`: **19**.
 
 ## Open items (not on `main`)
 
@@ -85,6 +86,7 @@ Next free `N`: **18**.
 | **PROP-15** | PM-01 | Sent 2026-10-05. Intake `PROP-15-TT01-to-PM01.md`. Execute on CreatorEdition; awaiting PM splits 15.0–15.6. |
 | **PROP-16** | FED/OPS | **In progress** — 16.1 LocalStackControl+UI + 16.2 restart-stack.ps1 on `cursor/prop16-host-update-stack-9531` |
 | **PROP-17** | BED/FED | **In progress** — 17.2+17.3 Pass on #150; 17.4 on `main` (#149); 17.6 Pass on #151; 17.1 Partial accepted with 17.6. **17.5 START NOW** (phone mood/doing-line). LeisureModel `qwen2.5:1.5b` |
+| **PROP-18** | TT-01 | Unexecuted. Chronology + felt persistence. Lock Q1–Q4 before send-to-PM. Builds on PROP-17; does not reopen it. |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.
