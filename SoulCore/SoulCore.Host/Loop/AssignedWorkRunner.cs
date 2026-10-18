@@ -167,6 +167,23 @@ public sealed class AssignedWorkRunner
         }
 
         var visible = WorkContinuation.VisibleText(reply, continuing: true);
+        // Persist into presence-local so the next assigned pass (and human chat)
+        // sees tool-loop context — previously every pass was amnesiac.
+        try
+        {
+            _history.AppendTurn(
+                WorkContinuation.PresenceSessionId,
+                new[]
+                {
+                    new ChatMessage { Role = "user", Content = prompt },
+                    new ChatMessage { Role = "assistant", Content = visible }
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Assigned work history append failed");
+        }
+
         await ReflectEmotionAsync(visible, cancellationToken).ConfigureAwait(false);
 
         var workResults = noting.Results
