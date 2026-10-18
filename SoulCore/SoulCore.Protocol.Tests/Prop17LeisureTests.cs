@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SoulCore.Config;
 using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
@@ -214,6 +215,19 @@ public class Prop17LeisureTests
         Assert.True(LeisureTools.IsAllowed("task_create"));
         Assert.True(LeisureTools.IsAllowed("research_subject_open"));
         Assert.True(LeisureTools.IsAllowed("research_paper_write"));
+        Assert.True(LeisureTools.IsLeisureOnly("research_paper_write"));
+        Assert.False(LeisureTools.IsLeisureOnly("task_list"));
+        Assert.False(LeisureTools.IsLeisureOnly("desktop_screenshot"));
+
+        var mixed = new[]
+        {
+            new ToolDefinition("research_paper_write", "x", JsonDocument.Parse("{}").RootElement),
+            new ToolDefinition("task_list", "y", JsonDocument.Parse("{}").RootElement),
+            new ToolDefinition("desktop_screenshot", "z", JsonDocument.Parse("{}").RootElement)
+        };
+        var work = LeisureTools.ForWorkSurface(mixed);
+        Assert.Equal(2, work.Count);
+        Assert.DoesNotContain(work, d => d.Name.StartsWith("research_", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

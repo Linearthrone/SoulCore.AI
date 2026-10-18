@@ -125,11 +125,17 @@ public sealed class ChatSendHandler
         if (chatText.Length == 0)
             chatText = "Kayleigh attached an image. Look at it carefully and respond.";
 
+        // Abort R&R before waiting on the turn gate so leisure releases promptly
+        // instead of forcing Kayleigh's chat to queue behind an APA/research pass.
+        _lease?.Abort("human-chat");
+        _leisure?.Clear();
+
         var holdGate = _turnGate is not null;
         if (holdGate)
             await _turnGate!.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+        // Re-assert after the wait in case a leisure tick raced the abort.
         _lease?.Abort("human-chat");
         _leisure?.Clear();
 
@@ -569,7 +575,7 @@ public sealed class ChatSendHandler
             prior.Count,
             images?.Count ?? 0);
 
-        var tools = _toolRegistry.GetDefinitions();
+        var tools = LeisureTools.ForWorkSurface(_toolRegistry.GetDefinitions());
         var trackingRegistry = new TrackingToolRegistry(
             _toolRegistry, dispatchedToolNames, toolTrace, beforeTool);
 

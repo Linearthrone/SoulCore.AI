@@ -145,8 +145,9 @@ public sealed class AssignedWorkRunner
         });
 
         _logger.LogInformation("Assigned work pass starting. id={Id} streak={Streak}", task.Id, _noToolStreak);
+        var workTools = LeisureTools.ForWorkSurface(_tools.GetDefinitions());
         var reply = await _inference
-            .CompleteWithToolsAsync(messages, _tools.GetDefinitions(), noting, cancellationToken)
+            .CompleteWithToolsAsync(messages, workTools, noting, cancellationToken)
             .ConfigureAwait(false);
 
         reply = (reply ?? "").Trim();
