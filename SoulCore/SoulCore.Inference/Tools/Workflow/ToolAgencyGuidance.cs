@@ -22,6 +22,8 @@ public static class ToolAgencyGuidance
         "task_create is only for a concrete to-do she asked you to remember. " +
         "Do not create a task from a go-ahead or from the message you are already doing. " +
         "A go-ahead means start the next task already on the list.\n" +
+        "research_* journal tools are R&R/hobby only — not available on this chat/work turn. " +
+        "Do not write APA papers or open research subjects while talking to Kayleigh or working a task.\n" +
         "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
         "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
         "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).";

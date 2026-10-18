@@ -51,6 +51,22 @@ public static class LeisureTools
         "task_delete"
     };
 
+    /// <summary>
+    /// Hobby/R&amp;R-only tools. Still registered globally for leisure filtering,
+    /// but must not be advertised on Kayleigh chat or assigned-work turns.
+    /// </summary>
+    private static readonly HashSet<string> LeisureOnly = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "research_subject_list",
+        "research_subject_open",
+        "research_paper_list",
+        "research_paper_get",
+        "research_paper_write"
+    };
+
+    public static bool IsLeisureOnly(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && LeisureOnly.Contains(name);
+
     public static bool IsAllowed(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -70,6 +86,14 @@ public static class LeisureTools
         if (all is null || all.Count == 0)
             return Array.Empty<ToolDefinition>();
         return all.Where(d => IsAllowed(d.Name)).ToList();
+    }
+
+    /// <summary>Drop R&amp;R-only tools from chat / assigned-work tool lists.</summary>
+    public static IReadOnlyList<ToolDefinition> ForWorkSurface(IReadOnlyList<ToolDefinition> all)
+    {
+        if (all is null || all.Count == 0)
+            return Array.Empty<ToolDefinition>();
+        return all.Where(d => !IsLeisureOnly(d.Name)).ToList();
     }
 
     public static IToolRegistry FilterRegistry(IToolRegistry inner) =>
