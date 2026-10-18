@@ -48,6 +48,16 @@ public class WorkContinuationTests
     }
 
     [Fact]
+    public void Empty_after_tools_line_keeps_work_going()
+    {
+        Assert.True(WorkContinuation.ShouldKeepGoing(
+            "complete the lesson",
+            WorkContinuation.EmptyAfterToolsLine,
+            usedWorkTools: true));
+        Assert.False(string.IsNullOrWhiteSpace(WorkContinuation.EmptyAfterToolsLine));
+    }
+
+    [Fact]
     public void Screenshot_phrase_is_looking()
     {
         Assert.Equal("Looking at the screen", WorkContinuation.PhraseForTool("desktop_screenshot"));

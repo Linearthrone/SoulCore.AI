@@ -51,6 +51,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// </summary>
     public const string IterationCapMarker = "[agent loop hit MaxToolIterations cap without a final text turn]";
 
+    /// <summary>
+    /// Fallback when tools ran but the model returned blank final text (gemma4).
+    /// Prefer a short continue line over an empty chat bubble / Host throw.
+    /// </summary>
+    public const string EmptyAfterToolsMarker =
+        "That step finished. Continuing from where I left off.";
+
     private readonly HttpClient _http;
     private readonly InferenceOptions _options;
     private readonly ILogger<OllamaInferenceClient> _logger;
@@ -198,6 +205,10 @@ public sealed class OllamaInferenceClient : IInferenceClient
         // Track the last assistant text so the cap-return path has something
         // to surface when the model's final turn emitted only tool_calls.
         var lastAssistantText = string.Empty;
+        // True after any tool dispatch this loop — empty final text must not
+        // wipe the turn (gemma4 often returns blank after desktop_* tools).
+        var toolsDispatched = false;
+        var emptyFinalNudgeUsed = false;
 
         // BED-168: ForceTool stays active until a tool_calls round is processed
         // (dispatch or refuse). Text-only on a force round must not end the
@@ -278,6 +289,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 var result = await toolRegistry.ExecuteAsync(name, args, cancellationToken)
                     .ConfigureAwait(false);
                 openOk = openOk && result.Success;
+                toolsDispatched = true;
                 await AppendToolFeedbackAsync(ollamaMessages, name, result, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -387,7 +399,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     _logger.LogWarning(
                         "[timing] ollama.chat empty iter={Iter} ms={Ms} endpoint={Endpoint} body={Body}",
                         iteration, modelSw.ElapsedMilliseconds, endpoint, TextUtil.Truncate(body, 400));
-                    return lastAssistantText;
+                    return ResolveEmptyLoopExit(lastAssistantText, toolsDispatched, ollamaMessages);
                 }
 
                 _logger.LogDebug(
@@ -432,7 +444,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     _logger.LogWarning(
                         "[timing] ollama.chat empty iter={Iter} ms={Ms} endpoint={Endpoint} body={Body}",
                         iteration, modelSw.ElapsedMilliseconds, endpoint, TextUtil.Truncate(body, 400));
-                    return lastAssistantText;
+                    return ResolveEmptyLoopExit(lastAssistantText, toolsDispatched, ollamaMessages);
                 }
             }
 
@@ -525,6 +537,36 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 }
                 else
                 {
+                    // Prefer any earlier non-empty assistant text when the final
+                    // post-tool turn is blank (gemma4 habit after desktop_open_app).
+                    var textReply = !string.IsNullOrWhiteSpace(assistantText)
+                        ? assistantText
+                        : lastAssistantText;
+
+                    // Tools ran, model returned blank — one nudge for a status line
+                    // before synthesizing. Avoids the Host empty-throw Continue tax.
+                    if (string.IsNullOrWhiteSpace(textReply)
+                        && toolsDispatched
+                        && !emptyFinalNudgeUsed
+                        && iteration + 1 < cap)
+                    {
+                        emptyFinalNudgeUsed = true;
+                        ollamaMessages.Add(new OllamaChatMessage
+                        {
+                            Role = "assistant",
+                            Content = assistantText ?? string.Empty
+                        });
+                        ollamaMessages.Add(new OllamaChatMessage
+                        {
+                            Role = "user",
+                            Content = BuildEmptyFinalNudge()
+                        });
+                        _logger.LogInformation(
+                            "Ollama empty post-tool text — retry nudge for a status line iter={Iter}.",
+                            iteration);
+                        continue;
+                    }
+
                     _logger.LogDebug(
                         "Ollama agent loop end at iteration {Iter}: text reply (no tool_calls, recovered={Recovered}, forceActive={Force}).",
                         iteration, recovered, forceActive);
@@ -532,11 +574,15 @@ public sealed class OllamaInferenceClient : IInferenceClient
                         "[timing] ollama.loop end iter={Iter} totalMs={Ms} reason=text",
                         iteration,
                         loopSw.ElapsedMilliseconds);
-                    // Prefer any earlier non-empty assistant text when the final
-                    // post-tool turn is blank (gemma4 habit after desktop_open_app).
-                    var textReply = !string.IsNullOrWhiteSpace(assistantText)
-                        ? assistantText
-                        : lastAssistantText;
+
+                    if (string.IsNullOrWhiteSpace(textReply) && toolsDispatched)
+                    {
+                        textReply = SynthesizePostToolContinue(ollamaMessages);
+                        _logger.LogInformation(
+                            "Ollama empty post-tool text — synthesized continue line iter={Iter}.",
+                            iteration);
+                    }
+
                     return FirewallAssistantReply(textReply);
                 }
             }
@@ -601,6 +647,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     "[timing] tool.exec iter={Iter} tool#{Index} name={Name} ok={Ok} ms={Ms} contentLen={Len}",
                     iteration, i, name, result.Success, toolSw.ElapsedMilliseconds, result.Content?.Length ?? 0);
 
+                toolsDispatched = true;
+
                 // BED-125: tool Content is the string the model reads. Screenshot
                 // bytes attach as images[] (never JSON Data). Gemma4 also gets a
                 // synthetic user turn with the PNG — Ollama vision attends to
@@ -645,9 +693,64 @@ public sealed class OllamaInferenceClient : IInferenceClient
             "[timing] ollama.loop CAP iter={Cap} totalMs={Ms} — returning last assistant text or cap marker.",
             cap,
             loopSw.ElapsedMilliseconds);
+        // Cap mid-tool-call must keep IterationCapMarker so WorkContinuation
+        // auto-continues. Empty post-tool text is handled on the text-only exit.
         return string.IsNullOrEmpty(lastAssistantText)
             ? IterationCapMarker
             : FirewallAssistantReply(lastAssistantText);
+    }
+
+    private string ResolveEmptyLoopExit(
+        string lastAssistantText,
+        bool toolsDispatched,
+        IReadOnlyList<OllamaChatMessage> messages)
+    {
+        if (!string.IsNullOrWhiteSpace(lastAssistantText))
+            return FirewallAssistantReply(lastAssistantText);
+        if (toolsDispatched)
+            return FirewallAssistantReply(SynthesizePostToolContinue(messages));
+        return lastAssistantText ?? string.Empty;
+    }
+
+    /// <summary>
+    /// User nudge after a blank post-tool assistant turn so gemma4 emits a short
+    /// status instead of ending the Host turn empty.
+    /// </summary>
+    private static string BuildEmptyFinalNudge() =>
+        "Reply in one short sentence about what you just did with the tool(s) and what you will do next. " +
+        "Do not call a tool in this reply unless the next step truly requires it.";
+
+    /// <summary>
+    /// Non-empty continue line when the model still returns blank after tools.
+    /// Prefer the last tool Content snippet when it is short and readable.
+    /// </summary>
+    private static string SynthesizePostToolContinue(IReadOnlyList<OllamaChatMessage> messages)
+    {
+        for (var i = messages.Count - 1; i >= 0; i--)
+        {
+            var m = messages[i];
+            if (m is null || !string.Equals(m.Role, "tool", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var content = (m.Content ?? string.Empty).Trim();
+            if (content.Length == 0)
+                continue;
+            // Screenshot / huge payloads are not chat-worthy.
+            if (content.Length > 240 || content.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                break;
+            if (content.StartsWith("error:", StringComparison.OrdinalIgnoreCase))
+                return content.Length > 200 ? content[..200].TrimEnd() + "…" : content;
+            return EmptyAfterToolsMarker + " (" + TruncateForContinue(content, 120) + ")";
+        }
+
+        return EmptyAfterToolsMarker;
+    }
+
+    private static string TruncateForContinue(string text, int max)
+    {
+        var flat = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        if (flat.Length <= max)
+            return flat;
+        return flat[..(max - 1)].TrimEnd() + "…";
     }
 
     /// <summary>

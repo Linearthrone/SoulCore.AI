@@ -582,8 +582,21 @@ public sealed class ChatSendHandler
 
         if (replyText is null || provider is null)
         {
-            throw lastError ?? new InvalidOperationException(
-                "LLM tool-loop returned empty reply from Ollama.");
+            // Tools already ran — do not throw empty and force Kayleigh to Continue.
+            // Synthesize a continue line so WorkContinuation can keep the pass going.
+            if (toolTrace.Count > 0)
+            {
+                replyText = WorkContinuation.EmptyAfterToolsLine;
+                provider = "ollama";
+                _logger.LogWarning(
+                    "Ollama tool-loop returned empty after {ToolCount} tool(s); synthesizing continue line.",
+                    toolTrace.Count);
+            }
+            else
+            {
+                throw lastError ?? new InvalidOperationException(
+                    "LLM tool-loop returned empty reply from Ollama.");
+            }
         }
 
         AppendToolLoopTurn(historySessionId, text, toolTrace, replyText);

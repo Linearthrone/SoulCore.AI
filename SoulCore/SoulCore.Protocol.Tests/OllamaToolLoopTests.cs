@@ -808,6 +808,64 @@ public class OllamaToolLoopTests
     }
 
     [Fact]
+    public async Task EmptyPostToolFinal_NudgesThenSynthesizesContinue_WhenStillBlank()
+    {
+        // gemma4 habit: tool_call → blank final text. Nudge once; still blank → synthesize.
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new { function = new { name = "echo", arguments = new { text = "hi" } } }
+                }),
+                ChatResponseJson(content: "", toolCalls: null),
+                ChatResponseJson(content: "", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("echo", _ => new ToolResult(true, "echo: hi", null)));
+        var client = MakeClient(handler, options: MakeOptions(maxToolIterations: 8), registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "echo hi" } },
+            new[] { EchoToolDef() },
+            registry);
+
+        Assert.Contains(OllamaInferenceClient.EmptyAfterToolsMarker, result, StringComparison.Ordinal);
+        Assert.Equal(3, handler.CallCount);
+        Assert.Single(registry.Calls);
+        var nudgeReq = handler.CapturedRequests[2];
+        Assert.Contains(nudgeReq.Messages, m =>
+            m.Role == "user"
+            && (m.Content ?? "").Contains("short sentence", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task EmptyPostToolFinal_NudgeRecoversWhenModelSpeaks()
+    {
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "", toolCalls: new[]
+                {
+                    new { function = new { name = "echo", arguments = new { text = "hi" } } }
+                }),
+                ChatResponseJson(content: "", toolCalls: null),
+                ChatResponseJson(content: "I echoed hi and I'm ready for the next step.", toolCalls: null)
+            });
+        var registry = new ScriptedRegistry(
+            ("echo", _ => new ToolResult(true, "echo: hi", null)));
+        var client = MakeClient(handler, options: MakeOptions(maxToolIterations: 8), registry: registry);
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "echo hi" } },
+            new[] { EchoToolDef() },
+            registry);
+
+        Assert.Equal("I echoed hi and I'm ready for the next step.", result);
+        Assert.Equal(3, handler.CallCount);
+    }
+
+    [Fact]
     public async Task IterationCap_StopsAfterN_WhenModelKeepsCallingTools()
     {
         // Model always emits a tool_call → cap kicks in at N=3.
