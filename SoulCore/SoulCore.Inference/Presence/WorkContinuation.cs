@@ -10,8 +10,11 @@ namespace SoulCore.Inference.Presence;
 /// </summary>
 public static class WorkContinuation
 {
-    /// <summary>Extra model passes after the first, so a full tool round does not end the task.</summary>
-    public const int MaxExtraPasses = 3;
+    /// <summary>
+    /// Extra model passes after the first. gemma4 often ends each tool round blank;
+    /// a budget of 3 made Kayleigh Continue every few steps on real desk work.
+    /// </summary>
+    public const int MaxExtraPasses = 16;
 
     public const string Nudge =
         "Continue the unfinished task from where you left off. Take the next concrete step. " +
@@ -173,6 +176,16 @@ public static class WorkContinuation
            && reply.Contains(OllamaInferenceClient.IterationCapMarker, StringComparison.Ordinal);
 
     /// <summary>
+    /// True when the model (or Host fallback) ended a tool round with the empty-after-tools
+    /// continue line — treat like a tool-cap so outer WorkContinuation keeps going even if
+    /// <paramref name="usedWorkTools"/> was not recorded on the Host trace.
+    /// </summary>
+    public static bool HitEmptyAfterTools(string? reply)
+        => !string.IsNullOrWhiteSpace(reply)
+           && (reply.Contains(EmptyAfterToolsLine, StringComparison.Ordinal)
+               || reply.Contains(OllamaInferenceClient.EmptyAfterToolsMarker, StringComparison.Ordinal));
+
+    /// <summary>
     /// True when she was in the middle of desktop or browser work and did not
     /// hand the turn back. Social replies with no work tools do not continue.
     /// </summary>
@@ -180,7 +193,7 @@ public static class WorkContinuation
     {
         if (IsUserStop(userText))
             return false;
-        if (HitToolCap(reply))
+        if (HitToolCap(reply) || HitEmptyAfterTools(reply))
             return true;
         if (!usedWorkTools)
             return false;
@@ -215,8 +228,10 @@ public static class WorkContinuation
 
     public static string VisibleText(string reply, bool continuing)
     {
-        if (!HitToolCap(reply))
-            return reply;
-        return continuing ? ContinuingLine : PausedLine;
+        if (HitToolCap(reply))
+            return continuing ? ContinuingLine : PausedLine;
+        if (HitEmptyAfterTools(reply))
+            return continuing ? ContinuingLine : reply;
+        return reply;
     }
 }

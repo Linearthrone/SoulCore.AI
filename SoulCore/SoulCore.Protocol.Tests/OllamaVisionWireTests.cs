@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using SoulCore.Config;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
@@ -19,7 +21,8 @@ public class OllamaVisionWireTests
     [Fact]
     public async Task ScreenshotToolResult_AddsUserVisionFollowUp_WithImagesOnWire()
     {
-        var png = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0 });
+        // Must be a real decodable PNG — ToolImagePayload rejects garbage bytes.
+        var png = MakePng(32, 24);
         var handler = new VisionScriptedHandler(new[]
         {
             OpenAiForceScreenshot(),
@@ -29,7 +32,7 @@ public class OllamaVisionWireTests
             ("desktop_screenshot", _ => new ToolResult(
                 true,
                 "captured 1280x800",
-                new { bytes = Convert.FromBase64String(png), format = "png" })));
+                new { bytes = png, format = "png" })));
         var client = MakeClient(handler, registry);
 
         await client.CompleteWithToolsAsync(
@@ -46,6 +49,14 @@ public class OllamaVisionWireTests
         Assert.NotNull(userVision);
         Assert.NotNull(userVision!.Images);
         Assert.Single(userVision.Images!);
+    }
+
+    private static byte[] MakePng(int width, int height)
+    {
+        using var img = new Image<Rgba32>(width, height);
+        using var ms = new MemoryStream();
+        img.SaveAsPng(ms);
+        return ms.ToArray();
     }
 
     private static OllamaInferenceClient MakeClient(HttpMessageHandler handler, IToolRegistry registry)

@@ -78,6 +78,35 @@ public class VictoriaVmPointerPlanTests
     }
 
     [Fact]
+    public void ShouldStashPress_And_InjectOnRelease_HostButtonParity()
+    {
+        Assert.True(VictoriaVmPointerPlan.ShouldStashPress(buttonChanged: true, buttons: 1));
+        Assert.False(VictoriaVmPointerPlan.ShouldStashPress(buttonChanged: true, buttons: 0));
+        Assert.False(VictoriaVmPointerPlan.ShouldStashPress(buttonChanged: false, buttons: 1));
+
+        Assert.True(VictoriaVmPointerPlan.ShouldInjectOnRelease(
+            buttonChanged: true, buttons: 0, hasPending: true));
+        Assert.False(VictoriaVmPointerPlan.ShouldInjectOnRelease(
+            buttonChanged: true, buttons: 0, hasPending: false));
+        Assert.False(VictoriaVmPointerPlan.ShouldInjectOnRelease(
+            buttonChanged: true, buttons: 1, hasPending: true));
+    }
+
+    [Fact]
+    public void FormatClickDeliveryLine_IncludesParkAndSent()
+    {
+        var ok = VictoriaVmPointerPlan.FormatClickDeliveryLine(10, 20, 1, parkOk: true, sent: true, null);
+        Assert.Contains("park=ok", ok, StringComparison.Ordinal);
+        Assert.Contains("sent", ok, StringComparison.Ordinal);
+        Assert.Contains("abs=11,21", ok, StringComparison.Ordinal);
+
+        var fail = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            10, 20, 1, parkOk: false, sent: false, "boom");
+        Assert.Contains("park=failed", fail, StringComparison.Ordinal);
+        Assert.Contains("COM error: boom", fail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StretchFill_SlotVsGuestFramebuffer_MapsCenterCorrectly()
     {
         // Regression: treating slot 900×600 as the FB sent Absolute(450,300) for a

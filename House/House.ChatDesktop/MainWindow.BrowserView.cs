@@ -608,6 +608,13 @@ public partial class MainWindow
     }
 
     private bool _vmPointerFaultHooked;
+    /// <summary>Stashed press for inject-on-release (Host Absolute / MI parity).</summary>
+    private bool _herClickPending;
+    private int _herClickButtons;
+    private int _herClickX;
+    private int _herClickY;
+    private int _herClickW;
+    private int _herClickH;
 
     private void EnsureVmPointer(nint parent)
     {
@@ -648,11 +655,36 @@ public partial class MainWindow
             return;
         }
 
-        if (!sample.ButtonChanged || sample.Buttons == 0)
+        if (!sample.ButtonChanged)
             return;
 
-        VictoriaVmPointer.PostFromSurface(
-            sample.X, sample.Y, sample.Width, sample.Height, sample.Buttons, 0);
+        // Inject Absolute only after host button-up. Injecting on WM_*BUTTONDOWN while
+        // SetCapture + host LButton are still down lets Mouse Integration clear the press
+        // (Host desktop_click always injects with host buttons up).
+        if (VictoriaVmPointerPlan.ShouldStashPress(sample.ButtonChanged, sample.Buttons))
+        {
+            _herClickPending = true;
+            _herClickButtons = sample.Buttons;
+            _herClickX = sample.X;
+            _herClickY = sample.Y;
+            _herClickW = sample.Width;
+            _herClickH = sample.Height;
+            return;
+        }
+
+        if (!VictoriaVmPointerPlan.ShouldInjectOnRelease(
+                sample.ButtonChanged, sample.Buttons, _herClickPending))
+            return;
+
+        var buttons = _herClickButtons;
+        var x = _herClickX;
+        var y = _herClickY;
+        var w = _herClickW;
+        var h = _herClickH;
+        _herClickPending = false;
+        _herClickButtons = 0;
+
+        VictoriaVmPointer.PostFromSurface(x, y, w, h, buttons, 0);
     }
 
     /// <summary>

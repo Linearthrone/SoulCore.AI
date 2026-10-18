@@ -477,14 +477,28 @@ public static class VictoriaVmPointer
             return;
 
         var (ax, ay) = VictoriaVmPointerPlan.ToAbsolute(guestX, guestY);
-        WithCursorParked(_excludeHwnd, () =>
+        var parkOk = false;
+        try
         {
-            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
-            Thread.Sleep(30);
-            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, buttons);
-            Thread.Sleep(40);
-            mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
-        });
+            parkOk = WithCursorParked(_excludeHwnd, () =>
+            {
+                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
+                Thread.Sleep(50);
+                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, buttons);
+                Thread.Sleep(50);
+                mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
+            });
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatClickDeliveryLine(
+                    guestX, guestY, buttons, parkOk, sent: true, comError: null));
+        }
+        catch (Exception ex)
+        {
+            PresenceStartupLog.Write(
+                VictoriaVmPointerPlan.FormatClickDeliveryLine(
+                    guestX, guestY, buttons, parkOk, sent: false, comError: ex.Message));
+            throw;
+        }
     }
 
     /// <summary>
@@ -827,13 +841,14 @@ public static class VictoriaVmPointer
     /// Park off Presence (and the reparented VM HWND) before Absolute button
     /// changes. Matches Host <c>HostPointerPark</c>: multi-candidate virtual-screen
     /// corners, not a weak ±24px nudge that snaps back onto fullscreen Presence.
+    /// Returns whether the cursor landed outside every exclude rect before inject.
     /// </summary>
-    private static void WithCursorParked(nint excludeHwnd, Action body)
+    private static bool WithCursorParked(nint excludeHwnd, Action body)
     {
         if (!OperatingSystem.IsWindows() || !GetCursorPos(out var saved))
         {
             body();
-            return;
+            return false;
         }
 
         var excludes = BuildParkExcludes(excludeHwnd);
@@ -861,6 +876,9 @@ public static class VictoriaVmPointer
             var fallback = VictoriaVmPointerPlan.PickParkPoint(excludes, vx, vy, vw, vh);
             _ = SetCursorPos(fallback.X, fallback.Y);
             Thread.Sleep(ParkSettleMs);
+            if (GetCursorPos(out var now)
+                && !VictoriaVmPointerPlan.IsInsideAnyPark(now.X, now.Y, excludes))
+                parked = true;
         }
 
         try
@@ -872,6 +890,8 @@ public static class VictoriaVmPointer
         {
             _ = SetCursorPos(saved.X, saved.Y);
         }
+
+        return parked;
     }
 
     private static List<VictoriaVmPointerPlan.ParkRect> BuildParkExcludes(nint excludeHwnd)

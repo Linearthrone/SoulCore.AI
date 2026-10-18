@@ -54,7 +54,16 @@ public class WorkContinuationTests
             "complete the lesson",
             WorkContinuation.EmptyAfterToolsLine,
             usedWorkTools: true));
-        Assert.False(string.IsNullOrWhiteSpace(WorkContinuation.EmptyAfterToolsLine));
+        // Even when Host toolTrace missed the work tool, the marker must continue.
+        Assert.True(WorkContinuation.ShouldKeepGoing(
+            "complete the lesson",
+            WorkContinuation.EmptyAfterToolsLine,
+            usedWorkTools: false));
+        Assert.True(WorkContinuation.HitEmptyAfterTools(WorkContinuation.EmptyAfterToolsLine));
+        Assert.Equal(
+            WorkContinuation.ContinuingLine,
+            WorkContinuation.VisibleText(WorkContinuation.EmptyAfterToolsLine, continuing: true));
+        Assert.True(WorkContinuation.MaxExtraPasses >= 12);
     }
 
     [Fact]

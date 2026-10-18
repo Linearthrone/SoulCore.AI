@@ -140,6 +140,38 @@ public static class VictoriaVmPointerPlan
         $"her-screen click surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} dropped-unmapped";
 
     /// <summary>
+    /// Host <c>desktop_click</c> injects Absolute with host buttons up. Presence must
+    /// not inject Absolute on WM_*BUTTONDOWN while the operator button is still down
+    /// (Mouse Integration fights the Absolute edge). Stash on press; inject on release.
+    /// </summary>
+    public static bool ShouldStashPress(bool buttonChanged, int buttons) =>
+        buttonChanged && buttons != 0;
+
+    /// <summary>True when this sample is a full button-up after a stashed press.</summary>
+    public static bool ShouldInjectOnRelease(bool buttonChanged, int buttons, bool hasPending) =>
+        buttonChanged && buttons == 0 && hasPending;
+
+    /// <summary>One startup-log line after a click Absolute burst (park + inject).</summary>
+    public static string FormatClickDeliveryLine(
+        int guestX, int guestY, int buttons, bool parkOk, bool sent, string? comError)
+    {
+        var (ax, ay) = ToAbsolute(guestX, guestY);
+        var head =
+            $"her-screen click abs={ax},{ay} buttons={buttons} park={(parkOk ? "ok" : "failed")}";
+        if (sent && string.IsNullOrWhiteSpace(comError))
+            return head + " sent";
+
+        var reason = string.IsNullOrWhiteSpace(comError) ? "console click failed" : comError;
+        var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+        if (flat.Length == 0)
+            flat = "failed";
+        return head + " COM error: " + flat;
+    }
+
+    /// <summary>
     /// Mouse Integration keeps rewriting the guest pointer while the Windows cursor
     /// sits over Presence. A button change has to be sent with the cursor parked
     /// outside that window or the press is cleared before the guest sees it.
