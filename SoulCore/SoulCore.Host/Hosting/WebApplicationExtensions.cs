@@ -86,6 +86,8 @@ internal static class WebApplicationExtensions
             CharterService charter,
             SoulCore.Inference.Presence.IPresenceActivityHub presenceActivity,
             SoulCore.Inference.Presence.ILeisureSession leisure,
+            IVictoriaTaskStore victoriaTasks,
+            SoulCore.Inference.Presence.IAssignedWorkStore assignedWork,
             CancellationToken cancellationToken) =>
         {
             var inferenceOptions = inferenceOpts.Value;
@@ -128,6 +130,19 @@ internal static class WebApplicationExtensions
 
             var charterFullyLocked = charterTotal > 0 && charterLocked == charterTotal;
 
+            var taskCount = 0;
+            long? runningTaskId = null;
+            try
+            {
+                var ledger = await victoriaTasks.ListAsync(null, cancellationToken).ConfigureAwait(false);
+                taskCount = ledger.Count;
+                runningTaskId = assignedWork.RunningId;
+            }
+            catch (Exception)
+            {
+                // health stays up even if the ledger query fails
+            }
+
             return Results.Json(new
             {
                 status = memoryOk ? "ok" : "degraded",
@@ -136,6 +151,11 @@ internal static class WebApplicationExtensions
                 bind = opts.Value.BindAddress,
                 port = opts.Value.Port,
                 phase = 1,
+                tasks = new
+                {
+                    count = taskCount,
+                    runningId = runningTaskId
+                },
                 ws = new
                 {
                     path = chatOpts.Value.Path,
@@ -213,21 +233,117 @@ internal static class WebApplicationExtensions
             });
         });
 
-        // Operator ledger. Not a model tool — Victoria cannot call DELETE.
+        // Operator ledger (Presence). Victoria also has task_* tools including task_delete.
         app.MapGet("/tasks", async (IVictoriaTaskStore tasks, CancellationToken cancellationToken) =>
         {
             var rows = await tasks.ListAsync(null, cancellationToken).ConfigureAwait(false);
             return Results.Json(new
             {
-                tasks = rows.Select(t => new
-                {
-                    id = t.Id,
-                    title = t.Title,
-                    status = t.Status,
-                    surface = t.Surface,
-                    priority = t.Priority
-                })
+                count = rows.Count,
+                tasks = rows.Select(TaskLedgerDto)
             });
+        });
+
+        app.MapPost("/tasks", async (
+            HttpRequest request,
+            IVictoriaTaskStore tasks,
+            CancellationToken cancellationToken) =>
+        {
+            using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return Results.Json(new { error = "expected JSON object" }, statusCode: StatusCodes.Status400BadRequest);
+
+            if (!root.TryGetProperty("title", out var titleEl) || titleEl.ValueKind != JsonValueKind.String)
+                return Results.Json(new { error = "title is required" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var title = titleEl.GetString();
+            if (string.IsNullOrWhiteSpace(title))
+                return Results.Json(new { error = "title must be non-empty" }, statusCode: StatusCodes.Status400BadRequest);
+
+            string? description = ReadOptionalString(root, "description");
+            string? priority = ReadOptionalString(root, "priority");
+            string? surface = ReadOptionalString(root, "surface");
+            string? status = ReadOptionalString(root, "status");
+            string? notes = ReadOptionalString(root, "notes");
+            var ready = false;
+            if (root.TryGetProperty("ready", out var readyEl))
+            {
+                ready = readyEl.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.String => string.Equals(readyEl.GetString(), "true", StringComparison.OrdinalIgnoreCase),
+                    _ => false
+                };
+            }
+
+            try
+            {
+                var id = await tasks.CreateAsync(
+                    title.Trim(),
+                    description,
+                    priority,
+                    surface,
+                    ready,
+                    status,
+                    notes,
+                    cancellationToken).ConfigureAwait(false);
+                var row = await tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
+                if (row is null)
+                    return Results.Json(new { error = "created but not found", id }, statusCode: StatusCodes.Status500InternalServerError);
+                return Results.Json(new { id, task = TaskLedgerDto(row) });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+
+        app.MapPost("/tasks/{id:long}/suspend", async (
+            long id,
+            HttpRequest request,
+            IVictoriaTaskStore tasks,
+            SoulCore.Inference.Presence.IAssignedWorkStore assigned,
+            CancellationToken cancellationToken) =>
+        {
+            if (id <= 0)
+                return Results.Json(new { error = "id must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+
+            string? notes = null;
+            if (request.ContentLength is > 0)
+            {
+                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    notes = ReadOptionalString(doc.RootElement, "notes");
+            }
+
+            var ok = await tasks.SuspendAsync(id, notes, cancellationToken).ConfigureAwait(false);
+            if (!ok)
+                return Results.Json(new { error = "task not found", id }, statusCode: StatusCodes.Status404NotFound);
+
+            if (assigned.RunningId == id)
+                assigned.Clear();
+
+            var row = await tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
+            return Results.Json(new { id, status = "suspended", task = row is null ? null : TaskLedgerDto(row) });
+        });
+
+        app.MapPost("/tasks/{id:long}/release", async (
+            long id,
+            IVictoriaTaskStore tasks,
+            CancellationToken cancellationToken) =>
+        {
+            if (id <= 0)
+                return Results.Json(new { error = "id must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var ok = await tasks.ReleaseAsync(id, cancellationToken).ConfigureAwait(false);
+            if (!ok)
+                return Results.Json(new { error = "task not found", id }, statusCode: StatusCodes.Status404NotFound);
+
+            var row = await tasks.GetAsync(id, cancellationToken).ConfigureAwait(false);
+            return Results.Json(new { id, status = "todo", task = row is null ? null : TaskLedgerDto(row) });
         });
 
         app.MapDelete("/tasks/{id:long}", async (

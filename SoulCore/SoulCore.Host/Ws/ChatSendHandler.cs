@@ -102,18 +102,28 @@ public sealed class ChatSendHandler
         Guid connectionSessionId,
         CancellationToken cancellationToken)
     {
+        var images = ExtractAndPrepareImages(frame.Payload);
         var text = ExtractText(frame.Payload);
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrWhiteSpace(text) && images.Count == 0)
         {
             await WsFrameSender.SendFrameAsync(
                 socket,
                 SoulCoreFrame.Create(
                     SoulCoreFrameTypes.Error,
-                    new { code = "chat.empty", message = "chat.send payload.text required" },
+                    new { code = "chat.empty", message = "chat.send payload.text or images required" },
                     id: frame.Id),
                 cancellationToken).ConfigureAwait(false);
             return;
         }
+
+        if (string.IsNullOrWhiteSpace(text) && images.Count > 0)
+            text = "Kayleigh attached an image. Look at it carefully and respond.";
+        else if (images.Count > 0)
+            text = text!.Trim() + "\n\n[Vision] Kayleigh attached an image — look at the pixels and respond.";
+
+        var chatText = (text ?? string.Empty).Trim();
+        if (chatText.Length == 0)
+            chatText = "Kayleigh attached an image. Look at it carefully and respond.";
 
         var holdGate = _turnGate is not null;
         if (holdGate)
@@ -123,11 +133,11 @@ public sealed class ChatSendHandler
         _lease?.Abort("human-chat");
         _leisure?.Clear();
 
-        _consent?.TryGrantFromUserText(text);
-        await RememberAssignmentAsync(text, cancellationToken).ConfigureAwait(false);
+        _consent?.TryGrantFromUserText(chatText);
+        await RememberAssignmentAsync(chatText, cancellationToken).ConfigureAwait(false);
 
         var quotedText = ExtractQuotedText(frame.Payload);
-        var modelUserText = QuotedChatText.BuildUserText(text, quotedText);
+        var modelUserText = QuotedChatText.BuildUserText(chatText, quotedText);
 
         _presenceActivity?.NoteChat("user");
 
@@ -188,6 +198,8 @@ public sealed class ChatSendHandler
 
                     var passTools = new HashSet<string>(StringComparer.Ordinal);
                     var passTrace = new List<ToolTraceEntry>();
+                    // Attach images only on the first pass — follow-up nudges are text.
+                    var passImages = extra == 0 ? images : null;
                     var loopResult = await CompleteChatWithToolsAsync(
                             passText,
                             chatContext.Preamble,
@@ -201,7 +213,8 @@ public sealed class ChatSendHandler
                                 _presenceActivity?.NoteTool(phrase);
                                 await PushActivityAsync(socket, frame.Id, phrase, "working", ct)
                                     .ConfigureAwait(false);
-                            })
+                            },
+                            passImages)
                         .ConfigureAwait(false);
                     reply = loopResult.Text;
                     provider = loopResult.Provider;
@@ -210,7 +223,7 @@ public sealed class ChatSendHandler
                     toolTrace.AddRange(passTrace);
 
                     var usedWorkTools = passTools.Any(WorkContinuation.IsWorkTool);
-                    var keep = WorkContinuation.ShouldKeepGoing(text, reply, usedWorkTools);
+                    var keep = WorkContinuation.ShouldKeepGoing(chatText, reply, usedWorkTools);
                     if (!keep || extra >= WorkContinuation.MaxExtraPasses)
                     {
                         pausedForBudget = keep && extra >= WorkContinuation.MaxExtraPasses;
@@ -266,7 +279,7 @@ public sealed class ChatSendHandler
 
             usedStub = true;
             provider = "stub";
-            reply = BuildStubReply(text);
+            reply = BuildStubReply(chatText);
             AppendPlainTurn(historySessionId, modelUserText, reply);
         }
 
@@ -281,7 +294,7 @@ public sealed class ChatSendHandler
             _presenceActivity?.NoteTool(WorkContinuation.ActivityFor(_assigned!.Current!.Text));
         else if (pausedForBudget || WorkContinuation.HitToolCap(reply))
             _presenceActivity?.NoteTool(WorkContinuation.PausedActivity);
-        else if (WorkContinuation.IsHandoff(reply) || WorkContinuation.IsUserStop(text)
+        else if (WorkContinuation.IsHandoff(reply) || WorkContinuation.IsUserStop(chatText)
                  || string.Equals(_assigned?.Current?.Status, "blocked", StringComparison.OrdinalIgnoreCase))
             _presenceActivity?.NoteTool(WorkContinuation.WaitingLine);
         else
@@ -296,13 +309,13 @@ public sealed class ChatSendHandler
                 cancellationToken)
             .ConfigureAwait(false);
 
-        await WriteTranscriptAfterChatAsync(historySessionId, text, reply, frame.Id, cancellationToken)
+        await WriteTranscriptAfterChatAsync(historySessionId, chatText, reply, frame.Id, cancellationToken)
             .ConfigureAwait(false);
 
         if (!usedStub)
             await WriteEpisodicAfterChatAsync(modelUserText, reply, provider, cancellationToken).ConfigureAwait(false);
 
-        await _postEffects.ApplyAsync(text, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
+        await _postEffects.ApplyAsync(chatText, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -529,7 +542,8 @@ public sealed class ChatSendHandler
         HashSet<string> dispatchedToolNames,
         List<ToolTraceEntry> toolTrace,
         CancellationToken cancellationToken,
-        Func<string, CancellationToken, Task>? beforeTool = null)
+        Func<string, CancellationToken, Task>? beforeTool = null,
+        IReadOnlyList<string>? images = null)
     {
         if (!_inferenceOptions.Enabled)
         {
@@ -542,12 +556,18 @@ public sealed class ChatSendHandler
         if (!string.IsNullOrWhiteSpace(contextPreamble))
             messages.Add(new ChatMessage { Role = "system", Content = contextPreamble.Trim() });
         messages.AddRange(prior);
-        messages.Add(new ChatMessage { Role = "user", Content = text });
+        messages.Add(new ChatMessage
+        {
+            Role = "user",
+            Content = text,
+            Images = images is { Count: > 0 } ? images : null
+        });
 
         _logger.LogDebug(
-            "Chat tool-loop history: session={SessionId} priorMessages={PriorCount}",
+            "Chat tool-loop history: session={SessionId} priorMessages={PriorCount} images={ImageCount}",
             historySessionId,
-            prior.Count);
+            prior.Count,
+            images?.Count ?? 0);
 
         var tools = _toolRegistry.GetDefinitions();
         var trackingRegistry = new TrackingToolRegistry(
@@ -594,8 +614,12 @@ public sealed class ChatSendHandler
             }
             else
             {
-                throw lastError ?? new InvalidOperationException(
-                    "LLM tool-loop returned empty reply from Ollama.");
+                // Prefer a typed empty line over chat.model_down for blank model text.
+                replyText = OllamaInferenceClient.EmptyNoToolsMarker;
+                provider = "ollama";
+                _logger.LogWarning(
+                    lastError,
+                    "Ollama tool-loop returned empty with no tools; synthesizing no-tools line.");
             }
         }
 
@@ -755,6 +779,31 @@ public sealed class ChatSendHandler
         if (payload.Value.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
             return textProp.GetString();
         return null;
+    }
+
+    /// <summary>
+    /// Read <c>images[]</c> base64 from chat.send and JPEG-compress for Ollama vision.
+    /// </summary>
+    private static IReadOnlyList<string> ExtractAndPrepareImages(JsonElement? payload)
+    {
+        if (payload is null || payload.Value.ValueKind != JsonValueKind.Object)
+            return Array.Empty<string>();
+        if (!payload.Value.TryGetProperty("images", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return Array.Empty<string>();
+
+        var list = new List<string>(Math.Min(4, arr.GetArrayLength()));
+        foreach (var el in arr.EnumerateArray())
+        {
+            if (list.Count >= 4)
+                break;
+            if (el.ValueKind != JsonValueKind.String)
+                continue;
+            var prepared = ToolImagePayload.TryPrepareChatAttachBase64(el.GetString());
+            if (!string.IsNullOrWhiteSpace(prepared))
+                list.Add(prepared);
+        }
+
+        return list;
     }
 
     private static string? ExtractQuotedText(JsonElement? payload)

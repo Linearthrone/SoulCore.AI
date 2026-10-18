@@ -62,7 +62,8 @@ public sealed class BrowserSnapshotTool : ITool
         Name: "browser_snapshot",
         Description:
             "List labeled controls (buttons, links, inputs). Prefer this to find Login / Sign in — " +
-            "do not guess window-center clicks. If degraded=true / locator=pixel, PNG alone cannot prove login.",
+            "do not guess window-center clicks. If degraded=true / locator=pixel, a11y labels are down " +
+            "(not a bridge outage) — use the PNG + desktop_click; PNG alone cannot prove login.",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

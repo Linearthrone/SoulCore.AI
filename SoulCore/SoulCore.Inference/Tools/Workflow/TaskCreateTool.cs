@@ -7,7 +7,7 @@ namespace SoulCore.Inference.Tools.Workflow;
 /// <summary>
 /// Model-callable <c>task_create</c> (BED-140 / PROP-17.1). Inserts a row into
 /// <c>victoria_tasks</c>. Default status is <c>suspended</c> unless
-/// <c>ready=true</c> (then <c>todo</c>). No delete API.
+/// <c>ready=true</c> (then <c>todo</c>). Remove with <c>task_delete</c>.
 /// Separate from PM tickets under <c>docs/agents/tasks/</c>.
 /// </summary>
 public sealed class TaskCreateTool : ITool

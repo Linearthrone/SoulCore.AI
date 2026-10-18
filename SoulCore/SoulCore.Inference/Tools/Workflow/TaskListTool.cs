@@ -21,7 +21,7 @@ public sealed class TaskListTool : ITool
 
     public ToolDefinition Definition { get; } = new(
         Name: "task_list",
-        Description: "List tasks (optionally filtered by status). You cannot delete a task.",
+        Description: "List tasks (optionally filtered by status). Use task_delete to remove one.",
         Parameters: ParametersSchema);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

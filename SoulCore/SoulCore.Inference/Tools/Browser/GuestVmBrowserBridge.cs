@@ -91,9 +91,10 @@ public sealed class GuestVmBrowserBridge : IBrowserBridge
         {
             return new BrowserBridgeResult(
                 true,
-                "browser_snapshot DEGRADED (locator=pixel, goal_complete=false). " +
-                "AT-SPI failed — PNG only. Do NOT claim Login from this alone; use browser_click_text when possible, " +
-                "else desktop_click from the PNG. AT-SPI error: " + result.Content + "\n\n" + shot.Content,
+                "browser_snapshot using pixel fallback (locator=pixel, goal_complete=false). " +
+                "This is NOT a bridge outage — guest browser is still usable. AT-SPI labels unavailable; " +
+                "read the attached PNG and continue with desktop_click / desktop_type (or browser_click_text if it works). " +
+                "Do NOT claim Login from the PNG alone. AT-SPI detail: " + result.Content + "\n\n" + shot.Content,
                 MergeData(shot.Data, BrowserResultHonesty.DegradedPixelSnapshot(result.Content)));
         }
 

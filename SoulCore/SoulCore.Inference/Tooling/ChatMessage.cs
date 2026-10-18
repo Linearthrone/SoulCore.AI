@@ -31,6 +31,12 @@ public sealed record ChatMessage
     /// re-prompt so the conversation shape matches what the model produced.
     /// </summary>
     public IReadOnlyList<ChatToolCall>? ToolCalls { get; init; }
+
+    /// <summary>
+    /// Optional base64 image payloads (no data-URI prefix) for multimodal models.
+    /// Used for Kayleigh chat attaches and tool vision follow-ups.
+    /// </summary>
+    public IReadOnlyList<string>? Images { get; init; }
 }
 
 /// <summary>
