@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="House.ChatDesktop.TaskAddWindow"
+        Title="Add task — House Victoria"
+        Width="420" Height="220"
+        MinWidth="360" MinHeight="200"
+        WindowStartupLocation="CenterOwner"
+        Foreground="{DynamicResource TextBrush}">
+  <Border Classes="metal glass" Margin="12" Padding="14">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+      <StackPanel Spacing="4" Margin="0,0,0,10">
+        <TextBlock Text="Add task" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                   Text="Short title for her ledger. Starts as todo so it can be picked up."/>
+      </StackPanel>
+
+      <TextBox x:Name="TitleBox" Grid.Row="1" Classes="input" Height="36" Padding="10,0"
+               VerticalContentAlignment="Center"
+               Watermark="e.g. Finish the lesson notes"/>
+
+      <TextBlock x:Name="ErrorText" Grid.Row="2" FontSize="11" Margin="0,8,0,0"
+                 Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsVisible="False"/>
+
+      <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <Button Classes="ghost" Content="Cancel" Padding="12,6" Click="Cancel_Click"/>
+        <Button Classes="chrome" Content="Add" Padding="12,6" Click="Add_Click" IsDefault="True"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

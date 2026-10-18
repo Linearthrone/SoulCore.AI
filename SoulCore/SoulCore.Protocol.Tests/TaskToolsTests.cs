@@ -194,6 +194,36 @@ public class TaskToolsTests
     }
 
     [Fact]
+    public async Task TaskDelete_RemovesRow()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"soulcore-tasks-del-{Guid.NewGuid():N}.db");
+        try
+        {
+            await using var store = new SqliteMemoryStore(path);
+            var create = new TaskCreateTool(store);
+            var delete = new TaskDeleteTool(store);
+
+            var created = await create.ExecuteAsync(JsonDocument.Parse(
+                """{"title":"temp note","ready":true}""").RootElement.Clone());
+            Assert.True(created.Success);
+            var id = GetDataLong(created.Data!, "id");
+
+            var missing = await delete.ExecuteAsync(JsonDocument.Parse("{\"id\":999999}").RootElement.Clone());
+            Assert.False(missing.Success);
+
+            var gone = await delete.ExecuteAsync(JsonDocument.Parse($"{{\"id\":{id}}}").RootElement.Clone());
+            Assert.True(gone.Success);
+            Assert.Contains("deleted:", gone.Content, StringComparison.Ordinal);
+            Assert.Null(await store.GetAsync(id));
+            Assert.Empty(await store.ListAsync());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
     public async Task TaskCreate_MissingTitle_ReturnsFailure()
     {
         var path = Path.Combine(Path.GetTempPath(), $"soulcore-tasks-notitle-{Guid.NewGuid():N}.db");
@@ -350,6 +380,7 @@ public class TaskToolsTests
             services.AddSingleton<ITool, TaskGetTool>();
             services.AddSingleton<ITool, TaskUpdateStatusTool>();
             services.AddSingleton<ITool, TaskListTool>();
+            services.AddSingleton<ITool, TaskDeleteTool>();
 
             using var sp = services.BuildServiceProvider();
             var registry = sp.GetRequiredService<IToolRegistry>();
@@ -358,10 +389,10 @@ public class TaskToolsTests
             Assert.Contains("task_get", names);
             Assert.Contains("task_update_status", names);
             Assert.Contains("task_list", names);
-            Assert.DoesNotContain("task_delete", names);
+            Assert.Contains("task_delete", names);
 
             var store = sp.GetRequiredService<IVictoriaTaskStore>();
-            var created = await store.CreateAsync("delete-me", "operator only", "medium").ConfigureAwait(true);
+            var created = await store.CreateAsync("delete-me", "operator + victoria", "medium").ConfigureAwait(true);
             Assert.NotNull(await store.GetAsync(created).ConfigureAwait(true));
             Assert.True(await store.DeleteAsync(created).ConfigureAwait(true));
             Assert.Null(await store.GetAsync(created).ConfigureAwait(true));

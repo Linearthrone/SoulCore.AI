@@ -42,7 +42,8 @@ public static class LeisureTools
         "workflow_execute",
         "task_update_status",
         "task_release",
-        "task_suspend"
+        "task_suspend",
+        "task_delete"
     };
 
     public static bool IsAllowed(string? name)

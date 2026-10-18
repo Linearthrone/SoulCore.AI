@@ -72,6 +72,7 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ITool, TaskListTool>();
         services.AddSingleton<ITool, TaskReleaseTool>();
         services.AddSingleton<ITool, TaskSuspendTool>();
+        services.AddSingleton<ITool, TaskDeleteTool>();
         // PROP-17.2 SOP store — recall only; cannot flip gates.
         services.AddSingleton<ITool, SopListTool>();
         services.AddSingleton<ITool, SopGetTool>();

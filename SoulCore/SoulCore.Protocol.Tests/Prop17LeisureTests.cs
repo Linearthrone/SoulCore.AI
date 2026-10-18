@@ -206,6 +206,9 @@ public class Prop17LeisureTests
         Assert.True(LeisureTools.IsAllowed("desktop_screenshot"));
         Assert.True(LeisureTools.IsAllowed("guest_read_file"));
         Assert.True(LeisureTools.IsAllowed("task_create"));
+        Assert.False(LeisureTools.IsAllowed("task_delete"));
+        Assert.False(LeisureTools.IsAllowed("task_suspend"));
+        Assert.False(LeisureTools.IsAllowed("task_release"));
     }
 
     [Fact]
