@@ -31,6 +31,8 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private nint _badgeHwnd;
     private nint _parent;
     private int _buttons;
+    private int _lastClientX;
+    private int _lastClientY;
     private readonly HashSet<int> _heldKeys = new();
     private GCHandle _selfHandle;
     private bool _cursorVisible;
@@ -458,7 +460,34 @@ public sealed class HerScreenHwndOverlay : IDisposable
         if (width <= 1 || height <= 1)
             return;
 
+        _lastClientX = pt.X;
+        _lastClientY = pt.Y;
         OnPointer(new HerScreenPointerSample(pt.X, pt.Y, width, height, buttons, wheel, changed));
+    }
+
+    /// <summary>
+    /// Capture lost without WM_*BUTTONUP would leave a stashed press forever
+    /// (inject-on-release never fires). Synthesize a full button-up.
+    /// </summary>
+    private void ReportCaptureLost()
+    {
+        if (OnPointer is null || _parent == 0 || _buttons == 0)
+        {
+            _buttons = 0;
+            return;
+        }
+
+        _buttons = 0;
+        _ = ReleaseCapture();
+        if (!GetClientRect(_parent, out var rc))
+            return;
+        var width = rc.Right - rc.Left;
+        var height = rc.Bottom - rc.Top;
+        if (width <= 1 || height <= 1)
+            return;
+
+        OnPointer(new HerScreenPointerSample(
+            _lastClientX, _lastClientY, width, height, Buttons: 0, WheelNotches: 0, ButtonChanged: true));
     }
 
     private void FocusForTyping()
@@ -579,6 +608,20 @@ public sealed class HerScreenHwndOverlay : IDisposable
             return nint.Zero;
         }
 
+        if (msg == WmCaptureChanged)
+        {
+            try
+            {
+                OverlayFromHwnd(hWnd)?.ReportCaptureLost();
+            }
+            catch
+            {
+                // never throw from WndProc
+            }
+
+            return nint.Zero;
+        }
+
         if (msg is WmKeyDown or WmKeyUp or WmSysKeyDown or WmSysKeyUp)
         {
             try
@@ -633,6 +676,7 @@ public sealed class HerScreenHwndOverlay : IDisposable
     private const uint WmMButtonDown = 0x0207;
     private const uint WmMButtonUp = 0x0208;
     private const uint WmMouseWheel = 0x020A;
+    private const uint WmCaptureChanged = 0x0215;
     private const int MaActivate = 1;
     private const int MaNoActivate = 3;
     private const int Winding = 2;
