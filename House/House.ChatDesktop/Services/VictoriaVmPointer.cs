@@ -292,7 +292,12 @@ public static class VictoriaVmPointer
 
             var mapped = MapSurfaceToGuest(session, surface.X, surface.Y, surface.Width, surface.Height);
             if (mapped is null)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickDroppedLine(
+                        surface.X, surface.Y, surface.Width, surface.Height));
                 return;
+            }
 
             InjectPointer(mouse, mapped.Value.X, mapped.Value.Y, surface.Buttons);
             _lastFault = null;
@@ -818,6 +823,11 @@ public static class VictoriaVmPointer
         catch { /* UI hook must not kill the STA thread */ }
     }
 
+    /// <summary>
+    /// Park off Presence (and the reparented VM HWND) before Absolute button
+    /// changes. Matches Host <c>HostPointerPark</c>: multi-candidate virtual-screen
+    /// corners, not a weak ±24px nudge that snaps back onto fullscreen Presence.
+    /// </summary>
     private static void WithCursorParked(nint excludeHwnd, Action body)
     {
         if (!OperatingSystem.IsWindows() || !GetCursorPos(out var saved))
@@ -826,21 +836,35 @@ public static class VictoriaVmPointer
             return;
         }
 
-        var root = excludeHwnd == 0 ? 0 : GetAncestor(excludeHwnd, GaRoot);
-        if (root == 0)
-            root = excludeHwnd;
-        RECT rc = default;
-        var haveRect = root != 0 && GetWindowRect(root, out rc);
-        if (haveRect)
+        var excludes = BuildParkExcludes(excludeHwnd);
+        var vx = GetSystemMetrics(SmXVirtualScreen);
+        var vy = GetSystemMetrics(SmYVirtualScreen);
+        var vw = Math.Max(1, GetSystemMetrics(SmCxVirtualScreen));
+        var vh = Math.Max(1, GetSystemMetrics(SmCyVirtualScreen));
+
+        var parked = false;
+        foreach (var (x, y) in VictoriaVmPointerPlan.EnumerateParkCandidates(excludes, vx, vy, vw, vh))
         {
-            var midY = (rc.Top + rc.Bottom) / 2;
-            TryPark(rc.Right + 24, midY, rc);
-            TryPark(rc.Left - 24, midY, rc);
+            _ = SetCursorPos(x, y);
+            Thread.Sleep(20);
+            if (GetCursorPos(out var now)
+                && !VictoriaVmPointerPlan.IsInsideAnyPark(now.X, now.Y, excludes))
+            {
+                Thread.Sleep(ParkSettleMs);
+                parked = true;
+                break;
+            }
+        }
+
+        if (!parked && excludes.Count > 0)
+        {
+            var fallback = VictoriaVmPointerPlan.PickParkPoint(excludes, vx, vy, vw, vh);
+            _ = SetCursorPos(fallback.X, fallback.Y);
+            Thread.Sleep(ParkSettleMs);
         }
 
         try
         {
-            Thread.Sleep(40);
             body();
             Thread.Sleep(20);
         }
@@ -850,16 +874,31 @@ public static class VictoriaVmPointer
         }
     }
 
-    private static void TryPark(int x, int y, RECT exclude)
+    private static List<VictoriaVmPointerPlan.ParkRect> BuildParkExcludes(nint excludeHwnd)
     {
-        _ = SetCursorPos(x, y);
-        Thread.Sleep(15);
-        if (GetCursorPos(out var now) && !Contains(exclude, now.X, now.Y))
-            return;
-    }
+        var excludes = new List<VictoriaVmPointerPlan.ParkRect>(2);
+        if (excludeHwnd == 0)
+            return excludes;
 
-    private static bool Contains(RECT rc, int x, int y) =>
-        x >= rc.Left && x < rc.Right && y >= rc.Top && y < rc.Bottom;
+        var root = GetAncestor(excludeHwnd, GaRoot);
+        if (root == 0)
+            root = excludeHwnd;
+
+        if (GetWindowRect(root, out var rootRc))
+        {
+            excludes.Add(new VictoriaVmPointerPlan.ParkRect(
+                rootRc.Left, rootRc.Top, rootRc.Right, rootRc.Bottom));
+        }
+
+        // SetParent child (victoria-sandbox) — Absolute also tracks over that HWND.
+        if (excludeHwnd != root && GetWindowRect(excludeHwnd, out var childRc))
+        {
+            excludes.Add(new VictoriaVmPointerPlan.ParkRect(
+                childRc.Left, childRc.Top, childRc.Right, childRc.Bottom));
+        }
+
+        return excludes;
+    }
 
     private abstract record WorkItem;
 
@@ -874,6 +913,11 @@ public static class VictoriaVmPointer
     private sealed record WheelKeyWork(int X, int Y, int Notches) : WorkItem;
 
     private const uint GaRoot = 2;
+    private const int ParkSettleMs = 80;
+    private const int SmXVirtualScreen = 76;
+    private const int SmYVirtualScreen = 77;
+    private const int SmCxVirtualScreen = 78;
+    private const int SmCyVirtualScreen = 79;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
@@ -899,4 +943,7 @@ public static class VictoriaVmPointer
 
     [DllImport("user32.dll")]
     private static extern nint GetAncestor(nint hWnd, uint gaFlags);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
 }

@@ -32,9 +32,9 @@ public static class VictoriaVmPointerPlan
 
     /// <summary>
     /// Guest framebuffer size for stretch-fill. Prefer live <c>IDisplay</c> size,
-    /// then the live HWND slot (Auto-resize usually matches), then hub/screenshot,
-    /// then the JPEG default. A stale hub default of 1280×800 against a different
-    /// slot warps every click when display COM fails.
+    /// then hub/screenshot (last known real FB), then the HWND slot, then the JPEG
+    /// default. Preferring the live slot over hub when display COM fails warps
+    /// Absolute coords whenever Auto-resize and the hub disagree.
     /// </summary>
     public static (int Width, int Height) ResolveGuestFramebuffer(
         int hubWidth,
@@ -47,16 +47,97 @@ public static class VictoriaVmPointerPlan
         if (displayWidth is > 0 && displayHeight is > 0)
             return (displayWidth.Value, displayHeight.Value);
 
-        if (surfaceWidth > 1 && surfaceHeight > 1)
-            return (surfaceWidth, surfaceHeight);
-
         if (hubWidth > 0 && hubHeight > 0)
             return (hubWidth, hubHeight);
+
+        if (surfaceWidth > 1 && surfaceHeight > 1)
+            return (surfaceWidth, surfaceHeight);
 
         return (
             VictoriaBrowserCoordMap.DefaultGuestWidth,
             VictoriaBrowserCoordMap.DefaultGuestHeight);
     }
+
+    /// <summary>
+    /// Exclude rect for host-cursor park during Absolute button inject.
+    /// </summary>
+    public readonly record struct ParkRect(int Left, int Top, int Right, int Bottom)
+    {
+        public bool Contains(int x, int y) =>
+            x >= Left && x < Right && y >= Top && y < Bottom;
+    }
+
+    /// <summary>
+    /// Ordered park candidates (virtual-screen corners, then just outside excludes).
+    /// Mouse Integration rewrites Absolute while the cursor sits over Presence / the
+    /// VM HWND — park must leave those rects, not just nudge ±24px beside them.
+    /// </summary>
+    public static IEnumerable<(int X, int Y)> EnumerateParkCandidates(
+        IReadOnlyList<ParkRect> excludes,
+        int virtualX,
+        int virtualY,
+        int virtualW,
+        int virtualH)
+    {
+        var vw = Math.Max(1, virtualW);
+        var vh = Math.Max(1, virtualH);
+
+        yield return (virtualX + vw - 4, virtualY + vh - 4);
+        yield return (virtualX + 4, virtualY + vh - 4);
+        yield return (virtualX + vw - 4, virtualY + 4);
+        yield return (virtualX + vw / 2, virtualY + vh - 4);
+        yield return (virtualX + 4, virtualY + 4);
+
+        if (excludes.Count == 0)
+            yield break;
+
+        var widest = excludes[0];
+        foreach (var r in excludes)
+        {
+            if ((r.Right - r.Left) > (widest.Right - widest.Left))
+                widest = r;
+        }
+
+        var midY = (widest.Top + widest.Bottom) / 2;
+        var midX = (widest.Left + widest.Right) / 2;
+        yield return (widest.Right + 8, midY);
+        yield return (widest.Left - 8, midY);
+        yield return (midX, widest.Bottom + 8);
+        yield return (midX, widest.Top - 8);
+        yield return (widest.Right + 1, midY);
+        yield return (virtualX + vw - 2, virtualY + vh - 2);
+    }
+
+    public static (int X, int Y) PickParkPoint(
+        IReadOnlyList<ParkRect> excludes,
+        int virtualX,
+        int virtualY,
+        int virtualW,
+        int virtualH)
+    {
+        foreach (var c in EnumerateParkCandidates(excludes, virtualX, virtualY, virtualW, virtualH))
+        {
+            if (!IsInsideAnyPark(c.X, c.Y, excludes))
+                return c;
+        }
+
+        return (virtualX + Math.Max(1, virtualW) - 4, virtualY + Math.Max(1, virtualH) - 4);
+    }
+
+    public static bool IsInsideAnyPark(int x, int y, IReadOnlyList<ParkRect> excludes)
+    {
+        foreach (var r in excludes)
+        {
+            if (r.Contains(x, y))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>One startup-log line for a click that never reached the guest.</summary>
+    public static string FormatClickDroppedLine(int surfaceX, int surfaceY, int surfaceW, int surfaceH) =>
+        $"her-screen click surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} dropped-unmapped";
 
     /// <summary>
     /// Mouse Integration keeps rewriting the guest pointer while the Windows cursor
