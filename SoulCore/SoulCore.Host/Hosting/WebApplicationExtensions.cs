@@ -888,6 +888,26 @@ internal static class WebApplicationExtensions
         return app;
     }
 
+    private static object TaskLedgerDto(VictoriaTask t) => new
+    {
+        id = t.Id,
+        title = t.Title,
+        status = t.Status,
+        surface = t.Surface,
+        priority = t.Priority,
+        notes = t.Notes,
+        parkReason = t.ParkReason,
+        parkUntil = t.ParkUntil
+    };
+
+    private static string? ReadOptionalString(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.String)
+            return null;
+        var s = el.GetString();
+        return string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+    }
+
     private static object ResearchPaperDto(VictoriaResearchPaper p) => new
     {
         id = p.Id,
