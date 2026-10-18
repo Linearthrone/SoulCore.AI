@@ -35,6 +35,46 @@ public static class ToolImagePayload
     /// <summary>Reject after compress if still larger than this.</summary>
     public const int DefaultMaxBytes = 1_500_000;
 
+    /// <summary>Reject Kayleigh chat attaches larger than this before decode.</summary>
+    public const int ChatAttachMaxRawBytes = 8_000_000;
+
+    /// <summary>
+    /// Prepare one Kayleigh chat-attach (raw file bytes or base64) into a vision JPEG base64.
+    /// Null when undecodable / over size.
+    /// </summary>
+    public static string? TryPrepareChatAttachBase64(
+        string? base64OrEmpty,
+        int maxRawBytes = ChatAttachMaxRawBytes,
+        int maxBytes = DefaultMaxBytes,
+        int maxEdgePx = DefaultMaxEdgePx,
+        int jpegQuality = DefaultJpegQuality)
+    {
+        if (string.IsNullOrWhiteSpace(base64OrEmpty))
+            return null;
+
+        byte[] raw;
+        try
+        {
+            var s = base64OrEmpty.Trim();
+            var comma = s.IndexOf(',');
+            if (s.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && comma > 0)
+                s = s[(comma + 1)..];
+            raw = Convert.FromBase64String(s);
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (raw.Length == 0 || raw.Length > maxRawBytes)
+            return null;
+
+        var prepared = TryPrepareVisionImage(raw, maxEdgePx, jpegQuality);
+        if (prepared is null || prepared.Value.Jpeg.Length == 0 || prepared.Value.Jpeg.Length > maxBytes)
+            return null;
+        return Convert.ToBase64String(prepared.Value.Jpeg);
+    }
+
     /// <summary>
     /// Extract a single vision-ready base64 image (JPEG preferred) from tool Data.
     /// </summary>

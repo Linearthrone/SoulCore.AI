@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using SoulCore.Config;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
@@ -805,6 +807,84 @@ public class OllamaToolLoopTests
         var secondReq = handler.CapturedRequests[1];
         Assert.Contains(secondReq.Messages, m =>
             m.Role == "tool" && m.Name == "echo" && m.Content == "echo: hello");
+    }
+
+    [Fact]
+    public async Task EmptyNoTools_SynthesizesNoToolsMarker_NeverReturnsBlank()
+    {
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "", toolCalls: null)
+            });
+        var client = MakeClient(handler, options: MakeOptions(maxToolIterations: 4));
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage> { new() { Role = "user", Content = "hi" } },
+            new[] { EchoToolDef() },
+            new ScriptedRegistry());
+
+        Assert.Equal(OllamaInferenceClient.EmptyNoToolsMarker, result);
+        Assert.False(string.IsNullOrWhiteSpace(result));
+    }
+
+    [Fact]
+    public async Task UserAttachImages_ForwardedOnWireToOllama()
+    {
+        var png = Convert.ToBase64String(MakeTinyPng());
+        // Host normally JPEG-compresses; here we pass a prepared-looking payload.
+        var jpegB64 = ToolImagePayload.TryPrepareChatAttachBase64(png);
+        Assert.NotNull(jpegB64);
+
+        var handler = new ScriptedHandler(
+            new[]
+            {
+                ChatResponseJson(content: "I see the image.", toolCalls: null)
+            });
+        var client = MakeClient(handler, options: MakeOptions(maxToolIterations: 4));
+
+        var result = await client.CompleteWithToolsAsync(
+            new List<ChatMessage>
+            {
+                new()
+                {
+                    Role = "user",
+                    Content = "what is this?",
+                    Images = new[] { jpegB64! }
+                }
+            },
+            Array.Empty<ToolDefinition>(),
+            new ScriptedRegistry());
+
+        Assert.Equal("I see the image.", result);
+        Assert.Equal(1, handler.CallCount);
+        var body = handler.CapturedRequests[0].RawBody ?? "";
+        using var doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.TryGetProperty("messages", out var msgs));
+        JsonElement? userWithImages = null;
+        foreach (var m in msgs.EnumerateArray())
+        {
+            if (m.TryGetProperty("role", out var role)
+                && role.GetString() == "user"
+                && m.TryGetProperty("images", out var imgs)
+                && imgs.ValueKind == JsonValueKind.Array
+                && imgs.GetArrayLength() > 0)
+            {
+                userWithImages = m;
+                break;
+            }
+        }
+
+        Assert.True(userWithImages.HasValue, "user message with images[] missing on Ollama wire: " + body[..Math.Min(400, body.Length)]);
+        Assert.Equal(jpegB64, userWithImages!.Value.GetProperty("images")[0].GetString());
+    }
+
+    private static byte[] MakeTinyPng()
+    {
+        using var img = new Image<Rgba32>(8, 8);
+        using var ms = new MemoryStream();
+        img.SaveAsPng(ms);
+        return ms.ToArray();
     }
 
     [Fact]
