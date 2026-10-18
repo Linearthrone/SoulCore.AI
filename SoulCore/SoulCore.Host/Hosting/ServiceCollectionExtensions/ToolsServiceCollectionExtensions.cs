@@ -76,6 +76,12 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ITool, SopListTool>();
         services.AddSingleton<ITool, SopGetTool>();
         services.AddSingleton<ITool, SopCreateTool>();
+        // Research / hobby subject journals + APA papers.
+        services.AddSingleton<ITool, ResearchSubjectListTool>();
+        services.AddSingleton<ITool, ResearchSubjectOpenTool>();
+        services.AddSingleton<ITool, ResearchPaperListTool>();
+        services.AddSingleton<ITool, ResearchPaperGetTool>();
+        services.AddSingleton<ITool, ResearchPaperWriteTool>();
 
         // Workflow tools (BED-141): workflow_create / workflow_execute / workflow_get.
         // workflow_execute resolves IToolRegistry lazily via IServiceProvider (ListToolsTool pattern).

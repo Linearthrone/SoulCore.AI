@@ -873,6 +873,12 @@ public partial class MainWindow
         await RefreshEmailAccountsAsync().ConfigureAwait(true);
     }
 
+    private async void ResearchJournals_Click(object? sender, RoutedEventArgs e)
+    {
+        var dlg = new ResearchJournalsWindow();
+        await dlg.ShowDialog(this).ConfigureAwait(true);
+    }
+
     private async void EmailGateToggle_Click(object? sender, RoutedEventArgs e)
     {
         if (_toolsAccessHydrating) return;

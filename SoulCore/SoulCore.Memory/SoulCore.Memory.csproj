@@ -29,6 +29,7 @@
     <EmbeddedResource Include="Migrations\008_victoria_tasks_park.sql" LogicalName="SoulCore.Memory.Migrations.008_victoria_tasks_park.sql" />
     <EmbeddedResource Include="Migrations\009_victoria_sops.sql" LogicalName="SoulCore.Memory.Migrations.009_victoria_sops.sql" />
     <EmbeddedResource Include="Migrations\010_life_hacks_journal.sql" LogicalName="SoulCore.Memory.Migrations.010_life_hacks_journal.sql" />
+    <EmbeddedResource Include="Migrations\011_victoria_research.sql" LogicalName="SoulCore.Memory.Migrations.011_victoria_research.sql" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -191,7 +191,13 @@ public class Prop17LeisureTests
         var session = new LeisureSession();
         session.BeginOrContinue("neural interfaces");
         Assert.True(session.IsActive);
+        // Band stays quiet until a leisure pass actually completes.
+        Assert.Equal("Between talks · quiet", session.ActivityLine());
+        session.NotePassCompleted();
         Assert.Equal("Reading about neural interfaces · local", session.ActivityLine());
+        Assert.Equal(
+            "Between talks · quiet",
+            session.ActivityLine(DateTimeOffset.UtcNow + LeisureSession.FreshPassWindow + TimeSpan.FromSeconds(1)));
         session.Clear();
         Assert.False(session.IsActive);
     }
@@ -206,6 +212,8 @@ public class Prop17LeisureTests
         Assert.True(LeisureTools.IsAllowed("desktop_screenshot"));
         Assert.True(LeisureTools.IsAllowed("guest_read_file"));
         Assert.True(LeisureTools.IsAllowed("task_create"));
+        Assert.True(LeisureTools.IsAllowed("research_subject_open"));
+        Assert.True(LeisureTools.IsAllowed("research_paper_write"));
     }
 
     [Fact]
