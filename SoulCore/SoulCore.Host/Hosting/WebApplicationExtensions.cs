@@ -365,6 +365,65 @@ internal static class WebApplicationExtensions
             return Results.Json(new { deleted = id });
         });
 
+        // Research / hobby subject journals (APA papers). Read-only for Presence.
+        app.MapGet("/research/subjects", async (
+            IVictoriaResearchStore research,
+            CancellationToken cancellationToken) =>
+        {
+            var rows = await research.ListSubjectsAsync(cancellationToken).ConfigureAwait(false);
+            return Results.Json(new
+            {
+                count = rows.Count,
+                subjects = rows.Select(s => new
+                {
+                    id = s.Id,
+                    slug = s.Slug,
+                    title = s.Title,
+                    summary = s.Summary,
+                    paperCount = s.PaperCount,
+                    updatedAt = s.UpdatedAt
+                })
+            });
+        });
+
+        app.MapGet("/research/subjects/{id:long}/papers", async (
+            long id,
+            IVictoriaResearchStore research,
+            CancellationToken cancellationToken) =>
+        {
+            if (id <= 0)
+                return Results.Json(new { error = "id must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+            var subject = await research.GetSubjectAsync(id, cancellationToken).ConfigureAwait(false);
+            if (subject is null)
+                return Results.Json(new { error = "subject not found", id }, statusCode: StatusCodes.Status404NotFound);
+            var papers = await research.ListPapersAsync(id, 100, cancellationToken).ConfigureAwait(false);
+            return Results.Json(new
+            {
+                subject = new
+                {
+                    id = subject.Id,
+                    title = subject.Title,
+                    summary = subject.Summary,
+                    paperCount = subject.PaperCount
+                },
+                count = papers.Count,
+                papers = papers.Select(ResearchPaperDto)
+            });
+        });
+
+        app.MapGet("/research/papers/{id:long}", async (
+            long id,
+            IVictoriaResearchStore research,
+            CancellationToken cancellationToken) =>
+        {
+            if (id <= 0)
+                return Results.Json(new { error = "id must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+            var paper = await research.GetPaperAsync(id, cancellationToken).ConfigureAwait(false);
+            if (paper is null)
+                return Results.Json(new { error = "paper not found", id }, statusCode: StatusCodes.Status404NotFound);
+            return Results.Json(new { paper = ResearchPaperDto(paper) });
+        });
+
         app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
         {
             var acked = driftWatcher.AcknowledgeAll();
@@ -829,25 +888,18 @@ internal static class WebApplicationExtensions
         return app;
     }
 
-    private static object TaskLedgerDto(VictoriaTask t) => new
+    private static object ResearchPaperDto(VictoriaResearchPaper p) => new
     {
-        id = t.Id,
-        title = t.Title,
-        status = t.Status,
-        surface = t.Surface,
-        priority = t.Priority,
-        notes = t.Notes,
-        parkReason = t.ParkReason,
-        parkUntil = t.ParkUntil
+        id = p.Id,
+        subjectId = p.SubjectId,
+        kind = p.Kind,
+        title = p.Title,
+        abstractText = p.Abstract,
+        bodyApa = p.BodyApa,
+        bibliographyApa = p.BibliographyApa,
+        status = p.Status,
+        updatedAt = p.UpdatedAt
     };
-
-    private static string? ReadOptionalString(JsonElement root, string name)
-    {
-        if (!root.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.String)
-            return null;
-        var s = el.GetString();
-        return string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-    }
 
     private static object PresenceDto(
         SoulCore.Inference.Presence.PresenceActivitySnapshot snap,

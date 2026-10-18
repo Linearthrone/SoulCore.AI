@@ -419,6 +419,9 @@
                 <Button Classes="chrome" Content="Correct mood…" FontSize="10" Padding="8,2"
                         Click="CorrectEmotion_Click"
                         ToolTip.Tip="Disclosure in the band — not title chrome"/>
+                <Button Classes="chrome" Content="Journals…" FontSize="10" Padding="8,2"
+                        Click="ResearchJournals_Click"
+                        ToolTip.Tip="Open her research/hobby subject journals and APA papers"/>
               </StackPanel>
               <TextBlock x:Name="BandInfluencesText" FontSize="12" TextWrapping="Wrap"
                          Foreground="{DynamicResource MutedBrush}"

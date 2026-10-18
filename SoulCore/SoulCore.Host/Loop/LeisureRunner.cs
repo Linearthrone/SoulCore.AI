@@ -26,6 +26,7 @@ public sealed class LeisureRunner
     private readonly IToolRegistry _tools;
     private readonly IVictoriaTaskStore _tasks;
     private readonly IVictoriaJournalStore? _journals;
+    private readonly IVictoriaResearchStore? _research;
     private readonly IInferenceLease _lease;
     private readonly ILeisureSession _session;
     private readonly IPresenceActivityHub? _activity;
@@ -48,7 +49,8 @@ public sealed class LeisureRunner
         ILoggerFactory loggerFactory,
         IBlockedAsideNotice aside,
         IPresenceActivityHub? activity = null,
-        IVictoriaJournalStore? journals = null)
+        IVictoriaJournalStore? journals = null,
+        IVictoriaResearchStore? research = null)
     {
         _httpFactory = httpFactory;
         _options = options.Value;
@@ -63,6 +65,7 @@ public sealed class LeisureRunner
         _loggerFactory = loggerFactory;
         _activity = activity;
         _journals = journals;
+        _research = research;
     }
 
     /// <summary>
@@ -93,6 +96,9 @@ public sealed class LeisureRunner
             _session.BeginOrContinue(interest);
         }
 
+        await EnsureResearchSubjectAsync(interest!, abortToken).ConfigureAwait(false);
+        // Mark the pass live so Presence "On her mind" is honest only while R&R is actually running.
+        _session.NotePassCompleted();
         var phrase = _session.ActivityLine();
         _activity?.NoteTool(phrase);
         await PushStatusAsync(phrase, "leisure", abortToken).ConfigureAwait(false);
@@ -199,9 +205,28 @@ public sealed class LeisureRunner
             await BroadcastFindAsync(VisibleFind(reply), abortToken).ConfigureAwait(false);
         }
 
+        _session.NotePassCompleted();
         _activity?.NoteTool(_session.ActivityLine());
         await PushStatusAsync(_session.ActivityLine(), "leisure", abortToken).ConfigureAwait(false);
         return TimeSpan.FromSeconds(20);
+    }
+
+    private async Task EnsureResearchSubjectAsync(string interest, CancellationToken cancellationToken)
+    {
+        if (_research is null || string.IsNullOrWhiteSpace(interest))
+            return;
+        try
+        {
+            await _research.OpenOrCreateSubjectAsync(
+                    interest.Trim(),
+                    summary: "Self-started R&R thread",
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "R&R research subject open failed");
+        }
     }
 
     private async Task<bool> ModelPresentLocalAsync(string model, CancellationToken cancellationToken)

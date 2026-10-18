@@ -13,6 +13,7 @@ public sealed class LeisureHostedService : BackgroundService
 {
     private readonly IAssignedWorkStore _store;
     private readonly IVictoriaTaskStore _tasks;
+    private readonly IVictoriaResearchStore? _research;
     private readonly ISurfaceAvailability _surfaces;
     private readonly IInferenceLease _lease;
     private readonly ILeisureSession _session;
@@ -28,10 +29,12 @@ public sealed class LeisureHostedService : BackgroundService
         ILeisureSession session,
         LeisureRunner runner,
         WorkTurnGate gate,
-        ILogger<LeisureHostedService> logger)
+        ILogger<LeisureHostedService> logger,
+        IVictoriaResearchStore? research = null)
     {
         _store = store;
         _tasks = tasks;
+        _research = research;
         _surfaces = surfaces;
         _lease = lease;
         _session = session;
@@ -100,7 +103,10 @@ public sealed class LeisureHostedService : BackgroundService
                     {
                         using var linked = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, abort);
                         if (!_session.IsActive)
-                            _session.BeginOrContinue(LeisurePrompt.DefaultInterest);
+                        {
+                            var interest = await PickInterestAsync(linked.Token).ConfigureAwait(false);
+                            _session.BeginOrContinue(interest);
+                        }
                         delay = await _runner.RunOnePassAsync(linked.Token).ConfigureAwait(false);
                     }
                     finally
@@ -125,6 +131,29 @@ public sealed class LeisureHostedService : BackgroundService
             }
 
             await DelayAsync(delay, stoppingToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Prefer an existing research subject (least recently updated) so the band
+    /// does not forever claim the PROP-17 example "neural interfaces".
+    /// </summary>
+    private async Task<string> PickInterestAsync(CancellationToken cancellationToken)
+    {
+        if (_research is null)
+            return LeisurePrompt.DefaultInterest;
+        try
+        {
+            var subjects = await _research.ListSubjectsAsync(cancellationToken).ConfigureAwait(false);
+            if (subjects.Count == 0)
+                return LeisurePrompt.DefaultInterest;
+            // ListSubjects is updated_at DESC — take the oldest for rotation.
+            return subjects[^1].Title;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "R&R interest pick from research subjects failed");
+            return LeisurePrompt.DefaultInterest;
         }
     }
 
