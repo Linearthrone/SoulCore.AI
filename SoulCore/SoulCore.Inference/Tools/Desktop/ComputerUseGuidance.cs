@@ -64,6 +64,7 @@ public static class ComputerUseGuidance
         "1) Websites / Login / Chrome / Firefox: desktop_open_app firefox|chrome (opens guest Firefox) OR browser_navigate " +
         "when the guest browser bridge is up. Then desktop_screenshot → desktop_click / desktop_type / desktop_key " +
         "using guest framebuffer coordinates (origin 0,0). browser_snapshot / browser_click_text also work on the guest bridge when available.\n" +
+        "If browser_snapshot says pixel fallback / degraded=true, that is a11y down — NOT a bridge outage. Keep working with the PNG + desktop_click.\n" +
         "NEVER tell Kayleigh you can only text/chat or that you have no browser — you control the embedded VM. " +
         "If a tool fails, report the real tool error (VM off, missing SOULCORE_VBOX_GUEST_PASS, etc.) and ask her to fix that; " +
         "do not invent a chat-only limitation.\n" +

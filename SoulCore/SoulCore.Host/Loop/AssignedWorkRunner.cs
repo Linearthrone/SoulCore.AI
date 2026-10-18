@@ -152,8 +152,19 @@ public sealed class AssignedWorkRunner
         reply = (reply ?? "").Trim();
         if (reply.Length == 0)
         {
-            _noToolStreak++;
-            return DelayForStreak();
+            // Mirror chat: never stay blank after tools ran.
+            if (noting.Results.Count > 0)
+            {
+                reply = WorkContinuation.EmptyAfterToolsLine;
+                _logger.LogWarning(
+                    "Assigned work empty after {ToolCount} tool(s); synthesizing continue line.",
+                    noting.Results.Count);
+            }
+            else
+            {
+                _noToolStreak++;
+                return DelayForStreak();
+            }
         }
 
         try
