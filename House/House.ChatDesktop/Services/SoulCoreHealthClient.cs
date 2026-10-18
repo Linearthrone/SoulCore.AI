@@ -57,6 +57,12 @@ public sealed class SoulCoreHealthSnapshot
     /// <summary>SoulCore.Host assembly version from /health (verify Host fix is running).</summary>
     public string? HostVersion { get; init; }
 
+    /// <summary>victoria_tasks row count from /health (diagnose empty Presence list).</summary>
+    public int? TaskCount { get; init; }
+
+    /// <summary>Assigned-work running task id from /health, when set.</summary>
+    public long? RunningTaskId { get; init; }
+
     public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>Alive = host HTTP health answered.</summary>
@@ -140,6 +146,8 @@ public sealed class SoulCoreHealthClient : IDisposable
                 ActivitySource = dto?.Presence?.ActivitySource,
                 OnHerMind = dto?.Presence?.OnHerMind,
                 HostVersion = dto?.Version,
+                TaskCount = dto?.Tasks?.Count,
+                RunningTaskId = dto?.Tasks?.RunningId,
                 Detail = null
             };
         }
@@ -193,6 +201,18 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("presence")]
         public PresenceDto? Presence { get; set; }
+
+        [JsonPropertyName("tasks")]
+        public TasksHealthDto? Tasks { get; set; }
+    }
+
+    private sealed class TasksHealthDto
+    {
+        [JsonPropertyName("count")]
+        public int? Count { get; set; }
+
+        [JsonPropertyName("runningId")]
+        public long? RunningId { get; set; }
     }
 
     private sealed class PresenceDto

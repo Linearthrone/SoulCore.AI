@@ -1327,7 +1327,7 @@ public partial class MainWindow
         RefreshBandMoodLine();
     }
 
-    private bool _taskDeleteBusy;
+    private bool _taskMutateBusy;
 
     private async Task RefreshBandTasksAsync()
     {
@@ -1344,25 +1344,110 @@ public partial class MainWindow
             return;
         }
 
-        BandTasksText.IsVisible = fetch.Tasks.Count == 0;
+        if (fetch.Tasks.Count == 0)
+        {
+            BandTasksText.IsVisible = true;
+            var hostCount = _lastHealth.TaskCount;
+            BandTasksText.Text = hostCount is > 0
+                ? $"No tasks in list, but Host health reports {hostCount}. Restart Host / Presence."
+                : "No tasks.";
+            return;
+        }
+
+        BandTasksText.IsVisible = false;
         BandTasksText.Text = "No tasks.";
+    }
+
+    private async void BandTaskAdd_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+
+        var dlg = new TaskAddWindow();
+        var accepted = await dlg.ShowDialog<bool>(this).ConfigureAwait(true);
+        if (!accepted || string.IsNullOrWhiteSpace(dlg.TitleText))
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.CreateAsync(dlg.TitleText).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? "Could not add task.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private async void BandTaskSuspend_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.SuspendAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? $"Could not suspend task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private async void BandTaskRelease_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.ReleaseAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? $"Could not release task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
     }
 
     private async void BandTaskDelete_Click(object? sender, RoutedEventArgs e)
     {
-        if (_taskDeleteBusy)
+        if (_taskMutateBusy)
             return;
         if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
             return;
 
         var title = string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title.Trim();
         var ok = await ConfirmYesNoAsync(
-            $"Delete task #{row.Id} permanently?\n\n{title}\n\nOnly you can do this. Victoria cannot restore it.",
+            $"Delete task #{row.Id} permanently?\n\n{title}\n\nShe can also delete via task_delete. Neither of you can restore it.",
             "Delete task").ConfigureAwait(true);
         if (!ok)
             return;
 
-        _taskDeleteBusy = true;
+        _taskMutateBusy = true;
         try
         {
             var removed = await _taskClient.DeleteAsync(row.Id).ConfigureAwait(true);
@@ -1375,7 +1460,7 @@ public partial class MainWindow
         }
         finally
         {
-            _taskDeleteBusy = false;
+            _taskMutateBusy = false;
         }
     }
 

@@ -428,9 +428,15 @@
                     Background="{DynamicResource MutedBrush}" Opacity="0.35"/>
             <DockPanel Grid.Column="2" LastChildFill="True" MinHeight="112">
               <TextBlock DockPanel.Dock="Top" Text="Tasks" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
-              <TextBlock DockPanel.Dock="Top" FontSize="10" Margin="0,0,0,6"
-                         Foreground="{DynamicResource MutedBrush}"
-                         Text="Only you can delete a task."/>
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6" LastChildFill="False">
+                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}"
+                           VerticalAlignment="Center" TextWrapping="Wrap"
+                           Text="Add / suspend / release here. She can delete too."/>
+                <Button DockPanel.Dock="Right" Classes="chrome" Content="Add" FontSize="10"
+                        Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                        Click="BandTaskAdd_Click"
+                        ToolTip.Tip="Add a task to her ledger (starts as todo)."/>
+              </DockPanel>
               <TextBlock x:Name="BandTasksText" DockPanel.Dock="Top" FontSize="11" TextWrapping="Wrap"
                          Foreground="{DynamicResource MutedBrush}"
                          Text="No tasks."/>
@@ -442,10 +448,18 @@
                       <Grid ColumnDefinitions="*,Auto" Margin="0,3,0,3">
                         <TextBlock Text="{Binding Line}" FontSize="11" TextWrapping="Wrap"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <Button Grid.Column="1" Classes="chrome" Content="Delete" FontSize="10"
-                                Padding="8,2" VerticalAlignment="Center"
-                                Click="BandTaskDelete_Click"
-                                ToolTip.Tip="Remove this task permanently. Victoria cannot do this."/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                    VerticalAlignment="Center">
+                          <Button Classes="chrome" Content="Suspend" FontSize="10"
+                                  Padding="6,2" Click="BandTaskSuspend_Click"
+                                  ToolTip.Tip="Stop auto-start; keep on the list."/>
+                          <Button Classes="chrome" Content="Release" FontSize="10"
+                                  Padding="6,2" Click="BandTaskRelease_Click"
+                                  ToolTip.Tip="Release parked/suspended to todo."/>
+                          <Button Classes="chrome" Content="Delete" FontSize="10"
+                                  Padding="6,2" Click="BandTaskDelete_Click"
+                                  ToolTip.Tip="Remove this task permanently."/>
+                        </StackPanel>
                       </Grid>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
