@@ -24,6 +24,13 @@ public static class WorkContinuation
     public const string PausedLine =
         "I paused because the tool round filled up. Say something and I'll pick it back up.";
 
+    /// <summary>
+    /// Fallback when the model ends a tool round with blank text (gemma4 habit).
+    /// Keeps the outer WorkContinuation pass alive instead of throwing empty.
+    /// </summary>
+    public const string EmptyAfterToolsLine =
+        "That step finished. Continuing from where I left off.";
+
     public const string WaitingLine = "Waiting on you";
 
     public const string PausedActivity = "Paused — say something to send her again";

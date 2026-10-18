@@ -1,3 +1,4 @@
+using System.Linq;
 using House.ChatDesktop.Services;
 
 namespace House.ChatDesktop.Tests;
@@ -16,7 +17,7 @@ public class VictoriaVmPointerPlanTests
     }
 
     [Fact]
-    public void ResolveGuestFramebuffer_PrefersDisplayThenSurfaceOverStaleHub()
+    public void ResolveGuestFramebuffer_PrefersDisplayThenHubOverSurface()
     {
         var resolved = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
             hubWidth: 1280,
@@ -25,15 +26,25 @@ public class VictoriaVmPointerPlanTests
             displayHeight: 900);
         Assert.Equal((1600, 900), resolved);
 
-        // When display COM fails, live slot beats a stale hub default (Auto-resize).
-        var surfaceOverHub = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+        // When display COM fails, hub/screenshot FB beats the HWND slot so
+        // Absolute does not warp when Auto-resize and the slot disagree.
+        var hubOverSurface = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
             hubWidth: 1280,
             hubHeight: 800,
             displayWidth: null,
             displayHeight: null,
             surfaceWidth: 900,
             surfaceHeight: 600);
-        Assert.Equal((900, 600), surfaceOverHub);
+        Assert.Equal((1280, 800), hubOverSurface);
+
+        var surfaceOnly = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+            hubWidth: 0,
+            hubHeight: 0,
+            displayWidth: null,
+            displayHeight: null,
+            surfaceWidth: 900,
+            surfaceHeight: 600);
+        Assert.Equal((900, 600), surfaceOnly);
 
         var hubOnly = VictoriaVmPointerPlan.ResolveGuestFramebuffer(1280, 800, null, null);
         Assert.Equal((1280, 800), hubOnly);
@@ -42,6 +53,28 @@ public class VictoriaVmPointerPlanTests
         Assert.Equal(
             (VictoriaBrowserCoordMap.DefaultGuestWidth, VictoriaBrowserCoordMap.DefaultGuestHeight),
             defaults);
+    }
+
+    [Fact]
+    public void EnumerateParkCandidates_PreferVirtualCornersOutsideExclude()
+    {
+        var excludes = new[] { new VictoriaVmPointerPlan.ParkRect(0, 0, 800, 600) };
+        var list = VictoriaVmPointerPlan.EnumerateParkCandidates(
+            excludes, virtualX: 0, virtualY: 0, virtualW: 1920, virtualH: 1080).ToList();
+        Assert.Contains((1916, 1076), list);
+        Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(1916, 1076, excludes));
+
+        var pick = VictoriaVmPointerPlan.PickParkPoint(
+            excludes, virtualX: 0, virtualY: 0, virtualW: 1920, virtualH: 1080);
+        Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(pick.X, pick.Y, excludes));
+    }
+
+    [Fact]
+    public void FormatClickDroppedLine_MentionsUnmapped()
+    {
+        var line = VictoriaVmPointerPlan.FormatClickDroppedLine(10, 20, 900, 600);
+        Assert.Contains("dropped-unmapped", line, StringComparison.Ordinal);
+        Assert.Contains("900x600", line, StringComparison.Ordinal);
     }
 
     [Fact]
