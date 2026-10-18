@@ -546,7 +546,10 @@ public partial class MainWindow : Window
         var hasImage = !string.IsNullOrWhiteSpace(_pendingImagePath) && _pendingImageBitmap is not null;
         if (string.IsNullOrEmpty(text) && !hasImage) return;
 
-        // Host chat.send is text-only today — UI ready; attach note in text when image present.
+        string? wireImageB64 = null;
+        if (hasImage && _pendingImagePath is not null)
+            wireImageB64 = TryReadImageBase64ForChat(_pendingImagePath);
+
         if (hasImage && string.IsNullOrEmpty(text))
             text = $"[image] {IoPath.GetFileName(_pendingImagePath)}";
         else if (hasImage)
@@ -586,7 +589,13 @@ public partial class MainWindow : Window
         UpdateEngagementState();
         ScrollTranscriptToEnd();
 
-        var sent = await _ws.SendChatAsync(text, quoted);
+        IReadOnlyList<string>? images = string.IsNullOrWhiteSpace(wireImageB64)
+            ? null
+            : new[] { wireImageB64 };
+        if (hasImage && images is null && PttHintText is not null)
+            PttHintText.Text = "Image too large or unreadable — sent as a filename note only.";
+
+        var sent = await _ws.SendChatAsync(text, quoted, images);
         if (!sent)
         {
             SetTyping(false);
@@ -601,6 +610,29 @@ public partial class MainWindow : Window
             _messages.Add(err);
             PersistMessage(err);
             ScrollTranscriptToEnd();
+        }
+    }
+
+    /// <summary>
+    /// Raw file → base64 for <c>chat.send images[]</c>. Host JPEG-compresses for Ollama.
+    /// Cap matches ToolImagePayload.ChatAttachMaxRawBytes (8 MB).
+    /// </summary>
+    private static string? TryReadImageBase64ForChat(string path)
+    {
+        try
+        {
+            const int maxRaw = 8_000_000;
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length <= 0 || info.Length > maxRaw)
+                return null;
+            var bytes = File.ReadAllBytes(path);
+            if (bytes.Length == 0 || bytes.Length > maxRaw)
+                return null;
+            return Convert.ToBase64String(bytes);
+        }
+        catch
+        {
+            return null;
         }
     }
 

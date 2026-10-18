@@ -104,11 +104,36 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
     public async Task<bool> SendChatAsync(
         string text,
         string? quotedText = null,
+        IReadOnlyList<string>? imagesBase64 = null,
         CancellationToken cancellationToken = default)
     {
-        object payload = string.IsNullOrWhiteSpace(quotedText)
-            ? new { text, sessionId = "presence-local" }
-            : new { text, quotedText = quotedText.Trim(), sessionId = "presence-local" };
+        var images = imagesBase64 is { Count: > 0 }
+            ? imagesBase64.Where(s => !string.IsNullOrWhiteSpace(s)).Take(4).ToArray()
+            : null;
+
+        object payload;
+        if (images is { Length: > 0 } && !string.IsNullOrWhiteSpace(quotedText))
+        {
+            payload = new
+            {
+                text,
+                quotedText = quotedText.Trim(),
+                sessionId = "presence-local",
+                images
+            };
+        }
+        else if (images is { Length: > 0 })
+        {
+            payload = new { text, sessionId = "presence-local", images };
+        }
+        else if (!string.IsNullOrWhiteSpace(quotedText))
+        {
+            payload = new { text, quotedText = quotedText.Trim(), sessionId = "presence-local" };
+        }
+        else
+        {
+            payload = new { text, sessionId = "presence-local" };
+        }
 
         var frame = SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, payload);
 

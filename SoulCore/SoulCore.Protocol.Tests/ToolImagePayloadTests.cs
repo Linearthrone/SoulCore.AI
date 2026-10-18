@@ -21,6 +21,23 @@ public class ToolImagePayloadTests
     }
 
     [Fact]
+    public void TryPrepareChatAttachBase64_CompressesPngAttach()
+    {
+        var png = MakePng(64, 48);
+        var b64 = Convert.ToBase64String(png);
+        var prepared = ToolImagePayload.TryPrepareChatAttachBase64(b64);
+        Assert.NotNull(prepared);
+        Assert.True(ToolImagePayload.LooksLikeJpegBase64(prepared!));
+    }
+
+    [Fact]
+    public void TryPrepareChatAttachBase64_RejectsGarbage()
+    {
+        Assert.Null(ToolImagePayload.TryPrepareChatAttachBase64("not-base64!!!"));
+        Assert.Null(ToolImagePayload.TryPrepareChatAttachBase64(Convert.ToBase64String(new byte[] { 1, 2, 3 })));
+    }
+
+    [Fact]
     public void FormatClickScaleHint_GuestFrameMatchesImage_UsesSameGrid()
     {
         var hint = ToolImagePayload.FormatClickScaleHint(1510, 770, 1510, 770);

@@ -58,6 +58,12 @@ public sealed class OllamaInferenceClient : IInferenceClient
     public const string EmptyAfterToolsMarker =
         "That step finished. Continuing from where I left off.";
 
+    /// <summary>
+    /// Fallback when the model returned blank with no tools — never surface "".
+    /// </summary>
+    public const string EmptyNoToolsMarker =
+        "I didn't catch a clear reply just then. Say that again or tell me the next step.";
+
     private readonly HttpClient _http;
     private readonly InferenceOptions _options;
     private readonly ILogger<OllamaInferenceClient> _logger;
@@ -582,6 +588,13 @@ public sealed class OllamaInferenceClient : IInferenceClient
                             "Ollama empty post-tool text — synthesized continue line iter={Iter}.",
                             iteration);
                     }
+                    else if (string.IsNullOrWhiteSpace(textReply))
+                    {
+                        textReply = EmptyNoToolsMarker;
+                        _logger.LogInformation(
+                            "Ollama empty text with no tools — synthesized no-tools line iter={Iter}.",
+                            iteration);
+                    }
 
                     return FirewallAssistantReply(textReply);
                 }
@@ -709,7 +722,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
             return FirewallAssistantReply(lastAssistantText);
         if (toolsDispatched)
             return FirewallAssistantReply(SynthesizePostToolContinue(messages));
-        return lastAssistantText ?? string.Empty;
+        return EmptyNoToolsMarker;
     }
 
     /// <summary>
@@ -782,7 +795,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
                 // turns the loop itself produces); we forward them to keep the
                 // shape faithful if a caller pre-seeds an assistant tool-call turn.
                 ,
-                ToolCalls = ConvertToolCalls(m.ToolCalls)
+                ToolCalls = ConvertToolCalls(m.ToolCalls),
+                Images = m.Images is { Count: > 0 } ? m.Images.ToList() : null
             });
         }
         return list;
