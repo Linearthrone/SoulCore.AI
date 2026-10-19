@@ -2,9 +2,10 @@ namespace House.ChatDesktop.Services;
 
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
-/// <c>putMouseEventAbsolute</c> is guest-display pixels starting at <c>[1,1]</c>
-/// top-left (VirtualBox SDK). Guest tools / stretch-fill stay 0-based; Absolute
-/// adds +1 at the last step.
+/// Slot→Guest0→Absolute stretch-fill lives on <see cref="VictoriaBrowserCoordMap"/>
+/// (PROP-19.3). <c>putMouseEventAbsolute</c> is guest-display pixels starting at
+/// <c>[1,1]</c> top-left (VirtualBox SDK). Guest tools / stretch-fill stay 0-based;
+/// Absolute adds +1 at the last step (<see cref="ToAbsolute"/>).
 /// A wheel is two absolute samples at the real point: a move with no button,
 /// then the same point with <c>dz</c> set to the notch count. No Page key.
 /// </summary>
@@ -26,6 +27,9 @@ public static class VictoriaVmPointerPlan
 
     /// <summary>
     /// Guest 0-based framebuffer pixel → Absolute [1,1] origin (SDK).
+    /// Must stay identical to Host <c>VboxConsoleMouse.PlanAbsolutePress</c> (+1,+1).
+    /// Soft-cursor tip uses Guest0 via <see cref="VictoriaBrowserCoordMap.TryMapGuestTipToSurfaceStretchFill"/>;
+    /// do not paint Absolute coords.
     /// </summary>
     public static (int X, int Y) ToAbsolute(int guestX, int guestY) =>
         (Math.Max(0, guestX) + 1, Math.Max(0, guestY) + 1);
@@ -35,6 +39,7 @@ public static class VictoriaVmPointerPlan
     /// then hub/screenshot (last known real FB), then the HWND slot, then the JPEG
     /// default. Preferring the live slot over hub when display COM fails warps
     /// Absolute coords whenever Auto-resize and the hub disagree.
+    /// Also exposed as <see cref="VictoriaBrowserCoordMap.ResolveGuestFramebuffer"/>.
     /// </summary>
     public static (int Width, int Height) ResolveGuestFramebuffer(
         int hubWidth,
@@ -151,6 +156,16 @@ public static class VictoriaVmPointerPlan
     public static bool ShouldInjectOnRelease(bool buttonChanged, int buttons, bool hasPending) =>
         buttonChanged && buttons == 0 && hasPending;
 
+    /// <summary>
+    /// Honest Absolute success: park cleared the embed HWND and COM accepted the burst.
+    /// Park failure must never look like <c>sent</c> — Mouse Integration clears the press.
+    /// </summary>
+    public static bool IsHonestClickSuccess(bool parkOk, bool sent, string? comError) =>
+        parkOk && sent && string.IsNullOrWhiteSpace(comError);
+
+    /// <summary>Startup-log reason when host-cursor park did not leave the embed HWND.</summary>
+    public const string ParkFailedReason = "park failed";
+
     /// <summary>One startup-log line after a click Absolute burst (park + inject).</summary>
     public static string FormatClickDeliveryLine(
         int guestX, int guestY, int buttons, bool parkOk, bool sent, string? comError)
@@ -158,10 +173,19 @@ public static class VictoriaVmPointerPlan
         var (ax, ay) = ToAbsolute(guestX, guestY);
         var head =
             $"her-screen click abs={ax},{ay} buttons={buttons} park={(parkOk ? "ok" : "failed")}";
-        if (sent && string.IsNullOrWhiteSpace(comError))
+
+        // Never claim "sent" when park failed — Absolute over the embed does not stick.
+        if (IsHonestClickSuccess(parkOk, sent, comError))
             return head + " sent";
 
-        var reason = string.IsNullOrWhiteSpace(comError) ? "console click failed" : comError;
+        string reason;
+        if (!parkOk && string.IsNullOrWhiteSpace(comError))
+            reason = ParkFailedReason;
+        else if (string.IsNullOrWhiteSpace(comError))
+            reason = "console click failed";
+        else
+            reason = comError;
+
         var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
             .Replace('\r', ' ')
             .Replace('\n', ' ')
@@ -169,6 +193,39 @@ public static class VictoriaVmPointerPlan
         if (flat.Length == 0)
             flat = "failed";
         return head + " COM error: " + flat;
+    }
+
+    /// <summary>Operator-visible Her screen status when Absolute delivery fails.</summary>
+    public static string FormatOperatorClickFault(string? detail)
+    {
+        var flat = string.IsNullOrWhiteSpace(detail) ? "click did not reach the guest" : detail.Trim();
+        if (flat.Contains("park failed", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — host cursor park failed (Mouse Integration).";
+        if (flat.Contains("unmapped", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — surface point unmapped to guest framebuffer.";
+        if (flat.Contains("no mouse", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — VirtualBox console has no mouse.";
+        return "Her screen: click failed — " + flat;
+    }
+
+    /// <summary>Operator-visible status when the input overlay is missing over the VM HWND.</summary>
+    public static string FormatOperatorOverlayMissingFault() =>
+        "Her screen: input overlay missing — clicks hit VirtualBox paint only (guest deaf).";
+
+    /// <summary>
+    /// Click never reached Absolute (console missing before guest map / inject).
+    /// Always park=failed — there was no successful park+inject burst.
+    /// </summary>
+    public static string FormatClickFailedBeforeInjectLine(int buttons, string? comError)
+    {
+        var reason = string.IsNullOrWhiteSpace(comError) ? "console click failed" : comError;
+        var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+        if (flat.Length == 0)
+            flat = "failed";
+        return $"her-screen click buttons={buttons} park=failed COM error: {flat}";
     }
 
     /// <summary>
