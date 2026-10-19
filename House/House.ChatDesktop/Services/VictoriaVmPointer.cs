@@ -30,6 +30,9 @@ public static class VictoriaVmPointer
 
     public static event Action<string>? Faulted;
 
+    /// <summary>Fired after a successful Absolute / key delivery clears the last fault.</summary>
+    public static event Action? FaultCleared;
+
     public static void NoteHostWindow(nint hwnd) => _excludeHwnd = hwnd;
 
     /// <summary>
@@ -257,18 +260,33 @@ public static class VictoriaVmPointer
         if (pointer.Buttons == 0)
             return;
 
+        var deliveryLogged = false;
         try
         {
             TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
             if (mouse is null)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(
+                        pointer.Buttons, "VirtualBox console has no mouse."));
+                deliveryLogged = true;
                 throw new InvalidOperationException("VirtualBox console has no mouse.");
+            }
 
-            InjectPointer(mouse, pointer.X, pointer.Y, pointer.Buttons);
-            _lastFault = null;
+            InjectPointer(mouse, pointer.X, pointer.Y, pointer.Buttons, out deliveryLogged);
+            ClearFault();
         }
         catch (Exception ex)
         {
-            ReportFault($"VM click failed: {ex.Message}");
+            if (!deliveryLogged)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickDeliveryLine(
+                        pointer.X, pointer.Y, pointer.Buttons,
+                        parkOk: false, sent: false, comError: ex.Message));
+            }
+
+            ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(ex.Message));
         }
         finally
         {
@@ -284,11 +302,18 @@ public static class VictoriaVmPointer
         ref dynamic? keyboard,
         SurfacePointerWork surface)
     {
+        var deliveryLogged = false;
         try
         {
             TryOpenConsole(ref vbox, ref session, ref mouse, ref keyboard);
             if (mouse is null || session is null)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(
+                        surface.Buttons, "VirtualBox console has no mouse."));
+                deliveryLogged = true;
                 throw new InvalidOperationException("VirtualBox console has no mouse.");
+            }
 
             var mapped = MapSurfaceToGuest(session, surface.X, surface.Y, surface.Width, surface.Height);
             if (mapped is null)
@@ -296,15 +321,24 @@ public static class VictoriaVmPointer
                 PresenceStartupLog.Write(
                     VictoriaVmPointerPlan.FormatClickDroppedLine(
                         surface.X, surface.Y, surface.Width, surface.Height));
+                deliveryLogged = true;
+                ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(
+                    "surface point unmapped to guest framebuffer."));
                 return;
             }
 
-            InjectPointer(mouse, mapped.Value.X, mapped.Value.Y, surface.Buttons);
-            _lastFault = null;
+            InjectPointer(mouse, mapped.Value.X, mapped.Value.Y, surface.Buttons, out deliveryLogged);
+            ClearFault();
         }
         catch (Exception ex)
         {
-            ReportFault($"VM click failed: {ex.Message}");
+            if (!deliveryLogged)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(surface.Buttons, ex.Message));
+            }
+
+            ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(ex.Message));
         }
         finally
         {
@@ -395,19 +429,22 @@ public static class VictoriaVmPointer
             // Hub / default seed below.
         }
 
-        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+        // PROP-19.3: same ResolveGuestFramebuffer + stretch-fill + Absolute as soft-cursor tip.
+        var fb = VictoriaBrowserCoordMap.ResolveGuestFramebuffer(
             hubW, hubH, displayW, displayH, surfaceW, surfaceH);
-        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
-            surfaceX, surfaceY, surfaceW, surfaceH, guest.Width, guest.Height);
-        if (mapped is not null)
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
+            surfaceX, surfaceY, surfaceW, surfaceH, fb.Width, fb.Height);
+        if (inject is not null)
         {
             PresenceStartupLog.Write(
                 $"her-screen click map surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} " +
-                $"guest={guest.Width}x{guest.Height} abs={mapped.Value.X + 1},{mapped.Value.Y + 1}" +
+                $"guest={fb.Width}x{fb.Height} guest0={inject.Value.GuestX},{inject.Value.GuestY} " +
+                $"abs={inject.Value.AbsX},{inject.Value.AbsY}" +
                 (displayW is > 0 ? " display=ok" : " display=fallback"));
+            return (inject.Value.GuestX, inject.Value.GuestY);
         }
 
-        return mapped;
+        return null;
     }
 
     [SupportedOSPlatform("windows")]
@@ -471,8 +508,10 @@ public static class VictoriaVmPointer
     }
 
     [SupportedOSPlatform("windows")]
-    private static void InjectPointer(dynamic mouse, int guestX, int guestY, int buttons)
+    private static void InjectPointer(
+        dynamic mouse, int guestX, int guestY, int buttons, out bool deliveryLogged)
     {
+        deliveryLogged = false;
         if (buttons == 0)
             return;
 
@@ -480,23 +519,44 @@ public static class VictoriaVmPointer
         var parkOk = false;
         try
         {
-            parkOk = WithCursorParked(_excludeHwnd, () =>
+            // Park must leave the embed HWND before Absolute button edges, or Mouse
+            // Integration clears the press. Do not inject (or claim "sent") on park fail.
+            WithCursorParked(_excludeHwnd, () =>
             {
                 mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
                 Thread.Sleep(50);
                 mouse.PutMouseEventAbsolute(ax, ay, 0, 0, buttons);
                 Thread.Sleep(50);
                 mouse.PutMouseEventAbsolute(ax, ay, 0, 0, 0);
-            });
+            }, out parkOk);
+
+            if (!parkOk)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickDeliveryLine(
+                        guestX, guestY, buttons,
+                        parkOk: false, sent: false,
+                        comError: VictoriaVmPointerPlan.ParkFailedReason));
+                deliveryLogged = true;
+                throw new InvalidOperationException(
+                    "park failed — host cursor still over embed HWND.");
+            }
+
             PresenceStartupLog.Write(
                 VictoriaVmPointerPlan.FormatClickDeliveryLine(
-                    guestX, guestY, buttons, parkOk, sent: true, comError: null));
+                    guestX, guestY, buttons, parkOk: true, sent: true, comError: null));
+            deliveryLogged = true;
         }
         catch (Exception ex)
         {
-            PresenceStartupLog.Write(
-                VictoriaVmPointerPlan.FormatClickDeliveryLine(
-                    guestX, guestY, buttons, parkOk, sent: false, comError: ex.Message));
+            if (!deliveryLogged)
+            {
+                PresenceStartupLog.Write(
+                    VictoriaVmPointerPlan.FormatClickDeliveryLine(
+                        guestX, guestY, buttons, parkOk, sent: false, comError: ex.Message));
+                deliveryLogged = true;
+            }
+
             throw;
         }
     }
@@ -837,19 +897,28 @@ public static class VictoriaVmPointer
         catch { /* UI hook must not kill the STA thread */ }
     }
 
+    private static void ClearFault()
+    {
+        if (_lastFault is null)
+            return;
+        _lastFault = null;
+        try { FaultCleared?.Invoke(); }
+        catch { /* UI hook must not kill the STA thread */ }
+    }
+
     /// <summary>
     /// Park off the VM / embed HWND before Absolute button changes. Matches Host
     /// <c>HostPointerPark</c>: multi-candidate virtual-screen corners — Presence
-    /// chrome is a valid park (do not exclude GA_ROOT). Returns whether the cursor
-    /// landed outside every exclude rect before inject.
+    /// chrome is a valid park (do not exclude GA_ROOT). <paramref name="parkOk"/> is
+    /// set true before <paramref name="body"/> runs so a COM throw still reports
+    /// park=ok. When park fails, body is not run — Absolute over the embed would be
+    /// cleared by Mouse Integration.
     /// </summary>
-    private static bool WithCursorParked(nint excludeHwnd, Action body)
+    private static void WithCursorParked(nint excludeHwnd, Action body, out bool parkOk)
     {
+        parkOk = false;
         if (!OperatingSystem.IsWindows() || !GetCursorPos(out var saved))
-        {
-            body();
-            return false;
-        }
+            return;
 
         var excludes = BuildParkExcludes(excludeHwnd);
         var vx = GetSystemMetrics(SmXVirtualScreen);
@@ -881,6 +950,13 @@ public static class VictoriaVmPointer
                 parked = true;
         }
 
+        if (!parked)
+        {
+            _ = SetCursorPos(saved.X, saved.Y);
+            return;
+        }
+
+        parkOk = true;
         try
         {
             body();
@@ -890,8 +966,6 @@ public static class VictoriaVmPointer
         {
             _ = SetCursorPos(saved.X, saved.Y);
         }
-
-        return parked;
     }
 
     private static List<VictoriaVmPointerPlan.ParkRect> BuildParkExcludes(nint excludeHwnd)
