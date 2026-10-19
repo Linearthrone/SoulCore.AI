@@ -395,19 +395,22 @@ public static class VictoriaVmPointer
             // Hub / default seed below.
         }
 
-        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+        // PROP-19.3: same ResolveGuestFramebuffer + stretch-fill + Absolute as soft-cursor tip.
+        var fb = VictoriaBrowserCoordMap.ResolveGuestFramebuffer(
             hubW, hubH, displayW, displayH, surfaceW, surfaceH);
-        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
-            surfaceX, surfaceY, surfaceW, surfaceH, guest.Width, guest.Height);
-        if (mapped is not null)
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
+            surfaceX, surfaceY, surfaceW, surfaceH, fb.Width, fb.Height);
+        if (inject is not null)
         {
             PresenceStartupLog.Write(
                 $"her-screen click map surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} " +
-                $"guest={guest.Width}x{guest.Height} abs={mapped.Value.X + 1},{mapped.Value.Y + 1}" +
+                $"guest={fb.Width}x{fb.Height} guest0={inject.Value.GuestX},{inject.Value.GuestY} " +
+                $"abs={inject.Value.AbsX},{inject.Value.AbsY}" +
                 (displayW is > 0 ? " display=ok" : " display=fallback"));
+            return (inject.Value.GuestX, inject.Value.GuestY);
         }
 
-        return mapped;
+        return null;
     }
 
     [SupportedOSPlatform("windows")]

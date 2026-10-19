@@ -150,17 +150,19 @@ public class VictoriaVmPointerPlanTests
     public void StretchFill_SlotVsGuestFramebuffer_MapsCenterCorrectly()
     {
         // Regression: treating slot 900×600 as the FB sent Absolute(450,300) for a
-        // center click; real FB 1280×800 must map center → (640,400).
-        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+        // center click; real FB 1280×800 must map center → Guest0 (640,400) / Abs (641,401).
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
             pointerX: 450,
             pointerY: 300,
             surfaceWidth: 900,
             surfaceHeight: 600,
-            imagePixelWidth: 1280,
-            imagePixelHeight: 800);
-        Assert.NotNull(mapped);
-        Assert.Equal(640, mapped!.Value.X);
-        Assert.Equal(400, mapped.Value.Y);
+            framebufferWidth: 1280,
+            framebufferHeight: 800);
+        Assert.NotNull(inject);
+        Assert.Equal(640, inject!.Value.GuestX);
+        Assert.Equal(400, inject.Value.GuestY);
+        Assert.Equal(641, inject.Value.AbsX);
+        Assert.Equal(401, inject.Value.AbsY);
     }
 
     [Fact]

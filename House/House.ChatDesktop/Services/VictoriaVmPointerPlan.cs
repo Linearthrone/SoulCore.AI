@@ -2,9 +2,10 @@ namespace House.ChatDesktop.Services;
 
 /// <summary>
 /// Maps a Her-screen pointer event into the VirtualBox absolute pointer.
-/// <c>putMouseEventAbsolute</c> is guest-display pixels starting at <c>[1,1]</c>
-/// top-left (VirtualBox SDK). Guest tools / stretch-fill stay 0-based; Absolute
-/// adds +1 at the last step.
+/// Slot→Guest0→Absolute stretch-fill lives on <see cref="VictoriaBrowserCoordMap"/>
+/// (PROP-19.3). <c>putMouseEventAbsolute</c> is guest-display pixels starting at
+/// <c>[1,1]</c> top-left (VirtualBox SDK). Guest tools / stretch-fill stay 0-based;
+/// Absolute adds +1 at the last step (<see cref="ToAbsolute"/>).
 /// A wheel is two absolute samples at the real point: a move with no button,
 /// then the same point with <c>dz</c> set to the notch count. No Page key.
 /// </summary>
@@ -26,6 +27,9 @@ public static class VictoriaVmPointerPlan
 
     /// <summary>
     /// Guest 0-based framebuffer pixel → Absolute [1,1] origin (SDK).
+    /// Must stay identical to Host <c>VboxConsoleMouse.PlanAbsolutePress</c> (+1,+1).
+    /// Soft-cursor tip uses Guest0 via <see cref="VictoriaBrowserCoordMap.TryMapGuestTipToSurfaceStretchFill"/>;
+    /// do not paint Absolute coords.
     /// </summary>
     public static (int X, int Y) ToAbsolute(int guestX, int guestY) =>
         (Math.Max(0, guestX) + 1, Math.Max(0, guestY) + 1);
@@ -35,6 +39,7 @@ public static class VictoriaVmPointerPlan
     /// then hub/screenshot (last known real FB), then the HWND slot, then the JPEG
     /// default. Preferring the live slot over hub when display COM fails warps
     /// Absolute coords whenever Auto-resize and the hub disagree.
+    /// Also exposed as <see cref="VictoriaBrowserCoordMap.ResolveGuestFramebuffer"/>.
     /// </summary>
     public static (int Width, int Height) ResolveGuestFramebuffer(
         int hubWidth,

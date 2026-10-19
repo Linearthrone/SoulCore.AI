@@ -701,7 +701,7 @@ public partial class MainWindow
             displayH = comH;
         }
 
-        var resolved = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+        var resolved = VictoriaBrowserCoordMap.ResolveGuestFramebuffer(
             _browserImagePixelWidth,
             _browserImagePixelHeight,
             displayW,
@@ -810,46 +810,49 @@ public partial class MainWindow
         var fill = flash ? SoftCursorClickFill : SoftCursorIdleFill;
         var size = flash ? 36.0 : 28.0;
 
-        // HWND embed fills the slot (stretch); JPEG uses Uniform letterbox.
-        var mapped = IsVictoriaVmEmbedLive()
-            ? VictoriaBrowserCoordMap.TryMapGuestToSurfaceStretchFill(
-                cx, cy, bounds.Width, bounds.Height,
-                _browserImagePixelWidth, _browserImagePixelHeight,
-                size, size)
-            : VictoriaBrowserCoordMap.TryMapGuestToSurfaceUniform(
-                cx, cy, bounds.Width, bounds.Height,
-                _browserImagePixelWidth, _browserImagePixelHeight,
-                size, size);
-
-        if (mapped is null)
-        {
-            layer.IsVisible = false;
-            _herScreenOverlay?.SetSoftCursor(false, 0, 0, size, stroke, fill);
-            return;
-        }
-
-        // Live VM HWND covers in-tree Avalonia — paint on Win32 sibling (or Avalonia fallback).
+        // PROP-19.3: HWND embed tip = inject Guest0 via stretch-fill inverse.
+        // JPEG / Playwright still uses Uniform letterbox (glyph-centered).
         if (IsVictoriaVmEmbedLive())
         {
+            var tip = VictoriaBrowserCoordMap.TryMapGuestTipToSurfaceStretchFill(
+                cx, cy, bounds.Width, bounds.Height,
+                _browserImagePixelWidth, _browserImagePixelHeight);
+            if (tip is null)
+            {
+                layer.IsVisible = false;
+                _herScreenOverlay?.SetSoftCursor(false, 0, 0, size, stroke, fill);
+                return;
+            }
+
+            // Live VM HWND covers in-tree Avalonia — paint on Win32 sibling (or Avalonia fallback).
             layer.IsVisible = false;
             EnsureHerScreenOverlay();
             var scaling = TopLevel.GetTopLevel(surface)?.RenderScaling ?? 1.0;
-            var centerX = (int)Math.Round((mapped.Value.Left + size / 2) * scaling);
-            var centerY = (int)Math.Round((mapped.Value.Top + size / 2) * scaling);
+            var tipX = (int)Math.Round(tip.Value.TipX * scaling);
+            var tipY = (int)Math.Round(tip.Value.TipY * scaling);
             var sizePx = (int)Math.Round(size * scaling);
             if (_herScreenHwndOverlay is { IsAttached: true })
             {
                 _herScreenHwndOverlay.SyncToParent();
-                _herScreenHwndOverlay.SetSoftCursor(true, centerX, centerY, sizePx, flash);
+                _herScreenHwndOverlay.SetSoftCursor(true, tipX, tipY, sizePx, flash);
             }
             else
             {
                 _herScreenOverlay?.SyncToSurface(surface);
-                var hotX = mapped.Value.Left + size / 2;
-                var hotY = mapped.Value.Top + size / 2;
-                _herScreenOverlay?.SetSoftCursor(true, hotX, hotY, size, stroke, fill);
+                _herScreenOverlay?.SetSoftCursor(true, tip.Value.TipX, tip.Value.TipY, size, stroke, fill);
             }
 
+            return;
+        }
+
+        var mapped = VictoriaBrowserCoordMap.TryMapGuestToSurfaceUniform(
+            cx, cy, bounds.Width, bounds.Height,
+            _browserImagePixelWidth, _browserImagePixelHeight,
+            size, size);
+        if (mapped is null)
+        {
+            layer.IsVisible = false;
+            _herScreenOverlay?.SetSoftCursor(false, 0, 0, size, stroke, fill);
             return;
         }
 
@@ -858,6 +861,7 @@ public partial class MainWindow
         cursor.Fill = fill;
         cursor.Height = size;
         cursor.Width = HerScreenCursorGlyph.WidthForHeight(size);
+        // Glyph hotspot is tip at (0,0); Uniform helper returns glyph top-left.
         Canvas.SetLeft(cursor, mapped.Value.Left + size / 2);
         Canvas.SetTop(cursor, mapped.Value.Top + size / 2);
         layer.Width = bounds.Width;

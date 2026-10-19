@@ -170,4 +170,85 @@ public class VictoriaBrowserCoordMapTests
         Assert.InRange(surface!.Value.Left, 319.5, 320.5);
         Assert.InRange(surface.Value.Top, 199.5, 200.5);
     }
+
+    /// <summary>
+    /// PROP-19.3: Kurt inject + soft-cursor tip share one Guest0; Absolute is +1 only at COM.
+    /// Slot 900×600 ≠ FB 1280×800 — center must not land at Absolute(450,300).
+    /// </summary>
+    [Fact]
+    public void MapSlotToInject_SlotDiffersFromFramebuffer_CenterMapsToGuestCenterAndAbsolute()
+    {
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
+            pointerX: 450,
+            pointerY: 300,
+            surfaceWidth: 900,
+            surfaceHeight: 600,
+            framebufferWidth: 1280,
+            framebufferHeight: 800);
+        Assert.NotNull(inject);
+        Assert.Equal(640, inject!.Value.GuestX);
+        Assert.Equal(400, inject.Value.GuestY);
+        Assert.Equal(641, inject.Value.AbsX);
+        Assert.Equal(401, inject.Value.AbsY);
+
+        var tip = VictoriaBrowserCoordMap.TryMapGuestTipToSurfaceStretchFill(
+            inject.Value.GuestX, inject.Value.GuestY,
+            900, 600, 1280, 800);
+        Assert.NotNull(tip);
+        Assert.InRange(tip!.Value.TipX, 449.5, 450.5);
+        Assert.InRange(tip.Value.TipY, 299.5, 300.5);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 0, 0, 1, 1)]
+    [InlineData(899, 599, 1279, 799, 1280, 800)] // near bottom-right → last guest px
+    [InlineData(0, 599, 0, 799, 1, 800)]
+    [InlineData(899, 0, 1279, 0, 1280, 1)]
+    public void MapSlotToInject_Edges_MatchTipInverse(
+        double slotX, double slotY,
+        int expectGuestX, int expectGuestY,
+        int expectAbsX, int expectAbsY)
+    {
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
+            slotX, slotY, 900, 600, 1280, 800);
+        Assert.NotNull(inject);
+        Assert.Equal(expectGuestX, inject!.Value.GuestX);
+        Assert.Equal(expectGuestY, inject.Value.GuestY);
+        Assert.Equal(expectAbsX, inject.Value.AbsX);
+        Assert.Equal(expectAbsY, inject.Value.AbsY);
+
+        var tip = VictoriaBrowserCoordMap.TryMapGuestTipToSurfaceStretchFill(
+            inject.Value.GuestX, inject.Value.GuestY, 900, 600, 1280, 800);
+        Assert.NotNull(tip);
+        // Tip is the inject Guest0 surface point — remapping tip → guest recovers Guest0.
+        var back = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
+            tip!.Value.TipX, tip.Value.TipY, 900, 600, 1280, 800);
+        Assert.NotNull(back);
+        Assert.Equal(inject.Value.GuestX, back!.Value.X);
+        Assert.Equal(inject.Value.GuestY, back.Value.Y);
+    }
+
+    [Fact]
+    public void ToAbsolute_MatchesVmPointerPlan()
+    {
+        Assert.Equal(
+            VictoriaVmPointerPlan.ToAbsolute(0, 0),
+            VictoriaBrowserCoordMap.ToAbsolute(0, 0));
+        Assert.Equal(
+            VictoriaVmPointerPlan.ToAbsolute(639, 399),
+            VictoriaBrowserCoordMap.ToAbsolute(639, 399));
+    }
+
+    [Fact]
+    public void ResolveGuestFramebuffer_NeverPrefersSlotWhenHubKnown()
+    {
+        var fb = VictoriaBrowserCoordMap.ResolveGuestFramebuffer(
+            hubWidth: 1280,
+            hubHeight: 800,
+            displayWidth: null,
+            displayHeight: null,
+            surfaceWidth: 900,
+            surfaceHeight: 600);
+        Assert.Equal((1280, 800), fb);
+    }
 }
