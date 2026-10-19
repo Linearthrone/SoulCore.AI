@@ -838,10 +838,10 @@ public static class VictoriaVmPointer
     }
 
     /// <summary>
-    /// Park off Presence (and the reparented VM HWND) before Absolute button
-    /// changes. Matches Host <c>HostPointerPark</c>: multi-candidate virtual-screen
-    /// corners, not a weak ±24px nudge that snaps back onto fullscreen Presence.
-    /// Returns whether the cursor landed outside every exclude rect before inject.
+    /// Park off the VM / embed HWND before Absolute button changes. Matches Host
+    /// <c>HostPointerPark</c>: multi-candidate virtual-screen corners — Presence
+    /// chrome is a valid park (do not exclude GA_ROOT). Returns whether the cursor
+    /// landed outside every exclude rect before inject.
     /// </summary>
     private static bool WithCursorParked(nint excludeHwnd, Action body)
     {
@@ -900,21 +900,15 @@ public static class VictoriaVmPointer
         if (excludeHwnd == 0)
             return excludes;
 
-        var root = GetAncestor(excludeHwnd, GaRoot);
-        if (root == 0)
-            root = excludeHwnd;
-
-        if (GetWindowRect(root, out var rootRc))
+        // Mouse Integration rewrites Absolute while the cursor sits over the VM /
+        // embed HWND — not the whole Presence window. Excluding GA_ROOT meant a
+        // maximized single-monitor Presence had nowhere to park (corners clamp
+        // back onto the root), so Absolute always ran with park=failed and MI
+        // cleared every press.
+        if (GetWindowRect(excludeHwnd, out var embedRc))
         {
             excludes.Add(new VictoriaVmPointerPlan.ParkRect(
-                rootRc.Left, rootRc.Top, rootRc.Right, rootRc.Bottom));
-        }
-
-        // SetParent child (victoria-sandbox) — Absolute also tracks over that HWND.
-        if (excludeHwnd != root && GetWindowRect(excludeHwnd, out var childRc))
-        {
-            excludes.Add(new VictoriaVmPointerPlan.ParkRect(
-                childRc.Left, childRc.Top, childRc.Right, childRc.Bottom));
+                embedRc.Left, embedRc.Top, embedRc.Right, embedRc.Bottom));
         }
 
         return excludes;
@@ -932,7 +926,6 @@ public static class VictoriaVmPointer
 
     private sealed record WheelKeyWork(int X, int Y, int Notches) : WorkItem;
 
-    private const uint GaRoot = 2;
     private const int ParkSettleMs = 80;
     private const int SmXVirtualScreen = 76;
     private const int SmYVirtualScreen = 77;
@@ -960,9 +953,6 @@ public static class VictoriaVmPointer
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
-
-    [DllImport("user32.dll")]
-    private static extern nint GetAncestor(nint hWnd, uint gaFlags);
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);

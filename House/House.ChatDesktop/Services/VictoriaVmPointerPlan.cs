@@ -69,8 +69,8 @@ public static class VictoriaVmPointerPlan
 
     /// <summary>
     /// Ordered park candidates (virtual-screen corners, then just outside excludes).
-    /// Mouse Integration rewrites Absolute while the cursor sits over Presence / the
-    /// VM HWND — park must leave those rects, not just nudge ±24px beside them.
+    /// Mouse Integration rewrites Absolute while the cursor sits over the VM / embed
+    /// HWND — park must leave that rect (Presence chrome is fine), not just nudge ±24px.
     /// </summary>
     public static IEnumerable<(int X, int Y)> EnumerateParkCandidates(
         IReadOnlyList<ParkRect> excludes,
