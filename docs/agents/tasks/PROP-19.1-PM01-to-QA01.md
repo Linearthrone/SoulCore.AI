@@ -7,7 +7,7 @@ to: QA-01
 co_owners:
   - BED-01
 priority: P0
-status: Queued
+status: In progress
 created: 2026-10-19
 updated: 2026-10-19
 wave: her-screen-clicks
