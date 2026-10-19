@@ -195,6 +195,23 @@ public static class VictoriaVmPointerPlan
         return head + " COM error: " + flat;
     }
 
+    /// <summary>Operator-visible Her screen status when Absolute delivery fails.</summary>
+    public static string FormatOperatorClickFault(string? detail)
+    {
+        var flat = string.IsNullOrWhiteSpace(detail) ? "click did not reach the guest" : detail.Trim();
+        if (flat.Contains("park failed", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — host cursor park failed (Mouse Integration).";
+        if (flat.Contains("unmapped", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — surface point unmapped to guest framebuffer.";
+        if (flat.Contains("no mouse", StringComparison.OrdinalIgnoreCase))
+            return "Her screen: click blocked — VirtualBox console has no mouse.";
+        return "Her screen: click failed — " + flat;
+    }
+
+    /// <summary>Operator-visible status when the input overlay is missing over the VM HWND.</summary>
+    public static string FormatOperatorOverlayMissingFault() =>
+        "Her screen: input overlay missing — clicks hit VirtualBox paint only (guest deaf).";
+
     /// <summary>
     /// Click never reached Absolute (console missing before guest map / inject).
     /// Always park=failed — there was no successful park+inject burst.

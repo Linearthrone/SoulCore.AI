@@ -30,6 +30,9 @@ public static class VictoriaVmPointer
 
     public static event Action<string>? Faulted;
 
+    /// <summary>Fired after a successful Absolute / key delivery clears the last fault.</summary>
+    public static event Action? FaultCleared;
+
     public static void NoteHostWindow(nint hwnd) => _excludeHwnd = hwnd;
 
     /// <summary>
@@ -271,7 +274,7 @@ public static class VictoriaVmPointer
             }
 
             InjectPointer(mouse, pointer.X, pointer.Y, pointer.Buttons, out deliveryLogged);
-            _lastFault = null;
+            ClearFault();
         }
         catch (Exception ex)
         {
@@ -283,7 +286,7 @@ public static class VictoriaVmPointer
                         parkOk: false, sent: false, comError: ex.Message));
             }
 
-            ReportFault($"VM click failed: {ex.Message}");
+            ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(ex.Message));
         }
         finally
         {
@@ -319,12 +322,13 @@ public static class VictoriaVmPointer
                     VictoriaVmPointerPlan.FormatClickDroppedLine(
                         surface.X, surface.Y, surface.Width, surface.Height));
                 deliveryLogged = true;
-                ReportFault("VM click failed: surface point unmapped to guest framebuffer.");
+                ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(
+                    "surface point unmapped to guest framebuffer."));
                 return;
             }
 
             InjectPointer(mouse, mapped.Value.X, mapped.Value.Y, surface.Buttons, out deliveryLogged);
-            _lastFault = null;
+            ClearFault();
         }
         catch (Exception ex)
         {
@@ -334,7 +338,7 @@ public static class VictoriaVmPointer
                     VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(surface.Buttons, ex.Message));
             }
 
-            ReportFault($"VM click failed: {ex.Message}");
+            ReportFault(VictoriaVmPointerPlan.FormatOperatorClickFault(ex.Message));
         }
         finally
         {
@@ -425,19 +429,22 @@ public static class VictoriaVmPointer
             // Hub / default seed below.
         }
 
-        var guest = VictoriaVmPointerPlan.ResolveGuestFramebuffer(
+        // PROP-19.3: same ResolveGuestFramebuffer + stretch-fill + Absolute as soft-cursor tip.
+        var fb = VictoriaBrowserCoordMap.ResolveGuestFramebuffer(
             hubW, hubH, displayW, displayH, surfaceW, surfaceH);
-        var mapped = VictoriaBrowserCoordMap.TryMapPointerStretchFill(
-            surfaceX, surfaceY, surfaceW, surfaceH, guest.Width, guest.Height);
-        if (mapped is not null)
+        var inject = VictoriaBrowserCoordMap.MapSlotToInject(
+            surfaceX, surfaceY, surfaceW, surfaceH, fb.Width, fb.Height);
+        if (inject is not null)
         {
             PresenceStartupLog.Write(
                 $"her-screen click map surface={surfaceW}x{surfaceH} pt={surfaceX},{surfaceY} " +
-                $"guest={guest.Width}x{guest.Height} abs={mapped.Value.X + 1},{mapped.Value.Y + 1}" +
+                $"guest={fb.Width}x{fb.Height} guest0={inject.Value.GuestX},{inject.Value.GuestY} " +
+                $"abs={inject.Value.AbsX},{inject.Value.AbsY}" +
                 (displayW is > 0 ? " display=ok" : " display=fallback"));
+            return (inject.Value.GuestX, inject.Value.GuestY);
         }
 
-        return mapped;
+        return null;
     }
 
     [SupportedOSPlatform("windows")]
@@ -887,6 +894,15 @@ public static class VictoriaVmPointer
         _lastFault = message;
         PresenceStartupLog.Write(message);
         try { Faulted?.Invoke(message); }
+        catch { /* UI hook must not kill the STA thread */ }
+    }
+
+    private static void ClearFault()
+    {
+        if (_lastFault is null)
+            return;
+        _lastFault = null;
+        try { FaultCleared?.Invoke(); }
         catch { /* UI hook must not kill the STA thread */ }
     }
 
