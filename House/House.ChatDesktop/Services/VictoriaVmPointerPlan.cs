@@ -156,6 +156,16 @@ public static class VictoriaVmPointerPlan
     public static bool ShouldInjectOnRelease(bool buttonChanged, int buttons, bool hasPending) =>
         buttonChanged && buttons == 0 && hasPending;
 
+    /// <summary>
+    /// Honest Absolute success: park cleared the embed HWND and COM accepted the burst.
+    /// Park failure must never look like <c>sent</c> — Mouse Integration clears the press.
+    /// </summary>
+    public static bool IsHonestClickSuccess(bool parkOk, bool sent, string? comError) =>
+        parkOk && sent && string.IsNullOrWhiteSpace(comError);
+
+    /// <summary>Startup-log reason when host-cursor park did not leave the embed HWND.</summary>
+    public const string ParkFailedReason = "park failed";
+
     /// <summary>One startup-log line after a click Absolute burst (park + inject).</summary>
     public static string FormatClickDeliveryLine(
         int guestX, int guestY, int buttons, bool parkOk, bool sent, string? comError)
@@ -163,10 +173,19 @@ public static class VictoriaVmPointerPlan
         var (ax, ay) = ToAbsolute(guestX, guestY);
         var head =
             $"her-screen click abs={ax},{ay} buttons={buttons} park={(parkOk ? "ok" : "failed")}";
-        if (sent && string.IsNullOrWhiteSpace(comError))
+
+        // Never claim "sent" when park failed — Absolute over the embed does not stick.
+        if (IsHonestClickSuccess(parkOk, sent, comError))
             return head + " sent";
 
-        var reason = string.IsNullOrWhiteSpace(comError) ? "console click failed" : comError;
+        string reason;
+        if (!parkOk && string.IsNullOrWhiteSpace(comError))
+            reason = ParkFailedReason;
+        else if (string.IsNullOrWhiteSpace(comError))
+            reason = "console click failed";
+        else
+            reason = comError;
+
         var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
             .Replace('\r', ' ')
             .Replace('\n', ' ')
@@ -174,6 +193,22 @@ public static class VictoriaVmPointerPlan
         if (flat.Length == 0)
             flat = "failed";
         return head + " COM error: " + flat;
+    }
+
+    /// <summary>
+    /// Click never reached Absolute (console missing before guest map / inject).
+    /// Always park=failed — there was no successful park+inject burst.
+    /// </summary>
+    public static string FormatClickFailedBeforeInjectLine(int buttons, string? comError)
+    {
+        var reason = string.IsNullOrWhiteSpace(comError) ? "console click failed" : comError;
+        var flat = reason.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+        if (flat.Length == 0)
+            flat = "failed";
+        return $"her-screen click buttons={buttons} park=failed COM error: {flat}";
     }
 
     /// <summary>

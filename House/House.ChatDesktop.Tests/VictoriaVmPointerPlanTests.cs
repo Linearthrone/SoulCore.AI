@@ -139,11 +139,98 @@ public class VictoriaVmPointerPlanTests
         Assert.Contains("park=ok", ok, StringComparison.Ordinal);
         Assert.Contains("sent", ok, StringComparison.Ordinal);
         Assert.Contains("abs=11,21", ok, StringComparison.Ordinal);
+        Assert.True(VictoriaVmPointerPlan.IsHonestClickSuccess(parkOk: true, sent: true, null));
 
         var fail = VictoriaVmPointerPlan.FormatClickDeliveryLine(
             10, 20, 1, parkOk: false, sent: false, "boom");
         Assert.Contains("park=failed", fail, StringComparison.Ordinal);
         Assert.Contains("COM error: boom", fail, StringComparison.Ordinal);
+        Assert.DoesNotContain("sent", fail, StringComparison.Ordinal);
+        Assert.False(VictoriaVmPointerPlan.IsHonestClickSuccess(parkOk: false, sent: false, "boom"));
+    }
+
+    /// <summary>
+    /// PROP-19.2: park=failed must never look like Absolute success (no "sent").
+    /// Callers that pass sent:true after a failed park are still honest in the log line.
+    /// </summary>
+    [Fact]
+    public void FormatClickDeliveryLine_ParkFailedNeverClaimsSent()
+    {
+        var dishonestCaller = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            10, 20, 1, parkOk: false, sent: true, comError: null);
+        Assert.Equal(
+            "her-screen click abs=11,21 buttons=1 park=failed COM error: park failed",
+            dishonestCaller);
+        Assert.DoesNotContain(" sent", dishonestCaller, StringComparison.Ordinal);
+        Assert.False(
+            VictoriaVmPointerPlan.IsHonestClickSuccess(parkOk: false, sent: true, comError: null));
+
+        var parkFailExplicit = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            100, 200, VictoriaVmPointerPlan.Left,
+            parkOk: false, sent: false,
+            comError: VictoriaVmPointerPlan.ParkFailedReason);
+        Assert.Contains("park=failed", parkFailExplicit, StringComparison.Ordinal);
+        Assert.Contains("COM error: park failed", parkFailExplicit, StringComparison.Ordinal);
+        Assert.DoesNotContain("sent", parkFailExplicit, StringComparison.Ordinal);
+
+        var parkOkComFail = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            10, 20, 1, parkOk: true, sent: false, "RPC_E_DISCONNECTED\r\nsecond");
+        Assert.Equal(
+            "her-screen click abs=11,21 buttons=1 park=ok COM error: RPC_E_DISCONNECTED second",
+            parkOkComFail);
+        Assert.DoesNotContain("sent", parkOkComFail, StringComparison.Ordinal);
+        Assert.False(
+            VictoriaVmPointerPlan.IsHonestClickSuccess(parkOk: true, sent: false, "RPC_E_DISCONNECTED"));
+    }
+
+    [Fact]
+    public void FormatClickFailedBeforeInjectLine_AlwaysParkFailedNoSent()
+    {
+        var line = VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(
+            VictoriaVmPointerPlan.Left, "VirtualBox console has no mouse.");
+        Assert.Equal(
+            "her-screen click buttons=1 park=failed COM error: VirtualBox console has no mouse.",
+            line);
+        Assert.DoesNotContain("sent", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("abs=", line, StringComparison.Ordinal);
+
+        var empty = VictoriaVmPointerPlan.FormatClickFailedBeforeInjectLine(1, null);
+        Assert.Contains("COM error: console click failed", empty, StringComparison.Ordinal);
+        Assert.Contains("park=failed", empty, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Embed-only exclude policy: Presence chrome remains parkable; fullscreen GA_ROOT does not.
+    /// Delivery honesty requires park=ok before claiming Absolute sent.
+    /// </summary>
+    [Fact]
+    public void ParkPolicy_EmbedExcludeAllowsHonestSuccess_FullscreenRootDoesNot()
+    {
+        const int vw = 1920;
+        const int vh = 1080;
+        var embedOnly = new[] { new VictoriaVmPointerPlan.ParkRect(0, 0, 1280, vh) };
+        var pick = VictoriaVmPointerPlan.PickParkPoint(embedOnly, 0, 0, vw, vh);
+        Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(pick.X, pick.Y, embedOnly));
+
+        // Honest success line only when park cleared embed.
+        var honest = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            pick.X, pick.Y, 1, parkOk: true, sent: true, null);
+        Assert.EndsWith(" sent", honest, StringComparison.Ordinal);
+        Assert.Contains("park=ok", honest, StringComparison.Ordinal);
+
+        var fullscreenRoot = new[] { new VictoriaVmPointerPlan.ParkRect(0, 0, vw, vh) };
+        var clamped = VictoriaVmPointerPlan.PickParkPoint(fullscreenRoot, 0, 0, vw, vh);
+        // Pick may return a corner that is still inside fullscreen exclude after clamp.
+        Assert.True(
+            VictoriaVmPointerPlan.IsInsideAnyPark(
+                Math.Clamp(clamped.X, 0, vw - 1),
+                Math.Clamp(clamped.Y, 0, vh - 1),
+                fullscreenRoot));
+        var dishonest = VictoriaVmPointerPlan.FormatClickDeliveryLine(
+            640, 400, 1, parkOk: false, sent: true, null);
+        Assert.False(
+            VictoriaVmPointerPlan.IsHonestClickSuccess(parkOk: false, sent: true, null));
+        Assert.DoesNotContain("sent", dishonest, StringComparison.Ordinal);
     }
 
     [Fact]
