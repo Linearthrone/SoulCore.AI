@@ -5,14 +5,20 @@ from: TT-01
 to: PM-01
 mode: idea
 environment: TINA-main
-status: Sent — awaiting PM ticketing
+status: Accepted — PM ticketed PROP-19.1–19.5
 priority: P1
 created: 2026-10-19
 updated: 2026-10-19
 title: "[TINA-main] Her screen — Kurt clicks dead; Victoria aim offset"
 assignee_role: PM-01 (TINA)
 proposal: docs/agents/unexecuted_proposals/her-screen-operator-clicks.md
+pm_accept: docs/agents/reports/PROP-19-PM01-accept.md
 pm_tickets:
+  - docs/agents/tasks/PROP-19.1-PM01-to-QA01.md
+  - docs/agents/tasks/PROP-19.2-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-19.3-PM01-to-BED01.md
+  - docs/agents/tasks/PROP-19.4-PM01-to-FED01.md
+  - docs/agents/tasks/PROP-19.5-PM01-to-QA01.md
 ---
 
 # PROP-19 : [TINA-main] Her screen operator clicks + Victoria aim
@@ -64,4 +70,8 @@ PM may re-split / reassign.
 
 Ticket **19.1** immediately. Prefer **19.2** (delivery) before or tightly with **19.3** (map). Do not mark wave Pass on park-only.
 
-Activate PM-01 to ticket. TT-01 does not write the execution tickets.
+## PM disposition (2026-10-19)
+
+**Accepted.** Avenue C then B. Tickets issued — see `docs/agents/reports/PROP-19-PM01-accept.md`.
+
+Start with `@Agents/QA-01.md` / `@Agents/BED-01.md` → `Start PROP-19.1.`

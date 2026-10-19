@@ -1,6 +1,6 @@
 ---
 type: proposal
-status: sent-to-pm
+status: accepted-pm-ticketed
 tt_id: TT-01
 prop_id: PROP-19-her-screen-operator-clicks
 created: 2026-10-19
@@ -14,6 +14,7 @@ related:
   - docs/agents/unexecuted_proposals/victoria-browser-live-cursor-pane.md
 sent_at: 2026-10-19
 pm_intake: docs/agents/tasks/PROP-19-TT01-to-PM01.md
+pm_accept: docs/agents/reports/PROP-19-PM01-accept.md
 ---
 
 # Her screen operator clicks + Victoria aim offset
