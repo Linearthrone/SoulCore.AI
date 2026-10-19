@@ -11,7 +11,7 @@ updated: 2026-10-19
 wave: her-screen-clicks
 title: Park/COM Absolute delivery honesty
 environment: TINA-main
-commit: b179ce9 (+ follow-up MapSlotToInject restore)
+commit: 476d822
 ---
 
 # PROP-19.2 — BED-01 → PM-01
@@ -32,7 +32,7 @@ commit: b179ce9 (+ follow-up MapSlotToInject restore)
 
 ## Evidence
 
-- Commit: `b179ce9` on `cursor/prop19-execute-6372` (plus follow-up restore of 19.3 `MapSlotToInject` if needed).
+- Commits: `b179ce9` (honesty), `476d822` (MapSlotToInject restore + operator fault text) on `cursor/prop19-execute-6372`.
 - Unit tests: `VictoriaVmPointerPlanTests` — **43 passed** (`dotnet test --filter VictoriaVmPointerPlanTests`).
 - Embed-only exclude policy unchanged (`BuildParkExcludes` = embed HWND only, not GA_ROOT) — covered by existing + new park policy tests.
 

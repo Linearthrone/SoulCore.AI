@@ -199,6 +199,22 @@ public class VictoriaVmPointerPlanTests
         Assert.Contains("park=failed", empty, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void FormatOperatorClickFault_IsHonestAndSpecific()
+    {
+        Assert.Contains(
+            "park failed",
+            VictoriaVmPointerPlan.FormatOperatorClickFault("park failed — host cursor still over embed HWND."),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "unmapped",
+            VictoriaVmPointerPlan.FormatOperatorClickFault("surface point unmapped to guest framebuffer."),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault(),
+            "Her screen: input overlay missing — clicks hit VirtualBox paint only (guest deaf).");
+    }
+
     /// <summary>
     /// Embed-only exclude policy: Presence chrome remains parkable; fullscreen GA_ROOT does not.
     /// Delivery honesty requires park=ok before claiming Absolute sent.
