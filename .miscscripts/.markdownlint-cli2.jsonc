@@ -1,0 +1,22 @@
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+    "MD024": false,
+    "MD060": {
+      "style": "compact"
+    }
+  },
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    "**/node_modules/**",
+    "docs/agents/log/**",
+    "docs/agents/unexecuted_proposals/**",
+    "SoulCore/scripts/logs/**",
+    "**/.git/**"
+  ]
+}
