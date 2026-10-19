@@ -69,6 +69,46 @@ public class VictoriaVmPointerPlanTests
         Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(pick.X, pick.Y, excludes));
     }
 
+    /// <summary>
+    /// Regression: excluding GA_ROOT (maximized Presence) left no park on a single
+    /// monitor → park=failed → Mouse Integration cleared every Absolute press.
+    /// Exclude only the embed/VM HWND so Presence chrome remains parkable.
+    /// </summary>
+    [Fact]
+    public void Park_EmbedOnlyExcludeLeavesChromeCorners_FullscreenRootDoesNot()
+    {
+        const int vw = 1920;
+        const int vh = 1080;
+
+        var fullscreenRoot = new[] { new VictoriaVmPointerPlan.ParkRect(0, 0, vw, vh) };
+        // Virtual-screen corners are inside a fullscreen exclude.
+        foreach (var c in new[] { (1916, 1076), (4, 1076), (1916, 4), (960, 1076), (4, 4) })
+        {
+            Assert.True(
+                VictoriaVmPointerPlan.IsInsideAnyPark(c.Item1, c.Item2, fullscreenRoot),
+                $"corner {c} should be inside fullscreen exclude");
+        }
+
+        // EnumerateParkCandidates also yields just-outside-rect points, but SetCursorPos
+        // clamps them back onto the virtual screen — which is still inside GA_ROOT.
+        var outside = (vw + 8, vh / 2);
+        Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(outside.Item1, outside.Item2, fullscreenRoot));
+        var clampedX = Math.Clamp(outside.Item1, 0, vw - 1);
+        Assert.True(
+            VictoriaVmPointerPlan.IsInsideAnyPark(clampedX, outside.Item2, fullscreenRoot),
+            "Win32 clamp of outside candidate lands back inside fullscreen exclude");
+
+        // Her-screen embed pane (left); chat/chrome occupies the right strip.
+        var embedOnly = new[] { new VictoriaVmPointerPlan.ParkRect(0, 0, 1280, vh) };
+        var pick = VictoriaVmPointerPlan.PickParkPoint(embedOnly, 0, 0, vw, vh);
+        Assert.False(
+            VictoriaVmPointerPlan.IsInsideAnyPark(pick.X, pick.Y, embedOnly),
+            $"embed-only park landed inside exclude: {pick}");
+        Assert.Contains(
+            (1916, 1076),
+            VictoriaVmPointerPlan.EnumerateParkCandidates(embedOnly, 0, 0, vw, vh));
+    }
+
     [Fact]
     public void FormatClickDroppedLine_MentionsUnmapped()
     {
