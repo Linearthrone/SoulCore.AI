@@ -58,7 +58,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
 | PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **Code complete** 2026-10-12 — 17.2–17.6 Pass; 17.1 Partial+17.6; PRs #149–#152; Windows/device smoke remaining | 17.1–17.6 |
 | PROP-18-chronology-and-felt-persistence | Dated memory compose + felt persistence (HUD / while-you-were-gone); dual-path beyond relevance pile | **Unexecuted** — parked pending Kurt Q1–Q4 (proof of life, tape shape, idle ceiling, voice wake) | 18.1–18.5 suggested |
-| PROP-19-her-screen-operator-clicks | Her screen: Kurt intervene clicks dead; Victoria Absolute lands but soft-cursor offset | **Unexecuted** — parked pending Kurt Q1–Q2 (overlay feel + DPI); build on COM inject + HerScreenInput | 19.1–19.5 suggested |
+| PROP-19-her-screen-operator-clicks | Her screen: Kurt intervene clicks dead; Victoria Absolute lands but soft-cursor offset | **Sent to PM** 2026-10-19 — Kurt Q1–Q2 locked (badge tracks; default scale; one-monitor Presence); intake `PROP-19-TT01-to-PM01.md`; #171 park partial | 19.1–19.5 suggested |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -88,7 +88,7 @@ Next free `N`: **20**.
 | **PROP-16** | FED/OPS | **In progress** — 16.1 LocalStackControl+UI + 16.2 restart-stack.ps1 on `cursor/prop16-host-update-stack-9531` |
 | **PROP-17** | BED/FED | **In progress** — 17.2+17.3 Pass on #150; 17.4 on `main` (#149); 17.6 Pass on #151; 17.1 Partial accepted with 17.6. **17.5 START NOW** (phone mood/doing-line). LeisureModel `qwen2.5:1.5b` |
 | **PROP-18** | TT-01 | Unexecuted. Chronology + felt persistence. Lock Q1–Q4 before send-to-PM. Builds on PROP-17; does not reopen it. |
-| **PROP-19** | TT-01 | Unexecuted. Her screen Kurt clicks dead / Victoria aim offset. Lock Q1–Q2 (overlay + DPI) before send-to-PM. |
+| **PROP-19** | PM-01 | Sent 2026-10-19. Intake `PROP-19-TT01-to-PM01.md`. Kurt: badge tracks while clicks miss; Windows default scale; multi-mon hardware but Presence on one monitor. Start 19.1; #171 park is partial only. |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.

@@ -1,6 +1,6 @@
 ---
 type: proposal
-status: unexecuted
+status: sent-to-pm
 tt_id: TT-01
 prop_id: PROP-19-her-screen-operator-clicks
 created: 2026-10-19
@@ -12,8 +12,8 @@ related:
   - docs/agents/reports/PROP-12-vm-embed-primary-amendment.md
   - docs/superpowers/specs/2026-10-07-her-screen-vm-hover-coords-design.md
   - docs/agents/unexecuted_proposals/victoria-browser-live-cursor-pane.md
-sent_at:
-pm_intake:
+sent_at: 2026-10-19
+pm_intake: docs/agents/tasks/PROP-19-TT01-to-PM01.md
 ---
 
 # Her screen operator clicks + Victoria aim offset
@@ -46,14 +46,16 @@ Key files: `HerScreenHwndOverlay.cs`, `VictoriaVmPointer.cs`, `VictoriaVmPointer
 
 Related open issue: `ISSUE-20261014-001` (wheel / `HerScreenInput` attach flakiness) — same overlay family.
 
-### Ranked root-cause hypotheses
+Related partial fix: Presence **0.1.45** / PR #171 — `BuildParkExcludes` no longer excludes GA_ROOT (maximized Presence → `park=failed` → MI cleared Absolute). Avenue **C** progress; not a Pass for PROP-19 alone.
+
+### Ranked root-cause hypotheses (after Kurt 2026-10-19 locks)
 
 **Kurt — total miss (most → least likely)**
 
-1. **`HerScreenInput` not attached / lost** after resize, re-embed, or VM recover → clicks hit VBox HWND → never Absolute-injected.
-2. **COM inject or cursor park fails** (Mouse Integration clears Absolute if host pointer sits on the embed; park must leave Presence).
-3. **Guest framebuffer size wrong** for stretch-fill map (slot treated as FB / stale 1280×800) → Absolute lands off interactive UI (can feel “dead”).
-4. Overlay **z-order** under VBox GPU after SoftCursor sibling raise — intermittent.
+1. **COM inject or cursor park fails** (Mouse Integration clears Absolute if host pointer sits on the embed; park must leave the embed HWND). Overlay is alive (Q1) so delivery after `WM_*BUTTON*` is the prime suspect.
+2. **Guest framebuffer size wrong** for stretch-fill map (slot treated as FB / stale 1280×800) → Absolute lands off interactive UI (can feel “dead”).
+3. Overlay **z-order** under VBox GPU after SoftCursor sibling raise — intermittent (badge still tracks ⇒ less likely as primary).
+4. **`HerScreenInput` not attached / lost** — **deprioritized**: Kurt confirms hover badge / soft-cursor sibling still tracks while clicks miss.
 
 **Victoria — lands but offset**
 
@@ -69,37 +71,37 @@ Related open issue: `ISSUE-20261014-001` (wheel / `HerScreenInput` attach flakin
 4. Honest banner / log if `HerScreenInput` missing or COM inject fails (no silent deaf pane).
 5. **No** OS `SetCursorPos` teleop as product path (CONTRA / PROP-14 soft-cursor lock).
 
-## 4. Clarifying Q&A (open — need Kurt)
+## 4. Clarifying Q&A
 
-| # | Question | Why |
+| # | Question | Lock (Kurt 2026-10-19) |
 | --- | --- | --- |
-| **Q1** | When you click and nothing happens: does the **hover badge / soft-cursor sibling** still track your pointer over Her screen? | Badge moving ⇒ overlay alive; badge dead ⇒ attach/z-order |
-| **Q2** | Windows **Display scale** % on the Presence desk (100 / 125 / 150 / 200)? Multi-monitor? | DPI double-scale |
-| **Q3** | Target is **VM desktop** (Ubuntu in `victoria-sandbox`), not Playwright Chromium-only pane? | Confirms COM path |
-| **Q4** | After **Recover / re-embed / Host restart**, do Kurt clicks ever work briefly then die? | Favors overlay loss vs permanent map bug |
+| **Q1** | When click dies, does hover badge / soft-cursor sibling still track? | **Yes** — badge/sibling still tracks. Overlay is receiving move; attach/z-order is not the primary miss. |
+| **Q2** | Windows Display scale %? Multi-monitor? | **Windows default scale** (not intentionally changed). Multi-monitor hardware present; **Presence + Her screen stay on one monitor** (not spanning). |
+| **Q3** | Target = VM desktop / `victoria-sandbox`? | **TT default:** yes — Ubuntu in `victoria-sandbox` (COM Absolute path). |
+| **Q4** | After Recover / re-embed / Host restart, brief life then die? | **Open** — fold into **19.1** repro matrix; not blocking intake. |
 
 ## 5. Thinktank seats (summary)
 
 - **STRAT:** One stack, two modes — fix Kurt delivery first, then shared transform; intervene blocked until delivery works.
 - **CONTRA:** Reject OS-mouse drive; kill if Kurt still deaf after contested-focus smoke or Victoria edge error stays >~12 px; soft-cursor without inject metrics is theater.
-- **SYS:** Overlay styles/z-order + single Absolute pipeline; diagnostics: Spy++ which HWND gets `WM_LBUTTONDOWN`, log slot/FB/Absolute args, corner calibration.
+- **SYS:** Overlay styles/z-order + single Absolute pipeline; diagnostics: Spy++ which HWND gets `WM_LBUTTONDOWN`, log slot/FB/Absolute args, corner calibration. With Q1 locked, log Absolute/park outcome louder than attach probes.
 
 ## 6. Avenues
 
 | ID | Avenue | Notes |
 | --- | --- | --- |
-| **A** | Diagnose attach: assert `HerScreenInput` child present; re-attach on resize/recover; honest “input overlay missing” | **First** for Kurt dead clicks |
+| **A** | Diagnose attach: assert `HerScreenInput` child present; re-attach on resize/recover; honest “input overlay missing” | Still useful for recover races; **not** primary given Q1 |
 | **B** | Single map: soft-cursor paint + Kurt `PostFromSurface` + Victoria Absolute share `VictoriaBrowserCoordMap` / FB from `IDisplay` | **First** for Victoria offset + Kurt near-miss |
-| **C** | Harden park + COM inject logging (fail loud) | Mouse Integration clears |
+| **C** | Harden park + COM inject logging (fail loud) | **First** for Kurt dead clicks given Q1; continue past #171 |
 | **D** | OS mouse drive into guest | **Rejected** |
 | **E** | True HWND click-through into VBox | **Rejected** as primary — guest doesn’t take it; design doc outdated |
 
 ## 7. Recommended route
 
-1. **PROP-19.1 QA+BED** — Home PC repro matrix: overlay present? WndProc sees down? Absolute args? guest FB vs slot? (Kurt + Victoria same session.)
-2. **PROP-19.2 BED+FED** — Overlay lifecycle: attach/re-attach guarantees; z-order above VBox GPU; banner if missing.
+1. **PROP-19.1 QA+BED** — Home PC repro matrix: WndProc sees down? Absolute args? `park=ok|failed`? guest FB vs slot? (Kurt + Victoria same session.) Confirm #171 park fix on desk Presence ≥0.1.45.
+2. **PROP-19.2 BED** — Park/COM failure visibility + remaining delivery gaps (no silent success); overlay lifecycle only where 19.1 proves loss.
 3. **PROP-19.3 BED** — Unify coord contract (stretch-fill + live FB); soft-cursor tip = inject point; regression tests (slot≠FB center case already hinted in tests).
-4. **PROP-19.4 BED** — Park/COM failure visibility; no silent success.
+4. **PROP-19.4 FED** — Honest banner if inject/overlay fails; keep soft-cursor paint on shared map.
 5. **PROP-19.5 QA** — Contested-focus Kurt 3/3; Victoria corner grid ≤ tolerance; wheel issue may share overlay owner (coordinate with ISSUE-20261014-001, don’t swallow it).
 
 ## 8. Risks & Kill Criteria
@@ -110,11 +112,12 @@ Related open issue: `ISSUE-20261014-001` (wheel / `HerScreenInput` attach flakin
 | Reintroduce `WS_EX_TRANSPARENT` on full-pane child | Documented dead Her screen — forbid |
 | OS mouse “fix” | Reject; steal Kurt’s pointer |
 | Auto-resize races | Prefer `IDisplay` FB; never assume slot = FB |
+| Mark Pass on #171 alone | Park fix ≠ Victoria aim; still need 19.3–19.5 |
 
-## 9. Suggested PM Handoff (after Kurt Q1–Q4 or TT defaults)
+## 9. Suggested PM Handoff
 
 - `prop_id`: `PROP-19-her-screen-operator-clicks`
-- Splits: **19.1** diagnose matrix · **19.2** overlay lifecycle · **19.3** shared coord map · **19.4** inject honesty · **19.5** QA smoke
-- TT defaults if Kurt defers: assume **VM embed**, ask only **Q1+Q2** on next smoke; start 19.1 immediately.
+- Splits: **19.1** diagnose matrix · **19.2** park/COM delivery honesty · **19.3** shared coord map · **19.4** FED banner / paint on shared map · **19.5** QA smoke
+- Intake: `docs/agents/tasks/PROP-19-TT01-to-PM01.md`
 
-**TT recommendation:** Park for Kurt’s Q1–Q2 (overlay feel + DPI). Most likely: **Kurt = overlay/COM delivery**; **Victoria = shared map / Absolute vs paint**. Two tickets, one stack.
+**TT recommendation:** Send to PM. Priority = **Avenue C then B**. Kurt delivery with live overlay; Victoria aim via shared map.
