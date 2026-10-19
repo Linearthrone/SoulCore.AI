@@ -375,11 +375,24 @@ public partial class MainWindow
                 _herScreenHwndOverlay.OnPointer = HandleHerScreenPointer;
                 _herScreenHwndOverlay.Attach(parent);
                 EnsureVmPointer(parent);
+                if (_herScreenHwndOverlay is not { IsAttached: true })
+                {
+                    var missing = VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault();
+                    PresenceStartupLog.Write(missing);
+                    if (VictoriaBrowserActionText is not null)
+                        VictoriaBrowserActionText.Text = missing;
+                }
+
                 // Avalonia popup is redundant when HWND sibling works.
                 if (_herScreenOverlay is { IsVisible: true })
                     _herScreenOverlay.Hide();
                 return;
             }
+
+            var noParent = VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault();
+            PresenceStartupLog.Write(noParent + " (embed parent HWND=0)");
+            if (VictoriaBrowserActionText is not null)
+                VictoriaBrowserActionText.Text = noParent;
 
             _herScreenOverlay ??= new VictoriaHerScreenOverlayWindow { Topmost = true };
             if (!_herScreenOverlay.IsVisible)
@@ -388,6 +401,8 @@ public partial class MainWindow
         catch (Exception ex)
         {
             PresenceStartupLog.WriteException("EnsureHerScreenOverlay", ex);
+            if (VictoriaBrowserActionText is not null)
+                VictoriaBrowserActionText.Text = VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault();
         }
     }
 
@@ -622,6 +637,7 @@ public partial class MainWindow
         {
             _vmPointerFaultHooked = true;
             VictoriaVmPointer.Faulted += OnVmPointerFaulted;
+            VictoriaVmPointer.FaultCleared += OnVmPointerFaultCleared;
         }
 
         VictoriaVmPointer.NoteHostWindow(parent);
@@ -634,6 +650,25 @@ public partial class MainWindow
         {
             if (VictoriaBrowserActionText is not null)
                 VictoriaBrowserActionText.Text = message;
+            if (VictoriaBrowserWaitingText is not null
+                && message.Contains("overlay missing", StringComparison.OrdinalIgnoreCase))
+            {
+                VictoriaBrowserWaitingText.Text = message;
+                VictoriaBrowserWaitingText.IsVisible = true;
+            }
+        });
+    }
+
+    private void OnVmPointerFaultCleared()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (VictoriaBrowserActionText is not null
+                && VictoriaBrowserActionText.Text is { } t
+                && t.StartsWith("Her screen:", StringComparison.Ordinal))
+            {
+                VictoriaBrowserActionText.Text = "Her screen: VirtualBox embedded";
+            }
         });
     }
 

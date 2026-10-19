@@ -58,7 +58,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
 | PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **Code complete** 2026-10-12 — 17.2–17.6 Pass; 17.1 Partial+17.6; PRs #149–#152; Windows/device smoke remaining | 17.1–17.6 |
 | PROP-18-chronology-and-felt-persistence | Dated memory compose + felt persistence (HUD / while-you-were-gone); dual-path beyond relevance pile | **Unexecuted** — parked pending Kurt Q1–Q4 (proof of life, tape shape, idle ceiling, voice wake) | 18.1–18.5 suggested |
-| PROP-19-her-screen-operator-clicks | Her screen: Kurt intervene clicks dead; Victoria Absolute lands but soft-cursor offset | **Accepted / ticketed** 2026-10-19 — PM accept + 19.1–19.5 Queued; Kurt Q1–Q2 locked; #171 park partial | 19.1–19.5 |
+| PROP-19-her-screen-operator-clicks | Her screen: Kurt intervene clicks dead; Victoria Absolute lands but soft-cursor offset | **Executing** 2026-10-19 — 19.2–19.4 Pass on `cursor/prop19-execute-6372` (Presence 0.1.47); 19.1/19.5 desk smoke open | 19.1–19.5 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -88,7 +88,7 @@ Next free `N`: **20**.
 | **PROP-16** | FED/OPS | **In progress** — 16.1 LocalStackControl+UI + 16.2 restart-stack.ps1 on `cursor/prop16-host-update-stack-9531` |
 | **PROP-17** | BED/FED | **In progress** — 17.2+17.3 Pass on #150; 17.4 on `main` (#149); 17.6 Pass on #151; 17.1 Partial accepted with 17.6. **17.5 START NOW** (phone mood/doing-line). LeisureModel `qwen2.5:1.5b` |
 | **PROP-18** | TT-01 | Unexecuted. Chronology + felt persistence. Lock Q1–Q4 before send-to-PM. Builds on PROP-17; does not reopen it. |
-| **PROP-19** | QA/BED/FED | **Accepted** 2026-10-19. Tickets 19.1–19.5 Queued. Start **19.1** (Home PC matrix). Avenue C then B; #171 park partial only. |
+| **PROP-19** | QA | **19.2–19.4 Pass** (Presence 0.1.47). Desk: run 19.1 checklist then 19.5 contested-focus smoke. |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.

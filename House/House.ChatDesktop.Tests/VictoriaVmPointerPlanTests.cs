@@ -211,8 +211,8 @@ public class VictoriaVmPointerPlanTests
             VictoriaVmPointerPlan.FormatOperatorClickFault("surface point unmapped to guest framebuffer."),
             StringComparison.OrdinalIgnoreCase);
         Assert.Equal(
-            VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault(),
-            "Her screen: input overlay missing — clicks hit VirtualBox paint only (guest deaf).");
+            "Her screen: input overlay missing — clicks hit VirtualBox paint only (guest deaf).",
+            VictoriaVmPointerPlan.FormatOperatorOverlayMissingFault());
     }
 
     /// <summary>

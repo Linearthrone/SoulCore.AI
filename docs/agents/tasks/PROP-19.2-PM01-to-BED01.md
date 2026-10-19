@@ -5,7 +5,7 @@ prop_root: PROP-19-her-screen-operator-clicks
 from: PM-01
 to: BED-01
 priority: P0
-status: In progress
+status: Pass
 created: 2026-10-19
 updated: 2026-10-19
 wave: her-screen-clicks

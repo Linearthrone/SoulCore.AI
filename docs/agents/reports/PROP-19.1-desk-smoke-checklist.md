@@ -9,7 +9,7 @@ updated: 2026-10-19
 
 # PROP-19.1 — Desk smoke (run when Presence build is ready)
 
-**Need:** Presence **≥0.1.46** (or whatever version the execute PR bumps to — check About / `InformationalVersion`). Confirm #171 park land is included.
+**Need:** Presence **≥0.1.47** (About / `InformationalVersion`). Includes #171 park, 19.2 honesty, 19.3 shared map, 19.4 banners.
 
 ## Before clicks
 

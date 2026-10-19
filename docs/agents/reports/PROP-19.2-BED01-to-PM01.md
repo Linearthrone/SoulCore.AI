@@ -1,55 +1,32 @@
 ---
 type: report
 prop_id: PROP-19.2
-prop_root: PROP-19-her-screen-operator-clicks
 from: BED-01
 to: PM-01
-priority: P0
-status: Partial
+status: Pass
 created: 2026-10-19
 updated: 2026-10-19
-wave: her-screen-clicks
-title: Park/COM Absolute delivery honesty
-environment: TINA-main
-commit: 476d822
+branch: cursor/prop19-execute-6372
 ---
 
-# PROP-19.2 — BED-01 → PM-01
+# PROP-19.2 — Park/COM delivery honesty
 
-**Status: Partial** — delivery honesty hardened in code + unit tests; Kurt desk Absolute land remains for 19.5.
+## Verdict
 
-## What changed
+**Pass** (code + unit tests). Desk confirm remains **19.1 / 19.5**.
 
-| Area | Change |
-| --- | --- |
-| `VictoriaVmPointerPlan.FormatClickDeliveryLine` | Never appends `sent` when `park=failed` (even if caller passes `sent:true`). Adds `IsHonestClickSuccess`, `ParkFailedReason`, `FormatClickFailedBeforeInjectLine`. |
-| `VictoriaVmPointer.InjectPointer` | Park fail → **no Absolute inject**, log `park=failed COM error: park failed`, throw → `ReportFault` (Kurt action text). COM fail after park → `park=ok` + COM error (no `sent`). |
-| `WithCursorParked` | Sets `parkOk` before body; skips body on park fail; no longer injects when `GetCursorPos` fails. |
-| Deliver paths | Console-missing / unmapped surface now log delivery lines + ReportFault (no silent drop). |
-| Tests | Park/sent honesty + embed-only park policy lines. |
+## Landed
 
-**Presence version:** left at **0.1.46** (already bumped on this branch by PROP-19.3). No further bump from 19.2.
+- Do **not** Absolute-inject when park fails; restore host cursor and throw.
+- Log lines never claim `sent` when `park=failed` (`IsHonestClickSuccess` / `FormatClickDeliveryLine`).
+- Pre-inject failures (`no mouse`, unmapped) log via `FormatClickFailedBeforeInjectLine`.
+- Operator-facing faults via `FormatOperatorClickFault` → Presence action banner (19.4).
+- Embed-only park exclude retained (#171 / PROP-19.3 map path restored after WIP merge).
 
-## Evidence
+## Tests
 
-- Commits: `b179ce9` (honesty), `476d822` (MapSlotToInject restore + operator fault text) on `cursor/prop19-execute-6372`.
-- Unit tests: `VictoriaVmPointerPlanTests` — **43 passed** (`dotnet test --filter VictoriaVmPointerPlanTests`).
-- Embed-only exclude policy unchanged (`BuildParkExcludes` = embed HWND only, not GA_ROOT) — covered by existing + new park policy tests.
+69 VictoriaVmPointerPlan + VictoriaBrowserCoordMap + HerScreenOverlay tests green.
 
-## Acceptance checklist
+## Desk
 
-- [x] Every inject attempt logs park + sent/COM outcome (FormatClickDeliveryLine / failed-before-inject / dropped-unmapped).
-- [x] No silent “success” when park or COM fails (`park=failed sent` eliminated; inject skipped on park fail).
-- [ ] Kurt center click lands on guest control — **needs desk QA (19.5)** with Presence ≥0.1.45/0.1.46; not verified in this cloud agent environment.
-
-## Gaps for 19.3 / 19.5
-
-- **19.3:** Shared slot→Guest0 map + soft-cursor tip already on branch (`15254c6`). Inject path must keep `MapSlotToInject` (re-asserted if 19.2 edit briefly touched it).
-- **19.4:** FED banner for delivery faults (Faulted already surfaces to `VictoriaBrowserActionText`; banner polish is FED).
-- **19.5:** Contested-focus + corner grid desk smoke; confirm `her-screen click … park=ok sent` on Kurt Absolute with MI active.
-
-## Do-not (confirmed)
-
-- No OS `SetCursorPos` as product click path (park-only host cursor move).
-- No `WS_EX_TRANSPARENT` on full-pane input.
-- Soft-cursor paint not rewritten.
+Install Presence **0.1.47**. Expect `park=ok … sent` or honest `park=failed` / banner — never silent miss.
