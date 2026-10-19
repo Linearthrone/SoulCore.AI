@@ -35,7 +35,8 @@ Host Victoria Absolute (`VboxConsoleMouse.PlanAbsolutePress`) keeps identical `+
 
 ## Evidence
 
-- `VictoriaBrowserCoordMapTests` + `VictoriaVmPointerPlanTests`: **64 passed**
+- Commit: `15254c615c4d564bb0ec90c2e54052f9cde8168e` on `cursor/prop19-execute-6372`
+- `VictoriaBrowserCoordMapTests` + `VictoriaVmPointerPlanTests`: **61 passed**
   - Slot≠FB center (900×600 slot, 1280×800 FB) → Guest0 (640,400) / Abs (641,401); tip round-trips
   - Edge samples (corners) tip ↔ Guest0 ↔ Absolute
   - Hub preferred over slot when they disagree
