@@ -32,9 +32,10 @@ public sealed class DesktopScrollTool : ITool
     private readonly IComputerControlGate _gate;
     private readonly IDesktopControlBackend _backend;
     private readonly IDesktopViewHub? _view;
+    private readonly IVisionClickCoordMap? _visionMap;
 
     public DesktopScrollTool(IComputerControlGate gate, IDesktopControlBackend backend)
-        : this(gate, backend, view: null)
+        : this(gate, backend, view: null, visionMap: null)
     {
     }
 
@@ -42,10 +43,20 @@ public sealed class DesktopScrollTool : ITool
         IComputerControlGate gate,
         IDesktopControlBackend backend,
         IDesktopViewHub? view)
+        : this(gate, backend, view, visionMap: null)
+    {
+    }
+
+    public DesktopScrollTool(
+        IComputerControlGate gate,
+        IDesktopControlBackend backend,
+        IDesktopViewHub? view,
+        IVisionClickCoordMap? visionMap)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _view = view;
+        _visionMap = visionMap;
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -67,6 +78,13 @@ public sealed class DesktopScrollTool : ITool
             || !TryGetInt(args, "deltaY", out var deltaY))
         {
             return new ToolResult(false, "error: desktop_scroll requires integer 'x', 'y', and 'deltaY'.", null);
+        }
+
+        if (_visionMap is not null)
+        {
+            var mapped = _visionMap.MapToGuest(x, y);
+            x = mapped.GuestX;
+            y = mapped.GuestY;
         }
 
         var deltaX = 0;

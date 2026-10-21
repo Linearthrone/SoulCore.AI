@@ -70,6 +70,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     private readonly IToolRegistry? _toolRegistry;
     private readonly IUeLiveSignal _ueLive;
     private readonly IVisionDescribeClient _vision;
+    private readonly IVisionClickCoordMap? _visionClickMap;
 
     /// <summary>
     /// DI-friendly constructor (the one <c>AddHttpClient&lt;OllamaInferenceClient&gt;</c>
@@ -86,8 +87,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
         IOptions<InferenceOptions> options,
         ILogger<OllamaInferenceClient> logger,
         IUeLiveSignal ueLive,
-        IVisionDescribeClient vision)
-        : this(http, options, logger, toolRegistry: null, ueLive, vision)
+        IVisionDescribeClient vision,
+        IVisionClickCoordMap visionClickMap)
+        : this(http, options, logger, toolRegistry: null, ueLive, vision, visionClickMap)
     {
     }
 
@@ -104,7 +106,8 @@ public sealed class OllamaInferenceClient : IInferenceClient
         ILogger<OllamaInferenceClient> logger,
         IToolRegistry? toolRegistry,
         IUeLiveSignal? ueLive = null,
-        IVisionDescribeClient? vision = null)
+        IVisionDescribeClient? vision = null,
+        IVisionClickCoordMap? visionClickMap = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
@@ -112,6 +115,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
         _toolRegistry = toolRegistry;
         _ueLive = ueLive ?? new NullUeLiveSignal();
         _vision = vision ?? new NullVisionDescribeClient();
+        _visionClickMap = visionClickMap;
     }
 
     public async Task<string> CompleteAsync(
@@ -875,6 +879,14 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     scaled.VisionWidth,
                     scaled.VisionHeight)
                 : null;
+            if (prepared is { } noted)
+            {
+                _visionClickMap?.NoteFrame(
+                    noted.SourceWidth,
+                    noted.SourceHeight,
+                    noted.VisionWidth,
+                    noted.VisionHeight);
+            }
             var followUp = BuildVisionUserFollowUp(name, result.Content, sidecar, scaleHint);
             ollamaMessages.Add(new OllamaChatMessage
             {

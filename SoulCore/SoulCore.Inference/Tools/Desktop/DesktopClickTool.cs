@@ -34,9 +34,10 @@ public sealed class DesktopClickTool : ITool
     private readonly IComputerControlGate _gate;
     private readonly IDesktopControlBackend _backend;
     private readonly IDesktopViewHub? _view;
+    private readonly IVisionClickCoordMap? _visionMap;
 
     public DesktopClickTool(IComputerControlGate gate, IDesktopControlBackend backend)
-        : this(gate, backend, view: null)
+        : this(gate, backend, view: null, visionMap: null)
     {
     }
 
@@ -44,19 +45,29 @@ public sealed class DesktopClickTool : ITool
         IComputerControlGate gate,
         IDesktopControlBackend backend,
         IDesktopViewHub? view)
+        : this(gate, backend, view, visionMap: null)
+    {
+    }
+
+    public DesktopClickTool(
+        IComputerControlGate gate,
+        IDesktopControlBackend backend,
+        IDesktopViewHub? view,
+        IVisionClickCoordMap? visionMap)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _view = view;
+        _visionMap = visionMap;
     }
 
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_click",
         Description:
-            "Click at guest framebuffer coordinates (Ubuntu VM pixels, origin 0,0). " +
+            "Click at coordinates from the last desktop_screenshot image (origin 0,0). " +
+            "Use the attached JPEG pixel x,y — Host maps downscaled vision grids onto the guest framebuffer. " +
             "Optional clicks:2 for double-click. " +
-            "REQUIRED: call desktop_screenshot first and read x,y from the attached image — " +
-            "never guess window-center for in-page buttons. " +
+            "REQUIRED: call desktop_screenshot first — never guess window-center for in-page buttons. " +
             "Prefer browser_click_text for labeled controls (Login, Sign in). " +
             "Requires AllowComputerControl.",
         Parameters: ParametersSchema);
@@ -71,6 +82,11 @@ public sealed class DesktopClickTool : ITool
 
         if (!TryGetInt(args, "x", out var x) || !TryGetInt(args, "y", out var y))
             return new ToolResult(false, "error: desktop_click requires integer 'x' and 'y'.", null);
+
+        var mapped = _visionMap?.MapToGuest(x, y)
+                     ?? new ToolImagePayload.ClickCoordResolution(x, y, Remapped: false, "no-map");
+        x = mapped.GuestX;
+        y = mapped.GuestY;
 
         var button = "left";
         if (args.TryGetProperty("button", out var b) && b.ValueKind == JsonValueKind.String)
@@ -100,6 +116,8 @@ public sealed class DesktopClickTool : ITool
             var note = string.IsNullOrWhiteSpace(result.Content)
                 ? $"{label} at ({x},{y})"
                 : result.Content;
+            if (mapped.Remapped)
+                note += $" [mapped from vision:{mapped.Reason}]";
             await SoftCursorPresenceFeedback.AnnounceClickAsync(_view, note, x, y, ct)
                 .ConfigureAwait(false);
         }

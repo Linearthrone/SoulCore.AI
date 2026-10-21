@@ -30,9 +30,10 @@ public sealed class DesktopDragTool : ITool
     private readonly IComputerControlGate _gate;
     private readonly IDesktopControlBackend _backend;
     private readonly IDesktopViewHub? _view;
+    private readonly IVisionClickCoordMap? _visionMap;
 
     public DesktopDragTool(IComputerControlGate gate, IDesktopControlBackend backend)
-        : this(gate, backend, view: null)
+        : this(gate, backend, view: null, visionMap: null)
     {
     }
 
@@ -40,10 +41,20 @@ public sealed class DesktopDragTool : ITool
         IComputerControlGate gate,
         IDesktopControlBackend backend,
         IDesktopViewHub? view)
+        : this(gate, backend, view, visionMap: null)
+    {
+    }
+
+    public DesktopDragTool(
+        IComputerControlGate gate,
+        IDesktopControlBackend backend,
+        IDesktopViewHub? view,
+        IVisionClickCoordMap? visionMap)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _view = view;
+        _visionMap = visionMap;
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -67,6 +78,16 @@ public sealed class DesktopDragTool : ITool
             || !TryGetInt(args, "x2", out var x2) || !TryGetInt(args, "y2", out var y2))
         {
             return new ToolResult(false, "error: desktop_drag requires integer 'x1','y1','x2','y2'.", null);
+        }
+
+        if (_visionMap is not null)
+        {
+            var a = _visionMap.MapToGuest(x1, y1);
+            var bPt = _visionMap.MapToGuest(x2, y2);
+            x1 = a.GuestX;
+            y1 = a.GuestY;
+            x2 = bPt.GuestX;
+            y2 = bPt.GuestY;
         }
 
         var button = "left";
