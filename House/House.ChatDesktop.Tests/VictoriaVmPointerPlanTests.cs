@@ -109,6 +109,36 @@ public class VictoriaVmPointerPlanTests
             VictoriaVmPointerPlan.EnumerateParkCandidates(embedOnly, 0, 0, vw, vh));
     }
 
+    /// <summary>
+    /// Multi-monitor: Presence on left monitor — exclude GA_ROOT so park leaves MI.
+    /// Single-monitor maximized: do not exclude GA_ROOT (#171).
+    /// </summary>
+    [Fact]
+    public void BuildParkExcludePolicy_AddsRootOnlyWhenFreeRegionExists()
+    {
+        var embed = new VictoriaVmPointerPlan.ParkRect(0, 0, 1280, 1080);
+        var root = new VictoriaVmPointerPlan.ParkRect(0, 0, 1920, 1080);
+
+        // Dual virtual desktop: second monitor to the right of Presence.
+        Assert.True(
+            VictoriaVmPointerPlan.CanExcludePresenceRoot(root, 0, 0, 3840, 1080));
+        var dual = VictoriaVmPointerPlan.BuildParkExcludePolicy(
+            embed, root, 0, 0, 3840, 1080);
+        Assert.Equal(2, dual.Count);
+        Assert.Contains(root, dual);
+        var dualPick = VictoriaVmPointerPlan.PickParkPoint(dual, 0, 0, 3840, 1080);
+        Assert.False(VictoriaVmPointerPlan.IsInsideAnyPark(dualPick.X, dualPick.Y, dual));
+        Assert.True(dualPick.X >= 1920, $"expected park on second monitor, got {dualPick}");
+
+        // Single monitor maximized — no in-bounds free region outside root.
+        Assert.False(
+            VictoriaVmPointerPlan.CanExcludePresenceRoot(root, 0, 0, 1920, 1080));
+        var single = VictoriaVmPointerPlan.BuildParkExcludePolicy(
+            embed, root, 0, 0, 1920, 1080);
+        Assert.Single(single);
+        Assert.Equal(embed, single[0]);
+    }
+
     [Fact]
     public void FormatClickDroppedLine_MentionsUnmapped()
     {

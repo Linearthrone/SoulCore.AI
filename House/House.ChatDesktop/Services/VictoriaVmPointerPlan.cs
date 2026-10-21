@@ -73,9 +73,69 @@ public static class VictoriaVmPointerPlan
     }
 
     /// <summary>
+    /// True when Presence GA_ROOT can be excluded without trapping park (another
+    /// virtual-screen region exists outside the root). Mouse Integration tracks the
+    /// whole Presence client — chrome park is a false win when root is excluded away.
+    /// Single-monitor maximized root → false (keep embed-only / #171).
+    /// </summary>
+    public static bool CanExcludePresenceRoot(
+        ParkRect root,
+        int virtualX,
+        int virtualY,
+        int virtualW,
+        int virtualH)
+    {
+        var vw = Math.Max(1, virtualW);
+        var vh = Math.Max(1, virtualH);
+        var rootOnly = new[] { root };
+        foreach (var c in EnumerateParkCandidates(rootOnly, virtualX, virtualY, vw, vh))
+        {
+            // SetCursorPos clamps onto the virtual screen — ignore off-screen
+            // "just outside exclude" candidates (they caused the #171 trap).
+            if (c.X < virtualX || c.Y < virtualY
+                || c.X >= virtualX + vw || c.Y >= virtualY + vh)
+                continue;
+            if (!root.Contains(c.X, c.Y))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Park exclude policy: always the embed HWND; add GA_ROOT when a free region
+    /// exists outside Presence (multi-monitor). Never empty when embed is known.
+    /// </summary>
+    public static List<ParkRect> BuildParkExcludePolicy(
+        ParkRect? embed,
+        ParkRect? presenceRoot,
+        int virtualX,
+        int virtualY,
+        int virtualW,
+        int virtualH)
+    {
+        var excludes = new List<ParkRect>(2);
+        if (embed is { } e)
+            excludes.Add(e);
+
+        if (presenceRoot is { } root
+            && CanExcludePresenceRoot(root, virtualX, virtualY, virtualW, virtualH))
+        {
+            var sameAsEmbed = embed is { } emb
+                && emb.Left == root.Left
+                && emb.Top == root.Top
+                && emb.Right == root.Right
+                && emb.Bottom == root.Bottom;
+            if (!sameAsEmbed)
+                excludes.Add(root);
+        }
+
+        return excludes;
+    }
+
+    /// <summary>
     /// Ordered park candidates (virtual-screen corners, then just outside excludes).
-    /// Mouse Integration rewrites Absolute while the cursor sits over the VM / embed
-    /// HWND — park must leave that rect (Presence chrome is fine), not just nudge ±24px.
+    /// When GA_ROOT is in excludes (multi-monitor), park must leave Presence entirely.
     /// </summary>
     public static IEnumerable<(int X, int Y)> EnumerateParkCandidates(
         IReadOnlyList<ParkRect> excludes,

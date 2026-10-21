@@ -907,12 +907,11 @@ public static class VictoriaVmPointer
     }
 
     /// <summary>
-    /// Park off the VM / embed HWND before Absolute button changes. Matches Host
-    /// <c>HostPointerPark</c>: multi-candidate virtual-screen corners — Presence
-    /// chrome is a valid park (do not exclude GA_ROOT). <paramref name="parkOk"/> is
-    /// set true before <paramref name="body"/> runs so a COM throw still reports
-    /// park=ok. When park fails, body is not run — Absolute over the embed would be
-    /// cleared by Mouse Integration.
+    /// Park off Mouse Integration before Absolute button changes. Exclude the embed
+    /// HWND always; also exclude Presence GA_ROOT when another monitor/region exists
+    /// (Host <c>HostPointerPark</c> intent — MI tracks the whole Presence client).
+    /// Single-monitor maximized keeps embed-only so chrome remains parkable (#171).
+    /// Empty excludes never count as parked. When park fails, body is not run.
     /// </summary>
     private static void WithCursorParked(nint excludeHwnd, Action body, out bool parkOk)
     {
@@ -920,13 +919,23 @@ public static class VictoriaVmPointer
         if (!OperatingSystem.IsWindows() || !GetCursorPos(out var saved))
             return;
 
-        var excludes = BuildParkExcludes(excludeHwnd);
         var vx = GetSystemMetrics(SmXVirtualScreen);
         var vy = GetSystemMetrics(SmYVirtualScreen);
         var vw = Math.Max(1, GetSystemMetrics(SmCxVirtualScreen));
         var vh = Math.Max(1, GetSystemMetrics(SmCyVirtualScreen));
+        var excludes = BuildParkExcludes(excludeHwnd, vx, vy, vw, vh);
+
+        // Without an exclude rect we cannot prove we left MI — never auto-ok.
+        if (excludes.Count == 0)
+        {
+            PresenceStartupLog.Write(
+                "her-screen click park=failed COM error: no embed HWND exclude");
+            return;
+        }
 
         var parked = false;
+        var parkX = 0;
+        var parkY = 0;
         foreach (var (x, y) in VictoriaVmPointerPlan.EnumerateParkCandidates(excludes, vx, vy, vw, vh))
         {
             _ = SetCursorPos(x, y);
@@ -936,31 +945,44 @@ public static class VictoriaVmPointer
             {
                 Thread.Sleep(ParkSettleMs);
                 parked = true;
+                parkX = now.X;
+                parkY = now.Y;
                 break;
             }
         }
 
-        if (!parked && excludes.Count > 0)
+        if (!parked)
         {
             var fallback = VictoriaVmPointerPlan.PickParkPoint(excludes, vx, vy, vw, vh);
             _ = SetCursorPos(fallback.X, fallback.Y);
             Thread.Sleep(ParkSettleMs);
             if (GetCursorPos(out var now)
                 && !VictoriaVmPointerPlan.IsInsideAnyPark(now.X, now.Y, excludes))
+            {
                 parked = true;
+                parkX = now.X;
+                parkY = now.Y;
+            }
         }
 
         if (!parked)
         {
             _ = SetCursorPos(saved.X, saved.Y);
+            PresenceStartupLog.Write(
+                $"her-screen click park=failed excludes={excludes.Count} " +
+                $"virtual={vw}x{vh}@{vx},{vy}");
             return;
         }
 
+        PresenceStartupLog.Write(
+            $"her-screen click park=ok at={parkX},{parkY} excludes={excludes.Count}");
         parkOk = true;
         try
         {
             body();
-            Thread.Sleep(20);
+            // Hold park until Absolute settles — restoring onto embed immediately
+            // lets Mouse Integration fight the trailing button-up.
+            Thread.Sleep(ParkSettleMs);
         }
         finally
         {
@@ -968,24 +990,32 @@ public static class VictoriaVmPointer
         }
     }
 
-    private static List<VictoriaVmPointerPlan.ParkRect> BuildParkExcludes(nint excludeHwnd)
+    private static List<VictoriaVmPointerPlan.ParkRect> BuildParkExcludes(
+        nint embedHwnd, int virtualX, int virtualY, int virtualW, int virtualH)
     {
-        var excludes = new List<VictoriaVmPointerPlan.ParkRect>(2);
-        if (excludeHwnd == 0)
-            return excludes;
+        VictoriaVmPointerPlan.ParkRect? embed = null;
+        VictoriaVmPointerPlan.ParkRect? root = null;
 
-        // Mouse Integration rewrites Absolute while the cursor sits over the VM /
-        // embed HWND — not the whole Presence window. Excluding GA_ROOT meant a
-        // maximized single-monitor Presence had nowhere to park (corners clamp
-        // back onto the root), so Absolute always ran with park=failed and MI
-        // cleared every press.
-        if (GetWindowRect(excludeHwnd, out var embedRc))
+        if (embedHwnd != 0 && GetWindowRect(embedHwnd, out var embedRc))
         {
-            excludes.Add(new VictoriaVmPointerPlan.ParkRect(
-                embedRc.Left, embedRc.Top, embedRc.Right, embedRc.Bottom));
+            embed = new VictoriaVmPointerPlan.ParkRect(
+                embedRc.Left, embedRc.Top, embedRc.Right, embedRc.Bottom);
         }
 
-        return excludes;
+        if (embedHwnd != 0)
+        {
+            var rootHwnd = GetAncestor(embedHwnd, GaRoot);
+            if (rootHwnd == 0)
+                rootHwnd = embedHwnd;
+            if (GetWindowRect(rootHwnd, out var rootRc))
+            {
+                root = new VictoriaVmPointerPlan.ParkRect(
+                    rootRc.Left, rootRc.Top, rootRc.Right, rootRc.Bottom);
+            }
+        }
+
+        return VictoriaVmPointerPlan.BuildParkExcludePolicy(
+            embed, root, virtualX, virtualY, virtualW, virtualH);
     }
 
     private abstract record WorkItem;
@@ -1000,6 +1030,7 @@ public static class VictoriaVmPointer
 
     private sealed record WheelKeyWork(int X, int Y, int Notches) : WorkItem;
 
+    private const uint GaRoot = 2;
     private const int ParkSettleMs = 80;
     private const int SmXVirtualScreen = 76;
     private const int SmYVirtualScreen = 77;
@@ -1027,6 +1058,9 @@ public static class VictoriaVmPointer
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetAncestor(nint hWnd, uint gaFlags);
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
