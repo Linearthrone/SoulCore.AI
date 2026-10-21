@@ -181,10 +181,66 @@ public static class ToolImagePayload
         return
             $"Attached image is {visionWidth}x{visionHeight}. desktop_click uses the full guest framebuffer " +
             $"{sourceWidth}x{sourceHeight} (origin 0,0). " +
-            $"Multiply a point on the attached image before clicking: " +
-            $"click_x = round(image_x * {scaleX.ToString("0.###", CultureInfo.InvariantCulture)}), " +
+            $"Prefer image-pixel x,y from this JPEG — Host scales to the framebuffer. " +
+            $"If you already scaled: click_x = round(image_x * {scaleX.ToString("0.###", CultureInfo.InvariantCulture)}), " +
             $"click_y = round(image_y * {scaleY.ToString("0.###", CultureInfo.InvariantCulture)}).";
     }
+
+    /// <summary>Result of mapping a tool click into guest framebuffer space.</summary>
+    public readonly record struct ClickCoordResolution(
+        int GuestX,
+        int GuestY,
+        bool Remapped,
+        string Reason);
+
+    /// <summary>
+    /// Map <c>desktop_click</c> args to guest framebuffer pixels.
+    /// When the vision JPEG was downscaled and the point still lies inside that
+    /// image, treat it as image space and scale up (models often skip the multiply).
+    /// Points already outside the vision image are left as guest space.
+    /// </summary>
+    public static ClickCoordResolution ResolveClickToGuest(
+        int x,
+        int y,
+        int sourceWidth,
+        int sourceHeight,
+        int visionWidth,
+        int visionHeight)
+    {
+        if (sourceWidth <= 0 || sourceHeight <= 0)
+            return new ClickCoordResolution(x, y, Remapped: false, "no-frame");
+
+        if (visionWidth <= 0 || visionHeight <= 0
+            || (visionWidth == sourceWidth && visionHeight == sourceHeight))
+        {
+            return new ClickCoordResolution(
+                Clamp(x, sourceWidth),
+                Clamp(y, sourceHeight),
+                Remapped: false,
+                "1:1");
+        }
+
+        // Already past the vision image edge → caller used guest framebuffer coords.
+        if (x >= visionWidth || y >= visionHeight || x < 0 || y < 0)
+        {
+            return new ClickCoordResolution(
+                Clamp(x, sourceWidth),
+                Clamp(y, sourceHeight),
+                Remapped: false,
+                "guest-space");
+        }
+
+        var gx = (int)Math.Round(x * (sourceWidth / (double)visionWidth));
+        var gy = (int)Math.Round(y * (sourceHeight / (double)visionHeight));
+        return new ClickCoordResolution(
+            Clamp(gx, sourceWidth),
+            Clamp(gy, sourceHeight),
+            Remapped: true,
+            "vision-scale");
+    }
+
+    private static int Clamp(int v, int size) =>
+        size <= 0 ? v : Math.Clamp(v, 0, size - 1);
 
     /// <summary>
     /// Downscale so max(width,height) ≤ <paramref name="maxEdgePx"/> and encode JPEG.

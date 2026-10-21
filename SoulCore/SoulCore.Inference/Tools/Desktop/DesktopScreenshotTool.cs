@@ -27,17 +27,20 @@ public sealed class DesktopScreenshotTool : ITool
     private readonly IDesktopControlBackend _backend;
     private readonly IDesktopViewHub? _view;
     private readonly IVictoriaBrowserViewHub? _browserView;
+    private readonly IVisionClickCoordMap? _visionMap;
 
     public DesktopScreenshotTool(
         IComputerControlGate gate,
         IDesktopControlBackend backend,
         IDesktopViewHub? view = null,
-        IVictoriaBrowserViewHub? browserView = null)
+        IVictoriaBrowserViewHub? browserView = null,
+        IVisionClickCoordMap? visionMap = null)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _view = view;
         _browserView = browserView;
+        _visionMap = visionMap;
     }
 
     public ToolDefinition Definition { get; } = new(
@@ -68,6 +71,17 @@ public sealed class DesktopScreenshotTool : ITool
         var result = await _backend.ScreenshotAsync(monitor, ct).ConfigureAwait(false);
         if (!result.Success)
             return DesktopToolGate.FromBackend(result);
+
+        // Same compress the tool-loop will attach — note grid so desktop_click can remap.
+        var prepared = ToolImagePayload.TryPrepareFromToolData(result.Data);
+        if (prepared is { } frame)
+        {
+            _visionMap?.NoteFrame(
+                frame.SourceWidth,
+                frame.SourceHeight,
+                frame.VisionWidth,
+                frame.VisionHeight);
+        }
 
         // Ensure Presence “What she saw” updates even when the backend forgot to.
         DesktopViewHub.TryRecordFromToolData(

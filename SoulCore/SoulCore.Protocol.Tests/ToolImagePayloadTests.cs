@@ -52,6 +52,45 @@ public class ToolImagePayloadTests
         Assert.Contains("1024x522", hint, StringComparison.Ordinal);
         Assert.Contains("1510x770", hint, StringComparison.Ordinal);
         Assert.Contains("image_y * 1.475", hint, StringComparison.Ordinal);
+        Assert.Contains("Host scales", hint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveClickToGuest_ScalesVisionPointOntoFramebuffer()
+    {
+        // Model clicked JPEG center without multiplying — Host must scale.
+        var mapped = ToolImagePayload.ResolveClickToGuest(
+            x: 512, y: 261,
+            sourceWidth: 1510, sourceHeight: 770,
+            visionWidth: 1024, visionHeight: 522);
+        Assert.True(mapped.Remapped);
+        Assert.Equal("vision-scale", mapped.Reason);
+        Assert.Equal(755, mapped.GuestX);
+        Assert.Equal(385, mapped.GuestY);
+    }
+
+    [Fact]
+    public void ResolveClickToGuest_LeavesGuestSpaceWhenOutsideVisionImage()
+    {
+        var mapped = ToolImagePayload.ResolveClickToGuest(
+            x: 1300, y: 400,
+            sourceWidth: 1510, sourceHeight: 770,
+            visionWidth: 1024, visionHeight: 522);
+        Assert.False(mapped.Remapped);
+        Assert.Equal("guest-space", mapped.Reason);
+        Assert.Equal(1300, mapped.GuestX);
+        Assert.Equal(400, mapped.GuestY);
+    }
+
+    [Fact]
+    public void VisionClickCoordMap_NotesFrameAndMaps()
+    {
+        var map = new VisionClickCoordMap();
+        map.NoteFrame(1510, 770, 1024, 522);
+        var mapped = map.MapToGuest(512, 261);
+        Assert.True(mapped.Remapped);
+        Assert.Equal(755, mapped.GuestX);
+        Assert.Equal(385, mapped.GuestY);
     }
 
     [Fact]

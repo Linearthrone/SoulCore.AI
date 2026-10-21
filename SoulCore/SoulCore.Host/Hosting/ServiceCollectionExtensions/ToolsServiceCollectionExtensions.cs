@@ -171,25 +171,30 @@ internal static class ToolsServiceCollectionExtensions
                 guest,
                 new NativeDesktopControlBackend());
         });
+        services.AddSingleton<IVisionClickCoordMap, VisionClickCoordMap>();
         services.AddSingleton<ITool>(sp => new DesktopScreenshotTool(
             sp.GetRequiredService<IComputerControlGate>(),
             sp.GetRequiredService<IDesktopControlBackend>(),
             sp.GetRequiredService<IDesktopViewHub>(),
-            sp.GetRequiredService<IVictoriaBrowserViewHub>()));
+            sp.GetRequiredService<IVictoriaBrowserViewHub>(),
+            sp.GetRequiredService<IVisionClickCoordMap>()));
         services.AddSingleton<ITool>(sp => new DesktopClickTool(
             sp.GetRequiredService<IComputerControlGate>(),
             sp.GetRequiredService<IDesktopControlBackend>(),
-            sp.GetRequiredService<IDesktopViewHub>()));
+            sp.GetRequiredService<IDesktopViewHub>(),
+            sp.GetRequiredService<IVisionClickCoordMap>()));
         services.AddSingleton<ITool>(sp => new DesktopDragTool(
             sp.GetRequiredService<IComputerControlGate>(),
             sp.GetRequiredService<IDesktopControlBackend>(),
-            sp.GetRequiredService<IDesktopViewHub>()));
+            sp.GetRequiredService<IDesktopViewHub>(),
+            sp.GetRequiredService<IVisionClickCoordMap>()));
         services.AddSingleton<ITool, DesktopTypeTool>();
         services.AddSingleton<ITool, DesktopKeyTool>();
         services.AddSingleton<ITool>(sp => new DesktopScrollTool(
             sp.GetRequiredService<IComputerControlGate>(),
             sp.GetRequiredService<IDesktopControlBackend>(),
-            sp.GetRequiredService<IDesktopViewHub>()));
+            sp.GetRequiredService<IDesktopViewHub>(),
+            sp.GetRequiredService<IVisionClickCoordMap>()));
         services.AddSingleton<ITool, DesktopOpenAppTool>();
         services.AddSingleton<ITool, GuestListDirTool>();
         services.AddSingleton<ITool, GuestReadFileTool>();
