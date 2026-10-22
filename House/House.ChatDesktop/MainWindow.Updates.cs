@@ -12,6 +12,11 @@ public partial class MainWindow
     private PresenceUpdateService? _updates;
     private UpdateInfo? _pendingUpdate;
     private bool _updateBusy;
+    private string? _lastHostVersion;
+    private bool? _healthHasPersona;
+    private bool? _healthCapabilitiesPersonas;
+    private PresenceUpdateCheckResult.Kind? _presenceUpdateKind;
+    private string? _presenceAvailableVersion;
 
     private void InitPresenceUpdates()
     {
@@ -23,9 +28,13 @@ public partial class MainWindow
         if (UpdateStatusText is not null)
         {
             UpdateStatusText.Text = _updates.IsInstalled
-                ? "Installed build — Update downloads Presence from GitHub Releases when a presence-v* release exists."
+                ? "Installed build — Update downloads Presence from CreatorEdition GitHub Releases when a presence-v* release exists."
                 : "Unpackaged build — Update cannot install. Pack with pack-presence.ps1 -Publish, install Setup.exe, then Update works.";
         }
+
+        // Unpackaged is already known without a network check.
+        if (!_updates.IsInstalled)
+            _presenceUpdateKind = PresenceUpdateCheckResult.Kind.DevBuild;
 
         RefreshBuildVersionChrome(hostVersion: null);
 
@@ -36,12 +45,48 @@ public partial class MainWindow
 
     private void RefreshBuildVersionChrome(string? hostVersion)
     {
+        if (hostVersion is not null)
+            _lastHostVersion = string.IsNullOrWhiteSpace(hostVersion) ? null : hostVersion.Trim();
+
         var presence = _updates?.CurrentVersion ?? "—";
-        var host = string.IsNullOrWhiteSpace(hostVersion) ? "—" : hostVersion.Trim();
+        var host = string.IsNullOrWhiteSpace(_lastHostVersion) ? "—" : _lastHostVersion;
+        var installed = _updates?.IsInstalled ?? false;
+        var hostBehind = BuildCurrencyStatus.IsHostBehindPresence(
+            host == "—" ? null : host,
+            presence == "—" ? null : presence);
+        var presenceCurrency = BuildCurrencyStatus.PresenceCurrencyLabel(
+            _presenceUpdateKind,
+            _presenceAvailableVersion,
+            installed);
+        var hostCurrency = BuildCurrencyStatus.HostCurrencyLabel(
+            _personaApiOk,
+            _healthHasPersona,
+            hostBehind,
+            _healthCapabilitiesPersonas);
+        var hostShort = BuildCurrencyStatus.HostCurrencyShort(
+            _personaApiOk,
+            _healthHasPersona,
+            hostBehind,
+            _healthCapabilitiesPersonas);
+
         if (BuildVersionsText is not null)
-            BuildVersionsText.Text = $"Presence {presence} · Host {host}";
+        {
+            BuildVersionsText.Text = BuildCurrencyStatus.FormatTitleChrome(
+                presence,
+                host == "—" ? null : host,
+                presenceCurrency,
+                hostShort);
+        }
+
         if (UpdateHostVersionBox is not null)
             UpdateHostVersionBox.Text = host;
+        if (UpdateVersionBox is not null && _updates is not null)
+            UpdateVersionBox.Text = _updates.CurrentVersion;
+        if (UpdatePresenceCurrencyBox is not null)
+            UpdatePresenceCurrencyBox.Text = presenceCurrency;
+        if (UpdateHostCurrencyBox is not null)
+            UpdateHostCurrencyBox.Text = hostCurrency;
+
         Title = $"SoulCore CreatorEdition — Presence {presence}";
     }
 
@@ -104,12 +149,15 @@ public partial class MainWindow
     private void ApplyUpdateCheckResult(PresenceUpdateCheckResult result, bool showToastIfAvailable, bool fromButton)
     {
         _pendingUpdate = result.Update;
+        _presenceUpdateKind = result.Status;
+        _presenceAvailableVersion = result.AvailableVersion;
         if (UpdateApplyButton is not null)
             UpdateApplyButton.IsEnabled = result.Status == PresenceUpdateCheckResult.Kind.Available;
         if (UpdateVersionBox is not null && !string.IsNullOrWhiteSpace(result.CurrentVersion))
             UpdateVersionBox.Text = result.CurrentVersion;
 
         SetUpdateStatus(result.Message);
+        RefreshBuildVersionChrome(_lastHostVersion);
 
         if (result.Status == PresenceUpdateCheckResult.Kind.Available && showToastIfAvailable)
             ShowUpdateToast(result.Message, showAction: true);

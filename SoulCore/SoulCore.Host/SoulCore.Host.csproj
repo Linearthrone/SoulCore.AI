@@ -15,8 +15,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>soulcore-host-phase0-dev</UserSecretsId>
     <!-- Bump with House/scripts/bump-versions.ps1 (-Target host) on every Host fix. -->
-    <Version>0.1.5</Version>
-    <InformationalVersion>0.1.5</InformationalVersion>
+    <!-- PROP-15.21b: 0.2.0 marks CreatorEdition persona Host vs legacy trees that still ship 0.1.5. -->
+    <Version>0.2.0</Version>
+    <InformationalVersion>0.2.0</InformationalVersion>
     <Product>SoulCore Host</Product>
     <Company>LinearThrone</Company>
   </PropertyGroup>

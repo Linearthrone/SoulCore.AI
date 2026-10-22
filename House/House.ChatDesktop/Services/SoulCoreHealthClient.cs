@@ -54,6 +54,21 @@ public sealed class SoulCoreHealthSnapshot
     /// <summary>SoulCore.Host assembly version from /health (verify Host fix is running).</summary>
     public string? HostVersion { get; init; }
 
+    /// <summary>PROP-15.22: /health included a persona object (CreatorEdition Host).</summary>
+    public bool HealthHasPersona { get; init; }
+
+    /// <summary>
+    /// PROP-15.24: /health capabilities.personas == true.
+    /// Missing or false means Host is not advertising CreatorEdition personas.
+    /// </summary>
+    public bool HealthCapabilitiesPersonas { get; init; }
+
+    /// <summary>Active persona id from /health when present.</summary>
+    public string? HealthPersonaId { get; init; }
+
+    /// <summary>Active persona display name from /health when present.</summary>
+    public string? HealthPersonaDisplayName { get; init; }
+
     public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>Alive = host HTTP health answered.</summary>
@@ -136,6 +151,10 @@ public sealed class SoulCoreHealthClient : IDisposable
                 CurrentActivity = dto?.Presence?.CurrentActivity,
                 ActivitySource = dto?.Presence?.ActivitySource,
                 HostVersion = dto?.Version,
+                HealthHasPersona = dto?.Persona is not null,
+                HealthCapabilitiesPersonas = dto?.Capabilities?.Personas == true,
+                HealthPersonaId = dto?.Persona?.PersonaId,
+                HealthPersonaDisplayName = dto?.Persona?.DisplayName,
                 Detail = null
             };
         }
@@ -162,6 +181,12 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("phase")]
         public int? Phase { get; set; }
+
+        [JsonPropertyName("persona")]
+        public PersonaHealthDto? Persona { get; set; }
+
+        [JsonPropertyName("capabilities")]
+        public CapabilitiesDto? Capabilities { get; set; }
 
         [JsonPropertyName("memory")]
         public MemoryDto? Memory { get; set; }
@@ -198,6 +223,21 @@ public sealed class SoulCoreHealthClient : IDisposable
 
         [JsonPropertyName("activitySource")]
         public string? ActivitySource { get; set; }
+    }
+
+    private sealed class PersonaHealthDto
+    {
+        [JsonPropertyName("personaId")]
+        public string? PersonaId { get; set; }
+
+        [JsonPropertyName("displayName")]
+        public string? DisplayName { get; set; }
+    }
+
+    private sealed class CapabilitiesDto
+    {
+        [JsonPropertyName("personas")]
+        public bool? Personas { get; set; }
     }
 
     private sealed class ToolsDto

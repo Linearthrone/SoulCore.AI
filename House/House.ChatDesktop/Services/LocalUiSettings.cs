@@ -42,7 +42,7 @@ public sealed class LocalUiSettings
 
     /// <summary>
     /// PROP-4.2 optional update feed override (GitHub repo URL or HTTP/file path).
-    /// Empty → GitHub Releases for Linearthrone/SoulCore.AI.
+    /// Empty → GitHub Releases for House-VictoriAI/SoulCore.AI_CreatorEdition.
     /// </summary>
     public string? UpdateFeedUrl { get; set; }
 

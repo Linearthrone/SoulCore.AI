@@ -7,7 +7,7 @@ public sealed class PresenceHonestyTests
     [Theory]
     [InlineData("want[recall]: recall the recent thread and weave it into presence.", "recall", "recall the recent thread and weave it into presence.")]
     [InlineData("want[idle]: sitting quietly (emotion=calm)", "idle", "sitting quietly")]
-    [InlineData("want[chat]: talking with Kurt", "chat", "talking with Kurt")]
+    [InlineData("want[chat]: talking with Kayleigh", "chat", "talking with Kayleigh")]
     public void ParseWantWire_strips_want_envelope_and_emotion_tail(string want, string? category, string expectedPhrase)
     {
         var (cat, phrase) = MainWindow.ParseWantWire(want, category);
@@ -33,7 +33,7 @@ public sealed class PresenceHonestyTests
     }
 
     [Theory]
-    [InlineData("Kurt, I'm actually annoyed right now.")]
+    [InlineData("Kayleigh, I'm actually annoyed right now.")]
     [InlineData("")]
     [InlineData(null)]
     public void IsAutomatedProactiveLine_rejects_real_chat_lines(string? line)

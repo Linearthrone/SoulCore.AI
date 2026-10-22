@@ -51,14 +51,32 @@
                              Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
               </StackPanel>
-              <!-- PROP-15.4: active persona switcher -->
-              <StackPanel Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2" MinWidth="160">
+              <!-- PROP-15.4 / 15.22: active persona switcher (DisplayName + clear Host status) -->
+              <StackPanel Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2" MinWidth="160" MaxWidth="240">
                 <TextBlock Text="ACTIVE PERSONA" FontSize="9" FontWeight="SemiBold"
                            Foreground="{DynamicResource MutedBrush}" LetterSpacing="1"/>
-                <ComboBox x:Name="PersonaSwitcher" MinWidth="150" MaxWidth="220" Height="28"
-                          FontSize="12" PlaceholderText="Load personas…"
-                          SelectionChanged="PersonaSwitcher_SelectionChanged"
-                          ToolTip.Tip="Switch active persona on Host. Confirms memory quarantine."/>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <ComboBox x:Name="PersonaSwitcher" MinWidth="150" MaxWidth="200" Height="28"
+                            FontSize="12" PlaceholderText="Load personas…"
+                            SelectionChanged="PersonaSwitcher_SelectionChanged"
+                            ToolTip.Tip="Switch active persona on Host. Confirms memory quarantine.">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Spacing="0" Margin="0,2">
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"/>
+                          <TextBlock Text="{Binding PersonaId}" FontSize="10"
+                                     Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <Button Classes="chrome" Content="↻" FontSize="12" Padding="8,4" MinWidth="28" Height="28"
+                          Click="PersonaRefresh_Click"
+                          ToolTip.Tip="Reload persona packs from Host"/>
+                </StackPanel>
+                <TextBlock x:Name="PersonaChromeStatusText" FontSize="9" TextWrapping="Wrap"
+                           MaxWidth="236" IsVisible="False"
+                           Foreground="{DynamicResource MutedBrush}"/>
               </StackPanel>
               <!-- brand center-ish -->
               <StackPanel Margin="20,0,0,0" VerticalAlignment="Center" Opacity="0.85">
@@ -803,14 +821,20 @@
               <StackPanel Margin="12" Spacing="6">
                 <TextBlock Text="Updates" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"
-                           Text="Update downloads Presence (this app) from GitHub Releases after a pack is published. It does not update Host — restart Host for Playwright/tool fixes. If the feed is empty, publish with pack-presence.ps1 -Publish (or the Presence Release Action)."
+                           Text="Update downloads Presence (this app) from CreatorEdition GitHub Releases after a pack is published. It does not update Host — restart Host from the CreatorEdition tree for persona API / Playwright fixes. If the feed is empty, publish with pack-presence.ps1 -Publish (or the Presence Release Action)."
                            Margin="0,0,0,12"/>
                 <TextBlock Text="Presence version" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="UpdateVersionBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,8"/>
+                <TextBlock Text="Presence currency" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="UpdatePresenceCurrencyBox" Classes="input" IsReadOnly="True" Text="—"
+                         Padding="8" Margin="0,0,0,8"/>
                 <TextBlock Text="Host version (from /health)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="UpdateHostVersionBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,8"/>
+                <TextBlock Text="Host personas (CreatorEdition)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="UpdateHostCurrencyBox" Classes="input" IsReadOnly="True" Text="—"
+                         TextWrapping="Wrap" Padding="8" Margin="0,0,0,8"/>
                 <TextBlock Text="Update feed" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="UpdateFeedBox" Classes="input" IsReadOnly="True" Text="—"
                          TextWrapping="Wrap" Padding="8" Margin="0,0,0,12"/>

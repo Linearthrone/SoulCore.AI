@@ -14,22 +14,67 @@ public partial class MainWindow
     private bool _personaSwitcherHydrating;
     private string? _activePersonaId;
     private string _activePersonaDisplayName = "Companion";
+    private bool? _personaApiOk;
 
     private async Task RefreshPersonasAsync()
     {
         var snap = await _personas.ListAsync().ConfigureAwait(true);
         if (!snap.Reachable)
         {
-            if (PersonaSwitcherStatusText is not null)
-            {
-                PersonaSwitcherStatusText.Text = snap.Detail ?? "Host unreachable";
-                PersonaSwitcherStatusText.IsVisible = true;
-            }
-
+            ClearPersonaSwitcherItems();
+            _personaApiOk = null;
+            SetPersonaStatus(snap.Detail ?? "Host unreachable", warn: true);
+            RefreshBuildVersionChrome(_lastHostVersion);
             return;
         }
 
+        if (snap.PersonaApiMissing)
+        {
+            ClearPersonaSwitcherItems();
+            _personaApiOk = false;
+            SetPersonaStatus(
+                snap.Detail ?? BuildCurrencyStatus.HostNoPersonaApiMessage,
+                warn: true);
+            RefreshBuildVersionChrome(_lastHostVersion);
+            return;
+        }
+
+        _personaApiOk = true;
         ApplyPersonaList(snap);
+        RefreshBuildVersionChrome(_lastHostVersion);
+    }
+
+    private void ClearPersonaSwitcherItems()
+    {
+        if (PersonaSwitcher is null)
+            return;
+
+        _personaSwitcherHydrating = true;
+        try
+        {
+            PersonaSwitcher.ItemsSource = null;
+            PersonaSwitcher.SelectedItem = null;
+        }
+        finally
+        {
+            _personaSwitcherHydrating = false;
+        }
+    }
+
+    private void SetPersonaStatus(string? text, bool warn)
+    {
+        var brush = warn
+            ? (_badBrush ?? _warnBrush ?? _mutedBrush)
+            : _mutedBrush;
+        foreach (var tb in new[] { PersonaChromeStatusText, PersonaSwitcherStatusText })
+        {
+            if (tb is null)
+                continue;
+            tb.Text = text ?? "";
+            tb.IsVisible = !string.IsNullOrWhiteSpace(text);
+            if (brush is not null)
+                tb.Foreground = brush;
+        }
     }
 
     private void ApplyPersonaList(PersonaListSnapshot snap)
@@ -59,12 +104,14 @@ public partial class MainWindow
             else
                 ApplyActivePersonaToShell(activeId, "Companion", syncLocalName: false);
 
-            if (PersonaSwitcherStatusText is not null)
+            if (items.Count == 0)
             {
-                PersonaSwitcherStatusText.Text = items.Count == 0
-                    ? "No persona packs on Host"
-                    : $"{items.Count} pack(s) · active quarantined";
-                PersonaSwitcherStatusText.IsVisible = true;
+                SetPersonaStatus("No persona packs on Host", warn: false);
+            }
+            else
+            {
+                var name = active?.DisplayName ?? "none";
+                SetPersonaStatus($"{items.Count} pack(s) · active: {name}", warn: false);
             }
         }
         finally
@@ -104,8 +151,17 @@ public partial class MainWindow
         var result = await _personas.ActivateAsync(selected.PersonaId).ConfigureAwait(true);
         if (!result.Ok || result.Persona is null)
         {
-            AppendSystemNotice(
-                $"Persona switch failed: {result.Detail ?? "Host rejected activate"}");
+            var detail = result.Detail ?? "Host rejected activate";
+            if (detail.Contains("404", StringComparison.Ordinal)
+                || detail.Contains("Not Found", StringComparison.OrdinalIgnoreCase))
+            {
+                detail = BuildCurrencyStatus.HostNoPersonaApiMessage;
+                _personaApiOk = false;
+                RefreshBuildVersionChrome(_lastHostVersion);
+            }
+
+            AppendSystemNotice($"Persona switch failed: {detail}");
+            SetPersonaStatus(detail, warn: true);
             _personaSwitcherHydrating = true;
             try
             {
@@ -128,12 +184,9 @@ public partial class MainWindow
             $"Active persona → {result.Persona.DisplayName} ({result.Persona.PersonaId}). " +
             "Memories stay quarantined; identity applies on the next chat turn.");
 
-        if (PersonaSwitcherStatusText is not null)
-        {
-            PersonaSwitcherStatusText.Text = result.Note
-                ?? $"Active: {result.Persona.DisplayName}";
-            PersonaSwitcherStatusText.IsVisible = true;
-        }
+        SetPersonaStatus(
+            result.Note ?? $"Active: {result.Persona.DisplayName}",
+            warn: false);
     }
 
     private PersonaPackInfo? FindPersonaItem(string? personaId)
@@ -288,6 +341,15 @@ public partial class MainWindow
         if (!list.Reachable)
         {
             AppendSystemNotice($"Persona Host unreachable: {list.Detail ?? "no detail"}");
+            return;
+        }
+
+        if (list.PersonaApiMissing)
+        {
+            AppendSystemNotice(list.Detail ?? BuildCurrencyStatus.HostNoPersonaApiMessage);
+            _personaApiOk = false;
+            SetPersonaStatus(list.Detail ?? BuildCurrencyStatus.HostNoPersonaApiMessage, warn: true);
+            RefreshBuildVersionChrome(_lastHostVersion);
             return;
         }
 

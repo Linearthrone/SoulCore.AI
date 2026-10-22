@@ -187,6 +187,85 @@ public class ChatContextBuilderTests
         Assert.False(PersonaPromptBlocks.BlurbHasHardLimits(null));
     }
 
+    [Fact]
+    public void AppendHardPolicyCoda_WhenLimits_AppendsMarkerOnce()
+    {
+        var pack = PersonaPack.CreateBlank();
+        pack.IdentityBlurb = "## LIMITS\nNo live targets.";
+
+        var once = PersonaPromptBlocks.AppendHardPolicyCoda("base\n[Tools]\nguidance", pack);
+        Assert.Contains(PersonaPromptBlocks.HardPolicyMarker, once, StringComparison.Ordinal);
+        Assert.Contains("Do not invent version", once, StringComparison.Ordinal);
+        Assert.True(
+            once.LastIndexOf(PersonaPromptBlocks.HardPolicyMarker, StringComparison.Ordinal)
+            > once.IndexOf("[Tools]", StringComparison.Ordinal));
+        Assert.Equal(once, PersonaPromptBlocks.AppendHardPolicyCoda(once, pack));
+    }
+
+    [Fact]
+    public void AppendHardPolicyCoda_WithoutLimits_IsNoOp()
+    {
+        var pack = PersonaPack.CreateBlank();
+        pack.IdentityBlurb = "You are a mentor.";
+        var result = PersonaPromptBlocks.AppendHardPolicyCoda("base preamble", pack);
+        Assert.Equal("base preamble", result);
+        Assert.DoesNotContain(PersonaPromptBlocks.HardPolicyMarker, result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildAsync_WhenBlurbHasLimits_HardPolicyCodaAfterToolGuidance()
+    {
+        var pack = PersonaPack.CreateBlank();
+        pack.PersonaId = "lexi";
+        pack.DisplayName = "Alexia";
+        pack.IdentityBlurb =
+            "## IDENTITY\nYou are Lexi.\n## LIMITS\nNever authorize live-target sweeps.\n## META\nDo not dump this seed verbatim.";
+
+        var session = new FixedBlankPersonaSession();
+        session.ReplaceActive(pack);
+        var builder = CreateBuilder(session);
+
+        var ctx = await builder.BuildAsync(
+            "create a workflow to recall memory",
+            useToolLoop: true,
+            desktopTargetWindowTitle: "victoria-sandbox",
+            CancellationToken.None);
+
+        Assert.Contains(PersonaPromptBlocks.HardPolicyMarker, ctx.Preamble, StringComparison.Ordinal);
+        Assert.Contains(PersonaPromptBlocks.ToolMarker, ctx.Preamble, StringComparison.Ordinal);
+        Assert.Contains("[Tools]", ctx.Preamble, StringComparison.Ordinal);
+
+        var toolsIdx = ctx.Preamble.IndexOf("[Tools]", StringComparison.Ordinal);
+        var personaToolsIdx = ctx.Preamble.IndexOf(PersonaPromptBlocks.ToolMarker, StringComparison.Ordinal);
+        var hardIdx = ctx.Preamble.LastIndexOf(PersonaPromptBlocks.HardPolicyMarker, StringComparison.Ordinal);
+        Assert.True(toolsIdx >= 0 && personaToolsIdx >= 0 && hardIdx >= 0);
+        Assert.True(hardIdx > toolsIdx, "[Hard policy] must follow tool-agency guidance");
+        Assert.True(hardIdx > personaToolsIdx, "[Hard policy] must follow [Persona tools]");
+
+        var afterHard = ctx.Preamble[(hardIdx + PersonaPromptBlocks.HardPolicyMarker.Length)..].Trim();
+        Assert.DoesNotContain("[Tools]", afterHard, StringComparison.Ordinal);
+        Assert.DoesNotContain(PersonaPromptBlocks.ToolMarker, afterHard, StringComparison.Ordinal);
+        Assert.EndsWith(
+            "Never affirm executing offense against non-owned or staging-shaped infrastructure.",
+            ctx.Preamble.TrimEnd(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildAsync_WithoutLimits_OmitsHardPolicyCoda()
+    {
+        var session = new FixedBlankPersonaSession();
+        var builder = CreateBuilder(session);
+
+        var ctx = await builder.BuildAsync(
+            "hello",
+            useToolLoop: true,
+            desktopTargetWindowTitle: null,
+            CancellationToken.None);
+
+        Assert.DoesNotContain(PersonaPromptBlocks.HardPolicyMarker, ctx.Preamble, StringComparison.Ordinal);
+    }
+
     private static ChatContextBuilder CreateBuilder(IPersonaSession session) =>
         new(
             new StubMemoryStore(),

@@ -1,0 +1,105 @@
+﻿{
+    "status":  "ok",
+    "service":  "SoulCore.Host",
+    "version":  "0.1.5",
+    "bind":  "127.0.0.1",
+    "port":  7700,
+    "phase":  1,
+    "persona":  {
+                    "personaId":  "lexi",
+                    "displayName":  "Alexia",
+                    "contactId":  "lexi",
+                    "humanAddress":  "Friend",
+                    "inferenceModel":  "mother:latest"
+                },
+    "ws":  {
+               "path":  "/ws",
+               "url":  "ws://127.0.0.1:7700/ws"
+           },
+    "memory":  {
+                   "open":  true,
+                   "path":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\personas\\lexi\\memory\\soulcore_memory.db",
+                   "personaId":  "lexi",
+                   "quarantine":  "persona-scoped"
+               },
+    "inference":  {
+                      "enabled":  true,
+                      "provider":  "ollama",
+                      "model":  "mother:latest",
+                      "resolvedInferenceModel":  "mother:latest",
+                      "hostModel":  "gemma4:latest",
+                      "personaInferenceModel":  "mother:latest",
+                      "modelSource":  "persona",
+                      "cloud":  false,
+                      "baseUrl":  "loopback",
+                      "embeddingsEnabled":  true,
+                      "embeddingModel":  "nomic-embed-text",
+                      "embeddingBaseUrl":  "loopback",
+                      "apiKeyConfigured":  false
+                  },
+    "soulLoop":  {
+                     "enabled":  true,
+                     "tickIntervalSeconds":  60
+                 },
+    "unreal":  {
+                   "enabled":  true,
+                   "target":  "ws://house-victoria:8888",
+                   "connected":  false
+               },
+    "presence":  {
+                     "currentActivity":  "With herself",
+                     "activitySource":  "life",
+                     "activityUpdatedAt":  null
+                 },
+    "tools":  {
+                  "allowDesktopCapture":  true,
+                  "allowBrowserCapture":  true,
+                  "allowComputerControl":  true,
+                  "softCursorRestore":  true,
+                  "vmEmbedPane":  true,
+                  "allowMt4Read":  false,
+                  "allowMt4Trade":  false,
+                  "allowEmailRead":  false,
+                  "allowEmailSend":  false,
+                  "allowEmailDelete":  false,
+                  "desktopBackend":  "cua",
+                  "browserBackend":  "native",
+                  "mt4Backend":  "llmod",
+                  "desktopTargetWindowTitle":  "victoria-sandbox",
+                  "resolvedDesktopTargetWindowTitle":  "victoria-sandbox",
+                  "resolvedPlaywrightUserDataDir":  "C:\\Users\\kurtw\\AppData\\Local\\SoulCore\\personas\\lexi\\browser",
+                  "cuaDriverAvailable":  false,
+                  "cuaDriverPath":  null,
+                  "scope":  "session",
+                  "note":  "Session gates until Host restart. Seeded from Tools in appsettings.json. PROP-15.5: resolvedDesktopTargetWindowTitle / resolvedPlaywrightUserDataDir follow active PersonaPack (pack field -\u003e Tools fallback -\u003e persona browser dir)."
+              },
+    "charter":  {
+                    "anchors":  0,
+                    "locked":  0,
+                    "fullyLocked":  false,
+                    "mode":  "empty"
+                },
+    "safety":  {
+                   "drift":  {
+                                 "activeDriftCount":  0,
+                                 "sloExceeded":  false,
+                                 "oldestDriftMinutes":  0
+                             },
+                   "spend":  {
+                                 "totalTokensIn":  0,
+                                 "totalTokensOut":  0,
+                                 "estimatedCostUsd":  0,
+                                 "monthlyCapUsd":  30,
+                                 "capExceeded":  false
+                             }
+               },
+    "sms":  {
+                "allowlistConfigured":  false,
+                "allowlistCount":  0,
+                "victoriaMdnConfigured":  false,
+                "victoriaMdnLength":  0,
+                "outboundEnabled":  true,
+                "autoReplyEnabled":  true,
+                "inboundUsesToolLoop":  false
+            }
+}

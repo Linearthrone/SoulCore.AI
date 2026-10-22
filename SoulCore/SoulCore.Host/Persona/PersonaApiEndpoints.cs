@@ -102,30 +102,30 @@ public static class PersonaApiEndpoints
             IOptions<InferenceOptions> inferenceOpts,
             CancellationToken ct) =>
         {
-            PersonaPack? body;
+            // PROP-15.19: sparse PUT merges onto existing pack — never deserialize
+            // a partial body into a full PersonaPack (that wiped IdentityBlurb/traits).
+            JsonElement patch;
             try
             {
-                body = await JsonSerializer.DeserializeAsync<PersonaPack>(
-                    request.Body,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true },
-                    ct).ConfigureAwait(false);
+                using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct)
+                    .ConfigureAwait(false);
+                patch = doc.RootElement.Clone();
             }
             catch (JsonException ex)
             {
                 return Results.BadRequest(new { error = "Invalid JSON: " + ex.Message });
             }
 
-            if (body is null)
-                return Results.BadRequest(new { error = "Body required." });
-
-            body.PersonaId = personaId;
             try
             {
                 var existing = await store.GetAsync(personaId, ct).ConfigureAwait(false);
                 if (existing is null)
                     return Results.NotFound(new { error = $"Unknown personaId '{personaId}'." });
 
-                var saved = await store.UpsertAsync(body, ct).ConfigureAwait(false);
+                if (!PersonaPackMerge.TryApplySparsePatch(existing, patch, out var merged, out var mergeError))
+                    return Results.BadRequest(new { error = mergeError });
+
+                var saved = await store.UpsertAsync(merged, ct).ConfigureAwait(false);
                 // Live adjust = next turn: reload session cache when editing the active pack.
                 if (string.Equals(saved.PersonaId, session.ActivePersonaId, StringComparison.OrdinalIgnoreCase))
                     await session.ReloadActiveAsync(ct).ConfigureAwait(false);

@@ -10,11 +10,13 @@ namespace House.ChatDesktop.Services;
 /// <summary>PROP-4.2: Velopack update checks for Presence (House.ChatDesktop).</summary>
 public sealed class PresenceUpdateService
 {
-    /// <summary>Default feed — GitHub Releases for this repo (override with env / settings).</summary>
-    public const string DefaultGithubRepoUrl = "https://github.com/Linearthrone/SoulCore.AI";
+    /// <summary>Default feed — CreatorEdition GitHub Releases (override with env / settings).</summary>
+    public const string DefaultGithubRepoUrl =
+        "https://github.com/House-VictoriAI/SoulCore.AI_CreatorEdition";
 
-    public const string DefaultGithubApiReleasesUrl =
-        "https://api.github.com/repos/Linearthrone/SoulCore.AI/releases?per_page=10";
+    /// <summary>Derived from <see cref="DefaultGithubRepoUrl"/> — single owner for repo identity.</summary>
+    public static readonly string DefaultGithubApiReleasesUrl =
+        TryGithubApiFromRepoUrl(DefaultGithubRepoUrl)!;
 
     public string CurrentVersion { get; }
 

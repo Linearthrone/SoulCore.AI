@@ -67,3 +67,5 @@ tools/**/*.log
 docs-site/node_modules/
 docs-site/.vitepress/dist/
 docs-site/.vitepress/cache/
+
+.fake

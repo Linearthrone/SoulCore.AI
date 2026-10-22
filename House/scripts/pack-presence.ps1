@@ -19,7 +19,7 @@
 # Presence auto-starts SoulCore.Host + Ollama on open when Auto-start is enabled (default).
 # Point Settings > System > SoulCore repo folder at your checkout (folder with ALLSTART.ps1),
 # or set HOUSE_SOULCORE_REPO - required when the app is installed outside the repo.
-# Updates: Presence checks GitHub Releases (Linearthrone/SoulCore.AI) or HOUSE_VICTORIA_UPDATE_URL.
+# Updates: Presence checks GitHub Releases (House-VictoriAI/SoulCore.AI_CreatorEdition) or HOUSE_VICTORIA_UPDATE_URL.
 # -Publish uploads presence-releases/* to a GitHub Release tag presence-v{version} so Update works.
 # Prefer -Bump (or House/scripts/bump-versions.ps1) before packing so every fix gets a new version.
 #

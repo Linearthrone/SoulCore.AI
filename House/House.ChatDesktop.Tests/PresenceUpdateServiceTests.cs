@@ -14,7 +14,10 @@ public class PresenceUpdateServiceTests
         var svc = new PresenceUpdateService();
         Assert.False(string.IsNullOrWhiteSpace(svc.CurrentVersion));
         Assert.Contains("GitHub", svc.FeedDescription, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("SoulCore.AI", svc.FeedDescription, StringComparison.Ordinal);
+        Assert.Contains(
+            "House-VictoriAI/SoulCore.AI_CreatorEdition",
+            svc.FeedDescription,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -50,10 +53,19 @@ public class PresenceUpdateServiceTests
     [Fact]
     public void TryGithubApiFromRepoUrl_BuildsApiEndpoint()
     {
-        var api = PresenceUpdateService.TryGithubApiFromRepoUrl("https://github.com/Linearthrone/SoulCore.AI");
+        var api = PresenceUpdateService.TryGithubApiFromRepoUrl(
+            "https://github.com/House-VictoriAI/SoulCore.AI_CreatorEdition");
         Assert.Equal(
-            "https://api.github.com/repos/Linearthrone/SoulCore.AI/releases?per_page=10",
+            "https://api.github.com/repos/House-VictoriAI/SoulCore.AI_CreatorEdition/releases?per_page=10",
             api);
+    }
+
+    [Fact]
+    public void DefaultGithubApiReleasesUrl_DerivedFromDefaultRepoUrl()
+    {
+        Assert.Equal(
+            PresenceUpdateService.TryGithubApiFromRepoUrl(PresenceUpdateService.DefaultGithubRepoUrl),
+            PresenceUpdateService.DefaultGithubApiReleasesUrl);
     }
 
     [Fact]

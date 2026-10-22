@@ -54,7 +54,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-12-cua-playwright-resolution | Lock web=Playwright / desktop=CUA+VM; ForceTool health companion | **Decided 2026-09-16** — emergency ship; see `docs/agents/reports/PROP-12-PM01-cua-playwright-decision.md` | emergency |
 | PROP-13-playwright-frame-not-leaked-text | Open Playwright to a URL and show the frame; chat must not echo `<execute_tool>` | **BED Pass** 2026-09-29 — Avenue A 13.1–13.3; QA Windows smoke pending | 13.1–13.3 BED |
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
-| PROP-15-persona-creation-platform | CreatorEdition PersonaPack + quarantine + in-app create | **Feel-drive** — **15.17 Pass**; **15.17b** Host pin; **15.13c** stress re-run | 15.0–15.18 |
+| PROP-15-persona-creation-platform | CreatorEdition PersonaPack + quarantine + in-app create | **Complete (platform)** — stress deferred; UI rewrite next; commit pending | 15.0–15.30 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -99,9 +99,28 @@ Next free `N`: **16**.
 | **PROP-15.14** | SLOP-01 | Slop audit InferenceModel — **findings closed** (15.15/15.16/15.16b) |
 | **PROP-15.13** | QA-01 | Persona stress suite on **lexi** — **Fail** (under-weighted; score `20261005-032428`) |
 | **PROP-15.17** | BED-01 | IdentityBlurb LIMITS vs trait-compiler order — **Pass** |
-| **PROP-15.17b** | OPS-HOME | Host recycle + lexi pin for re-run — **In Progress** |
+| **PROP-15.17b** | OPS-HOME | Host recycle + lexi pin — **Pass** |
 | **PROP-15.18** | OPS-HOME | Pin lexi / victoria race — **Pass** (ChatDesktop switcher) |
-| **PROP-15.13c** | QA-01 | Stress re-run after 15.17 — Queued on 15.17b |
+| **PROP-15.13c** | QA-01 | Stress re-run after 15.17 — **Fail** (C1/D2–D4 Pass; A/B/S3 Fail) |
+| **PROP-15.20** | BED-01 | Hard-policy coda after full preamble — **Pass** |
+| **PROP-15.20b** | OPS-HOME | Pin for 15.13d — **Pass** |
+| **PROP-15.13d** | QA-01 | Stress re-run after 15.20 — **Deferred** (closeout 15.30; residual feel-drive) |
+| **PROP-15.21** | OPS-HOME | Recycle Host — wrong-tree binary — **Pass** (personas 200; lexi pinned) |
+| **PROP-15.21b** | BED-01 | Host version 0.2.0 + capabilities.personas — **Pass** |
+| **PROP-15.21c** | OPS-HOME | Recycle Host 0.2.0 + lexi pin — **Pass** |
+| **PROP-15.22** | FED-01 | Persona switcher + version currency chrome — **Pass** |
+| **PROP-15.22b** | QA-01 | Smoke switcher + version chrome — **Pass** |
+| **PROP-15.23** | SLOP-01 | Slop audit version/persona chrome — **findings** (F1–F3 → 15.24) |
+| **PROP-15.24** | FED-01 | Scrub kurtw + capabilities.personas + feed dedupe — **Pass** (`PROP-15.24-FED01-to-PM01.md`) |
+| **PROP-15.25** | QA-01 | Smoke after 15.24 (capabilities chrome + naming) — **Pass** (`PROP-15.25-QA01-to-PM01.md`) |
+| **PROP-15.26** | SLOP-01 | Post-QA slop after 15.24/15.25 — **findings** (F1 → 15.27) |
+| **PROP-15.27** | FED-01 | Redact UserProfile in RepoRoot notices — **Pass** (`PROP-15.27-FED01-to-PM01.md`) |
+| **PROP-15.27b** | QA-01 | Smoke RepoRoot display redact — **Pass** (`PROP-15.27b-QA01-to-PM01.md`) |
+| **PROP-15.28** | SLOP-01 | Post-QA slop FormatPathForDisplay — **clean** (`PROP-15.28-SLOP01-to-PM01.md`) |
+| **PROP-15.29** | OPS-HOME | Recycle Host 0.2.0 (stale 0.1.5 again) — **Pass** (`PROP-15.29-OPSHOME-to-PM01.md`) |
+| **PROP-15.30** | PM-01 | Platform closeout → UI rewrite handoff — **Pass** |
+| **PROP-15.19** | BED-01 | Partial PUT must merge packs — **Pass** |
+| **PROP-15.19b** | OPS-HOME | Host recycle after 15.19 + lexi pin — **Pass** |
 | **PROP-15.13b** | OPS-HOME | lexi → `mother:latest` — **Pass** (`PROP-15.13b-OPSHOME-to-PM01.md`) |
 | **PROP-15.15** | BED-01 | Unify model JSON keys + models payload — **Pass** (`PROP-15.15-BED01-to-PM01.md`) |
 | **PROP-15.15b** | OPS-HOME | Host up after 15.15 — **Pass** (`PROP-15.15b-OPSHOME-to-PM01.md`) |

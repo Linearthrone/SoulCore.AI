@@ -1,11 +1,11 @@
 ---
 type: proposal
-status: accepted-pm-ticketed
-pm_note: v1 spine complete 2026-10-05 (15.1–15.10); feel-drive next — promote accepted-shipped when on main + feel OK
+status: accepted-shipped-platform
+pm_note: Platform complete 2026-10-21 (15.0–15.30). Stress suite deferred. Commit to main pending LinearThrone. Next = UI rewrite PROP; upstream Presence catch-up after that.
 tt_id: TT-01
 prop_id: PROP-15-persona-creation-platform
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-21
 title: CreatorEdition persona platform — in-app creation, trait scales, quarantined brains
 need: On the CreatorEdition fork, strip Victoria-as-default and build in-app persona creation with templates, trait scales, total memory quarantine, and VM+tooling — one active brain now, multi later
 related:

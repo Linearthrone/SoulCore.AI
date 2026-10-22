@@ -379,6 +379,7 @@ public partial class MainWindow : Window
     {
         await _ws.ConnectAsync();
         await ProbeHealthAsync();
+        await RefreshPersonasAsync().ConfigureAwait(true);
     }
 
     private async void Send_Click(object? sender, RoutedEventArgs e) => await SendCurrentAsync();

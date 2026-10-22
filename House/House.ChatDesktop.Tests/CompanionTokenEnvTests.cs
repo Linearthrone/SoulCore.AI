@@ -37,7 +37,7 @@ public class CompanionTokenEnvTests
     [Fact]
     public void EnumerateEnvFileCandidates_PrefersConfiguredRepo()
     {
-        var configured = @"C:\Users\kurtw\Soul_Core";
+        var configured = @"C:\Users\LinearThrone\Soul_Core";
         var first = CompanionToken.EnumerateEnvFileCandidates(configured).First();
         Assert.Equal(Path.Combine(configured, "SoulCore", ".env"), first);
     }

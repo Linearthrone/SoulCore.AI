@@ -1,0 +1,1 @@
+﻿{"seedId":"S1","sample":1,"error":"Exception calling \"SendAsync\" with \"4\" argument(s): \"Cannot access a disposed object.\r\nObject name: \u0027System.Net.WebSockets.ClientWebSocket\u0027.\""}

@@ -70,4 +70,52 @@ public class LocalStackControlTests
         Assert.Equal(@"C:\Users\test\Soul_Core", s.SoulCoreRepoRoot);
         Assert.False(s.AutoStartStack);
     }
+
+    [Fact]
+    public void FormatPathForDisplay_RewritesUserProfilePrefix()
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Assert.False(string.IsNullOrWhiteSpace(profile));
+
+        var under = Path.Combine(profile, "Soul_Core", "nested");
+        var display = LocalStackControl.FormatPathForDisplay(under);
+
+        Assert.Equal(
+            "%USERPROFILE%" + Path.DirectorySeparatorChar + "Soul_Core" + Path.DirectorySeparatorChar + "nested",
+            display);
+        Assert.DoesNotContain(profile, display, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FormatPathForDisplay_ExactUserProfile()
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        Assert.Equal("%USERPROFILE%", LocalStackControl.FormatPathForDisplay(profile));
+    }
+
+    [Fact]
+    public void FormatPathForDisplay_LeavesNonProfilePathsUnchanged()
+    {
+        var outside = OperatingSystem.IsWindows()
+            ? @"D:\Repos\Soul_Core"
+            : "/opt/Soul_Core";
+        Assert.Equal(outside, LocalStackControl.FormatPathForDisplay(outside));
+    }
+
+    [Fact]
+    public void FormatPathForDisplay_DoesNotRewritePartialProfilePrefix()
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var siblingish = profile + "Extra" + Path.DirectorySeparatorChar + "Soul_Core";
+        Assert.Equal(siblingish, LocalStackControl.FormatPathForDisplay(siblingish));
+    }
+
+    [Fact]
+    public void FormatPathForDisplay_NullOrEmpty()
+    {
+        Assert.Equal("", LocalStackControl.FormatPathForDisplay(null));
+        Assert.Equal("", LocalStackControl.FormatPathForDisplay(""));
+    }
 }

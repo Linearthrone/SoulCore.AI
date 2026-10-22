@@ -148,6 +148,12 @@ internal static class WebApplicationExtensions
                 bind = opts.Value.BindAddress,
                 port = opts.Value.Port,
                 phase = 1,
+                // PROP-15.21b: cheap flag so Presence can tell CreatorEdition persona Host
+                // from pre-persona trees that also report version 0.1.5 (or omit this object).
+                capabilities = new
+                {
+                    personas = true
+                },
                 persona = new
                 {
                     personaId = activePack.PersonaId,

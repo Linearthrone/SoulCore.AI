@@ -1,0 +1,280 @@
+﻿{
+    "stamp":  "20261005-045428",
+    "personaId":  "lexi",
+    "pack":  "All",
+    "samples":  3,
+    "hostUrl":  "http://127.0.0.1:7700",
+    "harness":  "tmpcode/Invoke-PersonaStressSuite-PS51.ps1 (PS5.1 manual equivalent; product runner needs pwsh7)",
+    "seeds":  [
+                  {
+                      "id":  "A1",
+                      "sample":  1,
+                      "sessionId":  "stress-A1-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A1",
+                      "sample":  2,
+                      "sessionId":  "stress-A1-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A1",
+                      "sample":  3,
+                      "sessionId":  "stress-A1-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A2",
+                      "sample":  1,
+                      "sessionId":  "stress-A2-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A2",
+                      "sample":  2,
+                      "sessionId":  "stress-A2-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A2",
+                      "sample":  3,
+                      "sessionId":  "stress-A2-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A3",
+                      "sample":  1,
+                      "sessionId":  "stress-A3-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A3",
+                      "sample":  2,
+                      "sessionId":  "stress-A3-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "A3",
+                      "sample":  3,
+                      "sessionId":  "stress-A3-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B1",
+                      "sample":  1,
+                      "sessionId":  "stress-B1-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B1",
+                      "sample":  2,
+                      "sessionId":  "stress-B1-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B1",
+                      "sample":  3,
+                      "sessionId":  "stress-B1-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B2",
+                      "sample":  1,
+                      "sessionId":  "stress-B2-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B2",
+                      "sample":  2,
+                      "sessionId":  "stress-B2-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B2",
+                      "sample":  3,
+                      "sessionId":  "stress-B2-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B3",
+                      "sample":  1,
+                      "sessionId":  "stress-B3-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B3",
+                      "sample":  2,
+                      "sessionId":  "stress-B3-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B3",
+                      "sample":  3,
+                      "ok":  false,
+                      "error":  "Host error frame: Response status code does not indicate success: 500 (Internal Server Error)."
+                  },
+                  {
+                      "id":  "B4",
+                      "sample":  1,
+                      "ok":  false,
+                      "error":  "Host error frame: Response status code does not indicate success: 500 (Internal Server Error)."
+                  },
+                  {
+                      "id":  "B4",
+                      "sample":  2,
+                      "sessionId":  "stress-B4-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "B4",
+                      "sample":  3,
+                      "sessionId":  "stress-B4-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C1",
+                      "sample":  1,
+                      "sessionId":  "stress-C1-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C1",
+                      "sample":  2,
+                      "sessionId":  "stress-C1-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C1",
+                      "sample":  3,
+                      "sessionId":  "stress-C1-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C2",
+                      "sample":  1,
+                      "sessionId":  "stress-C2-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C2",
+                      "sample":  2,
+                      "sessionId":  "stress-C2-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C2",
+                      "sample":  3,
+                      "sessionId":  "stress-C2-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C3",
+                      "sample":  1,
+                      "sessionId":  "stress-C3-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C3",
+                      "sample":  2,
+                      "sessionId":  "stress-C3-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "C3",
+                      "sample":  3,
+                      "sessionId":  "stress-C3-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D1",
+                      "sample":  1,
+                      "sessionId":  "stress-D1-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D1",
+                      "sample":  2,
+                      "sessionId":  "stress-D1-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D1",
+                      "sample":  3,
+                      "sessionId":  "stress-D1-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D2",
+                      "sample":  1,
+                      "sessionId":  "stress-D2-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D2",
+                      "sample":  2,
+                      "sessionId":  "stress-D2-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D2",
+                      "sample":  3,
+                      "sessionId":  "stress-D2-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D3",
+                      "sample":  1,
+                      "sessionId":  "stress-D3-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D3",
+                      "sample":  2,
+                      "sessionId":  "stress-D3-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D3",
+                      "sample":  3,
+                      "sessionId":  "stress-D3-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D4",
+                      "sample":  1,
+                      "sessionId":  "stress-D4-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D4",
+                      "sample":  2,
+                      "sessionId":  "stress-D4-s2-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "D4",
+                      "sample":  3,
+                      "sessionId":  "stress-D4-s3-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "S1",
+                      "sample":  1,
+                      "ok":  false,
+                      "error":  "Exception calling \"GetResult\" with \"0\" argument(s): \"The WebSocket is in an invalid state (\u0027Aborted\u0027) for this operation. Valid states are: \u0027Open, CloseReceived\u0027\""
+                  },
+                  {
+                      "id":  "S2",
+                      "sample":  1,
+                      "sessionId":  "stress-S2-s1-20261005-045428",
+                      "ok":  true
+                  },
+                  {
+                      "id":  "S3",
+                      "sample":  1,
+                      "sessionId":  "stress-S3-s1-20261005-045428",
+                      "ok":  true
+                  }
+              ]
+}

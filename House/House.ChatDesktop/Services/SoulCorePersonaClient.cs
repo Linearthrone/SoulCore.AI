@@ -103,12 +103,18 @@ public sealed class SoulCorePersonaClient : IDisposable
         try
         {
             using var response = await _http.GetAsync(ListUri, cancellationToken).ConfigureAwait(false);
+            var code = (int)response.StatusCode;
             if (!response.IsSuccessStatusCode)
             {
+                var missing = code == 404;
                 return new PersonaListSnapshot
                 {
                     Reachable = true,
-                    Detail = $"HTTP {(int)response.StatusCode}"
+                    HttpStatus = code,
+                    PersonaApiMissing = missing,
+                    Detail = missing
+                        ? BuildCurrencyStatus.HostNoPersonaApiMessage
+                        : $"HTTP {code}"
                 };
             }
 
@@ -122,6 +128,8 @@ public sealed class SoulCorePersonaClient : IDisposable
             return new PersonaListSnapshot
             {
                 Reachable = true,
+                HttpStatus = code,
+                PersonaApiMissing = false,
                 ActivePersonaId = dto?.ActivePersonaId,
                 Personas = personas,
                 Detail = null
@@ -526,6 +534,10 @@ public sealed class SoulCorePersonaClient : IDisposable
 public sealed class PersonaListSnapshot
 {
     public bool Reachable { get; init; }
+    /// <summary>HTTP status when the Host answered (even on error).</summary>
+    public int? HttpStatus { get; init; }
+    /// <summary>True when Host returned 404 for GET /api/personas (pre-persona Host).</summary>
+    public bool PersonaApiMissing { get; init; }
     public string? ActivePersonaId { get; init; }
     public IReadOnlyList<PersonaPackInfo> Personas { get; init; } = Array.Empty<PersonaPackInfo>();
     public string? Detail { get; init; }

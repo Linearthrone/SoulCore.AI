@@ -105,6 +105,10 @@ public sealed class ChatContextBuilder : IChatContextBuilder
             preamble = PersonaPromptBlocks.AppendToolGuidance(preamble, pack);
         }
 
+        // PROP-15.20: Host [Hard policy] coda after *full* preamble (incl. tool guidance)
+        // so soft agency blocks cannot bury LIMITS/META under mother:latest.
+        preamble = PersonaPromptBlocks.AppendHardPolicyCoda(preamble, pack);
+
         return new ChatContext(preamble, identityAnchors, recentMemories, emotionPreamble, pack.PersonaId);
     }
 

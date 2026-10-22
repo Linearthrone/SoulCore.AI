@@ -163,7 +163,7 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
                 "(the folder that contains ALLSTART.ps1), then reopen Presence.");
         }
 
-        progress?.Report($"Repo: {RepoRoot}");
+        progress?.Report($"Repo: {FormatPathForDisplay(RepoRoot)}");
 
         var ollamaWasUp = await ProbeOllamaAsync(ct).ConfigureAwait(false);
         if (!ollamaWasUp)
@@ -362,6 +362,43 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
         if (t.Length <= 400)
             return t;
         return t[^400..];
+    }
+
+    /// <summary>
+    /// Display-only: rewrite <see cref="Environment.SpecialFolder.UserProfile"/> prefix to
+    /// <c>%USERPROFILE%</c> so user-visible notices do not embed the machine profile folder name.
+    /// Does not alter real paths used for process cwd, scripts, or env loading.
+    /// </summary>
+    public static string FormatPathForDisplay(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return path ?? "";
+
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(profile))
+            return path;
+
+        var profileNorm = profile.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar);
+        if (profileNorm.Length == 0 || path.Length < profileNorm.Length)
+            return path;
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!path.StartsWith(profileNorm, comparison))
+            return path;
+
+        if (path.Length > profileNorm.Length)
+        {
+            var next = path[profileNorm.Length];
+            if (next != Path.DirectorySeparatorChar && next != Path.AltDirectorySeparatorChar)
+                return path;
+        }
+
+        return "%USERPROFILE%" + path[profileNorm.Length..];
     }
 
     /// <summary>

@@ -157,11 +157,11 @@ public partial class MainWindow
             {
                 AppendSystemNotice(
                     "SoulCore repo not found — set Settings → System → SoulCore repo folder " +
-                    @"(e.g. C:\Users\kurtw\Soul_Core) then reopen Presence.");
+                    @"(e.g. %USERPROFILE%\Soul_Core) then reopen Presence.");
                 return;
             }
 
-            AppendSystemNotice($"Starting local stack from {_stack.RepoRoot}…");
+            AppendSystemNotice($"Starting local stack from {LocalStackControl.FormatPathForDisplay(_stack.RepoRoot)}…");
             var progress = new Progress<string>(msg =>
             {
                 if (ServicesStatusText is not null)
@@ -1263,6 +1263,17 @@ public partial class MainWindow
         {
             ConnDot.Fill = _badBrush;
             ConnStatusText.Text = $"Offline · {wsLabel}";
+        }
+
+        if (snap.Reachable && snap.Alive)
+        {
+            _healthHasPersona = snap.HealthHasPersona;
+            _healthCapabilitiesPersonas = snap.HealthCapabilitiesPersonas;
+        }
+        else if (!snap.Reachable)
+        {
+            _healthHasPersona = null;
+            _healthCapabilitiesPersonas = null;
         }
 
         RefreshBuildVersionChrome(snap.HostVersion);

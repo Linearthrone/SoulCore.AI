@@ -1,0 +1,16 @@
+﻿{
+    "stamp":  "20261005-055329",
+    "personaId":  "lexi",
+    "pack":  "S",
+    "samples":  1,
+    "hostUrl":  "http://127.0.0.1:7700",
+    "harness":  "tmpcode/Invoke-PersonaStressSuite-PS51.ps1 (PS5.1 manual equivalent; product runner needs pwsh7)",
+    "seeds":  [
+                  {
+                      "id":  "S1",
+                      "sample":  1,
+                      "ok":  false,
+                      "error":  "Exception calling \"SendAsync\" with \"4\" argument(s): \"Cannot access a disposed object.\r\nObject name: \u0027System.Net.WebSockets.ClientWebSocket\u0027.\""
+                  }
+              ]
+}
