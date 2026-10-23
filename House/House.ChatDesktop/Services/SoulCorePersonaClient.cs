@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SoulCore.Core.Persona;
 
 namespace House.ChatDesktop.Services;
 
@@ -28,11 +29,33 @@ public sealed class SoulCorePersonaClient : IDisposable
     public static Uri ActiveUri =>
         new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/active");
 
+    public static Uri ModeUri =>
+        new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/mode");
+
+    /// <summary>POST body <c>{"mode":"one"}</c> or <c>{"mode":"many"}</c>.</summary>
+    public static string ModeRequestJson(string? mode) =>
+        PersonaChatMode.IsMany(mode)
+            ? "{\"mode\":\"many\"}"
+            : "{\"mode\":\"one\"}";
+
     public static Uri PersonaUri(string personaId) =>
         new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/{Uri.EscapeDataString(personaId)}");
 
     public static Uri ActivateUri(string personaId) =>
         new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/{Uri.EscapeDataString(personaId)}/activate");
+
+    public static Uri ArchiveUri(string personaId) =>
+        new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/{Uri.EscapeDataString(personaId)}/archive");
+
+    /// <summary>POST body for description-draft. Empty object: no notes, and not a pack write.</summary>
+    public const string DescriptionDraftRequestJson = "{}";
+
+    public static Uri DescriptionDraftUri(string personaId) =>
+        new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/personas/{Uri.EscapeDataString(personaId)}/description-draft");
+
+    /// <summary>JSON object <c>{"summary":"..."}</c>. The caller already built the text.</summary>
+    public static string ArchiveRequestJson(string summary) =>
+        "{\"summary\":" + JsonSerializer.Serialize(summary) + "}";
 
     public static Uri InferenceModelsUri =>
         new($"http://{ConnectionDefaults.Host}:{ConnectionDefaults.Port}/api/inference/models");
@@ -284,6 +307,279 @@ public sealed class SoulCorePersonaClient : IDisposable
         }
     }
 
+    public async Task<PersonaArchiveSnapshot> ArchiveAsync(
+        string personaId,
+        string summary,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(personaId))
+        {
+            return new PersonaArchiveSnapshot
+            {
+                Reachable = true,
+                Ok = false,
+                Detail = "personaId required"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return new PersonaArchiveSnapshot
+            {
+                Reachable = true,
+                Ok = false,
+                Detail = "summary is required."
+            };
+        }
+
+        if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
+        {
+            return new PersonaArchiveSnapshot
+            {
+                Reachable = false,
+                Ok = false,
+                Detail = $"Non-loopback host blocked: {ConnectionDefaults.Host}"
+            };
+        }
+
+        try
+        {
+            using var content = new StringContent(
+                ArchiveRequestJson(summary),
+                Encoding.UTF8,
+                "application/json");
+            using var response = await _http.PostAsync(ArchiveUri(personaId.Trim()), content, cancellationToken)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                return new PersonaArchiveSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = string.IsNullOrWhiteSpace(body)
+                        ? $"HTTP {(int)response.StatusCode}"
+                        : TrimDetail(body)
+                };
+            }
+
+            return new PersonaArchiveSnapshot { Reachable = true, Ok = true };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        {
+            return new PersonaArchiveSnapshot { Reachable = false, Ok = false, Detail = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// POST /api/personas/{id}/description-draft. Returns text only.
+    /// Does not create or update a pack.
+    /// </summary>
+    public async Task<DescriptionDraftSnapshot> DraftPhysicalDescriptionAsync(
+        string personaId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(personaId))
+        {
+            return new DescriptionDraftSnapshot
+            {
+                Reachable = true,
+                Ok = false,
+                Detail = "personaId required"
+            };
+        }
+
+        if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
+        {
+            return new DescriptionDraftSnapshot
+            {
+                Reachable = false,
+                Ok = false,
+                Detail = $"Non-loopback host blocked: {ConnectionDefaults.Host}"
+            };
+        }
+
+        try
+        {
+            using var content = new StringContent(
+                DescriptionDraftRequestJson,
+                Encoding.UTF8,
+                "application/json");
+            using var response = await _http.PostAsync(
+                    DescriptionDraftUri(personaId.Trim()),
+                    content,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new DescriptionDraftSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = string.IsNullOrWhiteSpace(body)
+                        ? $"HTTP {(int)response.StatusCode}"
+                        : TrimDetail(body)
+                };
+            }
+
+            var dto = JsonSerializer.Deserialize<DescriptionDraftDto>(body, JsonOptions);
+            if (dto?.Text is null)
+            {
+                return new DescriptionDraftSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = "Description draft returned no text."
+                };
+            }
+
+            return new DescriptionDraftSnapshot
+            {
+                Reachable = true,
+                Ok = true,
+                Text = dto.Text
+            };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        {
+            return new DescriptionDraftSnapshot { Reachable = false, Ok = false, Detail = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Save body for create and update. Traits are every catalog key.
+    /// A value left on the catalog default is still sent.
+    /// </summary>
+    public static string BuildPersonaWriteJson(PersonaPackWrite pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        var traits = PersonaWizardLogic.BuildTraitSaveMap(pack.Traits ?? new PersonaTraitScalesInfo());
+        var payload = new
+        {
+            personaId = pack.PersonaId,
+            displayName = pack.DisplayName,
+            humanAddress = pack.HumanAddress,
+            contactId = pack.ContactId,
+            charterSeedPath = pack.CharterSeedPath,
+            playwrightProfileDir = pack.PlaywrightProfileDir,
+            vmWindowTitle = pack.VmWindowTitle,
+            inferenceModel = PersonaWizardLogic.NormalizeInferenceModel(pack.InferenceModel),
+            identityBlurb = pack.IdentityBlurb,
+            physicalDescription = PersonaWizardLogic.NormalizePhysicalDescription(pack.PhysicalDescription),
+            toolPolicy = pack.ToolPolicy is null
+                ? null
+                : new
+                {
+                    allowDesktop = pack.ToolPolicy.AllowDesktop,
+                    allowBrowser = pack.ToolPolicy.AllowBrowser,
+                    allowEmail = pack.ToolPolicy.AllowEmail
+                },
+            traits
+        };
+
+        return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    public async Task<PersonaModeSnapshot> GetModeAsync(CancellationToken cancellationToken = default)
+    {
+        if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
+        {
+            return new PersonaModeSnapshot
+            {
+                Reachable = false,
+                Ok = false,
+                Detail = $"Non-loopback host blocked: {ConnectionDefaults.Host}"
+            };
+        }
+
+        try
+        {
+            using var response = await _http.GetAsync(ModeUri, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new PersonaModeSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = $"HTTP {(int)response.StatusCode}"
+                };
+            }
+
+            var dto = await response.Content.ReadFromJsonAsync<ModeDto>(JsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+            var mode = dto?.Mode?.Trim();
+            if (mode is not (PersonaChatMode.One or PersonaChatMode.Many))
+            {
+                return new PersonaModeSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = "mode missing"
+                };
+            }
+
+            return new PersonaModeSnapshot { Reachable = true, Ok = true, Mode = mode };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        {
+            return new PersonaModeSnapshot { Reachable = false, Ok = false, Detail = ex.Message };
+        }
+    }
+
+    public async Task<PersonaModeSnapshot> SetModeAsync(
+        string mode,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = PersonaChatMode.Normalize(mode);
+        if (!ConnectionDefaults.IsLocalLoopback(ConnectionDefaults.Host))
+        {
+            return new PersonaModeSnapshot
+            {
+                Reachable = false,
+                Ok = false,
+                Detail = $"Non-loopback host blocked: {ConnectionDefaults.Host}"
+            };
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, ModeUri)
+            {
+                Content = new StringContent(ModeRequestJson(normalized), Encoding.UTF8, "application/json")
+            };
+            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new PersonaModeSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = $"HTTP {(int)response.StatusCode}"
+                };
+            }
+
+            var dto = await response.Content.ReadFromJsonAsync<ModeDto>(JsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+            var confirmed = dto?.Mode?.Trim();
+            if (confirmed is not (PersonaChatMode.One or PersonaChatMode.Many))
+            {
+                return new PersonaModeSnapshot
+                {
+                    Reachable = true,
+                    Ok = false,
+                    Detail = "mode missing"
+                };
+            }
+
+            return new PersonaModeSnapshot { Reachable = true, Ok = true, Mode = confirmed };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        {
+            return new PersonaModeSnapshot { Reachable = false, Ok = false, Detail = ex.Message };
+        }
+    }
+
     public void Dispose() => _http.Dispose();
 
     private async Task<PersonaWriteSnapshot> WriteAsync(
@@ -304,38 +600,7 @@ public sealed class SoulCorePersonaClient : IDisposable
 
         try
         {
-            var payload = new
-            {
-                personaId = pack.PersonaId,
-                displayName = pack.DisplayName,
-                humanAddress = pack.HumanAddress,
-                contactId = pack.ContactId,
-                charterSeedPath = pack.CharterSeedPath,
-                playwrightProfileDir = pack.PlaywrightProfileDir,
-                vmWindowTitle = pack.VmWindowTitle,
-                // PROP-15.12/15.16: blank/null = Host Inference:Model for this pack only.
-                inferenceModel = PersonaWizardLogic.NormalizeInferenceModel(pack.InferenceModel),
-                identityBlurb = pack.IdentityBlurb,
-                toolPolicy = pack.ToolPolicy is null
-                    ? null
-                    : new
-                    {
-                        allowDesktop = pack.ToolPolicy.AllowDesktop,
-                        allowBrowser = pack.ToolPolicy.AllowBrowser,
-                        allowEmail = pack.ToolPolicy.AllowEmail
-                    },
-                traits = new
-                {
-                    warmth = pack.Traits.Warmth,
-                    directness = pack.Traits.Directness,
-                    formality = pack.Traits.Formality,
-                    playfulness = pack.Traits.Playfulness,
-                    boundaryStrictness = pack.Traits.BoundaryStrictness,
-                    recallBias = pack.Traits.RecallBias
-                }
-            };
-
-            var json = JsonSerializer.Serialize(payload, JsonOptions);
+            var json = BuildPersonaWriteJson(pack);
             using var request = new HttpRequestMessage(method, uri)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
@@ -385,6 +650,7 @@ public sealed class SoulCorePersonaClient : IDisposable
         HumanAddress = dto.HumanAddress,
         ContactId = dto.ContactId,
         IdentityBlurb = dto.IdentityBlurb,
+        PhysicalDescription = dto.PhysicalDescription ?? "",
         CharterSeedPath = dto.CharterSeedPath,
         PlaywrightProfileDir = dto.PlaywrightProfileDir,
         VmWindowTitle = dto.VmWindowTitle,
@@ -394,15 +660,7 @@ public sealed class SoulCorePersonaClient : IDisposable
         IsActive = dto.IsActive,
         Traits = dto.Traits is null
             ? new PersonaTraitScalesInfo()
-            : new PersonaTraitScalesInfo
-            {
-                Warmth = dto.Traits.Warmth,
-                Directness = dto.Traits.Directness,
-                Formality = dto.Traits.Formality,
-                Playfulness = dto.Traits.Playfulness,
-                BoundaryStrictness = dto.Traits.BoundaryStrictness,
-                RecallBias = dto.Traits.RecallBias
-            },
+            : PersonaTraitScalesInfo.FromScales(dto.Traits),
         ToolPolicy = dto.ToolPolicy is null
             ? new PersonaToolPolicyInfo()
             : new PersonaToolPolicyInfo
@@ -412,6 +670,12 @@ public sealed class SoulCorePersonaClient : IDisposable
                 AllowEmail = dto.ToolPolicy.AllowEmail
             }
     };
+
+    private sealed class ModeDto
+    {
+        [JsonPropertyName("mode")]
+        public string? Mode { get; set; }
+    }
 
     private sealed class ListDto
     {
@@ -451,6 +715,9 @@ public sealed class SoulCorePersonaClient : IDisposable
         [JsonPropertyName("identityBlurb")]
         public string? IdentityBlurb { get; set; }
 
+        [JsonPropertyName("physicalDescription")]
+        public string? PhysicalDescription { get; set; }
+
         [JsonPropertyName("charterSeedPath")]
         public string? CharterSeedPath { get; set; }
 
@@ -473,7 +740,7 @@ public sealed class SoulCorePersonaClient : IDisposable
         public bool IsActive { get; set; }
 
         [JsonPropertyName("traits")]
-        public TraitsDto? Traits { get; set; }
+        public PersonaTraitScales? Traits { get; set; }
 
         [JsonPropertyName("toolPolicy")]
         public ToolPolicyDto? ToolPolicy { get; set; }
@@ -497,25 +764,13 @@ public sealed class SoulCorePersonaClient : IDisposable
         public string? ResolvedInferenceModel { get; set; }
     }
 
-    private sealed class TraitsDto
+    private sealed class DescriptionDraftDto
     {
-        [JsonPropertyName("warmth")]
-        public double Warmth { get; set; } = 0.5;
+        [JsonPropertyName("text")]
+        public string? Text { get; set; }
 
-        [JsonPropertyName("directness")]
-        public double Directness { get; set; } = 0.5;
-
-        [JsonPropertyName("formality")]
-        public double Formality { get; set; } = 0.5;
-
-        [JsonPropertyName("playfulness")]
-        public double Playfulness { get; set; } = 0.5;
-
-        [JsonPropertyName("boundaryStrictness")]
-        public double BoundaryStrictness { get; set; } = 0.5;
-
-        [JsonPropertyName("recallBias")]
-        public double RecallBias { get; set; } = 0.5;
+        [JsonPropertyName("error")]
+        public string? Error { get; set; }
     }
 
     private sealed class ToolPolicyDto
@@ -569,6 +824,29 @@ public sealed class PersonaActivateSnapshot
     public string? Detail { get; init; }
 }
 
+public sealed class PersonaArchiveSnapshot
+{
+    public bool Reachable { get; init; }
+    public bool Ok { get; init; }
+    public string? Detail { get; init; }
+}
+
+public sealed class PersonaModeSnapshot
+{
+    public bool Reachable { get; init; }
+    public bool Ok { get; init; }
+    public string? Mode { get; init; }
+    public string? Detail { get; init; }
+}
+
+public sealed class DescriptionDraftSnapshot
+{
+    public bool Reachable { get; init; }
+    public bool Ok { get; init; }
+    public string? Text { get; init; }
+    public string? Detail { get; init; }
+}
+
 public sealed class InferenceModelsSnapshot
 {
     public bool Reachable { get; init; }
@@ -586,6 +864,7 @@ public sealed class PersonaPackInfo
     public string? HumanAddress { get; init; }
     public string? ContactId { get; init; }
     public string? IdentityBlurb { get; init; }
+    public string PhysicalDescription { get; init; } = "";
     public string? CharterSeedPath { get; init; }
     public string? PlaywrightProfileDir { get; init; }
     public string? VmWindowTitle { get; init; }
@@ -608,6 +887,8 @@ public sealed class PersonaPackWrite
     public string HumanAddress { get; set; } = "Friend";
     public string? ContactId { get; set; }
     public string? IdentityBlurb { get; set; }
+    /// <summary>Null on an update means leave the stored description. Empty clears it.</summary>
+    public string? PhysicalDescription { get; set; }
     public string? CharterSeedPath { get; set; }
     public string? PlaywrightProfileDir { get; set; }
     public string? VmWindowTitle { get; set; }
@@ -617,24 +898,78 @@ public sealed class PersonaPackWrite
     public PersonaToolPolicyInfo? ToolPolicy { get; set; }
 }
 
+/// <summary>
+/// Desktop view of one <see cref="PersonaTraitScales"/> object.
+/// The original six stay as properties. Every other trait is read through the catalog.
+/// </summary>
 public sealed class PersonaTraitScalesInfo
 {
-    public double Warmth { get; set; } = 0.5;
-    public double Directness { get; set; } = 0.5;
-    public double Formality { get; set; } = 0.5;
-    public double Playfulness { get; set; } = 0.5;
-    public double BoundaryStrictness { get; set; } = 0.5;
-    public double RecallBias { get; set; } = 0.5;
+    private readonly PersonaTraitScales _scales;
 
-    public PersonaTraitScalesInfo Clone() => new()
+    public PersonaTraitScalesInfo()
+        : this(new PersonaTraitScales())
     {
-        Warmth = Warmth,
-        Directness = Directness,
-        Formality = Formality,
-        Playfulness = Playfulness,
-        BoundaryStrictness = BoundaryStrictness,
-        RecallBias = RecallBias
-    };
+    }
+
+    private PersonaTraitScalesInfo(PersonaTraitScales scales) => _scales = scales;
+
+    internal PersonaTraitScales Scales => _scales;
+
+    public static PersonaTraitScalesInfo FromScales(PersonaTraitScales scales)
+    {
+        ArgumentNullException.ThrowIfNull(scales);
+        return new PersonaTraitScalesInfo(scales.Clone());
+    }
+
+    public double Warmth
+    {
+        get => _scales.Warmth;
+        set => _scales.Warmth = value;
+    }
+
+    public double Directness
+    {
+        get => _scales.Directness;
+        set => _scales.Directness = value;
+    }
+
+    public double Formality
+    {
+        get => _scales.Formality;
+        set => _scales.Formality = value;
+    }
+
+    public double Playfulness
+    {
+        get => _scales.Playfulness;
+        set => _scales.Playfulness = value;
+    }
+
+    public double BoundaryStrictness
+    {
+        get => _scales.BoundaryStrictness;
+        set => _scales.BoundaryStrictness = value;
+    }
+
+    public double RecallBias
+    {
+        get => _scales.RecallBias;
+        set => _scales.RecallBias = value;
+    }
+
+    public double Read(PersonaTraitDefinition trait)
+    {
+        ArgumentNullException.ThrowIfNull(trait);
+        return trait.Get(_scales);
+    }
+
+    public void Write(PersonaTraitDefinition trait, double value)
+    {
+        ArgumentNullException.ThrowIfNull(trait);
+        trait.Set(_scales, value);
+    }
+
+    public PersonaTraitScalesInfo Clone() => new(_scales.Clone());
 }
 
 public sealed class PersonaToolPolicyInfo

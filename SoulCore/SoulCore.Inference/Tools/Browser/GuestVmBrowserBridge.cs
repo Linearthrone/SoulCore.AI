@@ -4,7 +4,7 @@ namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// VM-scoped browser backend. All actions run inside Ubuntu Firefox via Guest
-/// Additions. Never talks to Kayleigh's Windows Chrome extension on :17891.
+/// Additions. Never talks to Kayleigh's Windows Chrome extension on :17920.
 /// </summary>
 public sealed class GuestVmBrowserBridge : IBrowserBridge
 {

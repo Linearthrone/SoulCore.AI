@@ -121,6 +121,14 @@ public static class PersonaPackMerge
             merged.IdentityBlurb = blurb;
         }
 
+        if (TryGetProperty(patch, "physicalDescription", out var descriptionEl))
+        {
+            applied++;
+            if (!TryReadOptionalString(descriptionEl, "physicalDescription", out var description, out error))
+                return false;
+            merged.PhysicalDescription = description ?? string.Empty;
+        }
+
         if (TryGetProperty(patch, "toolPolicy", out var toolPolicyEl))
         {
             applied++;
@@ -210,46 +218,13 @@ public static class PersonaPackMerge
             return false;
         }
 
-        if (TryGetProperty(el, "warmth", out var warmth))
+        foreach (var trait in PersonaTraitCatalog.All)
         {
-            if (!TryReadDouble(warmth, "traits.warmth", out var v, out error))
+            if (!TryGetProperty(el, trait.JsonName, out var prop))
+                continue;
+            if (!TryReadDouble(prop, "traits." + trait.JsonName, out var v, out error))
                 return false;
-            target.Warmth = v;
-        }
-
-        if (TryGetProperty(el, "directness", out var directness))
-        {
-            if (!TryReadDouble(directness, "traits.directness", out var v, out error))
-                return false;
-            target.Directness = v;
-        }
-
-        if (TryGetProperty(el, "formality", out var formality))
-        {
-            if (!TryReadDouble(formality, "traits.formality", out var v, out error))
-                return false;
-            target.Formality = v;
-        }
-
-        if (TryGetProperty(el, "playfulness", out var playfulness))
-        {
-            if (!TryReadDouble(playfulness, "traits.playfulness", out var v, out error))
-                return false;
-            target.Playfulness = v;
-        }
-
-        if (TryGetProperty(el, "boundaryStrictness", out var boundary))
-        {
-            if (!TryReadDouble(boundary, "traits.boundaryStrictness", out var v, out error))
-                return false;
-            target.BoundaryStrictness = v;
-        }
-
-        if (TryGetProperty(el, "recallBias", out var recall))
-        {
-            if (!TryReadDouble(recall, "traits.recallBias", out var v, out error))
-                return false;
-            target.RecallBias = v;
+            trait.Set(target, v);
         }
 
         return true;

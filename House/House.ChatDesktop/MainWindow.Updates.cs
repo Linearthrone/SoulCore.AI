@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using House.ChatDesktop.Drawers;
 using House.ChatDesktop.Services;
 using Velopack;
 
@@ -96,6 +97,22 @@ public partial class MainWindow
     private async void UpdateApply_Click(object? sender, RoutedEventArgs e)
     {
         if (_updateBusy || _updates is null || _pendingUpdate is null)
+            return;
+
+        var light = GlassChrome.IsLightTheme(_uiSettings.Theme);
+        bool accepted;
+        using (_viewportPolicy.Open(ViewportDialogKind.UpdateApply))
+        {
+            accepted = await PresenceConsentWindow.ShowAsync(
+                this,
+                light,
+                "Apply update",
+                "Download this update and restart?",
+                "Download & restart",
+                "Cancel").ConfigureAwait(true);
+        }
+
+        if (!accepted)
             return;
 
         _updateBusy = true;

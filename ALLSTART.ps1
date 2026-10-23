@@ -4,8 +4,8 @@
   Start local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
 .DESCRIPTION
   Starts Host (Ollama tool-loop + desktop tools). Opens Chrome/sites via desktop_open_app.
-  Refuses to attach the GUI to a foreign :7700 occupant (e.g. Cursor cloud port-forward to a
-  Linux/ubuntu Host). If 7700 is stolen, starts local Host on -AlternatePort and points the GUI
+  Refuses to attach the GUI to a foreign :7720 occupant (e.g. Cursor cloud port-forward to a
+  Linux/ubuntu Host). If 7720 is stolen, starts local Host on -AlternatePort and points the GUI
   there via HOUSE_SOULCORE_PORT.
 
   OPS-179: child scripts run with timeouts so Tailscale / Voice health probes cannot freeze forever.
@@ -21,8 +21,8 @@
 param(
     [ValidateSet("Release", "Debug")]
     [string]$Configuration = "Release",
-    [int]$Port = 7700,
-    [int]$AlternatePort = 7701,
+    [int]$Port = 7720,
+    [int]$AlternatePort = 7721,
     [switch]$SkipPreflight,
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
@@ -45,6 +45,9 @@ $StartHost = Join-Path $RepoRoot "SoulCore\scripts\start-soulcore.ps1"
 $StartBrowserBridge = Join-Path $RepoRoot "SoulCore\scripts\start-browser-bridge.ps1"
 $StartGui = Join-Path $RepoRoot "start-desktopgui.ps1"
 $TailscaleServe = Join-Path $RepoRoot "SoulCore\scripts\tailscale-serve-soulcore.ps1"
+$BrowserBridgePort = 17920
+$TailscaleTcpPort = 7720
+$TailscaleHttpsPort = 8453
 
 if (-not (Test-Path -LiteralPath $StartHost)) {
     throw "Missing Host start script: $StartHost"
@@ -241,7 +244,7 @@ if ($SkipTailscaleServe) {
     }
 }
 
-Write-Host "=== ALLSTART: BrowserCaptureBridge :17891 ==="
+Write-Host "=== ALLSTART: BrowserCaptureBridge :$BrowserBridgePort ==="
 $browserBridgeOk = $false
 if ($SkipBrowserBridge) {
     Write-Host "Browser bridge skipped (-SkipBrowserBridge)."
@@ -249,7 +252,7 @@ if ($SkipBrowserBridge) {
     Write-Warning "Missing $StartBrowserBridge - browser_capture_tab will fail until bridge is started"
 } else {
     try {
-        $bbArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $StartBrowserBridge)
+        $bbArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $StartBrowserBridge, "-Port", "$BrowserBridgePort")
         $bbResult = Invoke-ScriptWithTimeout `
             -Label "start-browser-bridge" `
             -ArgumentList $bbArgs `
@@ -261,9 +264,9 @@ if ($SkipBrowserBridge) {
             Write-Warning "start-browser-bridge exited $($bbResult.ExitCode) - continuing"
         } else {
             try {
-                $bh = Invoke-RestMethod -Uri "http://127.0.0.1:17891/health" -TimeoutSec 3 -ErrorAction Stop
+                $bh = Invoke-RestMethod -Uri "http://127.0.0.1:${BrowserBridgePort}/health" -TimeoutSec 3 -ErrorAction Stop
                 if ($bh.ok -eq $true) {
-                    Write-Host "BrowserCaptureBridge OK: http://127.0.0.1:17891/health"
+                    Write-Host "BrowserCaptureBridge OK: http://127.0.0.1:${BrowserBridgePort}/health"
                     $browserBridgeOk = $true
                 }
             } catch {
@@ -277,7 +280,7 @@ if ($SkipBrowserBridge) {
     Write-Host "Chrome extension (Load unpacked): $extDir"
 }
 if (-not $browserBridgeOk -and -not $SkipBrowserBridge) {
-    Write-Warning "BrowserCaptureBridge not confirmed on :17891 (soft-fail; Host continues)."
+    Write-Warning "BrowserCaptureBridge not confirmed on :$BrowserBridgePort (soft-fail; Host continues)."
     Write-Warning "Load unpacked extension from BrowserCaptureExtension after bridge is up."
 }
 
@@ -331,7 +334,7 @@ if (Test-LocalVictoriaHealth -Health $existing) {
     }
 }
 
-# Point ChatDesktop at the Host we validated (not a cloud tunnel on 7700).
+# Point ChatDesktop at the Host we validated (not a cloud tunnel on 7720).
 $env:HOUSE_SOULCORE_HOST = "127.0.0.1"
 $env:HOUSE_SOULCORE_PORT = "$chosenPort"
 Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
@@ -378,8 +381,10 @@ if ($SkipPlaywrightInstall) {
 }
 
 # --- Tailscale serve: enable proxies now that Host is healthy ---
-# Applies TCP :7700 + HTTPS :8443 (tailnet-only). Soft-fail: local desktop
-# still works without it. Skipped entirely if -SkipTailscaleServe or sync failed.
+# Applies TCP :7720 + HTTPS :8453 (tailnet-only) onto loopback :7720.
+# Soft-fail: local desktop still works without it.
+# Skipped entirely if -SkipTailscaleServe or sync failed.
+# Does not turn off 7700 / 8443 / 8444.
 if ($SkipTailscaleServe) {
     Write-Host "=== ALLSTART: Tailscale serve enable skipped (-SkipTailscaleServe) ==="
 } elseif (-not $tailscaleSynced) {
@@ -387,9 +392,15 @@ if ($SkipTailscaleServe) {
 } elseif (-not (Test-Path -LiteralPath $TailscaleServe)) {
     Write-Warning "tailscale-serve-soulcore.ps1 not found - cannot enable serve"
 } else {
-    Write-Host "=== ALLSTART: Tailscale serve enable (TCP 7700 + HTTPS 8443) ==="
+    Write-Host "=== ALLSTART: Tailscale serve enable (TCP $TailscaleTcpPort + HTTPS $TailscaleHttpsPort) ==="
     try {
-        $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SkipAllowedHosts")
+        $tsArgs = @(
+            "-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,
+            "-SkipAllowedHosts",
+            "-TcpPort","$TailscaleTcpPort",
+            "-HttpsPort","$TailscaleHttpsPort",
+            "-TargetPort","$TailscaleTcpPort"
+        )
         $tsResult = Invoke-ScriptWithTimeout `
             -Label "tailscale serve enable" `
             -ArgumentList $tsArgs `

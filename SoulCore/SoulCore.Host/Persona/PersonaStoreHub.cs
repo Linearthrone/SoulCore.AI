@@ -4,6 +4,7 @@ using SoulCore.Config;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Charter;
 using SoulCore.Memory;
+using SoulCore.Memory.Repositories;
 
 namespace SoulCore.Host.Persona;
 
@@ -16,6 +17,9 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
     private readonly string _personasRoot;
     private readonly ILogger<PersonaStoreHub> _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly object _sideGate = new();
+    private readonly Dictionary<string, SqliteMemoryStore> _sideMemory = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SideTranscript> _sideTranscript = new(StringComparer.OrdinalIgnoreCase);
     private PersonaStoreBundle? _active;
     private bool _disposed;
 
@@ -66,6 +70,10 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
                 return;
             }
 
+            // Drop side connections before the active bundle opens the same file.
+            CloseSideMemory(id);
+            CloseSideTranscript(id);
+
             var next = new PersonaStoreBundle(id, _personasRoot);
             var previous = _active;
             _active = next;
@@ -98,7 +106,39 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
         }
     }
 
-    public IMemoryStore GetMemoryStore(string personaId) => RequireBundle(personaId).Episodic;
+    public IMemoryStore GetMemoryStore(string personaId)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaId);
+        var id = PersonaMemoryPaths.NormalizePersonaId(personaId);
+
+        // Active bundle wins so chat / SoulLoop keep the single open session.
+        var active = _active;
+        if (active is not null && string.Equals(active.PersonaId, id, StringComparison.OrdinalIgnoreCase))
+            return active.Episodic;
+
+        // PROP-16.3: archive must write this persona's file while another persona is active.
+        // Other hub accessors stay on RequireBundle and still refuse a non-active id.
+        lock (_sideGate)
+        {
+            ThrowIfDisposed();
+            active = _active;
+            if (active is not null && string.Equals(active.PersonaId, id, StringComparison.OrdinalIgnoreCase))
+                return active.Episodic;
+
+            if (_sideMemory.TryGetValue(id, out var cached))
+                return cached;
+
+            var path = ResolveMemoryDbPath(id);
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var opened = new SqliteMemoryStore(path);
+            _sideMemory[id] = opened;
+            return opened;
+        }
+    }
 
     public IMemoryStats GetMemoryStats(string personaId) => RequireBundle(personaId).Episodic;
 
@@ -110,7 +150,37 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
 
     public IVictoriaWorkflowStore GetWorkflowStore(string personaId) => RequireBundle(personaId).Workflows;
 
-    public IChatTranscriptStore GetTranscriptStore(string personaId) => RequireBundle(personaId).Transcript;
+    public IChatTranscriptStore GetTranscriptStore(string personaId)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaId);
+        var id = PersonaMemoryPaths.NormalizePersonaId(personaId);
+
+        var active = _active;
+        if (active is not null && string.Equals(active.PersonaId, id, StringComparison.OrdinalIgnoreCase))
+            return active.Transcript;
+
+        // PROP-16.6: a background chat appends this persona's transcript without switching foreground.
+        lock (_sideGate)
+        {
+            ThrowIfDisposed();
+            active = _active;
+            if (active is not null && string.Equals(active.PersonaId, id, StringComparison.OrdinalIgnoreCase))
+                return active.Transcript;
+
+            if (_sideTranscript.TryGetValue(id, out var cached))
+                return cached.Transcript;
+
+            var path = ResolveMemoryDbPath(id);
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var opened = new SideTranscript(path);
+            _sideTranscript[id] = opened;
+            return opened.Transcript;
+        }
+    }
 
     public ICharter GetCharter(string personaId) => RequireBundle(personaId).Charter;
 
@@ -127,6 +197,8 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
             if (_disposed)
                 return;
             _disposed = true;
+            CloseAllSideMemory();
+            CloseAllSideTranscript();
             if (_active is not null)
             {
                 await _active.DisposeAsync().ConfigureAwait(false);
@@ -138,6 +210,59 @@ public sealed class PersonaStoreHub : IPersonaStoreHub
             _gate.Release();
             _gate.Dispose();
         }
+    }
+
+    private void CloseSideMemory(string personaId)
+    {
+        lock (_sideGate)
+        {
+            if (_sideMemory.Remove(personaId, out var side))
+                side.Dispose();
+        }
+    }
+
+    private void CloseAllSideMemory()
+    {
+        lock (_sideGate)
+        {
+            foreach (var side in _sideMemory.Values)
+                side.Dispose();
+            _sideMemory.Clear();
+        }
+    }
+
+    private void CloseSideTranscript(string personaId)
+    {
+        lock (_sideGate)
+        {
+            if (_sideTranscript.Remove(personaId, out var side))
+                side.Dispose();
+        }
+    }
+
+    private void CloseAllSideTranscript()
+    {
+        lock (_sideGate)
+        {
+            foreach (var side in _sideTranscript.Values)
+                side.Dispose();
+            _sideTranscript.Clear();
+        }
+    }
+
+    private sealed class SideTranscript : IDisposable
+    {
+        private readonly SqliteMemorySession _session;
+
+        public SideTranscript(string databasePath)
+        {
+            _session = new SqliteMemorySession(databasePath);
+            Transcript = new SqliteChatTranscriptRepository(_session);
+        }
+
+        public SqliteChatTranscriptRepository Transcript { get; }
+
+        public void Dispose() => _session.Dispose();
     }
 
     private PersonaStoreBundle RequireBundle(string personaId)

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build (if needed) and start SoulCore.Host on loopback :7700.
+  Build (if needed) and start SoulCore.Host on loopback :7720.
 .DESCRIPTION
   Inference/embed preflight (TASK-112): before starting the Host, probe the
   local Ollama server (/api/tags) and confirm the embedding model is present.
@@ -18,7 +18,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 7700,
+    [int]$Port = 7720,
     [switch]$ForceRebuild,
     # Stop any Host already on this port (pid file + listeners) then start fresh.
     # Needed after .env / branch changes — ALLSTART otherwise reuses a stale Host.

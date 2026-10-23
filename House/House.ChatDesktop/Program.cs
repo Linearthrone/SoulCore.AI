@@ -14,11 +14,14 @@ internal static class Program
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
+            CuaLampClear.TryClearNow();
             if (e.ExceptionObject is Exception ex)
                 PresenceStartupLog.WriteException("UnhandledException", ex);
             else
                 PresenceStartupLog.Write($"UnhandledException: {e.ExceptionObject}");
         };
+
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => CuaLampClear.TryClearNow();
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {

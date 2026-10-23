@@ -31,7 +31,7 @@ public sealed class VoiceOptions
     /// <summary>
     /// Public URL UE should fetch for the last WAV (loopback when UE and Host share a machine).
     /// </summary>
-    public string LastWavPublicUrl { get; set; } = "http://127.0.0.1:7700/api/voice/last.wav";
+    public string LastWavPublicUrl { get; set; } = "http://127.0.0.1:7720/api/voice/last.wav";
 
     public int TimeoutSeconds { get; set; } = 60;
 }

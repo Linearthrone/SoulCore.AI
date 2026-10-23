@@ -199,7 +199,7 @@ internal static class ToolsServiceCollectionExtensions
         // Read: Tools.AllowBrowserCapture (default true). Write: Tools.AllowComputerControl.
         // Backend: Tools.BrowserBackend=playwright (BED-195 Victoria Chromium) preferred even when
         // DesktopTargetWindowTitle is set (VM stays for desktop_*; web uses Playwright).
-        // native → BrowserCaptureBridge :17891.
+        // native → BrowserCaptureBridge :17920.
         services.AddHttpClient("browser-bridge", (sp, client) =>
         {
             var opts = sp.GetRequiredService<IOptions<ToolsOptions>>().Value;

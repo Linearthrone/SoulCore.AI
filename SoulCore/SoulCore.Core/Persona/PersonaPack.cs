@@ -50,6 +50,14 @@ public sealed class PersonaPack
     /// <summary>Short free-text identity seed folded into [Identity].</summary>
     public string? IdentityBlurb { get; set; }
 
+    /// <summary>
+    /// PROP-16.4 — physical appearance text. Missing JSON stays empty.
+    /// A save whose trimmed value is longer than <see cref="PhysicalDescriptionMaxLength"/> is rejected.
+    /// </summary>
+    public const int PhysicalDescriptionMaxLength = 1000;
+
+    public string PhysicalDescription { get; set; } = string.Empty;
+
     public PersonaToolPolicy ToolPolicy { get; set; } = new();
 
     public PersonaTraitScales Traits { get; set; } = new();
@@ -67,6 +75,7 @@ public sealed class PersonaPack
         VmWindowTitle = VmWindowTitle,
         InferenceModel = InferenceModel,
         IdentityBlurb = IdentityBlurb,
+        PhysicalDescription = PhysicalDescription ?? string.Empty,
         ToolPolicy = ToolPolicy.Clone(),
         Traits = Traits.Clone(),
         UpdatedAtUtc = UpdatedAtUtc
@@ -171,8 +180,11 @@ public sealed class PersonaToolPolicy
 }
 
 /// <summary>
-/// Continuous 0..1 trait scales. Compiled to discrete bands on each chat turn
-/// (live adjust applies on the <b>next</b> turn — no mid-turn hot-reload in 15.1).
+/// Continuous 0..1 trait scales. One object for the Top 30 and the Top 50.
+/// Missing JSON keys keep the property initializer (PROP-16.4). The original
+/// six stay at 0.5; later traits use the proposal defaults.
+/// Compiled to discrete bands on each chat turn (live adjust applies on the
+/// <b>next</b> turn — no mid-turn hot-reload in 15.1).
 /// </summary>
 public sealed class PersonaTraitScales
 {
@@ -180,18 +192,61 @@ public sealed class PersonaTraitScales
     public double Directness { get; set; } = 0.5;
     public double Formality { get; set; } = 0.5;
     public double Playfulness { get; set; } = 0.5;
+    public double Verbosity { get; set; } = 0.45;
+    public double Expressiveness { get; set; } = 0.45;
     public double BoundaryStrictness { get; set; } = 0.5;
+    public double Skepticism { get; set; } = 0.50;
+    public double Caution { get; set; } = 0.55;
+    public double Candor { get; set; } = 0.50;
+    public double PrivacyInstinct { get; set; } = 0.60;
+    public double RiskTolerance { get; set; } = 0.40;
+    public double Curiosity { get; set; } = 0.55;
+    public double AnalyticalDepth { get; set; } = 0.50;
+    public double Creativity { get; set; } = 0.45;
+    public double Structure { get; set; } = 0.50;
+    public double Patience { get; set; } = 0.55;
+    public double Focus { get; set; } = 0.60;
+    public double Initiative { get; set; } = 0.40;
+    public double Persistence { get; set; } = 0.50;
+    public double Assertiveness { get; set; } = 0.45;
+    public double Empathy { get; set; } = 0.55;
+    public double Collaboration { get; set; } = 0.60;
+    public double TeachingStance { get; set; } = 0.45;
 
     /// <summary>0 = present-focused; 1 = past/continuity-focused recall bias.</summary>
     public double RecallBias { get; set; } = 0.5;
 
-    public PersonaTraitScales Clone() => new()
+    public double Agreeableness { get; set; } = 0.50;
+    public double Optimism { get; set; } = 0.50;
+    public double DeferenceToOtherAis { get; set; } = 0.40;
+    public double PeerChallenge { get; set; } = 0.45;
+    public double LoyaltyToOperator { get; set; } = 0.70;
+    public double HumorDryness { get; set; } = 0.40;
+    public double SarcasmRestraint { get; set; } = 0.60;
+    public double Storytelling { get; set; } = 0.40;
+    public double MetaphorUse { get; set; } = 0.35;
+    public double Conciliation { get; set; } = 0.55;
+    public double Competitiveness { get; set; } = 0.35;
+    public double Humility { get; set; } = 0.55;
+    public double Confidence { get; set; } = 0.50;
+    public double Spontaneity { get; set; } = 0.40;
+    public double PlanningHorizon { get; set; } = 0.50;
+    public double DetailOrientation { get; set; } = 0.55;
+    public double Abstraction { get; set; } = 0.45;
+    public double Practicality { get; set; } = 0.60;
+    public double Nurturance { get; set; } = 0.50;
+    public double Stoicism { get; set; } = 0.45;
+    public double PlayWithIdeas { get; set; } = 0.45;
+    public double CitationHabit { get; set; } = 0.50;
+    public double QuestionAsking { get; set; } = 0.50;
+    public double ContinuityCallbacks { get; set; } = 0.55;
+    public double Adaptability { get; set; } = 0.50;
+
+    public PersonaTraitScales Clone()
     {
-        Warmth = Warmth,
-        Directness = Directness,
-        Formality = Formality,
-        Playfulness = Playfulness,
-        BoundaryStrictness = BoundaryStrictness,
-        RecallBias = RecallBias
-    };
+        var copy = new PersonaTraitScales();
+        foreach (var trait in PersonaTraitCatalog.All)
+            trait.Set(copy, trait.Get(this));
+        return copy;
+    }
 }

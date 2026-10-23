@@ -291,7 +291,7 @@ public class BrowserToolsTests
     {
         var handler = new FixedJsonHandler(
             """{"ok":true,"service":"hv-browser-capture-bridge","pending_jobs":0}""");
-        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17920/") };
         var bridge = new NativeBrowserBridge(http, toolsOptions: null);
 
         var result = await bridge.HealthAsync();
@@ -307,7 +307,7 @@ public class BrowserToolsTests
     {
         var handler = new FixedJsonHandler(
             """{"ok":true,"url":"https://example.com","title":"Example","screenshot_path":"C:\\tmp\\tab.png","page_map":{"elements":[{"index":1,"tag":"a","text":"Hi"}]}}""");
-        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17920/") };
         var bridge = new NativeBrowserBridge(http, toolsOptions: null);
 
         var result = await bridge.CaptureTabAsync(0);
@@ -325,7 +325,7 @@ public class BrowserToolsTests
     {
         var handler = new FixedJsonHandler(
             """{"ok":true,"detail":"clicked","url":"https://example.com","title":"Example"}""");
-        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17920/") };
         var bridge = new NativeBrowserBridge(http, toolsOptions: null);
 
         var result = await bridge.ClickAsync(10, 20);
@@ -341,7 +341,7 @@ public class BrowserToolsTests
     public async Task NativeBrowserBridge_WhenUnreachable_ReturnsUnavailable()
     {
         var handler = new FailingHandler();
-        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17891/") };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:17920/") };
         var bridge = new NativeBrowserBridge(http, toolsOptions: null);
 
         var result = await bridge.HealthAsync();

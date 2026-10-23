@@ -10,5 +10,5 @@ public sealed class HostBindOptions
     /// <summary>Must remain 127.0.0.1 for V1 unless SEC opt-in ticket.</summary>
     public string BindAddress { get; set; } = "127.0.0.1";
 
-    public int Port { get; set; } = 7700;
+    public int Port { get; set; } = 7720;
 }

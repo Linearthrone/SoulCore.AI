@@ -27,12 +27,23 @@ public interface IPersonaStoreHub : IAsyncDisposable
     /// </summary>
     Task SwitchActiveAsync(string personaId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Episodic store for <paramref name="personaId"/>.
+    /// PROP-16.3: opens that persona's database even when a different persona
+    /// is the active bundle. Charter, journal, and the other accessors stay
+    /// single-active.
+    /// </summary>
     IMemoryStore GetMemoryStore(string personaId);
     IMemoryStats GetMemoryStats(string personaId);
     IEmotionState GetEmotionState(string personaId);
     IVictoriaJournalStore GetJournalStore(string personaId);
     IVictoriaTaskStore GetTaskStore(string personaId);
     IVictoriaWorkflowStore GetWorkflowStore(string personaId);
+    /// <summary>
+    /// Durable transcript for <paramref name="personaId"/>.
+    /// PROP-16.6: opens that persona's database even when a different persona
+    /// is the foreground bundle, so a background chat can append its own thread.
+    /// </summary>
     IChatTranscriptStore GetTranscriptStore(string personaId);
     ICharter GetCharter(string personaId);
 

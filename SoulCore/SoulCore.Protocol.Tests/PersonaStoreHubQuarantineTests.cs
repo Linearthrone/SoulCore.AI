@@ -89,8 +89,12 @@ public class PersonaStoreHubQuarantineTests
             Assert.Contains(bJournal, e => e.Body.Contains(journalB));
             Assert.DoesNotContain(bJournal, e => e.Body.Contains(journalA));
 
-            // Non-active personaId must refuse access (v1 single-active keyed API)
-            Assert.Throws<InvalidOperationException>(() => hub.GetMemoryStore(personaA));
+            // PROP-16.3: episodic lookup by id stays open while another persona is active.
+            // Charter / journal accessors still refuse a non-active id.
+            var aWhileB = await hub.GetMemoryStore(personaA).RecallRecentAsync(20);
+            Assert.Contains(aWhileB, t => t.Contains(secretA));
+            Assert.DoesNotContain(aWhileB, t => t.Contains(secretB));
+            Assert.Throws<InvalidOperationException>(() => hub.GetCharter(personaA));
 
             // --- Switch back to A ---
             await hub.SwitchActiveAsync(personaA);
@@ -107,7 +111,11 @@ public class PersonaStoreHubQuarantineTests
             Assert.Contains(aJournal, e => e.Body.Contains(journalA));
             Assert.DoesNotContain(aJournal, e => e.Body.Contains(journalB));
 
-            Assert.Throws<InvalidOperationException>(() => hub.GetMemoryStore(personaB));
+            // PROP-16.3: B's episodic file is still readable by id while A is active.
+            var bWhileA = await hub.GetMemoryStore(personaB).RecallRecentAsync(20);
+            Assert.Contains(bWhileA, t => t.Contains(secretB));
+            Assert.DoesNotContain(bWhileA, t => t.Contains(secretA));
+            Assert.Throws<InvalidOperationException>(() => hub.GetCharter(personaB));
         }
         finally
         {

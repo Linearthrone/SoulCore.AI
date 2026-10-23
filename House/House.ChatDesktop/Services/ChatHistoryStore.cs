@@ -33,12 +33,128 @@ public sealed class ChatHistoryStore : IDisposable
             "HouseVictoria",
             "presence-chat.db");
 
-    public IReadOnlyList<ChatMessage> LoadRecent(
-        string conversationId = PresenceConversationId,
-        int limit = DefaultLimit)
+    public IReadOnlyList<ChatMessage> LoadRecent(string conversationId, int limit = DefaultLimit)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new ArgumentException("Transcript conversation id is required.", nameof(conversationId));
         limit = Math.Clamp(limit, 1, 1000);
+
+        return LoadRows(conversationId, limit, visibleOnly: true);
+    }
+
+    /// <summary>
+    /// Every stored row for the persona, including ones an archive hide mark skips.
+    /// Archive does not delete rows.
+    /// </summary>
+    public IReadOnlyList<ChatMessage> LoadIncludingHidden(string conversationId, int limit = DefaultLimit)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return LoadRows(conversationId, limit, visibleOnly: false);
+    }
+
+    /// <summary>How many rows are stored for this transcript, including hidden ones.</summary>
+    public int CountStored(string conversationId)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        RequireConversation(conversationId);
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM Messages WHERE ConversationId = $cid;";
+        cmd.Parameters.AddWithValue("$cid", conversationId);
+        return Convert.ToInt32(cmd.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Latest visible text for a role, or null when none remains after the hide mark.
+    /// Blank rows are skipped. Role is the stored value (<c>user</c> or <c>assistant</c>).
+    /// </summary>
+    public string? LatestVisibleText(string conversationId, string role)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        RequireConversation(conversationId);
+        if (string.IsNullOrWhiteSpace(role))
+            throw new ArgumentException("Role is required.", nameof(role));
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT Text
+            FROM Messages
+            WHERE ConversationId = $cid
+              AND Role = $role
+              AND rowid > $mark
+            ORDER BY AtUtc DESC, rowid DESC;
+            """;
+        cmd.Parameters.AddWithValue("$cid", conversationId);
+        cmd.Parameters.AddWithValue("$role", role);
+        cmd.Parameters.AddWithValue("$mark", VisibleMark(conversationId));
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var text = reader.GetString(0);
+            if (!string.IsNullOrWhiteSpace(text))
+                return text;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Personas with no hide mark stay listed. After a mark, the row comes back only when a newer message exists.
+    /// </summary>
+    public bool IsThreadListed(string conversationId)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        RequireConversation(conversationId);
+        if (ReadHideMark(conversationId) is not long mark)
+            return true;
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT 1
+            FROM Messages
+            WHERE ConversationId = $cid AND rowid > $mark
+            LIMIT 1;
+            """;
+        cmd.Parameters.AddWithValue("$cid", conversationId);
+        cmd.Parameters.AddWithValue("$mark", mark);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read();
+    }
+
+    /// <summary>
+    /// Record a hide mark at the latest row id for this transcript. Rows at or before that id stay stored and are skipped on load.
+    /// An empty transcript records 0 so a later insert (rowid starts at 1) can show again.
+    /// </summary>
+    public void HideThroughLatest(string conversationId)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        RequireConversation(conversationId);
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText =
+            """
+            INSERT INTO ThreadHideMarks (ConversationId, MarkRowId)
+            VALUES (
+                $cid,
+                COALESCE((SELECT MAX(rowid) FROM Messages WHERE ConversationId = $cid), 0))
+            ON CONFLICT(ConversationId) DO UPDATE SET
+                MarkRowId = MAX(ThreadHideMarks.MarkRowId, excluded.MarkRowId);
+            """;
+        cmd.Parameters.AddWithValue("$cid", conversationId);
+        cmd.ExecuteNonQuery();
+    }
+
+    private IReadOnlyList<ChatMessage> LoadRows(string conversationId, int limit, bool visibleOnly)
+    {
+        RequireConversation(conversationId);
+        limit = Math.Clamp(limit, 1, 1000);
+        // A missing mark uses 0: SQLite rowids start at 1, so every stored row stays visible.
+        // Including hidden rows uses -1 so the same predicate still matches rowid 0.
+        var mark = visibleOnly ? VisibleMark(conversationId) : -1L;
 
         using var cmd = _connection.CreateCommand();
         cmd.CommandText =
@@ -46,11 +162,13 @@ public sealed class ChatHistoryStore : IDisposable
             SELECT Id, Role, Text, AtUtc, FrameId, MediaPath, MediaId
             FROM Messages
             WHERE ConversationId = $cid
-            ORDER BY AtUtc DESC, RowId DESC
+              AND rowid > $mark
+            ORDER BY AtUtc DESC, rowid DESC
             LIMIT $limit;
             """;
         cmd.Parameters.AddWithValue("$cid", conversationId);
         cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.Parameters.AddWithValue("$mark", mark);
 
         var list = new List<ChatMessage>();
         using var reader = cmd.ExecuteReader();
@@ -72,10 +190,35 @@ public sealed class ChatHistoryStore : IDisposable
         return list;
     }
 
-    public void Save(ChatMessage message, string conversationId = PresenceConversationId)
+    private long VisibleMark(string conversationId) => ReadHideMark(conversationId) ?? 0L;
+
+    private long? ReadHideMark(string conversationId)
+    {
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "SELECT MarkRowId FROM ThreadHideMarks WHERE ConversationId = $cid;";
+        cmd.Parameters.AddWithValue("$cid", conversationId);
+        var value = cmd.ExecuteScalar();
+        if (value is null or DBNull)
+            return null;
+        return Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static void RequireConversation(string conversationId)
+    {
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new ArgumentException("Transcript conversation id is required.", nameof(conversationId));
+    }
+
+    public void Save(ChatMessage message, string conversationId)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(message);
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new ArgumentException("Transcript conversation id is required.", nameof(conversationId));
+        if (string.Equals(conversationId, PresenceConversationId, StringComparison.Ordinal))
+            throw new ArgumentException(
+                "presence-local is not a persona transcript. Key rows with ChatTranscriptKey.ForPersona.",
+                nameof(conversationId));
 
         if (string.IsNullOrWhiteSpace(message.Id))
             message.Id = Guid.NewGuid().ToString("N");
@@ -120,6 +263,10 @@ public sealed class ChatHistoryStore : IDisposable
             );
             CREATE INDEX IF NOT EXISTS idx_messages_conv_at
                 ON Messages (ConversationId, AtUtc DESC);
+            CREATE TABLE IF NOT EXISTS ThreadHideMarks (
+                ConversationId TEXT PRIMARY KEY NOT NULL,
+                MarkRowId INTEGER NOT NULL
+            );
             """;
         cmd.ExecuteNonQuery();
 

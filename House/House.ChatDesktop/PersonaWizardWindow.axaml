@@ -2,14 +2,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="House.ChatDesktop.PersonaWizardWindow"
         Title="Persona wizard"
-        Width="560" Height="640"
-        MinWidth="480" MinHeight="520"
+        Width="600" Height="720"
+        MinWidth="520" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
-        Background="{DynamicResource BgBrush}"
+        Background="Transparent"
         Foreground="{DynamicResource TextBrush}"
-        SystemDecorations="BorderOnly">
-  <DockPanel Margin="20">
+        TransparencyLevelHint="Transparent,AcrylicBlur,None"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ShowInTaskbar="False">
+  <Border Classes="shell-bevel" Margin="4">
+  <Border Classes="shell">
+  <DockPanel Margin="16">
     <DockPanel DockPanel.Dock="Bottom" Margin="0,16,0,0">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
         <Button x:Name="CancelButton" Classes="ghost" Content="Cancel" MinWidth="88" Click="Cancel_Click"/>
@@ -27,11 +33,11 @@
                  TextWrapping="Wrap" Margin="0,0,0,12"
                  Text="Step 1 — pick a template. Blank needs no Victoria pack."/>
 
-      <!-- Step 0: template gallery (create only) — Host GET /api/personas only -->
+      <!-- Template gallery (create only) — Host GET /api/personas only -->
       <StackPanel x:Name="TemplateStep" Spacing="8">
         <TextBlock x:Name="HostRequiredText" FontSize="12" TextWrapping="Wrap"
                    Foreground="{DynamicResource MutedBrush}" IsVisible="False"
-                   Text="Host persona packs required. Start SoulCore.Host on loopback :7700, then retry."/>
+                   Text="Host persona packs required. Start SoulCore.Host on loopback :7720, then retry."/>
         <Button x:Name="RetryTemplatesButton" Classes="ghost" Content="Retry Host packs"
                 HorizontalAlignment="Left" MinWidth="140" IsVisible="False"
                 Click="RetryTemplates_Click"/>
@@ -48,7 +54,7 @@
         </ListBox>
       </StackPanel>
 
-      <!-- Step 1: identity -->
+      <!-- Identity and portrait -->
       <StackPanel x:Name="IdentityStep" Spacing="6" IsVisible="False">
         <TextBlock Text="Display name" Foreground="{DynamicResource MutedBrush}"/>
         <TextBox x:Name="DisplayNameBox" Classes="input" MaxLength="64" Height="36"
@@ -60,9 +66,25 @@
                    Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap"/>
         <TextBox x:Name="HumanAddressBox" Classes="input" MaxLength="64" Height="36"
                  VerticalContentAlignment="Center" Padding="8,0"/>
-        <!-- PROP-15.12: model picker for this pack only (not Presence chrome). -->
-        <TextBlock Text="Chat model (this persona only)"
+        <TextBlock Text="Physical description"
                    Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+        <TextBox x:Name="PhysicalDescriptionBox" Classes="input" AcceptsReturn="True" TextWrapping="Wrap"
+                 MinHeight="96" MaxLength="1000" Padding="10" TextChanged="PhysicalDescriptionBox_TextChanged"/>
+        <DockPanel Margin="0,2,0,0">
+          <Button x:Name="DescriptionHelpButton" Classes="ghost" Content="AI help"
+                  DockPanel.Dock="Right" MinWidth="96" Click="DescriptionHelp_Click"/>
+          <TextBlock x:Name="PhysicalDescriptionCount" FontSize="11"
+                     Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                     Text="0/1000"/>
+        </DockPanel>
+        <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
+                   Text="Separate from the identity blurb. AI help fills this box only, and only after the persona is already saved."/>
+      </StackPanel>
+
+      <!-- Model for this pack only -->
+      <StackPanel x:Name="ModelStep" Spacing="6" IsVisible="False">
+        <TextBlock Text="Chat model (this persona only)"
+                   Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
         <ComboBox x:Name="InferenceModelCombo" Classes="input" Height="36"
                   HorizontalAlignment="Stretch"
                   SelectionChanged="InferenceModelCombo_SelectionChanged"/>
@@ -71,58 +93,33 @@
                    Text="Blank = Host default. Applies to this pack only."/>
       </StackPanel>
 
-      <!-- Step 2: trait scales -->
-      <StackPanel x:Name="TraitsStep" Spacing="4" IsVisible="False">
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Warmth" VerticalAlignment="Center"/>
-          <Slider x:Name="WarmthSlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #WarmthSlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Directness" VerticalAlignment="Center"/>
-          <Slider x:Name="DirectnessSlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #DirectnessSlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Formality" VerticalAlignment="Center"/>
-          <Slider x:Name="FormalitySlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #FormalitySlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Playfulness" VerticalAlignment="Center"/>
-          <Slider x:Name="PlayfulnessSlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #PlayfulnessSlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Boundaries" VerticalAlignment="Center"/>
-          <Slider x:Name="BoundarySlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #BoundarySlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <Grid ColumnDefinitions="120,*,48" Margin="0,2">
-          <TextBlock Text="Recall bias" VerticalAlignment="Center"/>
-          <Slider x:Name="RecallSlider" Grid.Column="1" Minimum="0" Maximum="1" Value="0.5" Margin="8,0"/>
-          <TextBlock Grid.Column="2" Text="{Binding #RecallSlider.Value, StringFormat='{}{0:0.00}'}"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-        <TextBlock x:Name="BandPreviewText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                   TextWrapping="Wrap" Margin="0,8,0,0"/>
-      </StackPanel>
+      <!-- One trait group. Sliders are built from PersonaTraitCatalog.All. -->
+      <ScrollViewer x:Name="TraitsStep" IsVisible="False" MaxHeight="460">
+        <StackPanel Spacing="6">
+          <TextBlock x:Name="TraitGroupTitle" FontSize="14" FontWeight="SemiBold"/>
+          <StackPanel x:Name="TraitSliderHost" Spacing="8"/>
+          <TextBlock x:Name="BandPreviewText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                     TextWrapping="Wrap" Margin="0,8,0,0"/>
+        </StackPanel>
+      </ScrollViewer>
 
-      <!-- Step 3: charter / identity blurb + quarantine -->
+      <!-- Identity blurb. Not the physical description. -->
       <StackPanel x:Name="CharterStep" Spacing="8" IsVisible="False">
         <TextBlock Text="Identity / charter seed" Foreground="{DynamicResource MutedBrush}"/>
         <TextBox x:Name="IdentityBlurbBox" Classes="input" AcceptsReturn="True" TextWrapping="Wrap"
                  MinHeight="160" Padding="10"/>
+        <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
+                   Text="This blurb is not the physical description. Trait and charter edits apply on the next chat turn."/>
+      </StackPanel>
+
+      <StackPanel x:Name="QuarantineStep" Spacing="8" IsVisible="False">
         <TextBlock x:Name="QuarantineNoticeText" FontSize="12" TextWrapping="Wrap"
                    Foreground="{DynamicResource MutedBrush}"/>
         <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
-                   Text="Saves via Host /api/personas. Live trait and charter edits apply on the next chat turn."/>
+                   Text="Saves via Host /api/personas. Every catalog trait is sent. An untouched trait is stored at its catalog default."/>
       </StackPanel>
     </StackPanel>
   </DockPanel>
+  </Border>
+  </Border>
 </Window>

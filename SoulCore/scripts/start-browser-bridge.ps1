@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start House Victoria BrowserCaptureBridge on loopback :17891 (BED-182).
+  Start House Victoria BrowserCaptureBridge on loopback :17920 (BED-182).
 .DESCRIPTION
   Runs repo-root BrowserCaptureBridge/bridge_server.py. Soft-fail friendly for ALLSTART.
   Pair with unpacked BrowserCaptureExtension (chrome://extensions -> Load unpacked).
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 17891,
+    [int]$Port = 17920,
     [switch]$ForceRestart
 )
 

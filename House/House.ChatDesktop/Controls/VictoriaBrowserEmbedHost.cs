@@ -181,6 +181,59 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         }
     }
 
+    /// <summary>
+    /// True when the guest window's outer rect fills the native parent.
+    /// This is a size check, not a framebuffer scale check.
+    /// </summary>
+    public bool GuestWindowFillsHost()
+    {
+        if (!_attached || _hwnd == 0 || !OperatingSystem.IsWindows())
+            return false;
+        var parent = GetParent(_hwnd);
+        if (parent == 0 || !GetClientRect(parent, out var parentRect) || !GetWindowRect(_hwnd, out var guestRect))
+            return false;
+        var origin = new POINT { X = guestRect.Left, Y = guestRect.Top };
+        if (!ScreenToClient(parent, ref origin))
+            return false;
+        var guestW = guestRect.Right - guestRect.Left;
+        var guestH = guestRect.Bottom - guestRect.Top;
+        var parentW = parentRect.Right - parentRect.Left;
+        var parentH = parentRect.Bottom - parentRect.Top;
+        return Math.Abs(origin.X) <= 2
+               && Math.Abs(origin.Y) <= 2
+               && Math.Abs(guestW - parentW) <= 2
+               && Math.Abs(guestH - parentH) <= 2
+               && parentW > 0
+               && parentH > 0;
+    }
+
+    /// <summary>
+    /// True when the center of the guest window hit-tests to that HWND or one of its children.
+    /// </summary>
+    public bool HitTestReachesGuest()
+    {
+        if (!_attached || _hwnd == 0 || !OperatingSystem.IsWindows())
+            return false;
+        if (!GetClientRect(_hwnd, out var rect))
+            return false;
+        var point = new POINT
+        {
+            X = Math.Max(0, (rect.Right - rect.Left) / 2),
+            Y = Math.Max(0, (rect.Bottom - rect.Top) / 2)
+        };
+        if (!ClientToScreen(_hwnd, ref point))
+            return false;
+        var hit = WindowFromPoint(point);
+        for (var depth = 0; depth < 8 && hit != 0; depth++)
+        {
+            if (hit == _hwnd)
+                return true;
+            hit = GetParent(hit);
+        }
+
+        return false;
+    }
+
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
@@ -237,6 +290,13 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
         public int Left, Top, Right, Bottom;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern nint SetParent(nint hWndChild, nint hWndNewParent);
 
@@ -257,4 +317,16 @@ public sealed class VictoriaBrowserEmbedHost : NativeControlHost
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool ScreenToClient(nint hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool ClientToScreen(nint hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    private static extern nint WindowFromPoint(POINT point);
 }

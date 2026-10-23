@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\SoulCore\SoulCore.Protocol\SoulCore.Protocol.csproj" />
+    <ProjectReference Include="..\..\SoulCore\SoulCore.Core\SoulCore.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

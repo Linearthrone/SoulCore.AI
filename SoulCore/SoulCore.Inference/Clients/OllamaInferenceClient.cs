@@ -106,11 +106,19 @@ public sealed class OllamaInferenceClient : IInferenceClient
         _personaSession = personaSession;
     }
 
-    public async Task<string> CompleteAsync(
+    public Task<string> CompleteAsync(
         string prompt,
         string? systemPreamble = null,
         CancellationToken cancellationToken = default,
         int? maxTokens = null)
+        => CompleteAsync(prompt, systemPreamble, cancellationToken, maxTokens, model: null);
+
+    public async Task<string> CompleteAsync(
+        string prompt,
+        string? systemPreamble,
+        CancellationToken cancellationToken,
+        int? maxTokens,
+        string? model)
     {
         if (string.IsNullOrWhiteSpace(prompt))
             throw new ArgumentException("Prompt must be non-empty.", nameof(prompt));
@@ -121,7 +129,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (_options.NumCtx > 0)
             options.NumCtx = _options.NumCtx;
 
-        var chatModel = InferenceModelRouting.ResolveChatModel(_options, _personaSession);
+        var chatModel = string.IsNullOrWhiteSpace(model)
+            ? InferenceModelRouting.ResolveChatModel(_options, _personaSession)
+            : model.Trim();
         var payload = new OllamaGenerateRequest
         {
             Model = chatModel,

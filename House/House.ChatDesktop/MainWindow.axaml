@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:House.ChatDesktop.Controls"
         x:Class="House.ChatDesktop.MainWindow"
         Title="SoulCore CreatorEdition — Presence"
         Height="780" Width="1180"
@@ -82,7 +83,7 @@
               <StackPanel Margin="20,0,0,0" VerticalAlignment="Center" Opacity="0.85">
                 <TextBlock Text="CREATOREDITION" FontSize="11" FontWeight="Bold"
                            Foreground="{DynamicResource MutedBrush}" LetterSpacing="1.5"/>
-                <TextBlock x:Name="EndpointText" Text="127.0.0.1:7700" FontSize="10"
+                <TextBlock x:Name="EndpointText" Text="127.0.0.1:7720" FontSize="10"
                            Foreground="{DynamicResource MutedBrush}" Opacity="0.6"/>
                 <TextBlock x:Name="BuildVersionsText" Text="" FontSize="10"
                            Foreground="{DynamicResource AccentBrush}" Opacity="0.9"/>
@@ -91,6 +92,8 @@
 
             <!-- Settings sits ON the frame (Presence tab removed) -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,12,0">
+              <Button x:Name="NavHouse" Classes="frame-nav" Content="HOUSE"
+                      Click="NavHouse_Click" ToolTip.Tip="Open HOUSE lamps"/>
               <Button x:Name="NavSettings" Classes="frame-nav" Content="SETTINGS"
                       Click="NavSettings_Click"/>
               <Button x:Name="NavUpdate" Classes="chrome" Content="Update" FontSize="11" Padding="10,6"
@@ -107,11 +110,11 @@
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
               <Button Classes="window-chrome" Content="─" Click="Minimize_Click"
-                      ToolTip.Tip="Minimize"/>
+                      ToolTip.Tip="Hide drawer"/>
               <Button x:Name="MaximizeButton" Classes="window-chrome" Content="□" Click="Maximize_Click"
                       ToolTip.Tip="Maximize"/>
-              <Button Classes="window-chrome close" Content="✕" Click="Close_Click"
-                      ToolTip.Tip="Close"/>
+              <Button Classes="window-chrome" Content="Hide" Width="52" Click="Close_Click"
+                      ToolTip.Tip="Hide drawer"/>
             </StackPanel>
           </Grid>
         </Border>
@@ -170,9 +173,47 @@
 
     <Grid x:Name="PresenceView" Margin="12,4,12,0" RowDefinitions="*,Auto,Auto">
       <Grid x:Name="PresenceMainSplit" Grid.Row="0" ColumnDefinitions="*,4,260">
-        <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="320">
-          <Grid RowDefinitions="Auto,*">
-            <DockPanel Margin="4,2,4,8">
+        <Border x:Name="ChatPanel" Classes="metal glass" Padding="8" MinWidth="460">
+          <Grid ColumnDefinitions="148,*" RowDefinitions="Auto,*">
+            <Border Grid.RowSpan="2" Classes="carbon" Padding="6" Margin="0,0,8,0">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,8">
+                  <TextBlock Text="THREADS" FontSize="9" FontWeight="SemiBold" LetterSpacing="1"
+                             Foreground="{DynamicResource MutedBrush}"/>
+                  <TextBlock x:Name="ThreadModeMark" Text="ONE" FontSize="10" FontWeight="Bold"
+                             Foreground="{DynamicResource AccentBrush}"
+                             ToolTip.Tip="One sends only the foreground persona. Many sends the open thread."/>
+                </StackPanel>
+                <ListBox x:Name="ThreadList" Background="Transparent" BorderThickness="0"
+                         SelectionChanged="ThreadList_SelectionChanged">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="36,*" Margin="0,4">
+                        <Panel Width="36" Height="36">
+                          <Border Width="36" Height="36" CornerRadius="18" ClipToBounds="True"
+                                  Background="{DynamicResource PanelBrush}">
+                            <Image Source="{Binding Photo}" Stretch="UniformToFill"/>
+                          </Border>
+                          <TextBlock Text="{Binding Initials}" FontSize="11" FontWeight="Bold"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     IsVisible="{Binding ShowInitials}"
+                                     Foreground="{DynamicResource AccentBrush}"/>
+                        </Panel>
+                        <StackPanel Grid.Column="1" Spacing="2" Margin="8,0,0,0">
+                          <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"/>
+                          <Button Classes="chrome" Content="Archive" Tag="archive-thread"
+                                  HorizontalAlignment="Left" Padding="6,1" MinHeight="0"
+                                  FontSize="10"
+                                  Click="ArchiveThread_Click"/>
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </DockPanel>
+            </Border>
+            <DockPanel Grid.Column="1" Margin="4,2,4,8">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                 <ToggleButton x:Name="ChatAlwaysOnTop" Classes="chrome" Content="Pin"
                               IsCheckedChanged="ChatAlwaysOnTop_Changed"/>
@@ -180,7 +221,7 @@
               </StackPanel>
               <TextBlock Text="" IsVisible="False"/>
             </DockPanel>
-            <Border Grid.Row="1" Classes="carbon inset" Padding="6" ClipToBounds="True">
+            <Border Grid.Row="1" Grid.Column="1" Classes="carbon inset" Padding="6" ClipToBounds="True">
               <ScrollViewer x:Name="TranscriptScroll" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                   <ItemsControl x:Name="TranscriptList">
@@ -259,7 +300,12 @@
           <!-- row 2 height restored from LocalUiSettings; GridSplitter adjusts vs Her browser -->
           <Border x:Name="VictoriaBrowserPanel" Classes="metal glass" Padding="8" MinHeight="120">
             <Grid RowDefinitions="Auto,*,Auto">
-              <TextBlock Text="Her screen" FontWeight="SemiBold" Margin="0,0,0,6"/>
+              <DockPanel Margin="0,0,0,6">
+                <Button DockPanel.Dock="Right" Classes="ghost" Content="Live view"
+                        Padding="8,2" Click="ShowViewport_Click"
+                        ToolTip.Tip="Show the still in this drawer. Not a live guest."/>
+                <TextBlock Text="Her screen" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              </DockPanel>
               <Border Grid.Row="1" x:Name="VictoriaBrowserSurface" Classes="carbon inset" ClipToBounds="True" MinHeight="90"
                       PointerMoved="VictoriaBrowserSurface_PointerMoved"
                       PointerExited="VictoriaBrowserSurface_PointerExited"
@@ -314,21 +360,29 @@
                         HorizontalAlignment="Stretch"
                         ToolTip.Tip="Drag to resize Her screen vs What she saw"/>
 
-          <!-- PROP-4 sight: frame + stamp + folder only (PROP-12.1: height via splitter) -->
-          <Border x:Name="ScreenPanel" Grid.Row="2" Classes="metal glass" Padding="8" MinHeight="120">
+          <!-- PROP-16.2b: opaque still. Not a live guest. Chrome opacity does not thin this island. -->
+          <Border x:Name="ScreenPanel" Grid.Row="2" Padding="8" MinHeight="120" Focusable="True"
+                  Opacity="1" Background="#FF111214" BorderBrush="#CCD8DEE8" BorderThickness="1"
+                  CornerRadius="6">
             <Grid RowDefinitions="Auto,*,Auto">
               <DockPanel Margin="0,0,0,6">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
                   <ToggleButton x:Name="ScreenAlwaysOnTop" Classes="chrome" Content="Pin"
                                 IsCheckedChanged="ScreenAlwaysOnTop_Changed"/>
                   <Button Classes="chrome" Content="⤢" Padding="8,3" Click="DesktopViewPopOut_Click"
-                          ToolTip.Tip="Pop out sight"/>
+                          ToolTip.Tip="Pop out the still"/>
                   <Button Classes="chrome" Content="📁" Padding="8,3" Click="DesktopViewOpenFolder_Click"
                           ToolTip.Tip="Open scratch sight gallery (not memory copies)"/>
                 </StackPanel>
-                <TextBlock Text="What she saw" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <TextBlock x:Name="DesktopViewPersonaName" Text="Companion" FontWeight="SemiBold"
+                             VerticalAlignment="Center"/>
+                  <TextBlock x:Name="DesktopViewTitle" Text="What she saw · still, not a live guest"
+                             FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
               </DockPanel>
-              <Border Grid.Row="1" Classes="carbon inset" ClipToBounds="True">
+              <Border x:Name="DesktopViewFrame" Grid.Row="1" ClipToBounds="True"
+                      Opacity="1" Background="#FF111214" BorderBrush="#CCD8DEE8" BorderThickness="1">
                 <Grid x:Name="DesktopViewSurface" SizeChanged="DesktopViewSurface_SizeChanged">
                   <TextBlock x:Name="DesktopViewEmptyText" Text="No still yet"
                              Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
@@ -397,12 +451,14 @@
       </Border>
 
       <!-- PROP-4 House drawer: closed rail + open lamp tray -->
-      <Border Grid.Row="2" Classes="metal glass" Margin="0,8,0,0" Padding="0">
+      <Border x:Name="HouseDrawerHost" Grid.Row="2" Classes="metal glass" Margin="0,8,0,0" Padding="0">
         <Grid RowDefinitions="Auto,Auto">
           <Button x:Name="HouseDrawerTab" Classes="house-tab" HorizontalAlignment="Stretch"
                   Click="HouseDrawerToggle_Click">
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
               <TextBlock Text="HOUSE" FontWeight="SemiBold" FontSize="12" LetterSpacing="2"
+                         VerticalAlignment="Center"/>
+              <TextBlock x:Name="HouseForegroundName" Text="Companion" FontSize="12" FontWeight="SemiBold"
                          VerticalAlignment="Center"/>
               <Ellipse x:Name="HouseDrawerPip" Width="8" Height="8" Fill="Transparent"
                        VerticalAlignment="Center"/>
@@ -708,8 +764,19 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                   <TextBlock Text="System" FontSize="18" FontWeight="SemiBold"/>
                 </StackPanel>
+                <TextBlock Text="Chat mode" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
+                           Text="One sends only the foreground persona. Many sends the open thread and leaves HOUSE and the viewport on the foreground."/>
+                <controls:PersonaModeControl x:Name="SystemPersonaMode" Margin="0,0,0,14"/>
+                <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                  <Button x:Name="ThemeDarkButton" Classes="frame-nav" Content="Dark" Click="ThemeDark_Click"/>
+                  <Button x:Name="ThemeLightButton" Classes="frame-nav" Content="Light" Click="ThemeLight_Click"/>
+                </StackPanel>
+                <TextBlock Text="Chrome opacity (floor 0.55)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <Slider x:Name="ChromeOpacitySlider" Minimum="0.55" Maximum="1" Value="0.82" Margin="0,0,0,14"/>
                 <TextBlock Text="Host endpoint" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemEndpointBox" Classes="input" IsReadOnly="True" Text="127.0.0.1:7700"
+                <TextBox x:Name="SystemEndpointBox" Classes="input" IsReadOnly="True" Text="127.0.0.1:7720"
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="SoulCore repo folder" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"
@@ -748,7 +815,7 @@
                 <TextBox x:Name="SystemBindBox" Classes="input" IsReadOnly="True" Text="—"
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Port" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="SystemPortBox" Classes="input" IsReadOnly="True" Text="7700"
+                <TextBox x:Name="SystemPortBox" Classes="input" IsReadOnly="True" Text="7720"
                          Padding="8" Margin="0,0,0,10"/>
                 <TextBlock Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="SystemInferenceBox" Classes="input" IsReadOnly="True" Text="—"
@@ -786,7 +853,7 @@
               <StackPanel Margin="12" Spacing="6">
                 <TextBlock Text="Services" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12"
-                           Text="Open the House drawer on Presence for SoulCore / Ollama / Unreal / Comfy / CUA / Sandbox lamps. Explicit Start / Stop / Restart Host buttons are under Settings → System."
+                           Text="HOUSE lamps open in their own drawer: SoulCore, Ollama, Unreal, Comfy, CUA, Sandbox. Ollama is a lamp. CUA is a toggle. Explicit Start / Stop / Restart Host buttons stay under Settings → System."
                            Margin="0,0,0,12"/>
                 <Button Classes="ghost" Content="Refresh" Click="ServicesRefresh_Click" HorizontalAlignment="Left"/>
               </StackPanel>

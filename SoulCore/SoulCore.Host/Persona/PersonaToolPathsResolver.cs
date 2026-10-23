@@ -26,6 +26,16 @@ public sealed class PersonaToolPathsResolver : IPersonaToolPathsResolver
     public string ResolveDesktopTargetWindowTitle()
     {
         var pack = _session.GetActive();
+        return ResolveDesktopTargetWindowTitle(pack);
+    }
+
+    /// <summary>
+    /// PROP-16.6: resolve from the pack the chat turn already pinned.
+    /// Does not call <see cref="IPersonaSession.GetActive"/>.
+    /// </summary>
+    public string ResolveDesktopTargetWindowTitle(PersonaPack pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
         var host = _tools.Value?.DesktopTargetWindowTitle;
         return PersonaToolPaths.ResolveDesktopTargetWindowTitle(pack.VmWindowTitle, host);
     }

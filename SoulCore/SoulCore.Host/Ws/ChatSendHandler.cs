@@ -26,6 +26,10 @@ namespace SoulCore.Host.Ws;
 /// <summary>
 /// Orchestrates <c>chat.send</c>: context build, inference (tool-loop or single-shot),
 /// delta/done frames, episodic write, and post-chat effects delegation.
+/// PROP-16.6: one Host process. A turn pins mode, foreground id, and payload personaId
+/// before any await. Tools, the VM, browser, email, and post-effects run only when
+/// that pin is the foreground. A background turn uses <c>CompleteAsync</c> only.
+/// SoulLoop is not started per persona.
 /// </summary>
 public sealed class ChatSendHandler
 {
@@ -45,6 +49,10 @@ public sealed class ChatSendHandler
     private readonly IPersonaSession _personaSession;
     private readonly IPresenceActivityHub? _presenceActivity;
     private readonly IChatTranscriptStore? _transcript;
+    private readonly IHostChatMode? _hostChatMode;
+    private readonly IPersonaPackStore? _packStore;
+    private readonly IPersonaStoreHub? _storeHub;
+    private readonly IForegroundToolLoopGate? _toolLoops;
     private readonly ILogger<ChatSendHandler> _logger;
 
     public ChatSendHandler(
@@ -64,7 +72,11 @@ public sealed class ChatSendHandler
         IPersonaSession? personaSession = null,
         IPresenceActivityHub? presenceActivity = null,
         IChatTranscriptStore? transcript = null,
-        IPersonaToolPathsResolver? toolPaths = null)
+        IPersonaToolPathsResolver? toolPaths = null,
+        IHostChatMode? hostChatMode = null,
+        IPersonaPackStore? packStore = null,
+        IPersonaStoreHub? storeHub = null,
+        IForegroundToolLoopGate? toolLoops = null)
     {
         _inference = inference ?? throw new ArgumentNullException(nameof(inference));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -83,6 +95,10 @@ public sealed class ChatSendHandler
         _presenceActivity = presenceActivity;
         _transcript = transcript;
         _toolPaths = toolPaths;
+        _hostChatMode = hostChatMode;
+        _packStore = packStore;
+        _storeHub = storeHub;
+        _toolLoops = toolLoops;
     }
 
     public async Task HandleAsync(
@@ -91,37 +107,111 @@ public sealed class ChatSendHandler
         Guid connectionSessionId,
         CancellationToken cancellationToken)
     {
+        // PROP-16.6: copy mode, foreground id, and payload personaId before any await.
+        // Do not call GetActive() again in this turn for the pin.
+        var mode = _hostChatMode?.Current ?? IHostChatMode.One;
+        if (mode is not (IHostChatMode.One or IHostChatMode.Many))
+            mode = IHostChatMode.One;
+        var foregroundId = _personaSession.ActivePersonaId;
+        var foregroundPack = _personaSession.GetActive();
+        var requestedPersonaId = ExtractPersonaId(frame.Payload);
+
         var text = ExtractText(frame.Payload);
         if (string.IsNullOrWhiteSpace(text))
         {
-            await WsFrameSender.SendFrameAsync(
+            await SendChatErrorAsync(
                 socket,
-                SoulCoreFrame.Create(
-                    SoulCoreFrameTypes.Error,
-                    new { code = "chat.empty", message = "chat.send payload.text required" },
-                    id: frame.Id),
+                frame.Id,
+                "chat.empty",
+                "chat.send payload.text required",
                 cancellationToken).ConfigureAwait(false);
             return;
         }
 
+        var pin = ResolvePin(mode, foregroundId, foregroundPack, requestedPersonaId);
+        if (!pin.Ok)
+        {
+            await SendChatErrorAsync(socket, frame.Id, pin.Code!, pin.Message!, cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        PersonaPack pinnedPack;
+        if (pin.LoadPack)
+        {
+            if (_packStore is null)
+            {
+                await SendChatErrorAsync(
+                    socket,
+                    frame.Id,
+                    "chat.persona_unknown",
+                    $"Unknown personaId '{pin.PersonaId}'.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            PersonaPack? loaded;
+            try
+            {
+                loaded = await _packStore.GetAsync(pin.PersonaId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ArgumentException ex)
+            {
+                await SendChatErrorAsync(socket, frame.Id, "chat.persona_invalid", ex.Message, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            if (loaded is null)
+            {
+                await SendChatErrorAsync(
+                    socket,
+                    frame.Id,
+                    "chat.persona_unknown",
+                    $"Unknown personaId '{pin.PersonaId}'.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            pinnedPack = loaded;
+        }
+        else
+        {
+            pinnedPack = pin.Pack!;
+        }
+
+        var pinnedId = pinnedPack.PersonaId;
+        var foregroundTurn = string.Equals(pinnedId, foregroundId, StringComparison.OrdinalIgnoreCase);
+
         var quotedText = ExtractQuotedText(frame.Payload);
         var modelUserText = QuotedChatText.BuildUserText(text, quotedText);
 
-        _presenceActivity?.NoteChat("user");
+        if (foregroundTurn)
+            _presenceActivity?.NoteChat("user");
 
-        var historySessionId = ResolveHistorySessionId(frame.Payload, connectionSessionId);
+        var clientSessionId = ResolveHistorySessionId(frame.Payload, connectionSessionId);
+        var historySessionId = pinnedId + ":" + clientSessionId;
 
         await _emotionSnapshot.SendAsync(socket, frame.Id, cancellationToken).ConfigureAwait(false);
 
-        var useToolLoop = _chatOptions.UseToolLoop;
-        // PROP-15.5: pack VmWindowTitle wins over Host Tools:DesktopTargetWindowTitle.
-        var desktopTarget = _toolPaths?.ResolveDesktopTargetWindowTitle()
-            ?? _toolsAccess.DesktopTargetWindowTitle;
+        // Tools, VM, browser, and email run only for the foreground pin.
+        var allowTools = foregroundTurn && _chatOptions.UseToolLoop;
+        var desktopTarget = _toolPaths is null
+            ? PersonaToolPaths.ResolveDesktopTargetWindowTitle(
+                pinnedPack.VmWindowTitle,
+                _toolsAccess.DesktopTargetWindowTitle)
+            : _toolPaths.ResolveDesktopTargetWindowTitle(pinnedPack);
+        var pinnedMemory = _storeHub is not null
+            ? _storeHub.GetMemoryStore(pinnedId)
+            : _memory;
         var chatContext = await _contextBuilder
-            .BuildAsync(
+            .BuildPinnedAsync(
                 modelUserText,
-                useToolLoop,
+                allowTools,
                 desktopTarget,
+                pinnedPack,
+                pinnedMemory,
+                foregroundTurn,
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -134,16 +224,11 @@ public sealed class ChatSendHandler
                 spendSummary.MonthlyCap,
                 spendSummary.TotalTokens,
                 spendSummary.MonthlyTokenCap);
-            await WsFrameSender.SendFrameAsync(
+            await SendChatErrorAsync(
                 socket,
-                SoulCoreFrame.Create(
-                    SoulCoreFrameTypes.Error,
-                    new
-                    {
-                        code = "chat.spend_cap",
-                        message = "Monthly spend/token cap exceeded. Inference refused."
-                    },
-                    id: frame.Id),
+                frame.Id,
+                "chat.spend_cap",
+                "Monthly spend/token cap exceeded. Inference refused.",
                 cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -153,48 +238,64 @@ public sealed class ChatSendHandler
         var usedStub = false;
         var dispatchedToolNames = new HashSet<string>(StringComparer.Ordinal);
         var toolTrace = new List<ToolTraceEntry>();
+        CancellationTokenSource? loopCts = null;
 
         try
         {
-            if (useToolLoop)
+            try
             {
-                var loopResult = await CompleteChatWithToolsAsync(
-                        modelUserText,
-                        chatContext.Preamble,
-                        historySessionId,
-                        dispatchedToolNames,
-                        toolTrace,
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                reply = loopResult.Text;
-                provider = loopResult.Provider;
+                if (allowTools)
+                {
+                    loopCts = _toolLoops?.Register(foregroundId, cancellationToken);
+                    var loopToken = loopCts?.Token ?? cancellationToken;
+                    var loopResult = await CompleteChatWithToolsAsync(
+                            modelUserText,
+                            chatContext.Preamble,
+                            historySessionId,
+                            dispatchedToolNames,
+                            toolTrace,
+                            pinnedPack.ToolPolicy,
+                            loopToken)
+                        .ConfigureAwait(false);
+                    reply = loopResult.Text;
+                    provider = loopResult.Provider;
+                }
+                else
+                {
+                    var result = await CompleteChatAsync(modelUserText, chatContext.Preamble, cancellationToken)
+                        .ConfigureAwait(false);
+                    reply = result.Text;
+                    provider = result.Provider;
+                    AppendPlainTurn(historySessionId, modelUserText, reply);
+                }
             }
-            else
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                var result = await CompleteChatAsync(modelUserText, chatContext.Preamble, cancellationToken)
-                    .ConfigureAwait(false);
-                reply = result.Text;
-                provider = result.Provider;
-                AppendPlainTurn(historySessionId, modelUserText, reply);
+                await SendChatErrorAsync(
+                    socket,
+                    frame.Id,
+                    "chat.foreground_changed",
+                    "Foreground persona changed. The in-flight tool loop was cancelled.",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Chat model path failed; stub={Stub} useToolLoop={UseToolLoop}", _chatOptions.StubWhenModelDown, useToolLoop);
+            _logger.LogWarning(ex, "Chat model path failed; stub={Stub} useToolLoop={UseToolLoop}", _chatOptions.StubWhenModelDown, allowTools);
             if (!_chatOptions.StubWhenModelDown)
             {
-                await WsFrameSender.SendFrameAsync(
+                await SendChatErrorAsync(
                     socket,
-                    SoulCoreFrame.Create(
-                        SoulCoreFrameTypes.Error,
-                        new
-                        {
-                            code = "chat.model_down",
-                            message = string.IsNullOrWhiteSpace(ex.Message)
-                                ? "LLM unreachable (Ollama)."
-                                : ex.Message
-                        },
-                        id: frame.Id),
+                    frame.Id,
+                    "chat.model_down",
+                    string.IsNullOrWhiteSpace(ex.Message)
+                        ? "LLM unreachable (Ollama)."
+                        : ex.Message,
                     cancellationToken).ConfigureAwait(false);
                 return;
             }
@@ -203,6 +304,11 @@ public sealed class ChatSendHandler
             provider = "stub";
             reply = BuildStubReply(text);
             AppendPlainTurn(historySessionId, modelUserText, reply);
+        }
+        finally
+        {
+            if (loopCts is not null)
+                _toolLoops?.Release(foregroundId, loopCts);
         }
 
         foreach (var partial in ChunkReply(reply))
@@ -224,15 +330,29 @@ public sealed class ChatSendHandler
                 id: frame.Id),
             cancellationToken).ConfigureAwait(false);
 
-        _presenceActivity?.NoteChat("assistant");
+        if (foregroundTurn)
+            _presenceActivity?.NoteChat("assistant");
 
-        await WriteTranscriptAfterChatAsync(historySessionId, text, reply, frame.Id, cancellationToken)
+        await WriteTranscriptAfterChatAsync(pinnedId, clientSessionId, text, reply, frame.Id, cancellationToken)
             .ConfigureAwait(false);
 
         if (!usedStub)
-            await WriteEpisodicAfterChatAsync(modelUserText, reply, provider, cancellationToken).ConfigureAwait(false);
+        {
+            await WriteEpisodicAfterChatAsync(
+                    pinnedMemory,
+                    pinnedPack.DisplayName,
+                    modelUserText,
+                    reply,
+                    provider,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
 
-        await _postEffects.ApplyAsync(text, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
+        if (foregroundTurn)
+        {
+            await _postEffects.ApplyAsync(text, reply, dispatchedToolNames, cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -248,13 +368,15 @@ public sealed class ChatSendHandler
     /// </para>
     /// </remarks>
     private async Task WriteTranscriptAfterChatAsync(
+        string pinnedPersonaId,
         string conversationId,
         string userText,
         string reply,
         string? frameId,
         CancellationToken cancellationToken)
     {
-        if (_transcript is null)
+        var transcript = ResolveTranscript(pinnedPersonaId);
+        if (transcript is null)
             return;
 
         try
@@ -265,10 +387,10 @@ public sealed class ChatSendHandler
             var assistantFrameId = string.IsNullOrWhiteSpace(frameId) ? null : frameId;
             var userFrameId = assistantFrameId is null ? null : assistantFrameId + ":user";
 
-            await _transcript
+            await transcript
                 .AppendAsync(conversationId, "user", userText, "desk", userFrameId, null, cancellationToken)
                 .ConfigureAwait(false);
-            await _transcript
+            await transcript
                 .AppendAsync(conversationId, "assistant", reply, "desk", assistantFrameId, null, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -279,6 +401,8 @@ public sealed class ChatSendHandler
     }
 
     private async Task WriteEpisodicAfterChatAsync(
+        IMemoryStore memory,
+        string personaDisplayName,
         string modelUserText,
         string reply,
         string provider,
@@ -286,9 +410,14 @@ public sealed class ChatSendHandler
     {
         try
         {
-            var episode = await AuthorChatEpisodicAsync(modelUserText, reply, provider, cancellationToken)
+            var episode = await AuthorChatEpisodicAsync(
+                    personaDisplayName,
+                    modelUserText,
+                    reply,
+                    provider,
+                    cancellationToken)
                 .ConfigureAwait(false);
-            var episodicId = await _memory
+            var episodicId = await memory
                 .WriteEpisodicAsync(episode, "chat", cancellationToken)
                 .ConfigureAwait(false);
 
@@ -301,8 +430,8 @@ public sealed class ChatSendHandler
                         .ConfigureAwait(false);
                     if (vector.Length > 0)
                     {
-                        await _memory
-                            .StoreEmbeddingAsync(
+                    await memory
+                        .StoreEmbeddingAsync(
                                 episodicId,
                                 vector,
                                 _embeddings.Model,
@@ -326,14 +455,14 @@ public sealed class ChatSendHandler
     }
 
     private async Task<string> AuthorChatEpisodicAsync(
+        string personaDisplayName,
         string userText,
         string assistantReply,
         string chatProvider,
         CancellationToken cancellationToken)
     {
         var template = EpisodicMemoryPrompt.BuildTemplateFallback(userText, assistantReply);
-        var personaName = _personaSession.GetActive().DisplayName;
-        var system = EpisodicMemoryPrompt.BuildSystemInstruction(personaName);
+        var system = EpisodicMemoryPrompt.BuildSystemInstruction(personaDisplayName);
         var userPayload = EpisodicMemoryPrompt.BuildUserPayload(userText, assistantReply);
 
         try
@@ -412,6 +541,7 @@ public sealed class ChatSendHandler
         string historySessionId,
         HashSet<string> dispatchedToolNames,
         List<ToolTraceEntry> toolTrace,
+        PersonaToolPolicy? toolPolicy,
         CancellationToken cancellationToken)
     {
         if (!_inferenceOptions.Enabled)
@@ -432,21 +562,30 @@ public sealed class ChatSendHandler
             historySessionId,
             prior.Count);
 
-        var tools = _toolRegistry.GetDefinitions();
         var trackingRegistry = new TrackingToolRegistry(_toolRegistry, dispatchedToolNames, toolTrace);
+        var filteredRegistry = new PolicyFilteredToolRegistry(trackingRegistry, toolPolicy);
+        var tools = filteredRegistry.GetDefinitions();
 
         Exception? lastError = null;
         string? replyText = null;
         string? provider = null;
 
         ToolLoopOptions? ollamaLoopOptions = ResolveForcedTool(text);
+        if (ollamaLoopOptions?.ForceToolName is string forced
+            && !PersonaToolPolicyFilter.Allows(toolPolicy, forced))
+        {
+            _logger.LogInformation(
+                "Forced tool {Tool} dropped by persona tool policy",
+                forced);
+            ollamaLoopOptions = null;
+        }
 
         if (replyText is null && _inferenceOptions.Enabled)
         {
             try
             {
                 var reply = await _inference
-                    .CompleteWithToolsAsync(messages, tools, trackingRegistry, cancellationToken, ollamaLoopOptions)
+                    .CompleteWithToolsAsync(messages, tools, filteredRegistry, cancellationToken, ollamaLoopOptions)
                     .ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(reply))
                 {
@@ -608,6 +747,96 @@ public sealed class ChatSendHandler
         return "ws:" + connectionSessionId.ToString("N");
     }
 
+    private IChatTranscriptStore? ResolveTranscript(string pinnedPersonaId)
+    {
+        if (_storeHub is not null)
+            return _storeHub.GetTranscriptStore(pinnedPersonaId);
+        return _transcript;
+    }
+
+    private static ChatPin ResolvePin(
+        string mode,
+        string foregroundId,
+        PersonaPack foregroundPack,
+        string? requestedPersonaId)
+    {
+        if (string.Equals(mode, IHostChatMode.Many, StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(requestedPersonaId))
+            {
+                return ChatPin.Fail(
+                    "chat.persona_required",
+                    "chat.send payload.personaId is required when host mode is many.");
+            }
+
+            string requested;
+            try
+            {
+                requested = PersonaMemoryPaths.NormalizePersonaId(requestedPersonaId);
+            }
+            catch (ArgumentException ex)
+            {
+                return ChatPin.Fail("chat.persona_invalid", ex.Message);
+            }
+
+            if (string.Equals(requested, foregroundId, StringComparison.OrdinalIgnoreCase))
+                return ChatPin.Ready(foregroundPack);
+
+            return new ChatPin(true, null, null, true, requested, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(requestedPersonaId))
+            return ChatPin.Ready(foregroundPack);
+
+        string requestedOne;
+        try
+        {
+            requestedOne = PersonaMemoryPaths.NormalizePersonaId(requestedPersonaId);
+        }
+        catch (ArgumentException ex)
+        {
+            return ChatPin.Fail("chat.persona_invalid", ex.Message);
+        }
+
+        if (!string.Equals(requestedOne, foregroundId, StringComparison.OrdinalIgnoreCase))
+        {
+            return ChatPin.Fail(
+                "chat.persona_rejected",
+                "Host mode is one. chat.send personaId must be the foreground persona, or omitted.");
+        }
+
+        return ChatPin.Ready(foregroundPack);
+    }
+
+    private static Task SendChatErrorAsync(
+        WebSocket socket,
+        string? frameId,
+        string code,
+        string message,
+        CancellationToken cancellationToken) =>
+        WsFrameSender.SendFrameAsync(
+            socket,
+            SoulCoreFrame.Create(
+                SoulCoreFrameTypes.Error,
+                new { code, message },
+                id: frameId),
+            cancellationToken);
+
+    private readonly record struct ChatPin(
+        bool Ok,
+        string? Code,
+        string? Message,
+        bool LoadPack,
+        string PersonaId,
+        PersonaPack? Pack)
+    {
+        public static ChatPin Fail(string code, string message) =>
+            new(false, code, message, false, string.Empty, null);
+
+        public static ChatPin Ready(PersonaPack pack) =>
+            new(true, null, null, false, pack.PersonaId, pack);
+    }
+
     private static string? ExtractSessionId(JsonElement? payload)
     {
         if (payload is null || payload.Value.ValueKind != JsonValueKind.Object)
@@ -623,6 +852,15 @@ public sealed class ChatSendHandler
             return null;
         if (payload.Value.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
             return textProp.GetString();
+        return null;
+    }
+
+    private static string? ExtractPersonaId(JsonElement? payload)
+    {
+        if (payload is null || payload.Value.ValueKind != JsonValueKind.Object)
+            return null;
+        if (payload.Value.TryGetProperty("personaId", out var id) && id.ValueKind == JsonValueKind.String)
+            return id.GetString();
         return null;
     }
 

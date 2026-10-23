@@ -19,7 +19,7 @@ public enum WsConnectionState
 
 /// <summary>
 /// Presence WebSocket client for SoulCore Host.
-/// Default: ws://127.0.0.1:7700/ws (loopback only). No LLM calls from UI.
+/// Default: ws://127.0.0.1:7720/ws (loopback only). No LLM calls from UI.
 /// </summary>
 public sealed class SoulCoreWsClient : IAsyncDisposable
 {
@@ -104,15 +104,30 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
     public async Task<bool> SendChatAsync(
         string text,
         string? quotedText = null,
+        string? personaId = null,
         CancellationToken cancellationToken = default)
     {
-        object payload = string.IsNullOrWhiteSpace(quotedText)
-            ? new { text, sessionId = "presence-local" }
-            : new { text, quotedText = quotedText.Trim(), sessionId = "presence-local" };
-
-        var frame = SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, payload);
-
+        var frame = BuildChatSendFrame(text, quotedText, personaId);
         return await SendFrameAsync(frame, "chat.send", cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// chat.send for the thread being sent. <paramref name="personaId"/> is the foreground in One
+    /// and the open thread in Many. This frame does not activate a persona.
+    /// </summary>
+    public static SoulCoreFrame BuildChatSendFrame(string text, string? quotedText, string? personaId)
+    {
+        var quoted = string.IsNullOrWhiteSpace(quotedText) ? null : quotedText.Trim();
+        var id = string.IsNullOrWhiteSpace(personaId) ? null : personaId.Trim();
+        return SoulCoreFrame.Create(
+            SoulCoreFrameTypes.ChatSend,
+            new
+            {
+                text,
+                quotedText = quoted,
+                sessionId = "presence-local",
+                personaId = id
+            });
     }
 
     /// <summary>

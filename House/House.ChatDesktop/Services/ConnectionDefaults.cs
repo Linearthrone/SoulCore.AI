@@ -7,7 +7,7 @@ namespace House.ChatDesktop.Services;
 public static class ConnectionDefaults
 {
     public const string DefaultHost = "127.0.0.1";
-    public const int DefaultPort = 7700;
+    public const int DefaultPort = 7720;
     public const string HealthPath = "/health";
     public const string WsPath = "/ws";
 

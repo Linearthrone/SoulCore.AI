@@ -4,7 +4,7 @@
   Start House.ChatDesktop (Avalonia desktop GUI).
 .DESCRIPTION
   Runs from repo root. Host is separate — start with SoulCore/scripts/start-soulcore.ps1
-  if chat/WS is needed (defaults 127.0.0.1:7700).
+  if chat/WS is needed (defaults 127.0.0.1:7720).
 .EXAMPLE
   .\start-desktopgui.ps1
   .\start-desktopgui.ps1 -Configuration Debug

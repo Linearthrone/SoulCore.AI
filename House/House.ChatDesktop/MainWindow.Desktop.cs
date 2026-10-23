@@ -12,6 +12,33 @@ namespace House.ChatDesktop;
 
 public partial class MainWindow
 {
+    private void ApplyViewportStillChrome()
+    {
+        if (ScreenPanel is not null)
+        {
+            ScreenPanel.Classes.Remove("metal");
+            ScreenPanel.Classes.Remove("glass");
+            ScreenPanel.Background = new SolidColorBrush(ViewportStill.FillColor);
+            ScreenPanel.BorderBrush = new SolidColorBrush(ViewportStill.BorderColor);
+            ScreenPanel.BorderThickness = new Thickness(ViewportStill.BorderDip);
+            ScreenPanel.Opacity = ViewportStill.WindowOpacity;
+            ScreenPanel.Focusable = true;
+        }
+
+        if (DesktopViewFrame is not null)
+        {
+            DesktopViewFrame.Classes.Remove("carbon");
+            DesktopViewFrame.Classes.Remove("inset");
+            DesktopViewFrame.Background = new SolidColorBrush(ViewportStill.FillColor);
+            DesktopViewFrame.BorderBrush = new SolidColorBrush(ViewportStill.BorderColor);
+            DesktopViewFrame.BorderThickness = new Thickness(ViewportStill.BorderDip);
+            DesktopViewFrame.Opacity = ViewportStill.WindowOpacity;
+        }
+
+        if (DesktopViewTitle is not null)
+            DesktopViewTitle.Text = ViewportStill.Label;
+    }
+
     private async Task RefreshDesktopViewAsync()
     {
         if (_desktopViewBusy) return;
@@ -45,6 +72,8 @@ public partial class MainWindow
                 DesktopViewImage.Source = null;
                 DesktopViewImage.IsVisible = false;
             }
+
+            _viewport?.ShowStill(null);
 
             if (DesktopViewEmptyText is not null)
                 DesktopViewEmptyText.IsVisible = true;
@@ -162,6 +191,8 @@ public partial class MainWindow
                 DesktopViewImage.Source = bmp;
                 DesktopViewImage.IsVisible = true;
             }
+
+            _viewport?.ShowStill(bmp);
 
             if (DesktopViewEmptyText is not null)
                 DesktopViewEmptyText.IsVisible = false;
@@ -405,7 +436,7 @@ public partial class MainWindow
         if (DesktopViewImage?.Source is { } src)
             image.Source = src;
 
-        var surface = new Grid { Background = new SolidColorBrush(Color.Parse("#12101C")) };
+        var surface = new Grid { Background = new SolidColorBrush(ViewportStill.FillColor), Opacity = ViewportStill.WindowOpacity };
         surface.Children.Add(image);
         surface.Children.Add(layer);
         surface.SizeChanged += (_, _) => PositionDesktopCursor(surface, layer, cursor);
@@ -428,10 +459,12 @@ public partial class MainWindow
 
         var win = new Window
         {
-            Title = "Companion screen",
+            Title = ForegroundChromeNames.ViewportTitle(_foregroundNames.Viewport),
             Width = 960,
             Height = 640,
-            Background = Res("BgBrush"),
+            Opacity = ViewportStill.WindowOpacity,
+            Background = new SolidColorBrush(ViewportStill.FillColor),
+            TransparencyLevelHint = [WindowTransparencyLevel.None],
             Foreground = Res("TextBrush"),
             Content = root,
             Topmost = _screenTop.IsOn

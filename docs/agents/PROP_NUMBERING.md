@@ -1,7 +1,7 @@
 ---
 type: config
 id: PROP-NUMBERING
-updated: 2026-10-05
+updated: 2026-10-22
 owner: PM-01 / TT-01
 ---
 
@@ -55,6 +55,7 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-13-playwright-frame-not-leaked-text | Open Playwright to a URL and show the frame; chat must not echo `<execute_tool>` | **BED Pass** 2026-09-29 — Avenue A 13.1–13.3; QA Windows smoke pending | 13.1–13.3 BED |
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
 | PROP-15-persona-creation-platform | CreatorEdition PersonaPack + quarantine + in-app create | **Complete (platform)** — stress deferred; UI rewrite next; commit pending | 15.0–15.30 |
+| PROP-16-presence-glass-overlay | Frameless glass drawers, radial, tray, live quarter-screen guest, trait catalog | **Complete (client)** 2026-10-23 — ports 7720/17920; ALLSTOP aimed at those only. Commit pending | 16.0–16.8b |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -65,7 +66,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **16**.
+Next free `N`: **17**.
 
 ## Open items (not on `main`)
 
@@ -126,6 +127,18 @@ Next free `N`: **16**.
 | **PROP-15.15b** | OPS-HOME | Host up after 15.15 — **Pass** (`PROP-15.15b-OPSHOME-to-PM01.md`) |
 | **PROP-15.16** | FED-01 | Client NormalizeInferenceModel dedupe — **Pass** |
 | **PROP-15.16b** | FED-01 | Remap `resolvedInferenceModel` client DTO — **Pass** |
+| **PROP-16.1** | FED-01 | Glass shell — **Pass** (client). Build green; 11 tests. Live tray clicks not driven (`PROP-16.1-FED01-to-PM01.md`) |
+| **PROP-16.2** | FED-01 | Live quarter-screen guest — **Stop**. SetParent does not keep a scaled click honest. No frosted stand-in (`PROP-16.2-FED01-to-PM01.md`) |
+| **PROP-16.2b** | FED-01 | Opaque still — **Pass** (client). No HWND parent (`PROP-16.2b-FED01-to-PM01.md`) |
+| **PROP-16.3** | BED-01 | Archive write — **Pass**. `POST /api/personas/{personaId}/archive` (`PROP-16.3-BED01-to-PM01.md`) |
+| **PROP-16.3b** | FED-01 | Hide archived local thread — **Pass** (client). 7 tests (`PROP-16.3b-FED01-to-PM01.md`) |
+| **PROP-16.4** | BED-01 | Trait catalog and description draft — **Pass**. 31 tests (`PROP-16.4-BED01-to-PM01.md`) |
+| **PROP-16.5** | FED-01 | Creation and contacts bound to the catalog — **Pass** (client). 8 catalog tests, 30 with wizard regression (`PROP-16.5-FED01-to-PM01.md`) |
+| **PROP-16.6** | BED-01 | Chat-multi — **Pass**. Mode defaults to one; only the foreground runs tools (`PROP-16.6-BED01-to-PM01.md`) |
+| **PROP-16.6b** | FED-01 | One/Many chip and pinned send — **Pass** (client). 8 tests (`PROP-16.6b-FED01-to-PM01.md`) |
+| **PROP-16.7** | FED-01 | Top-edge VM drawer, lighter radial, Create agent caption hit — **Pass** (client). 3 tests (`PROP-16.7-FED01-to-PM01.md`) |
+| **PROP-16.8** | OPS-01 | Port block — **Pass**. Host 7720, bridge 17920, Tailscale 7720/8453 (`PROP-16.8-OPS01-to-PM01.md`) |
+| **PROP-16.8b** | OPS-01 | ALLSTOP targets 7720, 7721, and 17920 only — **Pass** (`PROP-16.8b-OPS01-to-PM01.md`) |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.

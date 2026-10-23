@@ -12,6 +12,7 @@ public sealed class ActivePersonaSession : IPersonaSession
     private readonly IPersonaPackStore _store;
     private readonly IPersonaStoreHub _stores;
     private readonly ILogger<ActivePersonaSession> _logger;
+    private readonly IForegroundToolLoopGate? _toolLoops;
     private readonly object _gate = new();
     private PersonaPack _active;
     private readonly Dictionary<string, PersonaPack> _loaded =
@@ -20,11 +21,13 @@ public sealed class ActivePersonaSession : IPersonaSession
     public ActivePersonaSession(
         IPersonaPackStore store,
         IPersonaStoreHub stores,
-        ILogger<ActivePersonaSession> logger)
+        ILogger<ActivePersonaSession> logger,
+        IForegroundToolLoopGate? toolLoops = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _stores = stores ?? throw new ArgumentNullException(nameof(stores));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _toolLoops = toolLoops;
         _active = PersonaPack.CreateBlank();
         _loaded[_active.PersonaId] = _active.Clone();
     }
@@ -101,6 +104,10 @@ public sealed class ActivePersonaSession : IPersonaSession
     public async Task SetActiveAsync(string personaId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(personaId);
+        string previousId;
+        lock (_gate)
+            previousId = _active.PersonaId;
+
         await _store.SetActivePersonaIdAsync(personaId, cancellationToken).ConfigureAwait(false);
         var pack = await _store.GetAsync(personaId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Unknown personaId '{personaId}'.");
@@ -112,6 +119,11 @@ public sealed class ActivePersonaSession : IPersonaSession
             _loaded.Clear();
             _loaded[pack.PersonaId] = pack.Clone();
         }
+
+        // PROP-16.6: an in-flight tool loop pinned to the previous foreground dies here.
+        // Background chats never register, so they keep running.
+        if (!string.Equals(previousId, pack.PersonaId, StringComparison.OrdinalIgnoreCase))
+            _toolLoops?.Cancel(previousId);
 
         await _stores.SwitchActiveAsync(pack.PersonaId, cancellationToken).ConfigureAwait(false);
 

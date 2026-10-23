@@ -104,6 +104,7 @@ public sealed class PresenceUpdateService
         try
         {
             await _manager.DownloadUpdatesAsync(update, progress).ConfigureAwait(false);
+            CuaLampClear.TryClearNow();
             _manager.ApplyUpdatesAndRestart(update);
             return PresenceUpdateApplyResult.Restarting();
         }

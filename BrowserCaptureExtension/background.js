@@ -1,5 +1,5 @@
-const BRIDGE_URL = "http://127.0.0.1:17891";
-const CAST_WS_URL = "ws://127.0.0.1:17891/ws/cast";
+const BRIDGE_URL = "http://127.0.0.1:17920";
+const CAST_WS_URL = "ws://127.0.0.1:17920/ws/cast";
 const POLL_MS = 400;
 const STREAM_MIN_MS = 750;
 const DEBUGGER_IDLE_MS = 60000;

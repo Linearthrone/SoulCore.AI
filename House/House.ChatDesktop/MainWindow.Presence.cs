@@ -405,6 +405,12 @@ public partial class MainWindow
 
     private void HouseDrawerToggle_Click(object? sender, RoutedEventArgs e)
     {
+        if (_houseDetached)
+        {
+            _houseWindow?.Hide();
+            return;
+        }
+
         _houseDrawerOpen = !_houseDrawerOpen;
         if (ServicesPanel is not null)
             ServicesPanel.IsVisible = _houseDrawerOpen;
@@ -613,6 +619,7 @@ public partial class MainWindow
         await ProbeHealthAsync();
         ApplySystemStatus(_lastHealth);
         RefreshCompanionTokenStatus();
+        await RefreshPersonaModeAsync().ConfigureAwait(true);
     }
 
     private void WirePushToTalk()

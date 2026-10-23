@@ -122,6 +122,133 @@ public class PersonaPackMergeTests
         }
     }
 
+    [Fact]
+    public async Task OldPackJson_MissingNewKeys_KeepsStoredSix_AndNewTraitDefaults()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sc-persona-old-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "legacy-pack"));
+        var path = Path.Combine(root, "legacy-pack", "pack.json");
+        await File.WriteAllTextAsync(path, """
+            {
+              "personaId": "legacy-pack",
+              "displayName": "Legacy",
+              "humanAddress": "Kayleigh",
+              "contactId": "legacy-pack",
+              "identityBlurb": "## LIMITS\nKeep this.",
+              "toolPolicy": { "allowDesktop": false, "allowBrowser": true, "allowEmail": false },
+              "traits": {
+                "warmth": 0.81,
+                "directness": 0.22,
+                "formality": 0.91,
+                "playfulness": 0.11,
+                "boundaryStrictness": 0.31,
+                "recallBias": 0.72
+              }
+            }
+            """);
+        try
+        {
+            var store = new PersonaPackStore(root, NullLogger<PersonaPackStore>.Instance);
+            var loaded = await store.GetAsync("legacy-pack");
+            Assert.NotNull(loaded);
+            Assert.Equal(string.Empty, loaded!.PhysicalDescription);
+            Assert.Equal("## LIMITS\nKeep this.", loaded.IdentityBlurb);
+            Assert.False(loaded.ToolPolicy.AllowDesktop);
+            Assert.True(loaded.ToolPolicy.AllowBrowser);
+            Assert.False(loaded.ToolPolicy.AllowEmail);
+
+            var stored = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["warmth"] = 0.81,
+                ["directness"] = 0.22,
+                ["formality"] = 0.91,
+                ["playfulness"] = 0.11,
+                ["boundaryStrictness"] = 0.31,
+                ["recallBias"] = 0.72
+            };
+            foreach (var trait in PersonaTraitCatalog.All)
+            {
+                var actual = trait.Get(loaded.Traits);
+                if (stored.TryGetValue(trait.JsonName, out var expected))
+                    Assert.True(Math.Abs(expected - actual) <= 1e-9, trait.JsonName);
+                else
+                    Assert.True(trait.IsDefault(actual), trait.JsonName);
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public void SparseNewTrait_PreservesOriginalSix_AndToolFlags()
+    {
+        var existing = BuildLexiLikePack();
+        var patch = Parse("""{ "traits": { "warmth": 0.1, "verbosity": 0.9 } }""");
+
+        Assert.True(PersonaPackMerge.TryApplySparsePatch(existing, patch, out var merged, out var error), error);
+        Assert.Equal(0.1, merged.Traits.Warmth);
+        Assert.Equal(0.9, merged.Traits.Verbosity);
+        Assert.Equal(0.55, merged.Traits.Directness);
+        Assert.Equal(0.23, merged.Traits.BoundaryStrictness);
+        Assert.Equal(0.7, merged.Traits.RecallBias);
+        Assert.True(merged.Traits.Caution > 0);
+        Assert.True(PersonaTraitCatalog.All.First(t => t.JsonName == "caution").IsDefault(merged.Traits.Caution));
+        Assert.Equal("## LIMITS\nNo real-world harm.", merged.IdentityBlurb);
+        Assert.True(merged.ToolPolicy.AllowDesktop);
+        Assert.False(merged.ToolPolicy.AllowEmail);
+        Assert.True(merged.ToolPolicy.AllowBrowser);
+    }
+
+    [Fact]
+    public void SparsePhysicalDescription_PreservesBlurbAndTraits()
+    {
+        var existing = BuildLexiLikePack();
+        var patch = Parse("""{ "physicalDescription": "silver hair" }""");
+
+        Assert.True(PersonaPackMerge.TryApplySparsePatch(existing, patch, out var merged, out var error), error);
+        Assert.Equal("silver hair", merged.PhysicalDescription);
+        Assert.Equal("## LIMITS\nNo real-world harm.", merged.IdentityBlurb);
+        Assert.Equal(0.8, merged.Traits.Warmth);
+        Assert.False(merged.ToolPolicy.AllowEmail);
+    }
+
+    [Fact]
+    public async Task PhysicalDescription_Over1000_Rejected_Trimmed1000_Saves()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sc-persona-desc-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new PersonaPackStore(root, NullLogger<PersonaPackStore>.Instance);
+            var pack = BuildLexiLikePack();
+            pack.PhysicalDescription = "short";
+            await store.UpsertAsync(pack);
+            var path = Path.Combine(root, "lexi", "pack.json");
+            var before = await File.ReadAllTextAsync(path);
+
+            pack.PhysicalDescription = "  " + new string('c', 1001) + "  ";
+            var rejected = await Assert.ThrowsAsync<ArgumentException>(() => store.UpsertAsync(pack));
+            Assert.Contains("1000", rejected.Message, StringComparison.Ordinal);
+            Assert.Equal(before, await File.ReadAllTextAsync(path));
+
+            var core = new string('b', 1000);
+            pack.PhysicalDescription = "  " + core + "\n";
+            var saved = await store.UpsertAsync(pack);
+            Assert.Equal(core, saved.PhysicalDescription);
+            var reloaded = await store.GetAsync("lexi");
+            Assert.Equal(core, reloaded!.PhysicalDescription);
+            Assert.Equal("## LIMITS\nNo real-world harm.", reloaded.IdentityBlurb);
+            Assert.False(reloaded.ToolPolicy.AllowEmail);
+            Assert.Equal(0.23, reloaded.Traits.BoundaryStrictness);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { /* best-effort */ }
+        }
+    }
+
     private static PersonaPack BuildLexiLikePack() => new()
     {
         PersonaId = "lexi",

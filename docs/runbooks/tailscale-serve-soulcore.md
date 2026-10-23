@@ -1,9 +1,9 @@
-# Runbook: Tailscale serve → SoulCore Host (:7700)
+# Runbook: Tailscale serve → SoulCore Host (:7720)
 
 **Audience:** OPS / phone-companion setup  
 **Goal:** Let a phone on the same Tailscale tailnet reach `SoulCore.Host` without opening a LAN / non-loopback bind (SEC-004 / SEC-152).  
-**Host stays:** `127.0.0.1:7700` — Tailscale **serve** proxies onto loopback.  
-**Do not:** bind Host to `0.0.0.0`, LAN IP, or document Funnel (public internet) as the Phase 0 path.
+**Host stays:** `127.0.0.1:7720` — Tailscale **serve** proxies onto loopback.  
+**Do not:** bind Host to `0.0.0.0`, LAN IP, or document Funnel (public internet) as the Phase 0 path. Do not run `tailscale serve` off for **7700**, **8443**, or **8444** (the other stack). This tree's off switch removes TCP **7720** and HTTPS **8453** only.
 
 Related: SEC-152 (see git history / `docs/archive/`); companion remote path shipped.
 
@@ -13,7 +13,7 @@ Related: SEC-152 (see git history / `docs/archive/`); companion remote path ship
 
 | Piece | Requirement |
 | --- | --- |
-| Host PC | Tailscale installed + logged in; SoulCore Host running on loopback `:7700` |
+| Host PC | Tailscale installed + logged in; SoulCore Host running on loopback `:7720` |
 | Phone | Tailscale app installed + same Tailscale account / tailnet |
 | Admin console | Tailnet **HTTPS** certificates enabled (DNS → Enable HTTPS) if using HTTPS serve |
 | Host config | `AllowedHosts` must accept the MagicDNS name / Tailscale IP (see §4) |
@@ -58,60 +58,60 @@ dotnet run --project SoulCore/SoulCore.Host -c Release
 Verify locally (must work before serve matters):
 
 ```powershell
-curl.exe -sS http://127.0.0.1:7700/health
+curl.exe -sS http://127.0.0.1:7720/health
 ```
 
 Expect JSON with `"status":"ok"` and `"bind":"127.0.0.1"`.
 
 ---
 
-## 3. Expose :7700 with Tailscale serve (tailnet only)
+## 3. Expose :7720 with Tailscale serve (tailnet only)
 
 CLI notes for Tailscale **1.98+** on Windows:
 
-- Put flags **before** the port target: `tailscale serve --https=8443 --bg --yes 7700`
-- Target is a bare port (`7700`), not `http://127.0.0.1:7700` (that form returns `invalid argument format`)
-- Default HTTPS on **443** fails if something else already serves 443 (e.g. existing Ollama proxy) → use **8443**
+- Put flags **before** the port target: `tailscale serve --https=8453 --bg --yes 7720`
+- Target is a bare port (`7720`), not `http://127.0.0.1:7720` (that form returns `invalid argument format`)
+- Default HTTPS on **443** fails if something else already serves 443 (e.g. existing Ollama proxy) → use **8453**
 - Prefer **serve** (tailnet). Do **not** use `tailscale funnel` for SoulCore Phase 0
 
 ### Recommended A — HTTPS reverse proxy (best for phone `wss://`)
 
 ```powershell
-tailscale serve --https=8443 --bg --yes 7700
+tailscale serve --https=8453 --bg --yes 7720
 tailscale serve status
 ```
 
 Expected status snippet:
 
 ```text
-https://<machine>.<tailnet>.ts.net:8443 (tailnet only)
-|-- / proxy http://127.0.0.1:7700
+https://<machine>.<tailnet>.ts.net:8453 (tailnet only)
+|-- / proxy http://127.0.0.1:7720
 ```
 
 Disable later:
 
 ```powershell
-tailscale serve --https=8443 off
+tailscale serve --https=8453 off
 ```
 
 ### Recommended B — TCP forward (plain `ws://` via Tailscale IP)
 
 ```powershell
-tailscale serve --tcp=7700 --bg --yes 7700
+tailscale serve --tcp=7720 --bg --yes 7720
 tailscale serve status
 ```
 
 Expected:
 
 ```text
-|-- tcp://100.x.y.z:7700
-|--> tcp://127.0.0.1:7700
+|-- tcp://100.x.y.z:7720
+|--> tcp://127.0.0.1:7720
 ```
 
 Disable later:
 
 ```powershell
-tailscale serve --tcp=7700 off
+tailscale serve --tcp=7720 off
 ```
 
 Both A and B can be active together. A is preferred for Android (`wss://`).
@@ -165,10 +165,10 @@ tailscale ip -4
 
 | Setting | Example (this machine, 2026-07-27) | Notes |
 | --- | --- | --- |
-| Health (HTTPS serve) | `https://kaia-reimagined.tailbf9ec2.ts.net:8443/health` | After AllowedHosts fix |
-| WS (HTTPS serve) | `wss://kaia-reimagined.tailbf9ec2.ts.net:8443/ws` | Preferred for phone |
-| Health (TCP serve) | `http://100.71.223.95:7700/health` | Tailscale IP |
-| WS (TCP serve) | `ws://100.71.223.95:7700/ws` | Plain WS on tailnet |
+| Health (HTTPS serve) | `https://kaia-reimagined.tailbf9ec2.ts.net:8453/health` | After AllowedHosts fix |
+| WS (HTTPS serve) | `wss://kaia-reimagined.tailbf9ec2.ts.net:8453/ws` | Preferred for phone |
+| Health (TCP serve) | `http://100.71.223.95:7720/health` | Tailscale IP |
+| WS (TCP serve) | `ws://100.71.223.95:7720/ws` | Plain WS on tailnet |
 
 Android companion settings should store the **WS base** (or full `…/ws` URL) plus whatever auth token FED/SEC specifies — never LAN `192.168…` for Phase 0.
 
@@ -180,13 +180,13 @@ Android companion settings should store the **WS base** (or full `…/ws` URL) p
 
 ```powershell
 # Local (always)
-curl.exe -sS http://127.0.0.1:7700/health
+curl.exe -sS http://127.0.0.1:7720/health
 
 # Via HTTPS serve
-curl.exe -sS -k https://kaia-reimagined.tailbf9ec2.ts.net:8443/health
+curl.exe -sS -k https://kaia-reimagined.tailbf9ec2.ts.net:8453/health
 
 # Via TCP serve (Tailscale IP)
-curl.exe -sS http://100.71.223.95:7700/health
+curl.exe -sS http://100.71.223.95:7720/health
 ```
 
 Expect `"status":"ok"`.

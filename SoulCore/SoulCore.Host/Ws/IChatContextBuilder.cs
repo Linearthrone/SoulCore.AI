@@ -1,3 +1,6 @@
+using SoulCore.Core.Persona;
+using SoulCore.Memory;
+
 namespace SoulCore.Host.Ws;
 
 /// <summary>
@@ -13,5 +16,18 @@ public interface IChatContextBuilder
         string userText,
         bool useToolLoop,
         string? desktopTargetWindowTitle,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Compose context for a persona the caller already pinned.
+    /// Does not read <see cref="SoulCore.Core.Persona.IPersonaSession.GetActive"/>.
+    /// </summary>
+    Task<ChatContext> BuildPinnedAsync(
+        string userText,
+        bool useToolLoop,
+        string? desktopTargetWindowTitle,
+        PersonaPack pinnedPack,
+        IMemoryStore pinnedMemory,
+        bool foregroundTurn,
         CancellationToken cancellationToken);
 }

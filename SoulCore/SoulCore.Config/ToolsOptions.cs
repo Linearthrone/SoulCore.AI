@@ -53,7 +53,7 @@ public sealed class ToolsOptions
 
     /// <summary>
     /// Browser backend: <c>playwright</c> (default / PROP-14 — Victoria Host Chromium),
-    /// or <c>native</c> (GuestVm / BrowserCaptureBridge :17891). When
+    /// or <c>native</c> (GuestVm / BrowserCaptureBridge :17920). When
     /// <c>playwright</c>, Host prefers it even if DesktopTargetWindowTitle is set
     /// (VM stays for desktop_* only; web Login uses Playwright).
     /// </summary>
@@ -86,11 +86,11 @@ public sealed class ToolsOptions
     /// </summary>
     public bool VmEmbedPane { get; set; }
 
-    /// <summary>Loopback base URL for native browser capture bridge (default :17891).</summary>
-    public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17891";
+    /// <summary>Loopback base URL for native browser capture bridge (default :17920).</summary>
+    public string BrowserBridgeUrl { get; set; } = "http://127.0.0.1:17920";
 
     /// <summary>Alias for bridge code (same value as <see cref="BrowserBridgeUrl"/>).</summary>
-    public const string DefaultBrowserBridgeBaseUrl = "http://127.0.0.1:17891/";
+    public const string DefaultBrowserBridgeBaseUrl = "http://127.0.0.1:17920/";
 
     /// <summary>Preferred name in bridge code; mirrors <see cref="BrowserBridgeUrl"/>.</summary>
     public string BrowserBridgeBaseUrl

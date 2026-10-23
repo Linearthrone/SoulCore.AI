@@ -27,7 +27,8 @@ public sealed class SqliteMemorySession : IAsyncDisposable, IDisposable {
     ApplyIfMissing("004","SoulCore.Memory.Migrations.004_victoria_workflows.sql");
     ApplyIfMissing("005","SoulCore.Memory.Migrations.005_episodic_source_model.sql");
     ApplyIfMissing("006","SoulCore.Memory.Migrations.006_victoria_journals.sql");
-    ApplyIfMissing("007","SoulCore.Memory.Migrations.007_chat_transcript.sql");}
+    ApplyIfMissing("007","SoulCore.Memory.Migrations.007_chat_transcript.sql");
+    ApplyIfMissing("008","SoulCore.Memory.Migrations.008_episodic_source_archive.sql");}
   private void ApplyIfMissing(string v, params string[] scripts){ if(IsMigrationApplied(v))return; foreach(var s in scripts) ExecuteScript(ReadEmbedded(s)); _logger.LogInformation("Applied Memory migration {Version} to {DbPath}", v, DatabasePath);} 
   private bool IsMigrationApplied(string v){ try{ using var c=_connection.CreateCommand(); c.CommandText="SELECT 1 FROM schema_migrations WHERE version = $version LIMIT 1;"; c.Parameters.AddWithValue("$version", v); var r=c.ExecuteScalar(); return r is not null and not DBNull;} catch(SqliteException){return false;}}
   private void ExecuteScript(string sql){using var c=_connection.CreateCommand();c.CommandText=sql;c.ExecuteNonQuery();}

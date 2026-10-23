@@ -121,6 +121,13 @@ public sealed class PersonaPackStore : IPersonaPackStore
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentException.ThrowIfNullOrWhiteSpace(pack.PersonaId);
 
+        var description = (pack.PhysicalDescription ?? string.Empty).Trim();
+        if (description.Length > PersonaPack.PhysicalDescriptionMaxLength)
+        {
+            throw new ArgumentException(
+                $"physicalDescription must be at most {PersonaPack.PhysicalDescriptionMaxLength} characters.");
+        }
+
         pack.PersonaId = PersonaMemoryPaths.NormalizePersonaId(pack.PersonaId);
         if (string.IsNullOrWhiteSpace(pack.DisplayName))
             pack.DisplayName = pack.PersonaId;
@@ -130,6 +137,7 @@ public sealed class PersonaPackStore : IPersonaPackStore
             pack.HumanAddress = "Friend";
         pack.Traits ??= new PersonaTraitScales();
         pack.ToolPolicy ??= new PersonaToolPolicy();
+        pack.PhysicalDescription = description;
         pack.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
         await EnsureSeededAsync(cancellationToken).ConfigureAwait(false);
@@ -291,6 +299,7 @@ public sealed class PersonaPackStore : IPersonaPackStore
             return null;
         pack.Traits ??= new PersonaTraitScales();
         pack.ToolPolicy ??= new PersonaToolPolicy();
+        pack.PhysicalDescription ??= string.Empty;
         return pack;
     }
 

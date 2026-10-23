@@ -88,6 +88,7 @@ public partial class MainWindow : Window
     private DateTimeOffset? _lastChatActivityUtc;
     private DateTimeOffset? _lastWantUtc;
     private string? _pendingImagePath;
+    private string? _loadedTranscriptKey;
     private Bitmap? _pendingImageBitmap;
     private Panel? _hudDock;
     private Panel? _chatDock;
@@ -98,6 +99,7 @@ public partial class MainWindow : Window
     {
         PresenceStartupLog.Write("MainWindow ctor begin");
         InitializeComponent();
+        ApplyViewportStillChrome();
         PresenceStartupLog.Write("InitializeComponent done");
         TranscriptList.ItemsSource = _messages;
         EndpointText.Text = ConnectionDefaults.DisplayEndpoint;
@@ -147,6 +149,7 @@ public partial class MainWindow : Window
             await _ws.ConnectAsync();
             await ProbeHealthAsync();
             await RefreshPersonasAsync().ConfigureAwait(true);
+            await RefreshPersonaModeAsync().ConfigureAwait(true);
             _pollTimer.Start();
             _desktopViewTimer.Start();
             _browserViewTimer.Start();
@@ -175,14 +178,21 @@ public partial class MainWindow : Window
             _stack.Dispose();
             _chatHistory.Dispose();
             _pendingImageBitmap?.Dispose();
+            _hotkeys?.Dispose();
+            foreach (var bitmap in _threadBitmaps)
+                bitmap.Dispose();
         };
+        InitGlassShell();
     }
 
     private void LoadChatHistory()
     {
+        var key = ChatTranscriptKey.ForPersona(TranscriptPersonaId());
+        _loadedTranscriptKey = key;
+        _streamingAssistant = null;
         try
         {
-            var prior = _chatHistory.LoadRecent();
+            var prior = _chatHistory.LoadRecent(key);
             _messages.Clear();
             foreach (var m in prior)
             {
@@ -220,6 +230,20 @@ public partial class MainWindow : Window
 
     private void NavSettings_Click(object? sender, RoutedEventArgs e)
     {
+        if (_settingsDetached)
+        {
+            if (_settingsWindow is { IsVisible: true })
+            {
+                _settingsWindow.Hide();
+                if (NavSettings is not null)
+                    NavSettings.Classes.Remove("active");
+                return;
+            }
+
+            ShowSettingsView();
+            return;
+        }
+
         if (SettingsView is { IsVisible: true })
         {
             ShowPresenceView();
@@ -231,6 +255,19 @@ public partial class MainWindow : Window
 
     private void ShowPresenceView()
     {
+        if (_settingsDetached)
+        {
+            _settingsWindow?.Hide();
+            if (NavSettings is not null)
+                NavSettings.Classes.Remove("active");
+            if (NavPresence is not null)
+                NavPresence.IsChecked = true;
+            ShowChatDrawer();
+            _ = RefreshDesktopViewAsync();
+            _ = RefreshVictoriaBrowserViewAsync();
+            return;
+        }
+
         if (PresenceView is null || SettingsView is null) return;
         PresenceView.IsVisible = true;
         SettingsView.IsVisible = false;
@@ -245,6 +282,23 @@ public partial class MainWindow : Window
 
     private void ShowSettingsView()
     {
+        if (_settingsDetached)
+        {
+            if (SettingsView is not null)
+                SettingsView.IsVisible = true;
+            if (NavSettings is not null && !NavSettings.Classes.Contains("active"))
+                NavSettings.Classes.Add("active");
+            _settingsWindow?.Show();
+            _settingsWindow?.Activate();
+            ApplySystemStatus(_lastHealth);
+            SeedNotificationControls();
+            UpdateIdentityDetail();
+            _ = RefreshPersonasAsync();
+            _ = RefreshToolsAccessAsync();
+            _ = RefreshEmailAccountsAsync();
+            return;
+        }
+
         if (PresenceView is null || SettingsView is null) return;
         PresenceView.IsVisible = false;
         SettingsView.IsVisible = true;
@@ -272,12 +326,13 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Maximized)
             return;
         BeginMoveDrag(e);
+        if (DrawerDismiss.IsMostlyOffScreen(this))
+            Hide();
     }
 
-    private void Minimize_Click(object? sender, RoutedEventArgs e) =>
-        WindowState = WindowState.Minimized;
+    private void Minimize_Click(object? sender, RoutedEventArgs e) => Hide();
 
-    private void Close_Click(object? sender, RoutedEventArgs e) => Close();
+    private void Close_Click(object? sender, RoutedEventArgs e) => Hide();
 
     private void IdentitySave_Click(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
 
@@ -521,6 +576,15 @@ public partial class MainWindow : Window
         var hasImage = !string.IsNullOrWhiteSpace(_pendingImagePath) && _pendingImageBitmap is not null;
         if (string.IsNullOrEmpty(text) && !hasImage) return;
 
+        var pin = ChatSendPin.Resolve(_modeBoard.Displayed, _activePersonaId, TranscriptPersonaId());
+        if (!pin.Send || pin.Activate || string.IsNullOrWhiteSpace(pin.PersonaId))
+        {
+            AppendSystemNotice(PersonaChatMode.IsMany(_modeBoard.Displayed)
+                ? "Many mode did not send. The open thread has no persona."
+                : "One mode did not send. The open thread is not the foreground persona.");
+            return;
+        }
+
         // Host chat.send is text-only today — UI ready; attach note in text when image present.
         if (hasImage && string.IsNullOrEmpty(text))
             text = $"[image] {IoPath.GetFileName(_pendingImagePath)}";
@@ -560,7 +624,7 @@ public partial class MainWindow : Window
         UpdateEngagementState();
         ScrollTranscriptToEnd();
 
-        var sent = await _ws.SendChatAsync(text, quoted);
+        var sent = await _ws.SendChatAsync(text, quoted, pin.PersonaId);
         if (!sent)
         {
             SetTyping(false);
@@ -605,7 +669,7 @@ public partial class MainWindow : Window
 
     private void PersistMessage(ChatMessage message)
     {
-        try { _chatHistory.Save(message); }
+        try { _chatHistory.Save(message, ChatTranscriptKey.ForPersona(TranscriptPersonaId())); }
         catch { /* History must never break the live chat path. */ }
     }
 

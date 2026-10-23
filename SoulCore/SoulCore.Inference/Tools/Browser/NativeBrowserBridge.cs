@@ -10,7 +10,7 @@ namespace SoulCore.Inference.Tools.Browser;
 
 /// <summary>
 /// Native House Victoria browser bridge (BED-182) — HTTP to
-/// <c>BrowserCaptureBridge/bridge_server.py</c> on loopback :17891.
+/// <c>BrowserCaptureBridge/bridge_server.py</c> on loopback :17920.
 /// No Hermes. Requires the unpacked <c>BrowserCaptureExtension</c> in Chrome/Edge.
 /// </summary>
 public sealed class NativeBrowserBridge : IBrowserBridge
@@ -20,7 +20,7 @@ public sealed class NativeBrowserBridge : IBrowserBridge
         "(ALLSTART or SoulCore/scripts/start-browser-bridge.ps1) and load " +
         "BrowserCaptureExtension (chrome://extensions → Load unpacked)";
 
-    public const string DefaultBaseUrl = "http://127.0.0.1:17891";
+    public const string DefaultBaseUrl = "http://127.0.0.1:17920";
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {

@@ -11,13 +11,17 @@ public enum PersonaTraitBand
 }
 
 /// <summary>
-/// Compiles continuous trait scales into directive blocks for identity / voice /
-/// boundaries / recall bias. Band edges are fixed so slider mush becomes
-/// detectable prompt differences.
+/// Compiles continuous trait scales into at most eight directive lines.
+/// Band edges are fixed so a slider that crosses 0.34 or 0.67 changes the line.
+/// Traits sitting on their own property default stay out. If every trait is on
+/// its default, the marker is omitted too.
 /// </summary>
 public static class PersonaTraitCompiler
 {
     public const string Marker = "[Persona directives]";
+
+    /// <summary>Directive lines after <see cref="Marker"/>. The marker does not count.</summary>
+    public const int MaxDirectiveLines = 8;
 
     /// <summary>Low &lt; 0.34, Mid &lt; 0.67, else High.</summary>
     public static PersonaTraitBand ToBand(double scale)
@@ -31,30 +35,72 @@ public static class PersonaTraitCompiler
     }
 
     /// <summary>
-    /// Compiles trait bands into a directive block.
-    /// When <paramref name="hardLimitsFromBlurb"/> is true, Low soft
+    /// Compiles off-default traits into a directive block.
+    /// Boundary strictness, when emitted, is line 1 and counts toward the eight.
+    /// Other off-default traits follow by absolute distance from their own default,
+    /// ties broken by proposal catalog order.
+    /// When <paramref name="hardLimitsFromBlurb"/> is true, the low boundary line
     /// ("Flexible boundaries…") is omitted so IdentityBlurb LIMITS are not undercut
-    /// (PROP-15.17). Mid/High boundary lines still emit.
+    /// (PROP-15.17). That omission does not leave an empty slot.
     /// </summary>
     public static string Compile(PersonaPack pack, bool hardLimitsFromBlurb = false)
     {
         ArgumentNullException.ThrowIfNull(pack);
         var traits = pack.Traits ?? new PersonaTraitScales();
 
-        var warmth = ToBand(traits.Warmth);
-        var directness = ToBand(traits.Directness);
-        var formality = ToBand(traits.Formality);
-        var playfulness = ToBand(traits.Playfulness);
-        var boundaries = ToBand(traits.BoundaryStrictness);
-        var recall = ToBand(traits.RecallBias);
+        string? boundaryLine = null;
+        var rest = new List<DirectiveCandidate>(PersonaTraitCatalog.All.Count);
+        foreach (var trait in PersonaTraitCatalog.All)
+        {
+            var value = trait.Get(traits);
+            if (trait.IsDefault(value))
+                continue;
+
+            var band = ToBand(value);
+            if (hardLimitsFromBlurb && trait.OmitForHardLimits(band))
+                continue;
+
+            var line = trait.Line(band);
+            if (ReferenceEquals(trait, PersonaTraitCatalog.Boundary)
+                || trait.JsonName == PersonaTraitCatalog.Boundary.JsonName)
+            {
+                boundaryLine = line;
+                continue;
+            }
+
+            rest.Add(new DirectiveCandidate(trait.Order, Math.Abs(value - trait.Default), line));
+        }
+
+        if (boundaryLine is null && rest.Count == 0)
+            return string.Empty;
+
+        rest.Sort(static (a, b) =>
+        {
+            var byDistance = b.Distance.CompareTo(a.Distance);
+            return byDistance != 0 ? byDistance : a.Order.CompareTo(b.Order);
+        });
+
+        var selected = new List<string>(MaxDirectiveLines);
+        if (boundaryLine is not null)
+            selected.Add(boundaryLine);
+        foreach (var candidate in rest)
+        {
+            if (selected.Count >= MaxDirectiveLines)
+                break;
+            selected.Add(candidate.Text);
+        }
+
+        if (selected.Count == 0)
+            return string.Empty;
 
         var sb = new StringBuilder(512);
-        sb.Append(Marker).Append('\n');
-        sb.Append("Voice: ").Append(CompileVoice(warmth, directness, formality, playfulness)).Append('\n');
-        // Soft Low band fights hard LIMITS text — skip when blurb already marks LIMITS.
-        if (!(hardLimitsFromBlurb && boundaries == PersonaTraitBand.Low))
-            sb.Append("Boundaries: ").Append(CompileBoundaries(boundaries)).Append('\n');
-        sb.Append("Recall: ").Append(CompileRecall(recall));
+        sb.Append(Marker);
+        foreach (var line in selected)
+        {
+            sb.Append('\n');
+            sb.Append(line);
+        }
+
         return sb.ToString();
     }
 
@@ -64,58 +110,27 @@ public static class PersonaTraitCompiler
         PersonaTraitBand formality,
         PersonaTraitBand playfulness)
     {
-        var warmthText = warmth switch
-        {
-            PersonaTraitBand.Low => "cool and reserved",
-            PersonaTraitBand.Mid => "balanced warmth",
-            PersonaTraitBand.High => "warm and affirming",
-            _ => "balanced warmth"
-        };
-        var directText = directness switch
-        {
-            PersonaTraitBand.Low => "soften hard edges; ease into points",
-            PersonaTraitBand.Mid => "clear without bluntness",
-            PersonaTraitBand.High => "direct and concise; lead with the answer",
-            _ => "clear without bluntness"
-        };
-        var formalText = formality switch
-        {
-            PersonaTraitBand.Low => "casual register",
-            PersonaTraitBand.Mid => "plain professional register",
-            PersonaTraitBand.High => "formal, carefully worded register",
-            _ => "plain professional register"
-        };
-        var playText = playfulness switch
-        {
-            PersonaTraitBand.Low => "minimal humor",
-            PersonaTraitBand.Mid => "light humor when it fits",
-            PersonaTraitBand.High => "playful wit welcome",
-            _ => "light humor when it fits"
-        };
-        return $"{warmthText}; {directText}; {formalText}; {playText}.";
+        var warmthText = Body("warmth", warmth);
+        var directText = Body("directness", directness);
+        var formalText = Body("formality", formality);
+        var playText = Body("playfulness", playfulness);
+        return $"{TrimPeriod(warmthText)}; {TrimPeriod(directText)}; {TrimPeriod(formalText)}; {TrimPeriod(playText)}.";
     }
 
-    public static string CompileBoundaries(PersonaTraitBand band) => band switch
-    {
-        PersonaTraitBand.Low =>
-            "Flexible boundaries; ask before assuming consent on sensitive actions.",
-        PersonaTraitBand.Mid =>
-            "Respect stated limits; confirm before irreversible or private actions.",
-        PersonaTraitBand.High =>
-            "Strict boundaries; refuse unsafe/secret-handling asks and require explicit confirmation for tools that change state.",
-        _ =>
-            "Respect stated limits; confirm before irreversible or private actions."
-    };
+    public static string CompileBoundaries(PersonaTraitBand band) =>
+        Body("boundaryStrictness", band);
 
-    public static string CompileRecall(PersonaTraitBand band) => band switch
+    public static string CompileRecall(PersonaTraitBand band) =>
+        Body("recallBias", band);
+
+    private static string Body(string jsonName, PersonaTraitBand band)
     {
-        PersonaTraitBand.Low =>
-            "Prefer the present exchange; cite past memory only when clearly relevant.",
-        PersonaTraitBand.Mid =>
-            "Blend present ask with a light continuity nod when memory helps.",
-        PersonaTraitBand.High =>
-            "Bias toward continuity: weave prior shared context when it strengthens the reply.",
-        _ =>
-            "Blend present ask with a light continuity nod when memory helps."
-    };
+        var trait = PersonaTraitCatalog.All.First(t => t.JsonName == jsonName);
+        return trait.Body(band);
+    }
+
+    private static string TrimPeriod(string text) =>
+        text.EndsWith('.') ? text[..^1] : text;
+
+    private readonly record struct DirectiveCandidate(int Order, double Distance, string Text);
 }

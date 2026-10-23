@@ -68,6 +68,7 @@ public partial class MainWindow
 
             ClearVictoriaBrowserImage();
             ClearVictoriaBrowserEmbed("Host unreachable");
+            _viewport?.ClearGuest("Host unreachable");
             ClearVictoriaBrowserSoftCursor();
             return;
         }
@@ -115,8 +116,22 @@ public partial class MainWindow
         if (snap.FrameWidth > 0) _browserImagePixelWidth = snap.FrameWidth;
         if (snap.FrameHeight > 0) _browserImagePixelHeight = snap.FrameHeight;
 
-        if (embedded)
+        if (embedded && IsVmSurface(embed))
         {
+            // Frame size only. The VirtualBox HWND is not parented into the chat drawer or the quarter drawer.
+            if (_victoriaBrowserEmbedHost is not null)
+                ClearVictoriaBrowserEmbed(null);
+            _viewport?.OfferGuest(0, snap.FrameWidth, snap.FrameHeight);
+        }
+        else if (IsVmSurface(embed))
+        {
+            if (_victoriaBrowserEmbedHost is not null)
+                ClearVictoriaBrowserEmbed(embed?.Detail);
+            _viewport?.ClearGuest(embed?.Detail ?? "VirtualBox window is not ready.");
+        }
+        else if (embedded)
+        {
+            _viewport?.ReleaseGuest();
             ApplyVictoriaBrowserEmbed(embed!);
             // Hide JPEG while HWND is live — coord hover is for JPEG fallback only.
             if (VictoriaBrowserImage is not null)
@@ -126,6 +141,10 @@ public partial class MainWindow
             HideVictoriaBrowserCoords();
             ApplyVictoriaBrowserSoftCursor(snap, embed);
             return;
+        }
+        else
+        {
+            _viewport?.ReleaseGuest();
         }
 
         ClearVictoriaBrowserEmbed(embed?.Detail);
@@ -151,6 +170,9 @@ public partial class MainWindow
 
         ApplyVictoriaBrowserSoftCursor(snap, embed);
     }
+
+    private static bool IsVmSurface(BrowserEmbedSnapshot? embed) =>
+        string.Equals(embed?.Surface, "vm", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildHerScreenEmptyHint(BrowserViewSnapshot snap, BrowserEmbedSnapshot? embed)
     {

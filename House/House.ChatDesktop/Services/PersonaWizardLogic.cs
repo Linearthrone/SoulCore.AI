@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using SoulCore.Core.Persona;
 
 namespace House.ChatDesktop.Services;
 
@@ -31,7 +33,7 @@ public static class PersonaWizardLogic
     public const double BandMidExclusiveMax = 0.67;
 
     public const string HostGalleryRequiredMessage =
-        "Host persona packs required. Start SoulCore.Host on loopback :7700, then retry.";
+        "Host persona packs required. Start SoulCore.Host on loopback :7720, then retry.";
 
     /// <summary>Combo label for blank pack InferenceModel (inherit Host Inference:Model).</summary>
     public const string HostDefaultModelLabel = "Host default";
@@ -111,7 +113,8 @@ public static class PersonaWizardLogic
         string humanAddress,
         string? identityBlurb,
         PersonaTraitScalesInfo traits,
-        string? inferenceModel = null)
+        string? inferenceModel = null,
+        string? physicalDescription = null)
     {
         ArgumentNullException.ThrowIfNull(template);
         ArgumentNullException.ThrowIfNull(traits);
@@ -130,6 +133,7 @@ public static class PersonaWizardLogic
             HumanAddress = address,
             ContactId = id,
             IdentityBlurb = blurb,
+            PhysicalDescription = NormalizePhysicalDescription(physicalDescription),
             InferenceModel = NormalizeInferenceModel(inferenceModel),
             Traits = traits.Clone()
         };
@@ -153,6 +157,10 @@ public static class PersonaWizardLogic
                 ? (existing.ContactId ?? existing.PersonaId)
                 : edits.ContactId.Trim(),
             IdentityBlurb = edits.IdentityBlurb,
+            // Null means this edit did not touch the description. A string, including empty, wins.
+            PhysicalDescription = edits.PhysicalDescription is null
+                ? NormalizePhysicalDescription(existing.PhysicalDescription)
+                : NormalizePhysicalDescription(edits.PhysicalDescription),
             // Explicit edits.InferenceModel (including null) wins — blank clears pack override.
             InferenceModel = NormalizeInferenceModel(edits.InferenceModel),
             Traits = (edits.Traits ?? existing.Traits ?? new PersonaTraitScalesInfo()).Clone(),
@@ -274,29 +282,250 @@ public static class PersonaWizardLogic
     }
 
     /// <summary>
-    /// Local Low/Mid/High labels for slider preview. Cutovers
+    /// Local Low/Mid/High label. Cutovers
     /// <see cref="BandLowExclusiveMax"/> / <see cref="BandMidExclusiveMax"/> must match
-    /// PersonaTraitCompiler.ToBand — ChatDesktop stays Core-free (PROP-15.10).
+    /// PersonaTraitCompiler.ToBand.
+    /// </summary>
+    public static string BandLabel(double value)
+    {
+        var c = Math.Clamp(value, 0.0, 1.0);
+        if (c < BandLowExclusiveMax)
+            return "Low";
+        if (c < BandMidExclusiveMax)
+            return "Mid";
+        return "High";
+    }
+
+    /// <summary>
+    /// Local Low/Mid/High labels for the original six. The wizard's live preview
+    /// for a visible group is <see cref="FormatGroupBandPreview"/>.
     /// </summary>
     public static string FormatBandPreview(PersonaTraitScalesInfo traits)
     {
         ArgumentNullException.ThrowIfNull(traits);
-        static string Band(double v)
+        var sb = new StringBuilder(128);
+        sb.Append("Bands — warmth ").Append(BandLabel(traits.Warmth));
+        sb.Append(", directness ").Append(BandLabel(traits.Directness));
+        sb.Append(", formality ").Append(BandLabel(traits.Formality));
+        sb.Append(", playfulness ").Append(BandLabel(traits.Playfulness));
+        sb.Append(", boundaries ").Append(BandLabel(traits.BoundaryStrictness));
+        sb.Append(", recall ").Append(BandLabel(traits.RecallBias));
+        return sb.ToString();
+    }
+
+    /// <summary>Band labels for the trait group currently open in the wizard.</summary>
+    public static string FormatGroupBandPreview(PersonaTraitScalesInfo traits, PersonaTraitGroup group)
+    {
+        ArgumentNullException.ThrowIfNull(traits);
+        ArgumentNullException.ThrowIfNull(group);
+        var sb = new StringBuilder();
+        sb.Append(group.Title).Append(" — ");
+        for (var i = 0; i < group.Traits.Count; i++)
         {
-            var c = Math.Clamp(v, 0.0, 1.0);
-            if (c < BandLowExclusiveMax) return "Low";
-            if (c < BandMidExclusiveMax) return "Mid";
-            return "High";
+            if (i > 0)
+                sb.Append(", ");
+            var trait = group.Traits[i];
+            sb.Append(trait.Label).Append(' ').Append(BandLabel(traits.Read(trait)));
         }
 
-        var sb = new StringBuilder(128);
-        sb.Append("Bands — warmth ").Append(Band(traits.Warmth));
-        sb.Append(", directness ").Append(Band(traits.Directness));
-        sb.Append(", formality ").Append(Band(traits.Formality));
-        sb.Append(", playfulness ").Append(Band(traits.Playfulness));
-        sb.Append(", boundaries ").Append(Band(traits.BoundaryStrictness));
-        sb.Append(", recall ").Append(Band(traits.RecallBias));
         return sb.ToString();
+    }
+
+    /// <summary>Shown when AI help is clicked before this persona exists on the Host.</summary>
+    public const string DescriptionDraftNeedsSavedPersona =
+        "This persona must already be saved before AI help can draft a physical description.";
+
+    private static readonly JsonSerializerOptions TraitJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    /// <summary>
+    /// Group titles and sizes for the wizard. Trait names are not listed here;
+    /// each slice is taken from <see cref="PersonaTraitCatalog.All"/> in order.
+    /// Declared above <see cref="TraitGroups"/> so the static initializer can read it.
+    /// </summary>
+    private static readonly (string Title, int Count, bool More)[] TraitGroupPlan =
+    [
+        ("Voice", 6, false),
+        ("Judgment", 6, false),
+        ("Thinking and drive", 9, false),
+        ("With people", 6, false),
+        ("With other AIs", 3, false),
+        ("More traits", 20, true)
+    ];
+
+    /// <summary>
+    /// Creation groups in catalog order, then More traits for the remainder.
+    /// </summary>
+    public static IReadOnlyList<PersonaTraitGroup> TraitGroups { get; } = BuildTraitGroups();
+
+    /// <summary>
+    /// One group is visible at a time. More traits stays hidden until that step is the one open.
+    /// </summary>
+    public static bool ShowsTraitGroup(PersonaTraitGroup group, PersonaTraitGroup? opened)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        if (opened is null)
+            return false;
+        if (group.IsMoreTraits)
+            return opened.IsMoreTraits;
+        return !opened.IsMoreTraits && group.Start == opened.Start;
+    }
+
+    public static IReadOnlyList<PersonaWizardStep> BuildWizardSteps(bool isCreate)
+    {
+        var steps = new List<PersonaWizardStep>();
+        if (isCreate)
+            steps.Add(new PersonaWizardStep { Kind = PersonaWizardStepKind.Template });
+        steps.Add(new PersonaWizardStep { Kind = PersonaWizardStepKind.Identity });
+        steps.Add(new PersonaWizardStep { Kind = PersonaWizardStepKind.Model });
+        foreach (var group in TraitGroups)
+        {
+            steps.Add(new PersonaWizardStep
+            {
+                Kind = PersonaWizardStepKind.Traits,
+                Group = group
+            });
+        }
+
+        steps.Add(new PersonaWizardStep { Kind = PersonaWizardStepKind.Blurb });
+        steps.Add(new PersonaWizardStep { Kind = PersonaWizardStepKind.Quarantine });
+        return steps;
+    }
+
+    /// <summary>
+    /// Every catalog trait, in catalog order. An untouched value is that trait's catalog default.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double> BuildTraitSaveMap(PersonaTraitScalesInfo traits)
+    {
+        ArgumentNullException.ThrowIfNull(traits);
+        var map = new Dictionary<string, double>(PersonaTraitCatalog.All.Count, StringComparer.Ordinal);
+        foreach (var trait in PersonaTraitCatalog.All)
+            map[trait.JsonName] = traits.Read(trait);
+        return map;
+    }
+
+    /// <summary>
+    /// Missing JSON keys stay on the catalog default (the scales property initializer).
+    /// A key that is present keeps its stored number, including blank-starter 0.4.
+    /// </summary>
+    public static PersonaTraitScalesInfo LoadTraits(string? traitsJson)
+    {
+        if (string.IsNullOrWhiteSpace(traitsJson))
+            return new PersonaTraitScalesInfo();
+
+        using var doc = JsonDocument.Parse(traitsJson);
+        return LoadTraits(doc.RootElement);
+    }
+
+    public static PersonaTraitScalesInfo LoadTraits(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return new PersonaTraitScalesInfo();
+        if (element.ValueKind != JsonValueKind.Object)
+            return new PersonaTraitScalesInfo();
+
+        var scales = JsonSerializer.Deserialize<PersonaTraitScales>(element.GetRawText(), TraitJsonOptions)
+                     ?? new PersonaTraitScales();
+        return PersonaTraitScalesInfo.FromScales(scales);
+    }
+
+    public static string NormalizePhysicalDescription(string? text)
+    {
+        var value = (text ?? "").Trim();
+        var max = PersonaPack.PhysicalDescriptionMaxLength;
+        if (value.Length <= max)
+            return value;
+        return value[..max];
+    }
+
+    public static string ContactDescriptionText(string? physicalDescription)
+    {
+        if (string.IsNullOrWhiteSpace(physicalDescription))
+            return "";
+        return physicalDescription.Trim();
+    }
+
+    /// <summary>
+    /// AI help may call the draft route only when the persona is already on the Host.
+    /// It never creates a pack.
+    /// </summary>
+    public static DescriptionDraftDecision DecideDescriptionDraft(bool personaAlreadyOnHost)
+    {
+        if (!personaAlreadyOnHost)
+        {
+            return new DescriptionDraftDecision
+            {
+                CallRoute = false,
+                CreatePack = false,
+                Status = DescriptionDraftNeedsSavedPersona
+            };
+        }
+
+        return new DescriptionDraftDecision
+        {
+            CallRoute = true,
+            CreatePack = false,
+            Status = null
+        };
+    }
+
+    /// <summary>
+    /// A successful draft replaces the physical description only.
+    /// The blurb (including LIMITS) and tool flags are copied through unchanged.
+    /// A failed draft leaves the description as it was.
+    /// </summary>
+    public static DescriptionDraftFields ApplyDescriptionDraft(
+        DescriptionDraftFields current,
+        bool draftSucceeded,
+        string? draftText)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var description = current.PhysicalDescription ?? "";
+        if (draftSucceeded && draftText is not null)
+            description = NormalizePhysicalDescription(draftText);
+
+        return new DescriptionDraftFields
+        {
+            IdentityBlurb = current.IdentityBlurb,
+            PhysicalDescription = description,
+            AllowDesktop = current.AllowDesktop,
+            AllowBrowser = current.AllowBrowser,
+            AllowEmail = current.AllowEmail
+        };
+    }
+
+    private static PersonaTraitGroup[] BuildTraitGroups()
+    {
+        var all = PersonaTraitCatalog.All;
+        var expected = 0;
+        foreach (var plan in TraitGroupPlan)
+            expected += plan.Count;
+        if (expected != all.Count)
+        {
+            throw new InvalidOperationException(
+                $"Trait groups cover {expected} traits but the catalog has {all.Count}.");
+        }
+
+        var groups = new PersonaTraitGroup[TraitGroupPlan.Length];
+        var index = 0;
+        for (var g = 0; g < TraitGroupPlan.Length; g++)
+        {
+            var plan = TraitGroupPlan[g];
+            var slice = new PersonaTraitDefinition[plan.Count];
+            for (var i = 0; i < plan.Count; i++)
+                slice[i] = all[index++];
+            groups[g] = new PersonaTraitGroup
+            {
+                Title = plan.Title,
+                Start = index - plan.Count,
+                IsMoreTraits = plan.More,
+                Traits = slice
+            };
+        }
+
+        return groups;
     }
 
     private static PersonaTemplateInfo ToTemplate(PersonaPackInfo pack) => new()
@@ -306,6 +535,7 @@ public static class PersonaWizardLogic
         Description = Describe(pack),
         HumanAddress = pack.HumanAddress ?? "Friend",
         IdentityBlurb = pack.IdentityBlurb,
+        PhysicalDescription = pack.PhysicalDescription ?? "",
         Traits = (pack.Traits ?? new PersonaTraitScalesInfo()).Clone(),
         RequiresVictoria = string.Equals(pack.PersonaId, "victoria", StringComparison.OrdinalIgnoreCase)
     };
@@ -331,6 +561,7 @@ public sealed class PersonaTemplateInfo
     public string Description { get; init; } = "";
     public string HumanAddress { get; init; } = "Friend";
     public string? IdentityBlurb { get; init; }
+    public string PhysicalDescription { get; init; } = "";
     public PersonaTraitScalesInfo Traits { get; init; } = new();
     public bool RequiresVictoria { get; init; }
 
@@ -344,4 +575,47 @@ public sealed class InferenceModelOption
     public string Label { get; init; } = PersonaWizardLogic.HostDefaultModelLabel;
 
     public override string ToString() => Label;
+}
+
+public enum PersonaWizardStepKind
+{
+    Template,
+    Identity,
+    Model,
+    Traits,
+    Blurb,
+    Quarantine
+}
+
+public sealed class PersonaTraitGroup
+{
+    public string Title { get; init; } = "";
+    public int Start { get; init; }
+    public bool IsMoreTraits { get; init; }
+    public IReadOnlyList<PersonaTraitDefinition> Traits { get; init; } = Array.Empty<PersonaTraitDefinition>();
+}
+
+public sealed class PersonaWizardStep
+{
+    public PersonaWizardStepKind Kind { get; init; }
+    public PersonaTraitGroup? Group { get; init; }
+}
+
+public sealed class DescriptionDraftDecision
+{
+    public bool CallRoute { get; init; }
+    public bool CreatePack { get; init; }
+    public string? Status { get; init; }
+}
+
+/// <summary>
+/// Fields AI help is allowed to see. Apply copies the blurb and tool flags through.
+/// </summary>
+public sealed class DescriptionDraftFields
+{
+    public string? IdentityBlurb { get; init; }
+    public string PhysicalDescription { get; init; } = "";
+    public bool AllowDesktop { get; init; } = true;
+    public bool AllowBrowser { get; init; } = true;
+    public bool AllowEmail { get; init; } = true;
 }

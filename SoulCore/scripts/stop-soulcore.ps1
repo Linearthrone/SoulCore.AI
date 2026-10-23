@@ -1,13 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop the SoulCore.Host process bound to loopback :7700.
+  Stop the SoulCore.Host process bound to loopback :7720.
 .NOTES
   Safe local only: only targets listeners on 127.0.0.1 (never 0.0.0.0).
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 7700
+    [int]$Port = 7720
 )
 
 $ErrorActionPreference = "Stop"

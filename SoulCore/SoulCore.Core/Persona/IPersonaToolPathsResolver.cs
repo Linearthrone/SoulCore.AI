@@ -13,6 +13,17 @@ public interface IPersonaToolPathsResolver
     string ResolveDesktopTargetWindowTitle();
 
     /// <summary>
+    /// Desktop title for a pack already pinned on this turn.
+    /// Does not read the live session. Host fallback is applied by the Host resolver;
+    /// the default returns the pack title only.
+    /// </summary>
+    string ResolveDesktopTargetWindowTitle(PersonaPack pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        return (pack.VmWindowTitle ?? string.Empty).Trim();
+    }
+
+    /// <summary>
     /// Active pack <see cref="PersonaPack.PlaywrightProfileDir"/>, else Host
     /// <c>Tools:PlaywrightUserDataDir</c>, else persona-scoped
     /// <c>{personasRoot}/{personaId}/browser</c>.

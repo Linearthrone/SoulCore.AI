@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace SoulCore.Protocol;
 
 /// <summary>
-/// Canonical SoulCore WebSocket JSON frame envelope for Presence chat (:7700/ws).
+/// Canonical SoulCore WebSocket JSON frame envelope for Presence chat (:7720/ws).
 /// Outbound Unreal body verbs use a separate UE <c>command</c> envelope via <c>UeVerbWireMapper</c>, not this shape.
 /// </summary>
 /// <remarks>
@@ -23,7 +23,11 @@ namespace SoulCore.Protocol;
 ///   "payload": { ... }
 /// }
 /// </code>
-/// chat.send payload: { "text": "...", "sessionId": "optional" }
+/// chat.send payload: { "text": "...", "sessionId": "optional", "personaId": "optional" }
+/// Host mode one (default when chat-mode.txt is missing): omitted personaId is the foreground.
+/// A personaId that is not the foreground is rejected and writes nothing.
+/// Host mode many: personaId is required. Context, transcript, and the episodic write use that persona.
+/// Tools, the VM, browser, email, and SoulLoop run only for the foreground persona.
 /// chat.delta payload: { "text": "partial" }
 /// chat.done payload: { "text": "full reply optional", "proactive"?: bool, "contactId"?: "victoria", "hasMedia"?: bool, "mediaId"?: "…" }
 /// emotion.snapshot payload: { "valence", "arousal", "dominance", "focus", "label", "note?", "revision" }

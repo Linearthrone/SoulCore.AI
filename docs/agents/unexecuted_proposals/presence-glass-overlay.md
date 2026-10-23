@@ -1,16 +1,31 @@
 ---
 type: proposal
-status: unexecuted
+status: complete-client
 tt_id: TT-01
+prop_id: PROP-16-presence-glass-overlay
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-10-22
 title: Presence glass overlay — drawers, traits, live quarter-screen guest
 need: A frameless white/blue glass overlay that shows every current Presence feature, with persona drawers, a trait catalog, and a live VirtualBox view
+pm_route: B
+pm_accepted_at: 2026-10-22
+pm_note: Ticketed chain closed 2026-10-22. Avenue B drawers, catalog, archive, and chat-multi accepted on builds and tests. 16.2 stopped: the guest is an opaque still, not a scaled live window. No running Presence window was clicked. Commit pending.
+pm_tickets:
+  - docs/agents/log/PROP-16.0-PM01-routing.md
+  - docs/agents/log/PROP-16.1-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.2-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.2b-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.3-PM01-to-BED01.md
+  - docs/agents/log/PROP-16.3b-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.4-PM01-to-BED01.md
+  - docs/agents/log/PROP-16.5-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.6-PM01-to-BED01.md
+  - docs/agents/log/PROP-16.6b-PM01-to-FED01.md
 ---
 
 # Presence glass overlay
 
-Parked. Thinktank only. No `prop_id` until LinearThrone says to send this to PM-01. Next free id in `docs/agents/PROP_NUMBERING.md` is **16**. TT-01 does not ticket FED, BED, or OPS.
+Accepted by PM-01 on 2026-10-22 as **PROP-16-presence-glass-overlay**. Avenue **B**. The ticketed chain closed the same day. The live guest stopped at 16.2; the viewport is an opaque still.
 
 Review frames (static art, not XAML):
 

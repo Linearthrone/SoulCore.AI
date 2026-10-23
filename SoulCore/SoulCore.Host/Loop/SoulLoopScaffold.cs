@@ -4,8 +4,10 @@ using SoulCore.Adapters.Ws;
 using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
+using SoulCore.Core.Persona;
 using SoulCore.Core.Safety;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Persona;
 using SoulCore.Memory;
 using SoulCore.Protocol;
 using System.Globalization;
@@ -17,7 +19,10 @@ namespace SoulCore.Host.Loop;
 /// Unreal verbs are not called from this loop (optional no-op path remains elsewhere if UE down).
 /// Also appends light journal notes on reflection ticks (feeling always; animation/environment by want).
 /// PROP-15.2: emotion / episodic / journal DI bindings are persona-scoped facades — ticks only
-/// touch the <b>active</b> persona's quarantined SQLite stores (never cross-persona).
+/// touch the <b>foreground</b> persona's quarantined SQLite stores (never a background persona).
+/// PROP-16.6: one Host process. SoulLoop does not start a VM per persona and writes the
+/// foreground bundle only. Episodic recall and reflection resolve
+/// <see cref="IPersonaStoreHub.GetMemoryStore"/> for the foreground id at the call.
 /// </summary>
 public sealed class SoulLoopScaffold : ISoulLoop
 {
@@ -25,6 +30,8 @@ public sealed class SoulLoopScaffold : ISoulLoop
     private readonly IMemoryStore _memory;
     private readonly IVictoriaJournalStore? _journals;
     private readonly ICompanionOutboundMessenger? _outbound;
+    private readonly IPersonaSession? _personaSession;
+    private readonly IPersonaStoreHub? _personaStores;
     private readonly PresenceWsHub _hub;
     private readonly SoulLoopOptions _options;
     private readonly DriftWatcher _driftWatcher;
@@ -42,7 +49,9 @@ public sealed class SoulLoopScaffold : ISoulLoop
         DriftWatcher driftWatcher,
         ILogger<SoulLoopScaffold> logger,
         IVictoriaJournalStore? journals = null,
-        ICompanionOutboundMessenger? outbound = null)
+        ICompanionOutboundMessenger? outbound = null,
+        IPersonaSession? personaSession = null,
+        IPersonaStoreHub? personaStores = null)
     {
         _emotion = emotion ?? throw new ArgumentNullException(nameof(emotion));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -52,6 +61,21 @@ public sealed class SoulLoopScaffold : ISoulLoop
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _journals = journals;
         _outbound = outbound;
+        _personaSession = personaSession;
+        _personaStores = personaStores;
+    }
+
+    /// <summary>
+    /// Foreground episodic store at the moment of the call. Never a background persona.
+    /// Without a session and hub, the injected store is the foreground facade.
+    /// </summary>
+    private IMemoryStore ForegroundMemory()
+    {
+        if (_personaSession is null || _personaStores is null)
+            return _memory;
+
+        var foregroundId = _personaSession.ActivePersonaId;
+        return _personaStores.GetMemoryStore(foregroundId);
     }
 
     public bool IsEnabled => _options.Enabled;
@@ -111,7 +135,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
             var limit = Math.Clamp(_options.EpisodicRecallLimit, 0, 20);
             recent = limit == 0
                 ? Array.Empty<string>()
-                : await _memory.RecallRecentAsync(limit, cancellationToken).ConfigureAwait(false);
+                : await ForegroundMemory().RecallRecentAsync(limit, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -187,7 +211,7 @@ public sealed class SoulLoopScaffold : ISoulLoop
                 want);
             try
             {
-                await _memory
+                await ForegroundMemory()
                     .WriteEpisodicAsync(reflection, "self", cancellationToken)
                     .ConfigureAwait(false);
                 _logger.LogInformation(

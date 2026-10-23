@@ -55,6 +55,7 @@
       <GradientStop Color="#0E0F12" Offset="1"/>
     </LinearGradientBrush>
     <FontFamily x:Key="DisplayFont">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
+    <x:Double x:Key="ShellTextureOpacity">0.55</x:Double>
     <ImageBrush x:Key="BrushedTextureBrush"
                 Source="avares://House.ChatDesktop/Assets/brushed-charcoal.png"
                 Stretch="UniformToFill"
@@ -89,7 +90,7 @@
 
     <Style Selector="Border.shell-inner">
       <Setter Property="Background" Value="{DynamicResource BrushedTextureBrush}"/>
-      <Setter Property="Opacity" Value="0.55"/>
+      <Setter Property="Opacity" Value="{DynamicResource ShellTextureOpacity}"/>
       <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
@@ -102,7 +103,7 @@
     </Style>
 
     <Style Selector="Button.frame-nav">
-      <Setter Property="Background" Value="#1A1C20"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -132,7 +133,7 @@
     <Style Selector="Button.frame-nav.active">
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrushSoft}"/>
     </Style>
 
     <Style Selector="Button.window-chrome">
@@ -212,7 +213,7 @@
     </Style>
 
     <Style Selector="Button.chrome">
-      <Setter Property="Background" Value="#16181C"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -253,7 +254,7 @@
       <Setter Property="Template">
         <ControlTemplate>
           <Border Name="TabBd"
-                  Background="#1A1C20"
+                  Background="{DynamicResource PanelBrush}"
                   BorderBrush="{DynamicResource PanelBorderBrush}"
                   BorderThickness="1"
                   CornerRadius="6"
@@ -275,7 +276,7 @@
     </Style>
     <Style Selector="TabItem:selected /template/ Border#TabBd">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrushSoft}"/>
     </Style>
 
     <!-- Message row with contact bubbles outside the text bubble -->
@@ -358,7 +359,7 @@
     </Style>
 
     <Style Selector="Border.inset">
-      <Setter Property="Background" Value="#0C0D10"/>
+      <Setter Property="Background" Value="{DynamicResource CarbonBrush}"/>
       <Setter Property="BoxShadow" Value="inset 0 3 10 0 #AA000000"/>
     </Style>
 
@@ -390,7 +391,7 @@
     </Style>
 
     <Style Selector="Border.house-drawer-body">
-      <Setter Property="Background" Value="#14161A"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource MetalHighlightBrush}"/>
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
       <Setter Property="BoxShadow" Value="inset 0 1 0 0 #33FFFFFF"/>

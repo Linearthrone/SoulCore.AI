@@ -14,6 +14,19 @@ public interface IInferenceClient
         int? maxTokens = null);
 
     /// <summary>
+    /// Single-shot completion on <paramref name="model"/> when it is set.
+    /// A null or blank model keeps the caller's existing resolution
+    /// (active pack model, else Host model). Still no tool loop.
+    /// </summary>
+    Task<string> CompleteAsync(
+        string prompt,
+        string? systemPreamble,
+        CancellationToken cancellationToken,
+        int? maxTokens,
+        string? model)
+        => CompleteAsync(prompt, systemPreamble, cancellationToken, maxTokens);
+
+    /// <summary>
     /// Agent loop: POST <c>/api/chat</c> with the <paramref name="tools"/>
     /// array, parse <c>message.tool_calls</c>, dispatch each via
     /// <paramref name="tools"/> registry... dispatch is the host's job, not

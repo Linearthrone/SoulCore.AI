@@ -18,7 +18,9 @@ namespace SoulCore.Host.Ws;
 /// <summary>
 /// Single prompt composition owner: parallel independent context reads →
 /// deterministic [Identity] → [Memory] → [SoulCore emotion] (+ tool guidance).
-/// Active <see cref="IPersonaSession"/> pack is read per turn (live adjust = next turn).
+/// <see cref="BuildAsync"/> reads the active pack once at the start of that call.
+/// <see cref="BuildPinnedAsync"/> uses the pack and memory the caller already copied
+/// and does not call <see cref="IPersonaSession.GetActive"/>.
 /// </summary>
 public sealed class ChatContextBuilder : IChatContextBuilder
 {
@@ -55,7 +57,7 @@ public sealed class ChatContextBuilder : IChatContextBuilder
     }
 
     /// <inheritdoc />
-    public async Task<ChatContext> BuildAsync(
+    public Task<ChatContext> BuildAsync(
         string userText,
         bool useToolLoop,
         string? desktopTargetWindowTitle,
@@ -65,12 +67,40 @@ public sealed class ChatContextBuilder : IChatContextBuilder
 
         // Live adjust = next turn: read active pack at build time (not mid-inference).
         var pack = _personaSession.GetActive();
+        return BuildPinnedAsync(
+            userText,
+            useToolLoop,
+            desktopTargetWindowTitle,
+            pack,
+            _memory,
+            foregroundTurn: true,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ChatContext> BuildPinnedAsync(
+        string userText,
+        bool useToolLoop,
+        string? desktopTargetWindowTitle,
+        PersonaPack pinnedPack,
+        IMemoryStore pinnedMemory,
+        bool foregroundTurn,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userText);
+        ArgumentNullException.ThrowIfNull(pinnedPack);
+        ArgumentNullException.ThrowIfNull(pinnedMemory);
+
+        // PROP-16.6: the caller pinned this pack. Do not read GetActive() here.
+        var pack = pinnedPack;
 
         // PROP-8.4 / PROP-5 gate: independent reads run in parallel; each piece
         // is assembled into one immutable ChatContext afterward.
-        var memoriesTask = RecallChatMemoriesSafeAsync(userText, cancellationToken);
-        var identityTask = LoadIdentityAnchorsSafeAsync(cancellationToken);
-        var emotionTask = LoadEmotionPreambleSafeAsync(cancellationToken);
+        var memoriesTask = RecallChatMemoriesSafeAsync(userText, pinnedMemory, cancellationToken);
+        var identityTask = foregroundTurn
+            ? LoadIdentityAnchorsSafeAsync(cancellationToken)
+            : Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        var emotionTask = LoadEmotionPreambleSafeAsync(pinnedMemory, foregroundTurn, cancellationToken);
 
         await Task.WhenAll(memoriesTask, identityTask, emotionTask).ConfigureAwait(false);
 
@@ -153,11 +183,29 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         }
     }
 
-    private async Task<string> LoadEmotionPreambleSafeAsync(CancellationToken cancellationToken)
+    private async Task<string> LoadEmotionPreambleSafeAsync(
+        IMemoryStore pinnedMemory,
+        bool foregroundTurn,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var emotion = await _emotion.GetAsync(cancellationToken).ConfigureAwait(false);
+            // Foreground uses the live emotion facade. A background turn reads that
+            // persona's own store when the memory handle is also an emotion store,
+            // and otherwise stays neutral so the foreground vector is not copied in.
+            IReadOnlyDictionary<string, double> emotion;
+            if (foregroundTurn)
+            {
+                emotion = await _emotion.GetAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else if (pinnedMemory is IEmotionState sideEmotion)
+            {
+                emotion = await sideEmotion.GetAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                emotion = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            }
             var preamble = EmotionInfluencePrompt.BuildPreamble(emotion);
             _logger.LogDebug("Emotion influence preamble ready ({Length} chars)", preamble.Length);
             return preamble;
@@ -172,11 +220,12 @@ public sealed class ChatContextBuilder : IChatContextBuilder
 
     private async Task<IReadOnlyList<string>> RecallChatMemoriesSafeAsync(
         string userText,
+        IMemoryStore memory,
         CancellationToken cancellationToken)
     {
         try
         {
-            var memories = await RecallChatMemoriesAsync(userText, cancellationToken).ConfigureAwait(false);
+            var memories = await RecallChatMemoriesAsync(userText, memory, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("Recalled {Count} episodic memories for chat.send", memories.Count);
             return memories;
         }
@@ -189,11 +238,12 @@ public sealed class ChatContextBuilder : IChatContextBuilder
 
     private async Task<IReadOnlyList<string>> RecallChatMemoriesAsync(
         string userText,
+        IMemoryStore memory,
         CancellationToken cancellationToken)
     {
         if (!_embeddings.IsEnabled)
         {
-            return await _memory
+            return await memory
                 .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -206,12 +256,12 @@ public sealed class ChatContextBuilder : IChatContextBuilder
             if (queryVec.Length == 0)
             {
                 _logger.LogDebug("Empty embedding vector; falling back to RecallRecentAsync");
-                return await _memory
+                return await memory
                     .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
                     .ConfigureAwait(false);
             }
 
-            var similar = await _memory
+            var similar = await memory
                 .RecallSimilarAsync(queryVec, ContextMemoryRecallLimit, cancellationToken)
                 .ConfigureAwait(false);
             if (similar.Count > 0)
@@ -224,7 +274,7 @@ public sealed class ChatContextBuilder : IChatContextBuilder
             _logger.LogDebug(ex, "Semantic recall failed; falling back to RecallRecentAsync");
         }
 
-        return await _memory
+        return await memory
             .RecallRecentAsync(ContextMemoryRecallLimit, cancellationToken)
             .ConfigureAwait(false);
     }

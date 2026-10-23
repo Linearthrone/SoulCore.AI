@@ -44,7 +44,7 @@ internal static class WebApplicationExtensions
             if (!context.WebSockets.IsWebSocketRequest)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Expected WebSocket upgrade. Use ws://127.0.0.1:7700/ws");
+                await context.Response.WriteAsync("Expected WebSocket upgrade. Use ws://127.0.0.1:7720/ws");
                 return;
             }
 

@@ -58,6 +58,21 @@ public sealed class LocalUiSettings
     /// </summary>
     public bool AutoStartStack { get; set; } = true;
 
+    /// <summary>PROP-16.1: "Light" or "Dark".</summary>
+    public string Theme { get; set; } = GlassChrome.DarkTheme;
+
+    /// <summary>Chrome background alpha. Floor is <see cref="GlassChrome.OpacityFloor"/>.</summary>
+    public double ChromeOpacity { get; set; } = GlassChrome.DefaultOpacity;
+
+    /// <summary>
+    /// PROP-16.2 viewport guest alpha. Independent of <see cref="ChromeOpacity"/>.
+    /// 1 keeps the guest fully opaque. Missing JSON stays 1, not the chrome floor.
+    /// </summary>
+    public double ViewOpacity { get; set; } = ViewportInputPolicy.DefaultViewOpacity;
+
+    /// <summary>Radial favorites. At most six, unique display names.</summary>
+    public List<FavoriteSlot> Favorites { get; set; } = new();
+
     public static string StorePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -115,6 +130,11 @@ public sealed class LocalUiSettings
             SideColumnWidth = Clamp(side, MinSideColumnWidth, 900);
         if (SightRowHeight is double sight)
             SightRowHeight = Clamp(sight, MinSightRowHeight, 800);
+
+        Theme = GlassChrome.IsLightTheme(Theme) ? GlassChrome.LightTheme : GlassChrome.DarkTheme;
+        ChromeOpacity = GlassChrome.ClampOpacity(ChromeOpacity);
+        ViewOpacity = ViewportInputPolicy.ClampViewOpacity(ViewOpacity);
+        Favorites = FavoriteRoster.Normalize(Favorites);
     }
 
     public double ResolvedWindowWidth() =>

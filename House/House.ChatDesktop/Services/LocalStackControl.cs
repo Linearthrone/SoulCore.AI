@@ -11,7 +11,7 @@ public sealed class LocalStackControl : IDisposable
 {
     public const string OllamaTagsUrl = "http://127.0.0.1:11434/api/tags";
     public const string ComfyUiUrl = "http://127.0.0.1:8188/system_stats";
-    public const string DefaultHostHealthUrl = "http://127.0.0.1:7700/health";
+    public const string DefaultHostHealthUrl = "http://127.0.0.1:7720/health";
 
     /// <summary>Env override for repo root when Presence is installed outside the checkout.</summary>
     public const string RepoRootEnvName = "HOUSE_SOULCORE_REPO";

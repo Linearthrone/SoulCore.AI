@@ -1,13 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Apply or tear down Tailscale serve proxies for SoulCore.Host :7700 (loopback),
+  Apply or tear down Tailscale serve proxies for SoulCore.Host :7720 (loopback),
   and sync AllowedHosts so the Host actually accepts Tailscale-served requests.
 
 .DESCRIPTION
   Tailnet-only exposure (no Funnel / no LAN bind). Matches docs/runbooks/tailscale-serve-soulcore.md.
 
-  Default: sync AllowedHosts, enable TCP :7700 forward + HTTPS :8443 reverse proxy to http://127.0.0.1:7700
+  Default: sync AllowedHosts, enable TCP :7720 forward + HTTPS :8453 reverse proxy to http://127.0.0.1:7720.
+  -Off removes only those two endpoints. It does not turn off 7700, 8443, or 8444.
 
   AllowedHosts sync (always on unless -SkipAllowedHosts):
     * Resolves Tailscale IPv4 (tailscale ip -4) + MagicDNS name (tailscale status --json).
@@ -20,14 +21,23 @@
   Print tailscale serve status only.
 
 .PARAMETER Off
-  Disable the SoulCore serve endpoints created by this script (TCP 7700 + HTTPS 8443).
-  Does not touch unrelated handlers (e.g. Ollama on :443).
+  Disable the SoulCore serve endpoints created by this script (TCP 7720 + HTTPS 8453).
+  Does not touch unrelated handlers (7700, 8443, 8444, or Ollama on :443).
 
 .PARAMETER TcpOnly
-  Only enable TCP forward on 7700 (no HTTPS reverse proxy, no AllowedHosts sync).
+  Only enable TCP forward on -TcpPort (default 7720). No HTTPS reverse proxy, no AllowedHosts sync.
 
 .PARAMETER HttpsOnly
-  Only enable HTTPS reverse proxy on 8443 (no TCP forward).
+  Only enable HTTPS reverse proxy on -HttpsPort (default 8453). No TCP forward.
+
+.PARAMETER TcpPort
+  Tailscale TCP listen port. Default 7720.
+
+.PARAMETER HttpsPort
+  Tailscale HTTPS listen port. Default 8453.
+
+.PARAMETER TargetPort
+  Loopback Host port the proxies forward to. Default 7720.
 
 .PARAMETER SyncAllowedHostsOnly
   Only run the AllowedHosts sync; do not change tailscale serve state.
@@ -49,7 +59,10 @@ param(
     [switch]$TcpOnly,
     [switch]$HttpsOnly,
     [switch]$SyncAllowedHostsOnly,
-    [switch]$SkipAllowedHosts
+    [switch]$SkipAllowedHosts,
+    [int]$TcpPort = 7720,
+    [int]$HttpsPort = 8453,
+    [int]$TargetPort = 7720
 )
 
 $ErrorActionPreference = "Stop"
@@ -200,14 +213,15 @@ if ($Status) {
 
 # ---- Off (tear down) ----
 if ($Off) {
-    Write-Host "Disabling SoulCore serve endpoints (TCP 7700, HTTPS 8443)..."
+    Write-Host "Disabling SoulCore serve endpoints (TCP $TcpPort, HTTPS $HttpsPort)..."
     # Already-off is success: Tailscale prints "serve config does not exist" and
     # PowerShell may treat stderr as a native error even with 2>$null.
+    # Only these two ports. Never 7700, 8443, or 8444.
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     foreach ($argsOff in @(
-        @("serve", "--tcp=7700", "off"),
-        @("serve", "--https=8443", "off")
+        @("serve", "--tcp=$TcpPort", "off"),
+        @("serve", "--https=$HttpsPort", "off")
     )) {
         $err = & $script:Tailscale @argsOff 2>&1
         if ($LASTEXITCODE -ne 0) {
@@ -253,21 +267,21 @@ $doHttps = -not $TcpOnly
 
 # Probe local Host (advisory)
 try {
-    $health = Invoke-WebRequest -Uri "http://127.0.0.1:7700/health" -UseBasicParsing -TimeoutSec 3
+    $health = Invoke-WebRequest -Uri "http://127.0.0.1:${TargetPort}/health" -UseBasicParsing -TimeoutSec 3
     Write-Host "Local Host health: HTTP $($health.StatusCode)"
 }
 catch {
-    Write-Warning "SoulCore Host not reachable at http://127.0.0.1:7700/health - start Host before phone clients connect."
+    Write-Warning "SoulCore Host not reachable at http://127.0.0.1:${TargetPort}/health - start Host before phone clients connect."
 }
 
 if ($doTcp) {
-    Write-Host "Enabling TCP serve :7700 -> 127.0.0.1:7700"
-    Invoke-Tailscale -CliArgs @("serve", "--tcp=7700", "--bg", "--yes", "7700")
+    Write-Host "Enabling TCP serve :$TcpPort -> 127.0.0.1:$TargetPort"
+    Invoke-Tailscale -CliArgs @("serve", "--tcp=$TcpPort", "--bg", "--yes", "$TargetPort")
 }
 
 if ($doHttps) {
-    Write-Host "Enabling HTTPS serve :8443 -> 127.0.0.1:7700"
-    Invoke-Tailscale -CliArgs @("serve", "--https=8443", "--bg", "--yes", "7700")
+    Write-Host "Enabling HTTPS serve :$HttpsPort -> 127.0.0.1:$TargetPort"
+    Invoke-Tailscale -CliArgs @("serve", "--https=$HttpsPort", "--bg", "--yes", "$TargetPort")
 }
 
 Write-Host ""
@@ -277,11 +291,11 @@ Invoke-Tailscale -CliArgs @("serve", "status")
 Write-Host ""
 Write-Host "Phone examples (after AllowedHosts includes MagicDNS / TS IP):"
 if ($doHttps -and $identity.Dns) {
-    Write-Host "  wss://$($identity.Dns):8443/ws"
-    Write-Host "  https://$($identity.Dns):8443/health"
+    Write-Host "  wss://$($identity.Dns):${HttpsPort}/ws"
+    Write-Host "  https://$($identity.Dns):${HttpsPort}/health"
 }
 if ($doTcp -and $identity.Ip) {
-    Write-Host "  ws://$($identity.Ip):7700/ws"
-    Write-Host "  http://$($identity.Ip):7700/health"
+    Write-Host "  ws://$($identity.Ip):${TcpPort}/ws"
+    Write-Host "  http://$($identity.Ip):${TcpPort}/health"
 }
 Write-Host "See docs/runbooks/tailscale-serve-soulcore.md"

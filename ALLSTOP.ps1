@@ -1,17 +1,18 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop House.ChatDesktop and local SoulCore.Host (Victoria).
+  Stop House.ChatDesktop and local SoulCore.Host for this Creator Edition checkout.
 .DESCRIPTION
-  Does not kill foreign :7700 occupants (e.g. Cursor cloud port-forward).
-  Stops local Host on 7700 and/or 7701 when /health memory path is this machine's Victoria.
-  Also stops browser bridge (:17891) and local voice STT/TTS (:8000 / :8881).
+  Default host stop ports are 7720 and 7721.
+  Stops the browser bridge on 17920.
+  Leaves shared voice servers running. This tree does not own them.
+  Tears down Tailscale serve by calling tailscale-serve-soulcore.ps1 -Off.
 .EXAMPLE
   .\ALLSTOP.ps1
 #>
 [CmdletBinding()]
 param(
-    [int[]]$Ports = @(7700, 7701),
+    [int[]]$Ports = @(7720, 7721),
     [switch]$KeepVoice,
     [switch]$KeepBrowserBridge
 )
@@ -140,21 +141,15 @@ Stop-ChatDesktop
 if ($KeepBrowserBridge) {
     Write-Host "=== ALLSTOP: browser bridge kept (-KeepBrowserBridge) ==="
 } else {
-    Write-Host "=== ALLSTOP: browser bridge (:17891) ==="
-    Stop-ListenersOnPort -LocalPort 17891 -Label "browser bridge"
+    Write-Host "=== ALLSTOP: browser bridge (:17920) ==="
+    Stop-ListenersOnPort -LocalPort 17920 -Label "browser bridge"
     $bbPid = Join-Path $RepoRoot "SoulCore\scripts\.browser-bridge.pid"
     if (Test-Path -LiteralPath $bbPid) {
         Remove-Item -LiteralPath $bbPid -Force -ErrorAction SilentlyContinue
     }
 }
 
-if ($KeepVoice) {
-    Write-Host "=== ALLSTOP: voice kept (-KeepVoice) ==="
-} else {
-    Write-Host "=== ALLSTOP: House.Voice (STT :8000 + TTS :8881) ==="
-    Stop-ListenersOnPort -LocalPort 8000 -Label "STT"
-    Stop-ListenersOnPort -LocalPort 8881 -Label "TTS"
-}
+Write-Host "=== ALLSTOP: shared voice servers left running ==="
 
 # --- Tailscale serve: tear down (soft-fail) ---
 if (-not (Test-Path -LiteralPath $TailscaleServe)) {
@@ -180,7 +175,7 @@ foreach ($port in $Ports) {
     Stop-LocalHostOnPort -LocalPort $port
 }
 
-# Pid-file orphan cleanup via existing stop script (7700 default), then alt port.
+# Pid-file orphan cleanup via existing stop script, once per host port in $Ports.
 if (Test-Path -LiteralPath $StopHost) {
     foreach ($port in $Ports) {
         $health = Get-HealthObject -LocalPort $port

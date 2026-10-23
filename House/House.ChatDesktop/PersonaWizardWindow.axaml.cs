@@ -1,6 +1,13 @@
+using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 using House.ChatDesktop.Services;
+using SoulCore.Core.Persona;
 
 namespace House.ChatDesktop;
 
@@ -9,6 +16,10 @@ public partial class PersonaWizardWindow : Window
     private readonly SoulCorePersonaClient _client;
     private readonly bool _isCreate;
     private readonly PersonaPackInfo? _editTarget;
+    private readonly PersonaTraitScalesInfo _traits = new();
+    private readonly List<StackPanel> _groupPanels = new();
+    private readonly List<TraitSliderRow> _rows = new();
+    private IReadOnlyList<PersonaWizardStep> _steps = Array.Empty<PersonaWizardStep>();
     private IReadOnlyList<PersonaPackInfo> _hostPacks;
 
     private int _step;
@@ -16,6 +27,7 @@ public partial class PersonaWizardWindow : Window
     private bool _personaIdTouched;
     private bool _suggestingPersonaId;
     private bool _saving;
+    private bool _drafting;
     private bool _retrying;
     private bool _loadingModels;
     private bool _bindingModelCombo;
@@ -43,16 +55,13 @@ public partial class PersonaWizardWindow : Window
         _isCreate = editTarget is null;
 
         InitializeComponent();
+        PhysicalDescriptionBox.MaxLength = PersonaPack.PhysicalDescriptionMaxLength;
+        BuildTraitSliders();
+        PointerPressed += Wizard_PointerPressed;
 
         Title = _isCreate ? "Create persona" : "Edit persona";
         TitleText.Text = Title;
-
-        WarmthSlider.PropertyChanged += (_, _) => RefreshBandPreview();
-        DirectnessSlider.PropertyChanged += (_, _) => RefreshBandPreview();
-        FormalitySlider.PropertyChanged += (_, _) => RefreshBandPreview();
-        PlayfulnessSlider.PropertyChanged += (_, _) => RefreshBandPreview();
-        BoundarySlider.PropertyChanged += (_, _) => RefreshBandPreview();
-        RecallSlider.PropertyChanged += (_, _) => RefreshBandPreview();
+        _steps = PersonaWizardLogic.BuildWizardSteps(_isCreate);
 
         PersonaIdBox.TextChanged += (_, _) =>
         {
@@ -70,12 +79,124 @@ public partial class PersonaWizardWindow : Window
         else
         {
             LoadEditTarget(_editTarget!);
-            _step = 1;
+            _step = 0;
         }
 
         BindModelPicker(Array.Empty<string>());
         ShowStep();
         _ = LoadInferenceModelsAsync();
+    }
+
+    private void Wizard_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is Visual visual)
+        {
+            var current = visual;
+            while (current is not null)
+            {
+                if (current is Button or TextBox or Slider or ComboBox or ListBox or ScrollViewer)
+                    return;
+                current = current.GetVisualParent();
+            }
+        }
+
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+        BeginMoveDrag(e);
+        if (DrawerDismiss.IsMostlyOffScreen(this))
+            Close();
+    }
+
+    private void BuildTraitSliders()
+    {
+        TraitSliderHost.Children.Clear();
+        _groupPanels.Clear();
+        _rows.Clear();
+
+        foreach (var group in PersonaWizardLogic.TraitGroups)
+        {
+            var panel = new StackPanel { Spacing = 8, IsVisible = false };
+            foreach (var trait in group.Traits)
+                panel.Children.Add(CreateTraitRow(trait));
+            _groupPanels.Add(panel);
+            TraitSliderHost.Children.Add(panel);
+        }
+    }
+
+    private Control CreateTraitRow(PersonaTraitDefinition trait)
+    {
+        var label = new TextBlock
+        {
+            Text = trait.Label,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var badge = new Border
+        {
+            Padding = new Thickness(6, 1),
+            CornerRadius = new CornerRadius(4),
+            BorderThickness = new Thickness(1),
+            BorderBrush = Brushes.Gray,
+            IsVisible = true,
+            Child = new TextBlock
+            {
+                Text = "Default",
+                FontSize = 10
+            }
+        };
+        var header = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(badge, Dock.Right);
+        header.Children.Add(badge);
+        header.Children.Add(label);
+
+        var slider = new Slider
+        {
+            Minimum = 0,
+            Maximum = 1,
+            Value = trait.Default,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        var valueText = new TextBlock
+        {
+            Text = trait.Default.ToString("0.00", CultureInfo.InvariantCulture),
+            Width = 40,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        var bar = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            }
+        };
+        Grid.SetColumn(valueText, 1);
+        bar.Children.Add(slider);
+        bar.Children.Add(valueText);
+
+        var row = new TraitSliderRow(trait, slider, valueText, badge);
+        slider.PropertyChanged += (_, e) =>
+        {
+            if (e.Property != Slider.ValueProperty)
+                return;
+            _traits.Write(trait, slider.Value);
+            UpdateRowChrome(row);
+            RefreshBandPreview();
+        };
+        _rows.Add(row);
+
+        return new StackPanel
+        {
+            Spacing = 2,
+            Children = { header, bar }
+        };
+    }
+
+    private static void UpdateRowChrome(TraitSliderRow row)
+    {
+        row.ValueText.Text = row.Slider.Value.ToString("0.00", CultureInfo.InvariantCulture);
+        row.Badge.IsVisible = row.Trait.IsDefault(row.Slider.Value);
     }
 
     private void BindHostTemplates()
@@ -100,19 +221,13 @@ public partial class PersonaWizardWindow : Window
         PersonaIdBox.IsReadOnly = true;
         HumanAddressBox.Text = pack.HumanAddress ?? "Friend";
         IdentityBlurbBox.Text = pack.IdentityBlurb ?? "";
+        PhysicalDescriptionBox.Text = pack.PhysicalDescription ?? "";
         _selectedInferenceModel = PersonaWizardLogic.NormalizeInferenceModel(pack.InferenceModel);
         _resolvedForThisPack = PersonaWizardLogic.NormalizeInferenceModel(pack.ResolvedInferenceModel);
         ApplyTraits(pack.Traits ?? new PersonaTraitScalesInfo());
-        // Prefer Host compiledDirectives on edit load (PROP-15.10 F3).
-        if (BandPreviewText is not null)
-        {
-            BandPreviewText.Text = PersonaWizardLogic.PreferHostOrBandPreview(
-                pack.CompiledDirectives,
-                pack.Traits ?? new PersonaTraitScalesInfo());
-        }
-
         _personaIdTouched = true;
         RefreshModelHint();
+        RefreshDescriptionCount();
     }
 
     private async Task LoadInferenceModelsAsync()
@@ -125,7 +240,6 @@ public partial class PersonaWizardWindow : Window
         {
             var snap = await _client.ListInferenceModelsAsync().ConfigureAwait(true);
             _hostDefaultModel = snap.HostModel;
-            // Prefer pack resolved (GET /api/personas); else models probe resolvedInferenceModel / hostModel.
             if (string.IsNullOrWhiteSpace(_resolvedForThisPack))
             {
                 _resolvedForThisPack = PersonaWizardLogic.NormalizeInferenceModel(_selectedInferenceModel)
@@ -180,7 +294,6 @@ public partial class PersonaWizardWindow : Window
         else
             _selectedInferenceModel = null;
 
-        // Live hint: override shows itself; blank inherits Host default from models probe.
         _resolvedForThisPack = _selectedInferenceModel
                                ?? _hostDefaultModel
                                ?? _resolvedForThisPack;
@@ -246,24 +359,87 @@ public partial class PersonaWizardWindow : Window
         }
     }
 
+    private void PhysicalDescriptionBox_TextChanged(object? sender, TextChangedEventArgs e) =>
+        RefreshDescriptionCount();
+
+    private void RefreshDescriptionCount()
+    {
+        if (PhysicalDescriptionCount is null || PhysicalDescriptionBox is null)
+            return;
+        var len = PhysicalDescriptionBox.Text?.Length ?? 0;
+        PhysicalDescriptionCount.Text = $"{len}/{PersonaPack.PhysicalDescriptionMaxLength}";
+    }
+
+    private async void DescriptionHelp_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_drafting || _saving)
+            return;
+
+        var decision = PersonaWizardLogic.DecideDescriptionDraft(personaAlreadyOnHost: !_isCreate);
+        if (!decision.CallRoute)
+        {
+            StatusText.Text = decision.Status ?? PersonaWizardLogic.DescriptionDraftNeedsSavedPersona;
+            return;
+        }
+
+        _drafting = true;
+        DescriptionHelpButton.IsEnabled = false;
+        var current = CurrentDraftFields();
+        try
+        {
+            StatusText.Text = "Drafting physical description…";
+            var draft = await _client.DraftPhysicalDescriptionAsync(_editTarget!.PersonaId).ConfigureAwait(true);
+            var applied = PersonaWizardLogic.ApplyDescriptionDraft(
+                current,
+                draftSucceeded: draft.Ok,
+                draftText: draft.Ok ? draft.Text : null);
+            PhysicalDescriptionBox.Text = applied.PhysicalDescription;
+            IdentityBlurbBox.Text = applied.IdentityBlurb ?? "";
+            StatusText.Text = draft.Ok
+                ? "Draft filled the physical description. Save to keep it."
+                : draft.Detail ?? "Description draft failed. The box was left unchanged.";
+        }
+        finally
+        {
+            _drafting = false;
+            DescriptionHelpButton.IsEnabled = true;
+        }
+    }
+
+    private DescriptionDraftFields CurrentDraftFields()
+    {
+        var policy = _editTarget?.ToolPolicy;
+        return new DescriptionDraftFields
+        {
+            IdentityBlurb = IdentityBlurbBox.Text,
+            PhysicalDescription = PhysicalDescriptionBox.Text ?? "",
+            AllowDesktop = policy?.AllowDesktop ?? true,
+            AllowBrowser = policy?.AllowBrowser ?? true,
+            AllowEmail = policy?.AllowEmail ?? true
+        };
+    }
+
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close(false);
 
     private void Back_Click(object? sender, RoutedEventArgs e)
     {
-        if (_saving)
+        if (_saving || _drafting)
             return;
-        if (_step <= (_isCreate ? 0 : 1))
+        if (_step <= 0)
             return;
         _step--;
         ShowStep();
     }
 
-    private async void Next_Click(object? sender, RoutedEventArgs e)
+    private void Next_Click(object? sender, RoutedEventArgs e)
     {
-        if (_saving)
+        if (_saving || _drafting)
+            return;
+        if (_step >= _steps.Count - 1)
             return;
 
-        if (_step == 0)
+        var kind = _steps[_step].Kind;
+        if (kind == PersonaWizardStepKind.Template)
         {
             if (TemplateList.SelectedItem is not PersonaTemplateInfo template)
             {
@@ -275,37 +451,23 @@ public partial class PersonaWizardWindow : Window
 
             _selectedTemplate = template;
             ApplyTemplateDefaults(template);
-            _step = 1;
-            ShowStep();
-            return;
         }
-
-        if (_step == 1)
+        else if (kind == PersonaWizardStepKind.Identity)
         {
             if (!ValidateIdentity(out var error))
             {
                 StatusText.Text = error;
                 return;
             }
-
-            _step = 2;
-            ShowStep();
-            return;
         }
 
-        if (_step == 2)
-        {
-            RefreshBandPreview();
-            _step = 3;
-            ShowStep();
-        }
-
-        await Task.CompletedTask.ConfigureAwait(true);
+        _step++;
+        ShowStep();
     }
 
     private async void Save_Click(object? sender, RoutedEventArgs e)
     {
-        if (_saving)
+        if (_saving || _drafting)
             return;
         if (!ValidateIdentity(out var error))
         {
@@ -322,6 +484,7 @@ public partial class PersonaWizardWindow : Window
         try
         {
             var traits = ReadTraits();
+            var description = PhysicalDescriptionBox.Text ?? "";
             PersonaWriteSnapshot result;
             if (_isCreate)
             {
@@ -340,7 +503,8 @@ public partial class PersonaWizardWindow : Window
                     HumanAddressBox.Text ?? "Friend",
                     IdentityBlurbBox.Text,
                     traits,
-                    _selectedInferenceModel);
+                    _selectedInferenceModel,
+                    description);
                 result = await _client.CreateAsync(write).ConfigureAwait(true);
             }
             else
@@ -351,6 +515,7 @@ public partial class PersonaWizardWindow : Window
                     DisplayName = DisplayNameBox.Text ?? "",
                     HumanAddress = HumanAddressBox.Text ?? "Friend",
                     IdentityBlurb = IdentityBlurbBox.Text,
+                    PhysicalDescription = description,
                     InferenceModel = _selectedInferenceModel,
                     Traits = traits
                 };
@@ -383,6 +548,7 @@ public partial class PersonaWizardWindow : Window
             DisplayNameBox.Text = "";
         HumanAddressBox.Text = template.HumanAddress;
         IdentityBlurbBox.Text = template.IdentityBlurb ?? "";
+        PhysicalDescriptionBox.Text = template.PhysicalDescription ?? "";
         ApplyTraits(template.Traits);
         _personaIdTouched = false;
         if (!string.IsNullOrWhiteSpace(DisplayNameBox.Text))
@@ -401,31 +567,39 @@ public partial class PersonaWizardWindow : Window
 
     private void ApplyTraits(PersonaTraitScalesInfo traits)
     {
-        WarmthSlider.Value = traits.Warmth;
-        DirectnessSlider.Value = traits.Directness;
-        FormalitySlider.Value = traits.Formality;
-        PlayfulnessSlider.Value = traits.Playfulness;
-        BoundarySlider.Value = traits.BoundaryStrictness;
-        RecallSlider.Value = traits.RecallBias;
+        foreach (var trait in PersonaTraitCatalog.All)
+            _traits.Write(trait, traits.Read(trait));
+        PushTraitsToSliders();
+    }
+
+    private void PushTraitsToSliders()
+    {
+        foreach (var row in _rows)
+        {
+            var value = _traits.Read(row.Trait);
+            if (Math.Abs(row.Slider.Value - value) > PersonaTraitCatalog.DefaultEpsilon)
+                row.Slider.Value = value;
+            UpdateRowChrome(row);
+        }
+
         RefreshBandPreview();
     }
 
-    private PersonaTraitScalesInfo ReadTraits() => new()
+    private PersonaTraitScalesInfo ReadTraits()
     {
-        Warmth = WarmthSlider.Value,
-        Directness = DirectnessSlider.Value,
-        Formality = FormalitySlider.Value,
-        Playfulness = PlayfulnessSlider.Value,
-        BoundaryStrictness = BoundarySlider.Value,
-        RecallBias = RecallSlider.Value
-    };
+        foreach (var row in _rows)
+            _traits.Write(row.Trait, row.Slider.Value);
+        return _traits.Clone();
+    }
 
     private void RefreshBandPreview()
     {
-        if (BandPreviewText is null)
+        if (BandPreviewText is null || _step < 0 || _step >= _steps.Count)
             return;
-        // Live slider: local 0.34/0.67 mirror (must match PersonaTraitCompiler).
-        BandPreviewText.Text = PersonaWizardLogic.FormatBandPreview(ReadTraits());
+        var group = _steps[_step].Group;
+        if (group is null)
+            return;
+        BandPreviewText.Text = PersonaWizardLogic.FormatGroupBandPreview(ReadTraits(), group);
     }
 
     private bool ValidateIdentity(out string error)
@@ -463,35 +637,36 @@ public partial class PersonaWizardWindow : Window
 
     private void ShowStep()
     {
-        TemplateStep.IsVisible = _isCreate && _step == 0;
-        IdentityStep.IsVisible = _step == 1;
-        TraitsStep.IsVisible = _step == 2;
-        CharterStep.IsVisible = _step == 3;
+        if (_steps.Count == 0)
+            return;
 
-        BackButton.IsVisible = _step > (_isCreate ? 0 : 1);
-        NextButton.IsVisible = _step < 3;
-        SaveButton.IsVisible = _step == 3;
+        var step = _steps[_step];
+        TemplateStep.IsVisible = step.Kind == PersonaWizardStepKind.Template;
+        IdentityStep.IsVisible = step.Kind == PersonaWizardStepKind.Identity;
+        ModelStep.IsVisible = step.Kind == PersonaWizardStepKind.Model;
+        TraitsStep.IsVisible = step.Kind == PersonaWizardStepKind.Traits;
+        CharterStep.IsVisible = step.Kind == PersonaWizardStepKind.Blurb;
+        QuarantineStep.IsVisible = step.Kind == PersonaWizardStepKind.Quarantine;
 
-        if (_isCreate && _step == 0 && PersonaWizardLogic.BuildTemplates(_hostPacks).Count == 0)
-            NextButton.IsEnabled = false;
-        else if (!_saving)
-            NextButton.IsEnabled = true;
+        if (step.Kind == PersonaWizardStepKind.Traits && step.Group is not null)
+            ShowTraitGroup(step.Group);
 
-        StepHintText.Text = _step switch
-        {
-            0 => "Step 1 — pick a Host template (Blank / Mentor / Analyst when seeded).",
-            1 => _isCreate
-                ? "Step 2 — name, Host id, human address, and optional chat model."
-                : "Edit name, human address, and chat model for this pack (id is fixed).",
-            2 => "Step 3 — trait scales (compiled to Low/Mid/High bands on Host).",
-            3 => "Step 4 — charter / identity seed + quarantine notice.",
-            _ => ""
-        };
+        var last = _steps.Count - 1;
+        BackButton.IsVisible = _step > 0;
+        NextButton.IsVisible = _step < last;
+        SaveButton.IsVisible = step.Kind == PersonaWizardStepKind.Quarantine;
 
-        if (_step == 1)
+        var templateBlocked = _isCreate
+                              && step.Kind == PersonaWizardStepKind.Template
+                              && PersonaWizardLogic.BuildTemplates(_hostPacks).Count == 0;
+        if (!_saving)
+            NextButton.IsEnabled = !templateBlocked;
+
+        StepHintText.Text = HintFor(step);
+
+        if (step.Kind == PersonaWizardStepKind.Model)
             RefreshModelHint();
-
-        if (_step == 3)
+        if (step.Kind == PersonaWizardStepKind.Quarantine)
         {
             var name = (DisplayNameBox.Text ?? "").Trim();
             var id = (PersonaIdBox.Text ?? "").Trim();
@@ -500,10 +675,56 @@ public partial class PersonaWizardWindow : Window
                 : PersonaQuarantineConfirm.BuildEditQuarantineNotice(name, id);
         }
 
-        if (_step == 2)
-            RefreshBandPreview();
-
-        if (!(_isCreate && _step == 0 && PersonaWizardLogic.BuildTemplates(_hostPacks).Count == 0))
+        if (!templateBlocked)
             StatusText.Text = "";
+    }
+
+    private void ShowTraitGroup(PersonaTraitGroup opened)
+    {
+        var groups = PersonaWizardLogic.TraitGroups;
+        for (var i = 0; i < _groupPanels.Count && i < groups.Count; i++)
+            _groupPanels[i].IsVisible = PersonaWizardLogic.ShowsTraitGroup(groups[i], opened);
+        TraitGroupTitle.Text = opened.Title;
+        RefreshBandPreview();
+    }
+
+    private string HintFor(PersonaWizardStep step)
+    {
+        var prefix = $"Step {_step + 1} of {_steps.Count} — ";
+        return step.Kind switch
+        {
+            PersonaWizardStepKind.Template =>
+                prefix + "pick a Host template (Blank / Mentor / Analyst when seeded).",
+            PersonaWizardStepKind.Identity => _isCreate
+                ? prefix + "identity and portrait. Name, Host id, human address, and physical description."
+                : prefix + "identity and portrait. Name, human address, and physical description (id is fixed).",
+            PersonaWizardStepKind.Model =>
+                prefix + "chat model for this pack only. Blank uses the Host default.",
+            PersonaWizardStepKind.Traits when step.Group?.IsMoreTraits == true =>
+                prefix + "More traits. These twenty stay hidden until this step. An untouched trait saves at its catalog default.",
+            PersonaWizardStepKind.Traits =>
+                prefix + $"{step.Group?.Title}. One trait group. Default marks a slider on its catalog default.",
+            PersonaWizardStepKind.Blurb =>
+                prefix + "identity blurb. Separate from the physical description.",
+            PersonaWizardStepKind.Quarantine =>
+                prefix + "quarantine confirm. Memory and the local transcript stay on this id.",
+            _ => throw new ArgumentOutOfRangeException(nameof(step.Kind), step.Kind, "Unhandled wizard step.")
+        };
+    }
+
+    private sealed class TraitSliderRow
+    {
+        public TraitSliderRow(PersonaTraitDefinition trait, Slider slider, TextBlock valueText, Border badge)
+        {
+            Trait = trait;
+            Slider = slider;
+            ValueText = valueText;
+            Badge = badge;
+        }
+
+        public PersonaTraitDefinition Trait { get; }
+        public Slider Slider { get; }
+        public TextBlock ValueText { get; }
+        public Border Badge { get; }
     }
 }
