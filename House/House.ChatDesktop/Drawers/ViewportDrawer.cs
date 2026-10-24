@@ -30,8 +30,13 @@ public sealed class ViewportDrawer
     private readonly TextBlock _status;
     private readonly TextBlock _clickNote;
     private readonly TextBlock _personaName;
+    private readonly TextBlock _caption;
     private readonly ToggleButton _clickthrough;
     private readonly Slider _viewOpacity;
+    private readonly ViewportStillSlot _stills = new();
+    private byte[]? _pendingJpeg;
+    private GuestPictureSource _pendingSource;
+    private Bitmap? _ownedGuestStill;
     private int _frameW;
     private int _frameH;
     private bool _frameKnown;
@@ -103,9 +108,9 @@ public sealed class ViewportDrawer
             Foreground = mark,
             FontWeight = FontWeight.SemiBold
         };
-        var caption = new TextBlock
+        _caption = new TextBlock
         {
-            Text = ViewportStill.Label,
+            Text = GuestPicture.NotReady,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(12, 2, 12, 4),
             Foreground = mark
@@ -114,7 +119,7 @@ public sealed class ViewportDrawer
         {
             IsVisible = false,
             Background = Brushes.Transparent,
-            Children = { _personaName, caption, stripBody }
+            Children = { _personaName, _caption, stripBody }
         };
 
         _still = new Image
@@ -128,7 +133,7 @@ public sealed class ViewportDrawer
         };
         _empty = new TextBlock
         {
-            Text = "No still yet",
+            Text = GuestPicture.NotReady,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(12),
             Foreground = new SolidColorBrush(Color.Parse("#8B8E97")),
@@ -286,6 +291,13 @@ public sealed class ViewportDrawer
         ApplyStill();
     }
 
+    /// <summary>Puts the VM tab back at the front of the topmost band. Chat is raised after this.</summary>
+    public void ReenterTabTopmost() => ChatDrawerFront.ReenterTopmost(_tabWindow);
+
+    public bool IsOpen => _open;
+
+    public event Action<bool>? OpenChanged;
+
     public void Hide() => SetOpen(false);
 
     public void Pin()
@@ -326,12 +338,53 @@ public sealed class ViewportDrawer
         ApplyStill();
     }
 
+    /// <summary>
+    /// Keeps the newest guest JPEG and, while the drawer is open, draws it with <see cref="ShowStill"/>.
+    /// A closed drawer may skip the decode. The next open paints the latest frame.
+    /// </summary>
+    public void ShowGuestJpeg(byte[] jpeg, GuestPictureSource source = GuestPictureSource.Vm)
+    {
+        if (jpeg is not { Length: > 0 })
+            return;
+
+        _stills.Show(jpeg);
+        _pendingJpeg = jpeg.ToArray();
+        _pendingSource = source;
+        SyncGuestCaption();
+        if (_open)
+            PaintPending();
+    }
+
+    public void NoteGuestNotReady()
+    {
+        if (_stills.HasFrame || _still.Source is not null)
+            return;
+        _caption.Text = GuestPicture.NotReady;
+        _empty.Text = GuestPicture.NotReady;
+        _empty.IsVisible = true;
+        _still.IsVisible = false;
+    }
+
+    public void ClearPicture(GuestPictureSource source)
+    {
+        if (_pendingSource != source)
+            return;
+        _pendingJpeg = null;
+        _pendingSource = GuestPictureSource.None;
+        _stills.Clear();
+        ReleaseOwnedStill();
+        ShowStill(null);
+    }
+
     public void ShowStill(Bitmap? bitmap)
     {
         _still.Source = bitmap;
         _still.IsVisible = bitmap is not null;
         _still.Opacity = ViewportStill.WindowOpacity;
         _empty.IsVisible = bitmap is null;
+        _empty.Text = GuestPicture.NotReady;
+        _caption.Text = bitmap is null ? GuestPicture.NotReady : GuestPicture.LiveCaption;
+        KeepStillOpaque();
     }
 
     public void ClearGuest(string? reason)
@@ -364,12 +417,53 @@ public sealed class ViewportDrawer
 
     private void SetOpen(bool open)
     {
+        var changed = _open != open;
         _open = open;
         if (!_tabWindow.IsVisible)
             _tabWindow.Show();
         Pin();
         if (open)
+        {
+            PaintPending();
             ApplyStill();
+        }
+
+        if (changed)
+            OpenChanged?.Invoke(open);
+    }
+
+    private void SyncGuestCaption()
+    {
+        _caption.Text = _stills.HasFrame ? GuestPicture.LiveCaption : GuestPicture.NotReady;
+        _empty.Text = GuestPicture.NotReady;
+    }
+
+    private void PaintPending()
+    {
+        if (_pendingJpeg is not { Length: > 0 } jpeg)
+            return;
+
+        try
+        {
+            using var stream = new MemoryStream(jpeg, writable: false);
+            var bitmap = new Bitmap(stream);
+            var previous = _ownedGuestStill;
+            _ownedGuestStill = bitmap;
+            ShowStill(bitmap);
+            if (previous is not null && !ReferenceEquals(previous, bitmap))
+                previous.Dispose();
+        }
+        catch (Exception ex)
+        {
+            PresenceStartupLog.WriteException("guest still", ex);
+        }
+    }
+
+    private void ReleaseOwnedStill()
+    {
+        var owned = _ownedGuestStill;
+        _ownedGuestStill = null;
+        owned?.Dispose();
     }
 
     private void HideStill()

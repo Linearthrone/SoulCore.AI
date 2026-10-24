@@ -156,6 +156,9 @@ public partial class PersonaWizardWindow : Window
             Value = trait.Default,
             Margin = new Thickness(0, 0, 8, 0)
         };
+        var hover = trait.HoverText;
+        ToolTip.SetTip(label, hover);
+        ToolTip.SetTip(slider, hover);
         var valueText = new TextBlock
         {
             Text = trait.Default.ToString("0.00", CultureInfo.InvariantCulture),

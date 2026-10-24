@@ -73,7 +73,7 @@ public partial class MainWindow
                 DesktopViewImage.IsVisible = false;
             }
 
-            _viewport?.ShowStill(null);
+            _viewport?.ClearPicture(GuestPictureSource.Desktop);
 
             if (DesktopViewEmptyText is not null)
                 DesktopViewEmptyText.IsVisible = true;
@@ -167,7 +167,7 @@ public partial class MainWindow
             if (!string.Equals(hash, _lastDesktopImageHash, StringComparison.Ordinal))
             {
                 _lastDesktopImageHash = hash;
-                ShowDesktopBitmap(snap.ImageBytes);
+                ShowDesktopBitmap(snap.ImageBytes, guestPicture: true);
             }
         }
         else if (showLiveImage && DesktopViewEmptyText is not null && DesktopViewImage is not null)
@@ -180,7 +180,7 @@ public partial class MainWindow
         PositionDesktopCursor(_desktopPopOutImage?.Parent as Control, _desktopPopOutCursorLayer, _desktopPopOutCursor);
     }
 
-    private void ShowDesktopBitmap(byte[] imageBytes)
+    private void ShowDesktopBitmap(byte[] imageBytes, bool guestPicture = false)
     {
         try
         {
@@ -192,7 +192,8 @@ public partial class MainWindow
                 DesktopViewImage.IsVisible = true;
             }
 
-            _viewport?.ShowStill(bmp);
+            if (guestPicture && !_guestJpegLive && _guestHwnd != 0)
+                _viewport?.ShowGuestJpeg(imageBytes, GuestPictureSource.Desktop);
 
             if (DesktopViewEmptyText is not null)
                 DesktopViewEmptyText.IsVisible = false;
@@ -274,7 +275,7 @@ public partial class MainWindow
             _desktopCursorX = null;
             _desktopCursorY = null;
             _lastDesktopImageHash = $"gallery:{item.FileName}:{bytes.Length}";
-            ShowDesktopBitmap(bytes);
+            ShowDesktopBitmap(bytes, guestPicture: false);
             PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
         }
     }

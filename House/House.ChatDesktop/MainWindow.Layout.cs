@@ -75,35 +75,10 @@ public partial class MainWindow
         _applyingLayout = true;
         try
         {
-            Width = _uiSettings.ResolvedWindowWidth();
-            Height = _uiSettings.ResolvedWindowHeight();
-            MinWidth = LocalUiSettings.MinWindowWidth;
-            MinHeight = LocalUiSettings.MinWindowHeight;
-
-            // Screens may be empty before the window handle exists; Opened re-checks.
-            var areas = CollectScreenWorkingAreas();
-            var (pos, relocated) = PresenceWindowPlacement.ResolveStartPosition(
-                _uiSettings.WindowX,
-                _uiSettings.WindowY,
-                Width,
-                Height,
-                areas);
-
-            if (pos is PixelPoint safe)
-            {
-                Position = safe;
-                WindowStartupLocation = WindowStartupLocation.Manual;
-                if (relocated)
-                {
-                    PresenceStartupLog.Write(
-                        $"Saved window position off-screen; moved to {safe.X},{safe.Y}");
-                    _uiSettings.WindowX = safe.X;
-                    _uiSettings.WindowY = safe.Y;
-                }
-            }
-
-            if (_uiSettings.WindowMaximized)
-                WindowState = WindowState.Maximized;
+            if (ChatDrawerPolicy.ShouldUseSavedFloatingRect())
+                ApplySavedFloatingRect();
+            else
+                ApplyClosedTabSize();
         }
         finally
         {
@@ -111,8 +86,43 @@ public partial class MainWindow
         }
     }
 
+    private void ApplySavedFloatingRect()
+    {
+        Width = _uiSettings.ResolvedWindowWidth();
+        Height = _uiSettings.ResolvedWindowHeight();
+        MinWidth = LocalUiSettings.MinWindowWidth;
+        MinHeight = LocalUiSettings.MinWindowHeight;
+
+        // Screens may be empty before the window handle exists; Opened re-checks.
+        var areas = CollectScreenWorkingAreas();
+        var (pos, relocated) = PresenceWindowPlacement.ResolveStartPosition(
+            _uiSettings.WindowX,
+            _uiSettings.WindowY,
+            Width,
+            Height,
+            areas);
+
+        if (pos is PixelPoint safe)
+        {
+            Position = safe;
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            if (relocated)
+            {
+                PresenceStartupLog.Write(
+                    $"Saved window position off-screen; moved to {safe.X},{safe.Y}");
+                _uiSettings.WindowX = safe.X;
+                _uiSettings.WindowY = safe.Y;
+            }
+        }
+
+        if (_uiSettings.WindowMaximized)
+            WindowState = WindowState.Maximized;
+    }
+
     private void EnsureWindowOnScreen()
     {
+        if (_chatEdgeOwnsPlacement && !ChatDrawerPolicy.ShouldUseSavedFloatingRect())
+            return;
         if (WindowState == WindowState.Maximized || WindowState == WindowState.FullScreen)
             return;
 
@@ -238,7 +248,8 @@ public partial class MainWindow
             return;
         try
         {
-            CaptureWindowBoundsIntoSettings();
+            if (!(_chatEdgeOwnsPlacement && !ChatDrawerPolicy.ShouldUseSavedFloatingRect()))
+                CaptureWindowBoundsIntoSettings();
             CapturePaneSizesIntoSettings();
             _uiSettings.Save();
         }
@@ -277,6 +288,12 @@ public partial class MainWindow
 
     private void ToggleMaximize()
     {
+        if (_chatEdgeOwnsPlacement && !ChatDrawerPolicy.ShouldUseSavedFloatingRect())
+        {
+            PinChatEdge();
+            return;
+        }
+
         WindowState = WindowState == WindowState.Maximized
             ? WindowState.Normal
             : WindowState.Maximized;
@@ -284,6 +301,8 @@ public partial class MainWindow
 
     private void ResizeEdge_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_chatEdgeOwnsPlacement && !ChatDrawerPolicy.ShouldUseSavedFloatingRect())
+            return;
         if (WindowState == WindowState.Maximized)
             return;
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)

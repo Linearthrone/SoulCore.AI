@@ -4,12 +4,12 @@ status: complete-client
 tt_id: TT-01
 prop_id: PROP-16-presence-glass-overlay
 created: 2026-10-21
-updated: 2026-10-22
+updated: 2026-10-23
 title: Presence glass overlay — drawers, traits, live quarter-screen guest
 need: A frameless white/blue glass overlay that shows every current Presence feature, with persona drawers, a trait catalog, and a live VirtualBox view
 pm_route: B
 pm_accepted_at: 2026-10-22
-pm_note: Ticketed chain closed 2026-10-22. Avenue B drawers, catalog, archive, and chat-multi accepted on builds and tests. 16.2 stopped: the guest is an opaque still, not a scaled live window. No running Presence window was clicked. Commit pending.
+pm_note: Ticketed chain closed 2026-10-23. 16.9 hovers and Open chat accepted on tests. The live drawer still hid on every Opened until the first-show park. 16.2 stopped: the guest is an opaque still. Commit pending.
 pm_tickets:
   - docs/agents/log/PROP-16.0-PM01-routing.md
   - docs/agents/log/PROP-16.1-PM01-to-FED01.md
@@ -21,6 +21,10 @@ pm_tickets:
   - docs/agents/log/PROP-16.5-PM01-to-FED01.md
   - docs/agents/log/PROP-16.6-PM01-to-BED01.md
   - docs/agents/log/PROP-16.6b-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.7-PM01-to-FED01.md
+  - docs/agents/log/PROP-16.8-PM01-to-OPS01.md
+  - docs/agents/log/PROP-16.8b-PM01-to-OPS01.md
+  - docs/agents/log/PROP-16.9-PM01-to-FED01.md
 ---
 
 # Presence glass overlay

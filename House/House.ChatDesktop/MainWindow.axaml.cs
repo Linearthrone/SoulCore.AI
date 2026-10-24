@@ -99,6 +99,7 @@ public partial class MainWindow : Window
     {
         PresenceStartupLog.Write("MainWindow ctor begin");
         InitializeComponent();
+        InstallChatEdgeChrome();
         ApplyViewportStillChrome();
         PresenceStartupLog.Write("InitializeComponent done");
         TranscriptList.ItemsSource = _messages;
@@ -163,6 +164,7 @@ public partial class MainWindow : Window
             _pollTimer.Stop();
             _desktopViewTimer.Stop();
             _browserViewTimer.Stop();
+            _guestGrabTimer?.Stop();
             _desktopPopOut?.Close();
             _popOuts.CloseAll();
             SaveDisplayNameFromEditor();
@@ -322,17 +324,19 @@ public partial class MainWindow : Window
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;
+        if (_chatEdgeOwnsPlacement && !ChatDrawerPolicy.ShouldUseSavedFloatingRect())
+            return;
         // Frameless: drag to move when restored. When maximized, ignore (use Restore / double-click).
         if (WindowState == WindowState.Maximized)
             return;
         BeginMoveDrag(e);
         if (DrawerDismiss.IsMostlyOffScreen(this))
-            Hide();
+            HideChatDrawer();
     }
 
-    private void Minimize_Click(object? sender, RoutedEventArgs e) => Hide();
+    private void Minimize_Click(object? sender, RoutedEventArgs e) => HideChatDrawer();
 
-    private void Close_Click(object? sender, RoutedEventArgs e) => Hide();
+    private void Close_Click(object? sender, RoutedEventArgs e) => HideChatDrawer();
 
     private void IdentitySave_Click(object? sender, RoutedEventArgs e) => SaveDisplayNameFromEditor();
 

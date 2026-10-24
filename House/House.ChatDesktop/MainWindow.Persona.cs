@@ -188,7 +188,8 @@ public partial class MainWindow
         var previousItem = FindPersonaItem(previousId);
 
         var confirmed = await ConfirmPersonaQuarantineAsync(selected).ConfigureAwait(true);
-        if (!confirmed)
+        var plan = ContactsOpenChat.Resolve(alreadyForeground: false, quarantineConfirmed: confirmed);
+        if (!plan.Activate)
         {
             _personaSwitcherHydrating = true;
             try
@@ -246,7 +247,8 @@ public partial class MainWindow
         SetPersonaStatus(
             result.Note ?? $"Active: {result.Persona.DisplayName}",
             warn: false);
-        ShowChatDrawer();
+        if (plan.ShowDrawer)
+            ShowChatDrawer();
     }
 
     private async Task OpenFavoriteAsync(FavoriteSlot slot)

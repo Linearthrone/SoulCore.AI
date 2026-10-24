@@ -134,6 +134,9 @@ public sealed class RadialEdgeWindow : Window
         return new TopmostRestore(this, wasTopmost);
     }
 
+    /// <summary>Puts this radial back at the front of the topmost band. Chat is raised after this.</summary>
+    public void ReenterTopmost() => ChatDrawerFront.ReenterTopmost(this);
+
     public void PinToLeftEdge()
     {
         var screen = Screens?.ScreenFromPoint(Position) ?? Screens?.Primary;

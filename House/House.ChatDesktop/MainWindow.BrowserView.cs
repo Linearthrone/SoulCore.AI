@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using House.ChatDesktop.Controls;
 using House.ChatDesktop.Services;
 
@@ -21,6 +22,9 @@ public partial class MainWindow
     private string? _browserCursorState;
     private DateTimeOffset? _browserCursorAt;
     private bool _browserCursorLayerHooked;
+    private bool _guestJpegLive;
+    private nint _guestHwnd;
+    private DispatcherTimer? _guestGrabTimer;
 
     // PROP-14.1 palette — match PlaywrightClickCursor IdleHex / ClickHex.
     private static readonly IBrush SoftCursorIdleStroke = new SolidColorBrush(Color.Parse("#FF2D55"));
@@ -70,6 +74,7 @@ public partial class MainWindow
             ClearVictoriaBrowserEmbed("Host unreachable");
             _viewport?.ClearGuest("Host unreachable");
             ClearVictoriaBrowserSoftCursor();
+            ReleaseVmGrab();
             return;
         }
 
@@ -116,22 +121,24 @@ public partial class MainWindow
         if (snap.FrameWidth > 0) _browserImagePixelWidth = snap.FrameWidth;
         if (snap.FrameHeight > 0) _browserImagePixelHeight = snap.FrameHeight;
 
-        if (embedded && IsVmSurface(embed))
+        var vmSurface = IsVmSurface(embed);
+        if (embedded && vmSurface)
         {
             // Frame size only. The VirtualBox HWND is not parented into the chat drawer or the quarter drawer.
             if (_victoriaBrowserEmbedHost is not null)
                 ClearVictoriaBrowserEmbed(null);
             _viewport?.OfferGuest(0, snap.FrameWidth, snap.FrameHeight);
         }
-        else if (IsVmSurface(embed))
+        else if (vmSurface)
         {
             if (_victoriaBrowserEmbedHost is not null)
                 ClearVictoriaBrowserEmbed(embed?.Detail);
-            _viewport?.ClearGuest(embed?.Detail ?? "VirtualBox window is not ready.");
+            _viewport?.ClearGuest(embed?.Detail ?? GuestPicture.NotReady);
         }
         else if (embedded)
         {
             _viewport?.ReleaseGuest();
+            ReleaseVmGrab();
             ApplyVictoriaBrowserEmbed(embed!);
             // Hide JPEG while HWND is live — coord hover is for JPEG fallback only.
             if (VictoriaBrowserImage is not null)
@@ -155,11 +162,20 @@ public partial class MainWindow
             {
                 _lastBrowserImageHash = hash;
                 ShowVictoriaBrowserBitmap(snap.ImageBytes);
+                if (vmSurface)
+                    ShowVmFrame(snap.ImageBytes);
+            }
+            else if (vmSurface)
+            {
+                _guestJpegLive = true;
+                StopGuestGrab();
             }
         }
         else
         {
             ClearVictoriaBrowserImage();
+            if (vmSurface)
+                NoteVmWithoutJpeg(embed);
             // Surface Host embed status in the big empty label (not only the tiny footer).
             if (VictoriaBrowserEmptyText is not null)
             {
@@ -169,6 +185,93 @@ public partial class MainWindow
         }
 
         ApplyVictoriaBrowserSoftCursor(snap, embed);
+        if (!vmSurface)
+            ReleaseVmGrab();
+    }
+
+    private void ShowVmFrame(byte[] jpeg)
+    {
+        _guestJpegLive = true;
+        StopGuestGrab();
+        _viewport?.ShowGuestJpeg(jpeg, GuestPictureSource.Vm);
+    }
+
+    private void NoteVmWithoutJpeg(BrowserEmbedSnapshot? embed)
+    {
+        _guestJpegLive = false;
+        var hwnd = embed is { Hwnd: > 0 } ? (nint)embed.Hwnd : 0;
+        if (hwnd != 0)
+        {
+            ArmGuestGrab(hwnd);
+            return;
+        }
+
+        _guestHwnd = 0;
+        StopGuestGrab();
+        _viewport?.NoteGuestNotReady();
+    }
+
+    private void ReleaseVmGrab()
+    {
+        _guestJpegLive = false;
+        _guestHwnd = 0;
+        StopGuestGrab();
+    }
+
+    private void ArmGuestGrab(nint hwnd)
+    {
+        if (hwnd == 0 || !OperatingSystem.IsWindows())
+            return;
+        _guestHwnd = hwnd;
+        if (_viewport is { IsOpen: true })
+            StartGuestGrab();
+    }
+
+    private void StartGuestGrab()
+    {
+        if (_guestJpegLive || _guestHwnd == 0)
+            return;
+        _guestGrabTimer ??= new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(GuestWindowGrab.IntervalMs)
+        };
+        _guestGrabTimer.Tick -= OnGuestGrabTick;
+        _guestGrabTimer.Tick += OnGuestGrabTick;
+        var started = !_guestGrabTimer.IsEnabled;
+        if (started)
+            _guestGrabTimer.Start();
+        if (started)
+            OnGuestGrabTick(null, EventArgs.Empty);
+    }
+
+    private void StopGuestGrab() => _guestGrabTimer?.Stop();
+
+    private void OnGuestGrabTick(object? sender, EventArgs e)
+    {
+        if (_guestJpegLive || _viewport is not { IsOpen: true } || _guestHwnd == 0)
+            return;
+        try
+        {
+            var bytes = GuestWindowGrab.TryBmp(_guestHwnd);
+            if (bytes is { Length: > 0 })
+                _viewport.ShowGuestJpeg(bytes, GuestPictureSource.Grab);
+        }
+        catch (Exception ex)
+        {
+            PresenceStartupLog.WriteException("guest grab", ex);
+        }
+    }
+
+    private void OnViewportPictureOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            StopGuestGrab();
+            return;
+        }
+
+        if (!_guestJpegLive && _guestHwnd != 0)
+            StartGuestGrab();
     }
 
     private static bool IsVmSurface(BrowserEmbedSnapshot? embed) =>

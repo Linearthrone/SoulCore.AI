@@ -27,6 +27,7 @@ public partial class MainWindow
     private bool _settingsDetached;
     private bool _houseDetached;
     private bool _glassChromeApplying;
+    private bool _chatRaisedOverGlass;
     private TrayIcon? _trayIcon;
 
     private void InitGlassShell()
@@ -155,6 +156,7 @@ public partial class MainWindow
         OnPersonaModeChanged();
 
         _viewport = new ViewportDrawer(_viewportPolicy, _uiSettings);
+        _viewport.OpenChanged += OnViewportPictureOpenChanged;
         ApplyForegroundChrome(_foregroundNames.House);
         _viewportPolicy.Changed += OnViewportPolicyChanged;
     }
@@ -199,8 +201,11 @@ public partial class MainWindow
         _radialWindow?.Show();
         _radialWindow?.PinToLeftEdge();
         _viewport?.Show();
-        if (GlassShellState.HotkeysArmed)
-            Hide();
+        // First launch is the closed right-edge tab. A later Show does not hide it.
+        if (!ChatDrawerPolicy.ShouldStartClosed() || _chatEdgePlaced)
+            return;
+        _chatEdgePlaced = true;
+        SetChatOpen(false);
     }
 
     private void ShowViewport_Click(object? sender, RoutedEventArgs e)
@@ -273,23 +278,76 @@ public partial class MainWindow
         if (GlassShellState.IsExiting)
             return;
         e.Cancel = true;
-        Hide();
+        HideChatDrawer();
     }
 
     private void ShowChatDrawer()
     {
+        if (ChatDrawerPolicy.ShouldHideOnOpen())
+            Hide();
+
         if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
-        Show();
+
+        SetChatOpen(true);
+        foreach (var window in ChatDrawerFront.TopmostRaiseOrder)
+            RaiseGlassWindow(window);
+        if (!IsVisible)
+            Show();
         Activate();
+    }
+
+    private void RaiseGlassWindow(GlassTopmostWindow window)
+    {
+        switch (window)
+        {
+            case GlassTopmostWindow.Radial:
+                _radialWindow?.ReenterTopmost();
+                break;
+            case GlassTopmostWindow.VmTab:
+                _viewport?.ReenterTabTopmost();
+                break;
+            case GlassTopmostWindow.Chat:
+                ReenterChatTopmost();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(window), window, "Unhandled glass window.");
+        }
+    }
+
+    private void ReenterChatTopmost()
+    {
+        ChatDrawerFront.ReenterTopmost(this);
+        if (!_chatTop.IsOn)
+            _chatRaisedOverGlass = true;
+    }
+
+    private void HideChatDrawer()
+    {
+        if (ChatDrawerPolicy.ShouldQuitWhenClosed())
+        {
+            ExitGlass();
+            return;
+        }
+
+        if (ChatDrawerPolicy.ShouldHideWindowWhenClosed())
+        {
+            if (_chatRaisedOverGlass && !_chatTop.IsOn)
+                Topmost = false;
+            _chatRaisedOverGlass = false;
+            Hide();
+            return;
+        }
+
+        SetChatOpen(false);
     }
 
     private void ToggleChatDrawer()
     {
-        if (!IsVisible || WindowState == WindowState.Minimized)
+        if (!_chatOpen || !IsVisible || WindowState == WindowState.Minimized)
             ShowChatDrawer();
         else
-            Hide();
+            HideChatDrawer();
     }
 
     private void NavHouse_Click(object? sender, RoutedEventArgs e) => ShowHouseDrawer();
@@ -417,6 +475,17 @@ public partial class MainWindow
             }
 
             await OpenPersonaWizardAsync(get.Persona).ConfigureAwait(true);
+            return;
+        }
+
+        var alreadyForeground = string.Equals(
+            persona.PersonaId,
+            _activePersonaId,
+            StringComparison.OrdinalIgnoreCase);
+        if (alreadyForeground)
+        {
+            var plan = ContactsOpenChat.Resolve(alreadyForeground: true, quarantineConfirmed: true);
+            OpenThreadWithoutActivating(persona.PersonaId, persona.DisplayName, showChat: plan.ShowDrawer);
             return;
         }
 

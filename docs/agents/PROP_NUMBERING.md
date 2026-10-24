@@ -55,7 +55,8 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-13-playwright-frame-not-leaked-text | Open Playwright to a URL and show the frame; chat must not echo `<execute_tool>` | **BED Pass** 2026-09-29 — Avenue A 13.1–13.3; QA Windows smoke pending | 13.1–13.3 BED |
 | PROP-14-victoria-browser-live-cursor-pane | HWND embed Victoria Chromium + pink→teal click cursor | **In progress** 2026-10-02 — 14.1/14.2 implementing on `cursor/prop14-cursor-hwnd-9531` | 14.1–14.5 |
 | PROP-15-persona-creation-platform | CreatorEdition PersonaPack + quarantine + in-app create | **Complete (platform)** — stress deferred; UI rewrite next; commit pending | 15.0–15.30 |
-| PROP-16-presence-glass-overlay | Frameless glass drawers, radial, tray, live quarter-screen guest, trait catalog | **Complete (client)** 2026-10-23 — ports 7720/17920; ALLSTOP aimed at those only. Commit pending | 16.0–16.8b |
+| PROP-16-presence-glass-overlay | Frameless glass drawers, radial, tray, live quarter-screen guest, trait catalog | **Complete (client)** 2026-10-23 — **16.9** hovers and Open chat Pass. Live reopen stayed hidden until the first-show park | — |
+| PROP-17-right-chat-and-live-vm | Right-edge chat drawer in the shared glass, plus a live VM picture that does not parent the guest HWND | **In progress** 2026-10-23 — **17** FED | 17 FED |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -66,7 +67,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **17**.
+Next free `N`: **18**.
 
 ## Open items (not on `main`)
 
@@ -81,6 +82,7 @@ Next free `N`: **17**.
 | **PROP-3** | — | Parked until SMS QA Pass |
 | **PROP-13** | BED-01 | Ticketed 2026-09-29. Avenue A: 13.1 intent+URL, 13.2 reply firewall, 13.3 capture gate + private-host reject. |
 | **PROP-14** | BED/FED | **In progress** — 14.1 cursor + 14.2 HWND embed on `cursor/prop14-cursor-hwnd-9531`; Windows Home PC smoke still needed |
+| **PROP-17** | FED-01 | **In progress** — right-edge chat drawer and a live VM picture. No HWND parent (`PROP-17-PM01-to-FED01.md`) |
 | **PROP-15.1** | BED-01 | PersonaPack spine — **Pass** (`docs/agents/reports/PROP-15.1-BED01-to-PM01.md`) |
 | **PROP-15.2** | BED-01 | Per-persona quarantined stores — **Pass** |
 | **PROP-15.3** | FED-01 | In-app create/edit wizard — **Pass (client)**; live API smoke → Host restart + 15.6 |
@@ -139,6 +141,8 @@ Next free `N`: **17**.
 | **PROP-16.7** | FED-01 | Top-edge VM drawer, lighter radial, Create agent caption hit — **Pass** (client). 3 tests (`PROP-16.7-FED01-to-PM01.md`) |
 | **PROP-16.8** | OPS-01 | Port block — **Pass**. Host 7720, bridge 17920, Tailscale 7720/8453 (`PROP-16.8-OPS01-to-PM01.md`) |
 | **PROP-16.8b** | OPS-01 | ALLSTOP targets 7720, 7721, and 17920 only — **Pass** (`PROP-16.8b-OPS01-to-PM01.md`) |
+| **PROP-16.9** | FED-01 | Trait hovers and Open chat — **Pass** (client). 6 tests. Live window still hid on every `Opened` until the first-show park (`PROP-16.9-FED01-to-PM01.md`) |
+| **PROP-17** | FED-01 | Right-edge chat drawer and live VM picture. **In Progress** (`PROP-17-PM01-to-FED01.md`) |
 
 Legacy non-PROP tickets still Pending: `TASK-123`, `TASK-137`, `TASK-139` (QA gates),
 `TASK-191` (Partial) / `TASK-192` (Queued) under REX.
