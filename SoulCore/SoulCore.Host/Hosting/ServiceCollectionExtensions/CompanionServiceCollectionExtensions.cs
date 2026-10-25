@@ -31,7 +31,6 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<ISmsOutboundService>(sp => new SmsOutboundService(
             sp.GetRequiredService<IOptions<SmsOptions>>(),
             sp.GetRequiredService<ILogger<SmsOutboundService>>(),
-            sp.GetService<IVictoriaBrowserViewHub>(),
             sp.GetService<IDesktopViewHub>(),
             sp.GetService<IHttpClientFactory>()));
         services.AddSingleton<ISmsInboundService, SmsInboundService>();

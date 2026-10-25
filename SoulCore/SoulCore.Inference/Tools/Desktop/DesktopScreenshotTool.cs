@@ -1,5 +1,4 @@
 using System.Text.Json;
-using SoulCore.Inference.Tools.Browser;
 
 namespace SoulCore.Inference.Tools.Desktop;
 
@@ -26,20 +25,17 @@ public sealed class DesktopScreenshotTool : ITool
     private readonly IComputerControlGate _gate;
     private readonly IDesktopControlBackend _backend;
     private readonly IDesktopViewHub? _view;
-    private readonly IVictoriaBrowserViewHub? _browserView;
     private readonly IVisionClickCoordMap? _visionMap;
 
     public DesktopScreenshotTool(
         IComputerControlGate gate,
         IDesktopControlBackend backend,
         IDesktopViewHub? view = null,
-        IVictoriaBrowserViewHub? browserView = null,
         IVisionClickCoordMap? visionMap = null)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _view = view;
-        _browserView = browserView;
         _visionMap = visionMap;
     }
 
@@ -89,16 +85,6 @@ public sealed class DesktopScreenshotTool : ITool
             result.Data,
             DesktopViewHub.SourceDesktop,
             "desktop_screenshot");
-
-        // Mirror guest framebuffer into Her screen so Kayleigh can hover→copy coords
-        // that match desktop_click / guest browser_click (origin 0,0).
-        VictoriaBrowserViewHub.TryPublishFromToolData(
-            _browserView,
-            result.Data,
-            "desktop_screenshot",
-            VictoriaBrowserViewHub.BackendVboxGuest,
-            url: null,
-            title: "victoria-sandbox");
 
         // Do not call ListWindowsAsync here — that is a second guestcontrol round
         // trip and was a major sandbox lag source. Window bounds stay available via

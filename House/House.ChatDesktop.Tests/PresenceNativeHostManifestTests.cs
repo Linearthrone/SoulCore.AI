@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using House.ChatDesktop.Controls;
 
 namespace House.ChatDesktop.Tests;
 
@@ -59,34 +58,4 @@ public sealed class PresenceNativeHostManifestTests
         Assert.Equal(version, info);
     }
 
-    [Fact]
-    public void MainWindow_axaml_defers_NativeControlHost_out_of_cold_start_tree()
-    {
-        var path = Path.Combine(ChatDesktopDir, "MainWindow.axaml");
-        var axaml = File.ReadAllText(path);
-        Assert.Contains("VictoriaBrowserEmbedSlot", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "<controls:VictoriaBrowserEmbedHost",
-            axaml,
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void EmbedHost_exposes_NativeHostUnavailable_for_soft_fail()
-    {
-        var host = new VictoriaBrowserEmbedHost();
-        Assert.False(host.NativeHostUnavailable);
-        // Bind(0) must stay quiet — no throw, stays invisible path for JPEG fallback.
-        host.Bind(0);
-        Assert.False(host.IsVisible);
-    }
-
-    [Fact]
-    public void EmbedHost_SyncSizeToSlot_is_safe_when_not_attached()
-    {
-        var host = new VictoriaBrowserEmbedHost();
-        host.Bind(0);
-        host.SyncSizeToSlot(); // no-op; must not throw
-        Assert.False(host.IsVisible);
-    }
 }

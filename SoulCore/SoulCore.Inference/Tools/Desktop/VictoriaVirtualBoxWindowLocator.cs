@@ -8,7 +8,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// Locate the Victoria VirtualBox guest window (victoria-sandbox) for Presence HWND embed.
 /// Prefer VirtualBoxVM.exe (the running VM) over VirtualBox Manager.
 /// After Presence SetParent, the HWND is no longer top-level — EnumWindows misses it.
-/// Cache + IsWindow keeps returning the same HWND so Her screen does not tear down.
+/// Cache + IsWindow keeps returning the same VirtualBox HWND.
 /// </summary>
 public static class VictoriaVirtualBoxWindowLocator
 {

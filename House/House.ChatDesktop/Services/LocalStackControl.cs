@@ -92,41 +92,6 @@ public sealed class LocalStackControl : IDisposable
     public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
-    /// <summary>
-    /// Soft recover: save state then start GUI (window gone but session still healthy).
-    /// </summary>
-    public async Task<LocalStackActionResult> RecoverSandboxVmGuiAsync(CancellationToken ct = default)
-    {
-        var save = await SaveSandboxVmAsync(ct).ConfigureAwait(false);
-        if (!save.Ok)
-        {
-            // Save often fails when the session is already wedged — escalate.
-            var hard = await ForceUnlockSandboxVmAsync(ct).ConfigureAwait(false);
-            return hard.Ok
-                ? LocalStackActionResult.Succeed("Recover UI escalated to force-unlock: " + hard.Detail)
-                : LocalStackActionResult.Fail(
-                    "Recover UI: save state failed (" + save.Detail + "); force-unlock also failed: "
-                    + hard.Detail);
-        }
-
-        await Task.Delay(900, ct).ConfigureAwait(false);
-
-        var start = await StartSandboxVmAsync(ct).ConfigureAwait(false);
-        if (start.Ok)
-        {
-            return LocalStackActionResult.Succeed(
-                "Recovered GUI (save state -> start) - Her screen should re-embed shortly");
-        }
-
-        var unlocked = await ForceUnlockSandboxVmAsync(ct).ConfigureAwait(false);
-        return unlocked.Ok
-            ? LocalStackActionResult.Succeed(
-                "Recover UI: start failed (" + start.Detail + "); force-unlock OK: " + unlocked.Detail)
-            : LocalStackActionResult.Fail(
-                "Recover UI: start failed (" + start.Detail + "); force-unlock failed: "
-                + unlocked.Detail);
-    }
-
     /// <summary>Relative path for stuck-session recovery (tests + ForceUnlockSandboxVmAsync).</summary>
     public const string ForceUnlockSandboxRelativeScript =
         "House\\scripts\\force-unlock-victoria-sandbox.ps1";

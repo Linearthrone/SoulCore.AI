@@ -308,35 +308,6 @@ public class DesktopToolsTests
     }
 
     [Fact]
-    public async Task DesktopScreenshot_PublishesGuestFrame_ToHerScreenHub()
-    {
-        var png = MinimalPng(8, 6);
-        var backend = new MockDesktopBackend
-        {
-            ScreenshotResult = new DesktopOpResult(
-                true,
-                "guest screenshot",
-                new { bytes = png, width = 8, height = 6, format = "png" }),
-        };
-        var gate = new ComputerControlGate(allowDesktopCapture: true, allowComputerControl: false);
-        var desk = new DesktopViewHub();
-        var her = new VictoriaBrowserViewHub();
-        var tool = new DesktopScreenshotTool(gate, backend, desk, her);
-
-        var result = await tool.ExecuteAsync(JsonDocument.Parse("""{}""").RootElement);
-
-        Assert.True(result.Success);
-        var snap = her.GetSnapshot();
-        Assert.True(snap.HasImage);
-        Assert.Equal(VictoriaBrowserViewHub.BackendVboxGuest, snap.Backend);
-        Assert.Equal("desktop_screenshot", snap.LastAction);
-        Assert.True(her.TryGetImageBytes(out var bytes, out var ct));
-        Assert.NotNull(bytes);
-        Assert.Equal(png.Length, bytes!.Length);
-        Assert.Equal("image/png", ct);
-    }
-
-    [Fact]
     public async Task DesktopScreenshot_CaptureDisabled_Refuses()
     {
         var backend = new MockDesktopBackend();

@@ -5,7 +5,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 /// <summary>
 /// <c>desktop_click</c> — requires session <see cref="IComputerControlGate.AllowComputerControl"/>.
 /// Optional <c>clicks: 2</c> for double-click (BED-174).
-/// Publishes pink→teal soft cursor to Presence Her screen (VM embed).
+/// Records the click on the desktop view so the Doing line can name it.
 /// </summary>
 public sealed class DesktopClickTool : ITool
 {
@@ -106,7 +106,6 @@ public sealed class DesktopClickTool : ITool
         if (clicks is not (1 or 2))
             return new ToolResult(false, "error: desktop_click 'clicks' must be 1 or 2.", null);
 
-        // Pink aim on Her screen before the press (Playwright-parity for VM embed).
         await SoftCursorPresenceFeedback.AnnounceAimAsync(_view, x, y, ct).ConfigureAwait(false);
 
         var result = await _backend.ClickAsync(x, y, button, clicks, ct).ConfigureAwait(false);

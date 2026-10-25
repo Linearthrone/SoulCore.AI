@@ -278,44 +278,6 @@
       <Setter Property="Background" Value="#1E2430"/>
     </Style>
 
-    <!-- Header stand-ins for Her screen / What she saw (tab strip is hidden so coords can sit between them and Start/Stop). -->
-    <Style Selector="Button.side-tab">
-      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Padding" Value="14,8"/>
-      <Setter Property="Margin" Value="0,0,8,0"/>
-      <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Background" Value="#1A1C20"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Name="TabBd"
-                  Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="6"
-                  Padding="{TemplateBinding Padding}"
-                  BoxShadow="inset 0 1 0 0 #22FFFFFF">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="Button.side-tab:pointerover /template/ Border#TabBd">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
-    </Style>
-    <Style Selector="Button.side-tab.selected">
-      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-    </Style>
-    <Style Selector="Button.side-tab.selected /template/ Border#TabBd">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
-    </Style>
-
     <!-- Message row with contact bubbles outside the text bubble -->
     <Style Selector="Grid.msg-row">
       <Setter Property="Margin" Value="4,6"/>

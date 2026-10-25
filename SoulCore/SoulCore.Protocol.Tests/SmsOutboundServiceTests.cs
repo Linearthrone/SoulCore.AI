@@ -5,7 +5,6 @@ using SoulCore.Config;
 using SoulCore.Host.Companion;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
-using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Memory;
 
@@ -70,20 +69,18 @@ public class SmsOutboundServiceTests
     }
 
     [Fact]
-    public async Task EnqueueScreenshotMms_PrefersBrowserHub()
+    public async Task EnqueueScreenshotMms_UsesDesktopCapture()
     {
-        var browser = new VictoriaBrowserViewHub();
-        browser.Publish(new byte[] { 0xFF, 0xD8, 0xFF, 0x00 }, "https://x", "t", "nav");
         var desk = new DesktopViewHub();
         desk.RecordScreenshot(new byte[] { 1, 2, 3, 4 }, "png", 1, 1, null, DesktopViewHub.SourceDesktop);
 
-        var sut = CreateSut(browser: browser, desktop: desk, minMms: 0);
+        var sut = CreateSut(desktop: desk, minMms: 0);
         var r = await sut.EnqueueScreenshotMmsAsync("still");
         Assert.True(r.Ok);
         var job = Assert.Single(sut.ListPending());
-        Assert.Equal("image/jpeg", job.ContentType);
+        Assert.Equal("image/png", job.ContentType);
         Assert.Equal(4, job.ImageBytes!.Length);
-        Assert.Contains("browser", job.Source ?? "", StringComparison.Ordinal);
+        Assert.Contains("desktop", job.Source ?? "", StringComparison.Ordinal);
     }
 
     [Fact]
@@ -141,7 +138,6 @@ public class SmsOutboundServiceTests
     private static SmsOutboundService CreateSut(
         int minSms = 0,
         int minMms = 0,
-        IVictoriaBrowserViewHub? browser = null,
         IDesktopViewHub? desktop = null) =>
         new(
             Options.Create(new SmsOptions
@@ -154,7 +150,6 @@ public class SmsOutboundServiceTests
                 MaxMmsPerHour = 6
             }),
             NullLogger<SmsOutboundService>.Instance,
-            browser,
             desktop);
 
     private sealed class InboundCountingInference : IInferenceClient

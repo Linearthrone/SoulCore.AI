@@ -3,10 +3,10 @@ using System.Runtime.InteropServices;
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
-/// Parks the Windows host cursor away from the VirtualBox / Presence embed during
+/// Parks the Windows host cursor away from the VirtualBox window during
 /// guest xdotool clicks. Mouse Integration (Absolute) only updates the guest while
 /// the host cursor is over the VM HWND — parking to (0,0) often still sits on
-/// Presence's top-left Her screen, so we park outside the VM (and its root) window.
+/// the VirtualBox window, so we park the host cursor outside that window.
 /// </summary>
 public static class HostPointerPark
 {
@@ -75,7 +75,7 @@ public static class HostPointerPark
 
     /// <summary>
     /// Prefer bottom-right / bottom-left / top-right of the virtual screen so we
-    /// avoid Presence's usual top-left placement of Her screen.
+    /// avoid the VirtualBox window.
     /// </summary>
     public static (int X, int Y) PickParkPoint(IReadOnlyList<Rect> excludes)
     {

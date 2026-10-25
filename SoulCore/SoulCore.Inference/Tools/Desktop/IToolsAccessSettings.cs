@@ -33,7 +33,7 @@ public interface IToolsAccessSettings
     /// </summary>
     string DesktopTargetWindowTitle { get; }
 
-    /// <summary>Presence Her screen SetParent of VirtualBox victoria-sandbox (session).</summary>
+    /// <summary>Retired embed flag. Presence no longer reparents the VM window.</summary>
     bool VmEmbedPane { get; }
 
     void SetAllowDesktopCapture(bool enabled);

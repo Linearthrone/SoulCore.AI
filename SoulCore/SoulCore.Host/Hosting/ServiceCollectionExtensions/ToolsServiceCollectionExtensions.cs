@@ -111,14 +111,9 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ComputerControlGate>();
         services.AddSingleton<IComputerControlGate>(sp => sp.GetRequiredService<ComputerControlGate>());
         services.AddSingleton<IToolsAccessSettings>(sp => sp.GetRequiredService<ComputerControlGate>());
-        services.AddSingleton<IVictoriaBrowserViewHub, VictoriaBrowserViewHub>();
         services.AddSingleton<IDesktopViewHub>(sp =>
-        {
-            var browser = sp.GetRequiredService<IVictoriaBrowserViewHub>();
-            return new DesktopViewHub(
-                () => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore,
-                mirrorCursor: (x, y, state) => browser.RecordCursor(x, y, state));
-        });
+            new DesktopViewHub(
+                () => sp.GetRequiredService<IToolsAccessSettings>().SoftCursorRestore));
         // PROP-4: honest Presence activity (doing-now), not SoulLoop want slogans.
         services.AddSingleton<SoulCore.Inference.Presence.IPresenceActivityHub>(sp =>
             new SoulCore.Inference.Presence.PresenceActivityHub(sp.GetRequiredService<IDesktopViewHub>()));
@@ -176,7 +171,6 @@ internal static class ToolsServiceCollectionExtensions
             sp.GetRequiredService<IComputerControlGate>(),
             sp.GetRequiredService<IDesktopControlBackend>(),
             sp.GetRequiredService<IDesktopViewHub>(),
-            sp.GetRequiredService<IVictoriaBrowserViewHub>(),
             sp.GetRequiredService<IVisionClickCoordMap>()));
         services.AddSingleton<ITool>(sp => new DesktopClickTool(
             sp.GetRequiredService<IComputerControlGate>(),
@@ -252,8 +246,7 @@ internal static class ToolsServiceCollectionExtensions
             {
                 return new PlaywrightBrowserBridge(
                     sp.GetRequiredService<IOptions<ToolsOptions>>(),
-                    sp.GetService<ILogger<PlaywrightBrowserBridge>>(),
-                    sp.GetRequiredService<IVictoriaBrowserViewHub>());
+                    sp.GetService<ILogger<PlaywrightBrowserBridge>>());
             }
 
             var scopeTitle = (opts.DesktopTargetWindowTitle ?? "").Trim();
@@ -280,8 +273,7 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ITool>(sp => new BrowserCaptureTabTool(
             sp.GetRequiredService<IBrowserBridge>(),
             sp.GetRequiredService<IToolsAccessSettings>(),
-            sp.GetRequiredService<IDesktopViewHub>(),
-            sp.GetRequiredService<IVictoriaBrowserViewHub>()));
+            sp.GetRequiredService<IDesktopViewHub>()));
         services.AddSingleton<ITool, BrowserNavigateTool>();
         services.AddSingleton<ITool, BrowserSnapshotTool>();
         services.AddSingleton<ITool, BrowserClickTextTool>();

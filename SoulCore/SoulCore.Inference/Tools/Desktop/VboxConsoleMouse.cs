@@ -20,9 +20,6 @@ public static class VboxConsoleMouse
 
     /// <summary>
     /// Guest framebuffer (0,0) top-left → VBox Absolute [1,1] (SDK).
-    /// PROP-19.3: must stay identical to Presence <c>VictoriaVmPointerPlan.ToAbsolute</c> /
-    /// <c>VictoriaBrowserCoordMap.ToAbsolute</c> (+1,+1). Soft-cursor tip paints Guest0;
-    /// Absolute is inject-only. (House cannot reference this assembly — keep math in lockstep.)
     /// </summary>
     public static (int Ax, int Ay, int DownFlags) PlanAbsolutePress(int x, int y, int xdotoolButton)
     {

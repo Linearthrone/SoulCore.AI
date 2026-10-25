@@ -21,12 +21,9 @@ public partial class MainWindow : Window
 {
     private readonly ObservableCollection<ChatMessage> _messages = new();
     private readonly SoulCoreHealthClient _health = new();
-    private readonly SoulCoreTaskClient _taskClient = new();
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
     private readonly SoulCoreEmailSettingsClient _emailSettings = new();
-    private readonly SoulCoreDesktopViewClient _desktopView = new();
-    private readonly SoulCoreBrowserViewClient _browserView = new();
     private readonly CompanionMediaClient _media = new();
     private readonly LocalStackControl _stack;
     private readonly ChatHistoryStore _chatHistory = new();
@@ -36,7 +33,6 @@ public partial class MainWindow : Window
     private readonly ToggleButtonState _hudTop = new();
     private readonly ToggleButtonState _chatTop = new();
     private readonly ToggleButtonState _servicesTop = new();
-    private readonly ToggleButtonState _screenTop = new();
 
     private bool _pttBusy;
     private bool _toolsAccessHydrating;
@@ -53,25 +49,6 @@ public partial class MainWindow : Window
     private DateTimeOffset? _soulCoreHoldStarted;
     private DispatcherTimer? _soulCoreHoldTimer;
     private readonly DispatcherTimer _pollTimer;
-    private readonly DispatcherTimer _desktopViewTimer;
-    private readonly DispatcherTimer _browserViewTimer;
-    private bool _desktopViewBusy;
-    private bool _browserViewBusy;
-    private string? _lastBrowserImageHash;
-    private int _desktopImageWidth;
-    private int _desktopImageHeight;
-    private int? _desktopCursorX;
-    private int? _desktopCursorY;
-    private string? _lastDesktopImageHash;
-    private string? _lastDesktopDiskPath;
-    private string? _lastDesktopGalleryDir;
-    private string? _lastDesktopGallerySignature;
-    private string? _lastNewestGalleryFileName;
-    private string? _pinnedGalleryFileName;
-    private Window? _desktopPopOut;
-    private Image? _desktopPopOutImage;
-    private Canvas? _desktopPopOutCursorLayer;
-    private Ellipse? _desktopPopOutCursor;
     private readonly IBrush _okBrush;
     private readonly IBrush _warnBrush;
     private readonly IBrush _badBrush;
@@ -96,7 +73,6 @@ public partial class MainWindow : Window
     private Panel? _hudDock;
     private Panel? _chatDock;
     private Panel? _servicesDock;
-    private Panel? _screenDock;
 
     public MainWindow()
     {
@@ -128,21 +104,12 @@ public partial class MainWindow : Window
         _hudDock = HudPanel.Parent as Panel;
         _chatDock = ChatPanel.Parent as Panel;
         _servicesDock = ServicesPanel.Parent as Panel;
-        // ScreenPanel docks in a TabItem now (What she saw); pop-out uses a twin window, not reparent.
-        _screenDock = ScreenPanel.Parent as Panel;
 
         _ws.StateChanged += OnWsStateChanged;
         _ws.FrameReceived += OnFrameReceived;
 
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += async (_, _) => await ProbeHealthAsync();
-
-        _desktopViewTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
-        _desktopViewTimer.Tick += async (_, _) => await RefreshDesktopViewAsync();
-
-        // FED-196: near-live Victoria Playwright pane (~5 fps so aim cursor is visible while she drives).
-        _browserViewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _browserViewTimer.Tick += async (_, _) => await RefreshVictoriaBrowserViewAsync();
 
         Opened += async (_, _) =>
         {
@@ -158,38 +125,18 @@ public partial class MainWindow : Window
             await _ws.ConnectAsync();
             await ProbeHealthAsync();
             _pollTimer.Start();
-            _desktopViewTimer.Start();
-            _browserViewTimer.Start();
-            await RefreshDesktopViewAsync();
-            await RefreshVictoriaBrowserViewAsync();
             await EnsureDesktopBrowserDefaultsAsync();
-        };
-
-        // Detach SetParent'd VirtualBox BEFORE the Avalonia host HWND dies. Closing only
-        // disposed the overlay — the guest window stayed a child of a dying parent and was
-        // destroyed while the VM process kept "running" (JPEG forever, no HerScreenInput).
-        Closing += (_, _) =>
-        {
-            try { _browserViewTimer.Stop(); } catch { /* ignore */ }
-            try { DestroyVictoriaBrowserEmbedHost(); } catch { /* ignore */ }
-            try { CloseHerScreenOverlay(); } catch { /* ignore */ }
         };
 
         Closed += async (_, _) =>
         {
             _pollTimer.Stop();
-            _desktopViewTimer.Stop();
-            _browserViewTimer.Stop();
-            CloseHerScreenOverlay();
-            _desktopPopOut?.Close();
             _popOuts.CloseAll();
             await _ws.DisposeAsync();
             _notifications.Dispose();
             _health.Dispose();
             _toolsSettings.Dispose();
             _emailSettings.Dispose();
-            _desktopView.Dispose();
-            _browserView.Dispose();
             _media.Dispose();
             _stack.Dispose();
             _chatHistory.Dispose();
@@ -258,8 +205,6 @@ public partial class MainWindow : Window
         if (NavPresence is not null)
             NavPresence.IsChecked = true;
         Title = "House Victoria — Presence";
-        _ = RefreshDesktopViewAsync();
-        _ = RefreshVictoriaBrowserViewAsync();
     }
 
     private void ShowSettingsView()
@@ -328,10 +273,9 @@ public partial class MainWindow : Window
                 "Memories — live / quarantined / newest: Host detail not on /health yet\n" +
                 "Books — feeling · animation · environment · life-hacks (life-hacks awaits PROP-17.2)\n" +
                 "SOP count — awaits PROP-17.2 store\n" +
-                "Tasks — listed under Her screen; only you can delete one\n" +
+                "Tasks — on the Host ledger; she manages them from chat\n" +
                 "Workflows — not reported on /health yet\n" +
-                "Parked + next probe — shown on the task row when the Host reports it\n" +
-                "Current interest — On her mind, in the band under Her screen";
+                "Parked + next probe — on the Host task when it reports one";
         }
 
         if (IdentityPromptMixText is not null)
