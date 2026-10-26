@@ -5,9 +5,7 @@ namespace SoulCore.Inference.Tools;
 
 /// <summary>
 /// Model-callable memory store tool (BED-131 / TASK-157). Wraps
-/// <see cref="IMemoryStore.WriteEpisodicAsync"/> — the same episodic store path
-/// used by <c>ChatWebSocketHandler.AuthorChatEpisodicAsync</c> (BED-108) for
-/// model-authored memories. Writes the row with <c>source='model'</c> (dedicated
+/// <see cref="IMemoryStore.WriteEpisodicAsync"/>. Writes the row with <c>source='model'</c> (dedicated
 /// provenance for <c>store_memory</c>, distinct from chat-path <c>'chat'</c> and
 /// SoulLoop <c>'self'</c>) and computes an embedding via
 /// <see cref="IEmbeddingClient"/> when enabled.
@@ -41,7 +39,7 @@ public sealed class StoreMemoryTool : ITool
     /// <summary>
     /// Source label written for <c>store_memory</c> rows.
     /// Schema-valid (<c>005_episodic_source_model</c>) and distinct from
-    /// <c>'self'</c> (SoulLoop) and <c>'chat'</c> (AuthorChatEpisodicAsync).
+    /// <c>'self'</c> (SoulLoop) and <c>'chat'</c> (the factual chat episode).
     /// </summary>
     public const string SourceLabel = "model";
 

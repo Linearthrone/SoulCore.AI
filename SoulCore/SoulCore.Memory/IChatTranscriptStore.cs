@@ -22,9 +22,10 @@ public sealed record ChatTranscriptMessage(
 /// PROP-3 Wave 1: the durable, replayable operator &lt;-&gt; Victoria transcript.
 ///
 /// Deliberately separate from the two things that already existed and are not this:
-/// <c>IMemoryStore</c> holds first-person *summaries* of what happened, and
+/// <c>IMemoryStore</c> holds episodic summaries of what happened, and
 /// <c>IChatSessionHistoryStore</c> is bounded in-RAM LLM context that dies with the process.
-/// Neither can backfill a fresh client, which is what this exists for.
+/// This store backfills a fresh client, and Host replays its tail into that RAM thread
+/// on the first turn after a restart.
 /// </summary>
 public interface IChatTranscriptStore
 {

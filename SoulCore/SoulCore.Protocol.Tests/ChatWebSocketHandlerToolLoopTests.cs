@@ -62,7 +62,8 @@ public class ChatWebSocketHandlerToolLoopTests
         ChatWsOptions? chatOptions = null,
         IEmotionState? emotion = null,
         IMemoryStore? memory = null,
-        IToolsAccessSettings? toolsAccess = null)
+        IToolsAccessSettings? toolsAccess = null,
+        IChatTranscriptStore? transcript = null)
     {
         emotion ??= new StubEmotionState();
         memory ??= new StubMemoryStore();
@@ -111,7 +112,8 @@ public class ChatWebSocketHandlerToolLoopTests
             chatOpts,
             infOpts,
             tools,
-            loggerFactory.CreateLogger<ChatSendHandler>());
+            loggerFactory.CreateLogger<ChatSendHandler>(),
+            transcript: transcript);
 
         var emotionCorrect = new EmotionCorrectHandler(
             emotion,
@@ -134,8 +136,10 @@ public class ChatWebSocketHandlerToolLoopTests
         return new ChatWebSocketHandler(runner);
     }
 
-    private static string ChatSendFrame(string text) =>
-        SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text }).ToJson();
+    private static string ChatSendFrame(string text, string? sessionId = null) =>
+        sessionId is null
+            ? SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text }).ToJson()
+            : SoulCoreFrame.Create(SoulCoreFrameTypes.ChatSend, new { text, sessionId }).ToJson();
 
     private static List<SoulCoreFrame> ParseOutboundFrames(List<string> rawFrames)
     {
@@ -151,11 +155,12 @@ public class ChatWebSocketHandlerToolLoopTests
     private static async Task<List<SoulCoreFrame>> RunOneChatTurnAsync(
         ChatWebSocketHandler handler,
         string userText,
-        CancellationTokenSource? externalCts = null)
+        CancellationTokenSource? externalCts = null,
+        string? sessionId = null)
     {
         var inboundFrames = new[]
         {
-            Encoding.UTF8.GetBytes(ChatSendFrame(userText)),
+            Encoding.UTF8.GetBytes(ChatSendFrame(userText, sessionId)),
             Array.Empty<byte>() // sentinel — FakeWebSocket signals close after the send frame
         };
         var socket = new FakeWebSocket(inboundFrames);
@@ -184,8 +189,7 @@ public class ChatWebSocketHandlerToolLoopTests
         var frames = await RunOneChatTurnAsync(handler, "hello victoria");
 
         // The handler MUST have called CompleteWithToolsAsync for the chat turn.
-        // (CompleteAsync may still be called afterward by AuthorChatEpisodicAsync
-        //  for memory authoring — that's a separate LLM call, not the chat turn.)
+        // The stored episode is a factual record and does not make a second model call.
         Assert.True(inference.CompleteWithToolsCalled, "CompleteWithToolsAsync should be called for the chat turn when UseToolLoop=true");
         // A chat.done frame must be present with the loop's reply text.
         var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
@@ -380,8 +384,7 @@ public class ChatWebSocketHandlerToolLoopTests
         var frames = await RunOneChatTurnAsync(handler, "hello victoria");
 
         // The handler MUST NOT have called CompleteWithToolsAsync for the chat turn.
-        // (CompleteAsync is used both for the chat turn and for AuthorChatEpisodicAsync
-        //  memory authoring afterward — both are single-shot, neither is the tool-loop.)
+        // CompleteAsync is the single-shot chat reply. The stored episode does not call it again.
         Assert.False(inference.CompleteWithToolsCalled, "CompleteWithToolsAsync should NOT be called when UseToolLoop=false");
         var done = frames.FirstOrDefault(f => f.Type == SoulCoreFrameTypes.ChatDone);
         Assert.NotNull(done);
@@ -607,6 +610,54 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.Equal("no tools, just text", done!.Payload?.GetProperty("text").GetString());
     }
 
+    [Fact]
+    public async Task ColdStart_ReplaysTranscript_AndStoresWhatWasSaid()
+    {
+        var inference = new ScriptedInferenceClient
+        {
+            CompleteWithToolsReply = "Continuing from the video."
+        };
+        var memory = new StubMemoryStore();
+        var transcript = new ScriptedTranscript();
+        transcript.Recent.Add(new ChatTranscriptMessage(
+            1, "presence-local", "user", "did you finish the video yet?",
+            "2026-10-25T15:08:41Z", "desk", null, null));
+        transcript.Recent.Add(new ChatTranscriptMessage(
+            2, "presence-local", "assistant", "I am watching the Tree Stories video.",
+            "2026-10-25T15:10:11Z", "desk", null, null));
+
+        var handler = MakeHandler(
+            inference,
+            new ToolRegistry(Array.Empty<ITool>()),
+            new RecordingUnrealVerbClient(),
+            MakeChatOptions(useToolLoop: true),
+            memory: memory,
+            transcript: transcript);
+
+        await RunOneChatTurnAsync(handler, "continue the lesson", sessionId: "presence-local");
+
+        Assert.Contains("[Where we left off]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("Tree Stories", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains(
+            inference.LastMessages,
+            m => m.Role == "user" && (m.Content ?? "").Contains("did you finish the video yet?", StringComparison.Ordinal));
+        Assert.Contains(
+            inference.LastMessages,
+            m => m.Role == "assistant" && (m.Content ?? "").Contains("Tree Stories", StringComparison.Ordinal));
+        Assert.False(inference.CompleteAsyncCalled);
+
+        var episode = Assert.Single(memory.Written);
+        Assert.Contains("Kayleigh said: continue the lesson", episode, StringComparison.Ordinal);
+        Assert.Contains("I replied: Continuing from the video.", episode, StringComparison.Ordinal);
+        Assert.DoesNotContain("I felt", episode, StringComparison.Ordinal);
+
+        await RunOneChatTurnAsync(handler, "keep going", sessionId: "presence-local");
+
+        var videoAsks = inference.LastMessages.Count(m =>
+            m.Role == "user" && (m.Content ?? "").Contains("did you finish the video yet?", StringComparison.Ordinal));
+        Assert.Equal(1, videoAsks);
+    }
+
     // ---------- stubs ----------
 
     private sealed class ScriptedInferenceClient : IInferenceClient
@@ -618,6 +669,7 @@ public class ChatWebSocketHandlerToolLoopTests
         public List<string> ToolDispatches { get; } = new();
         public ToolLoopOptions? LastLoopOptions { get; private set; }
         public string? LastSystemContent { get; private set; }
+        public IReadOnlyList<ChatMessage> LastMessages { get; private set; } = Array.Empty<ChatMessage>();
 
         public Task<string> CompleteAsync(
             string prompt, string? systemPreamble = null,
@@ -637,6 +689,7 @@ public class ChatWebSocketHandlerToolLoopTests
             CompleteWithToolsCalled = true;
             LastLoopOptions = loopOptions;
             LastSystemContent = messages.FirstOrDefault(m => m.Role == "system")?.Content;
+            LastMessages = messages.ToList();
             // Simulate dispatching any registered tools so Strategy A sees them.
             var defs = registry.GetDefinitions();
             foreach (var d in defs)
@@ -789,12 +842,66 @@ public class ChatWebSocketHandlerToolLoopTests
             => Task.FromResult(1L);
     }
 
+    private sealed class ScriptedTranscript : IChatTranscriptStore
+    {
+        public List<ChatTranscriptMessage> Recent { get; } = new();
+
+        public Task<long> AppendAsync(
+            string conversationId,
+            string role,
+            string content,
+            string? channel = null,
+            string? frameId = null,
+            string? mediaId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var row = new ChatTranscriptMessage(
+                Recent.Count + 1,
+                conversationId,
+                role,
+                content,
+                "2026-10-26T08:30:00Z",
+                channel,
+                frameId,
+                mediaId);
+            Recent.Add(row);
+            return Task.FromResult(row.Id);
+        }
+
+        public Task<IReadOnlyList<ChatTranscriptMessage>> GetSinceAsync(
+            string conversationId,
+            long afterId,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ChatTranscriptMessage>>(Array.Empty<ChatTranscriptMessage>());
+
+        public Task<IReadOnlyList<ChatTranscriptMessage>> GetRecentAsync(
+            string conversationId,
+            int limit,
+            CancellationToken cancellationToken = default)
+        {
+            var tail = Recent
+                .Where(m => string.Equals(m.ConversationId, conversationId, StringComparison.Ordinal))
+                .TakeLast(limit)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<ChatTranscriptMessage>>(tail);
+        }
+
+        public Task<long> GetLatestCursorAsync(string conversationId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Recent.Count == 0 ? 0 : Recent[^1].Id);
+    }
+
     private sealed class StubMemoryStore : IMemoryStore
     {
         public bool IsDatabaseOpen => true;
         public string DatabasePath => ":memory:";
+        public List<string> Written { get; } = new();
+
         public Task<long> WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
-            => Task.FromResult(1L);
+        {
+            Written.Add(text);
+            return Task.FromResult(1L);
+        }
         public Task StoreEmbeddingAsync(long episodicId, float[] vector, string model, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
         public Task<IReadOnlyList<(long Id, string Content)>> ListEpisodicsMissingEmbeddingsAsync(int limit, CancellationToken cancellationToken = default)

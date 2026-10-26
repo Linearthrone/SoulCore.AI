@@ -46,6 +46,40 @@ public class EpisodicMemoryPromptTests
     }
 
     [Fact]
+    public void BuildFactualRecord_KeepsWhatWasSaidAndWhichToolsRan()
+    {
+        var record = EpisodicMemoryPrompt.BuildFactualRecord(
+            "continue the lesson",
+            "Watching the Tree Stories video.",
+            new[] { "desktop_screenshot", "desktop_screenshot", "browser_navigate" });
+
+        Assert.Contains("Kayleigh said: continue the lesson", record, StringComparison.Ordinal);
+        Assert.Contains("I replied: Watching the Tree Stories video.", record, StringComparison.Ordinal);
+        Assert.Contains("I used: desktop_screenshot, browser_navigate", record, StringComparison.Ordinal);
+        Assert.DoesNotContain("I felt", record, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildFactualRecord_OmitsToolsWhenNoneRan()
+    {
+        var record = EpisodicMemoryPrompt.BuildFactualRecord("hey", "I'm here.", null);
+
+        Assert.DoesNotContain("I used:", record, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildFactualRecord_TruncatesLongReply()
+    {
+        var record = EpisodicMemoryPrompt.BuildFactualRecord(
+            "hi",
+            new string('r', EpisodicMemoryPrompt.FactualReplyCharLimit + 50),
+            null);
+
+        var reply = record.Split("I replied: ", 2)[1];
+        Assert.Equal(EpisodicMemoryPrompt.FactualReplyCharLimit, reply.Length);
+    }
+
+    [Fact]
     public void BuildTemplateFallback_MatchesLegacyBriefingShape()
     {
         var fallback = EpisodicMemoryPrompt.BuildTemplateFallback(

@@ -1,8 +1,8 @@
 namespace SoulCore.Core;
 
 /// <summary>
-/// Builds the tight prompt for model-authored first-person chat episodic memory,
-/// plus the deterministic template fallback when the authoring call fails.
+/// Chat episodic text. Stored turns use <see cref="BuildFactualRecord"/>.
+/// The authoring prompt remains for a private feeling line when a caller still wants one.
 /// </summary>
 public static class EpisodicMemoryPrompt
 {
@@ -41,9 +41,58 @@ public static class EpisodicMemoryPrompt
         return UserLabel + userPart + ReplyLabel + replyPart;
     }
 
+    /// <summary>Chars kept from what Kayleigh said in a stored chat episode.</summary>
+    public const int FactualUserCharLimit = 400;
+
+    /// <summary>Chars kept from Victoria's reply in a stored chat episode.</summary>
+    public const int FactualReplyCharLimit = 600;
+
+    /// <summary>How many distinct tool names a stored chat episode will list.</summary>
+    public const int FactualToolNameLimit = 12;
+
+    /// <summary>
+    /// Deterministic chat episode: what Kayleigh said, what Victoria replied, and which tools ran.
+    /// This is the chronology record. Feelings stay in the journal.
+    /// </summary>
+    public static string BuildFactualRecord(
+        string? userText,
+        string? assistantReply,
+        IEnumerable<string>? toolNames = null)
+    {
+        var user = Truncate((userText ?? string.Empty).Trim(), FactualUserCharLimit);
+        var reply = Truncate((assistantReply ?? string.Empty).Trim(), FactualReplyCharLimit);
+        var tools = FormatToolNames(toolNames);
+        var record = "Kayleigh said: " + user + "\nI replied: " + reply;
+        if (tools.Length > 0)
+            record += "\nI used: " + tools;
+        return record;
+    }
+
     /// <summary>Legacy briefing template used when model authoring fails or returns empty.</summary>
     public static string BuildTemplateFallback(string userText, string assistantReply)
         => $"I heard the user say: {(userText ?? string.Empty).Trim()}\nI replied: {(assistantReply ?? string.Empty).Trim()}";
+
+    private static string FormatToolNames(IEnumerable<string>? toolNames)
+    {
+        if (toolNames is null)
+            return string.Empty;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var names = new List<string>();
+        foreach (var name in toolNames)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+            var trimmed = name.Trim();
+            if (!seen.Add(trimmed))
+                continue;
+            names.Add(trimmed);
+            if (names.Count == FactualToolNameLimit)
+                break;
+        }
+
+        return string.Join(", ", names);
+    }
 
     /// <summary>Truncates to <paramref name="maxChars"/>; empty when max ≤ 0.</summary>
     public static string Truncate(string text, int maxChars)

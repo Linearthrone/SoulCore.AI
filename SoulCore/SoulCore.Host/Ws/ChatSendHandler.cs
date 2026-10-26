@@ -152,13 +152,18 @@ public sealed class ChatSendHandler
         await _emotionSnapshot.SendAsync(socket, frame.Id, cancellationToken).ConfigureAwait(false);
 
         var useToolLoop = _chatOptions.UseToolLoop;
-        var chatContext = await _contextBuilder
-            .BuildAsync(
-                modelUserText,
-                useToolLoop,
-                _toolsAccess.DesktopTargetWindowTitle,
-                cancellationToken)
-            .ConfigureAwait(false);
+        var continuityTask = LoadWakeContinuityAsync(historySessionId, cancellationToken);
+        var contextTask = _contextBuilder.BuildAsync(
+            modelUserText,
+            useToolLoop,
+            _toolsAccess.DesktopTargetWindowTitle,
+            cancellationToken);
+        await Task.WhenAll(continuityTask, contextTask).ConfigureAwait(false);
+
+        var leftOff = await continuityTask.ConfigureAwait(false);
+        var chatContext = await contextTask.ConfigureAwait(false);
+        if (leftOff.Length > 0)
+            chatContext = chatContext with { Preamble = leftOff + chatContext.Preamble };
 
         var spendSummary = _spendMeter.GetSummary();
         if (spendSummary.CapExceeded)
@@ -319,7 +324,7 @@ public sealed class ChatSendHandler
             .ConfigureAwait(false);
 
         if (!usedStub)
-            await WriteEpisodicAfterChatAsync(modelUserText, reply, provider, cancellationToken).ConfigureAwait(false);
+            await WriteEpisodicAfterChatAsync(modelUserText, reply, toolTrace, cancellationToken).ConfigureAwait(false);
 
         await _postEffects.ApplyAsync(chatText, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
         }
@@ -414,16 +419,82 @@ public sealed class ChatSendHandler
         }
     }
 
+    /// <summary>
+    /// After a restart the in-memory thread is empty. Replay the durable transcript into it,
+    /// and quote the latest exchange so "continue" has a place to continue from.
+    /// </summary>
+    private async Task<string> LoadWakeContinuityAsync(
+        string historySessionId,
+        CancellationToken cancellationToken)
+    {
+        if (_transcript is null || string.IsNullOrWhiteSpace(historySessionId))
+            return string.Empty;
+
+        try
+        {
+            var limit = _chatOptions.MaxSessionHistoryMessages;
+            if (limit < 2)
+                limit = 40;
+
+            var recent = await _transcript
+                .GetRecentAsync(historySessionId, limit, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (_sessionHistory.GetMessages(historySessionId).Count == 0)
+            {
+                var seeded = new List<ChatMessage>(recent.Count);
+                foreach (var row in recent)
+                {
+                    if (!IsDialogueRole(row.Role) || string.IsNullOrWhiteSpace(row.Content))
+                        continue;
+                    seeded.Add(new ChatMessage
+                    {
+                        Role = row.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase)
+                            ? "assistant"
+                            : "user",
+                        Content = row.Content
+                    });
+                }
+
+                if (seeded.Count > 0)
+                {
+                    _sessionHistory.AppendTurn(historySessionId, seeded);
+                    _logger.LogInformation(
+                        "Woke session {SessionId} from transcript ({Count} messages)",
+                        historySessionId,
+                        seeded.Count);
+                }
+            }
+
+            var lines = new List<WakeContinuity.ExchangeLine>(recent.Count);
+            foreach (var row in recent)
+                lines.Add(new WakeContinuity.ExchangeLine(row.Role, row.Content, row.OccurredAt));
+            return WakeContinuity.BuildLeftOffBlock(lines);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Wake continuity load failed for session {SessionId}", historySessionId);
+            return string.Empty;
+        }
+    }
+
+    private static bool IsDialogueRole(string? role) =>
+        role is not null
+        && (role.Equals("user", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("assistant", StringComparison.OrdinalIgnoreCase));
+
     private async Task WriteEpisodicAfterChatAsync(
         string modelUserText,
         string reply,
-        string provider,
+        IReadOnlyList<ToolTraceEntry> toolTrace,
         CancellationToken cancellationToken)
     {
         try
         {
-            var episode = await AuthorChatEpisodicAsync(modelUserText, reply, provider, cancellationToken)
-                .ConfigureAwait(false);
+            var episode = EpisodicMemoryPrompt.BuildFactualRecord(
+                modelUserText,
+                reply,
+                toolTrace.Select(static t => t.Name));
             var episodicId = await _memory
                 .WriteEpisodicAsync(episode, "chat", cancellationToken)
                 .ConfigureAwait(false);
@@ -458,52 +529,6 @@ public sealed class ChatSendHandler
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Episodic write after chat failed (reply already sent)");
-        }
-    }
-
-    private async Task<string> AuthorChatEpisodicAsync(
-        string userText,
-        string assistantReply,
-        string chatProvider,
-        CancellationToken cancellationToken)
-    {
-        var template = EpisodicMemoryPrompt.BuildTemplateFallback(userText, assistantReply);
-        var system = EpisodicMemoryPrompt.SystemInstruction;
-        var userPayload = EpisodicMemoryPrompt.BuildUserPayload(userText, assistantReply);
-
-        try
-        {
-            string? authored = null;
-            var authorProvider = chatProvider;
-
-            if (_inferenceOptions.Enabled)
-            {
-                authored = await _inference
-                    .CompleteAsync(
-                        userPayload,
-                        system,
-                        cancellationToken,
-                        EpisodicMemoryPrompt.AuthorMaxTokens)
-                    .ConfigureAwait(false);
-                authorProvider = "ollama";
-            }
-
-            if (string.IsNullOrWhiteSpace(authored))
-            {
-                _logger.LogWarning(
-                    "Memory-author LLM returned empty (provider={Provider}); falling back to template",
-                    authorProvider);
-                return template;
-            }
-
-            var trimmed = authored.Trim();
-            RecordSpend(authorProvider, userPayload, system, trimmed);
-            return trimmed;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Memory-author LLM call failed; falling back to template");
-            return template;
         }
     }
 
