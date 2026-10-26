@@ -25,12 +25,16 @@ public class ChatContextBuilderTests
         Assert.StartsWith("[Identity]", preamble, StringComparison.Ordinal);
         Assert.Contains("Kayleigh", preamble, StringComparison.Ordinal);
         Assert.Contains("[Memory]", preamble, StringComparison.Ordinal);
+        Assert.Contains(MemorySteeringGuidance.Marker, preamble, StringComparison.Ordinal);
         Assert.Contains("[SoulCore emotion]", preamble, StringComparison.Ordinal);
         Assert.True(
             preamble.IndexOf("[Identity]", StringComparison.Ordinal)
             < preamble.IndexOf("[Memory]", StringComparison.Ordinal));
         Assert.True(
             preamble.IndexOf("[Memory]", StringComparison.Ordinal)
+            < preamble.IndexOf(MemorySteeringGuidance.Marker, StringComparison.Ordinal));
+        Assert.True(
+            preamble.IndexOf(MemorySteeringGuidance.Marker, StringComparison.Ordinal)
             < preamble.IndexOf("[SoulCore emotion]", StringComparison.Ordinal));
     }
 

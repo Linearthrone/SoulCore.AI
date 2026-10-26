@@ -82,7 +82,6 @@ public sealed class ChatContextBuilder : IChatContextBuilder
             emotionPreamble.Length);
 
         var preamble = BuildContextPreamble(identityAnchors, recentMemories, emotionPreamble);
-        preamble = MemorySteeringGuidance.AppendToPreamble(preamble);
 
         if (useToolLoop)
         {
@@ -122,14 +121,17 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         var safeMemories = UntrustedObservation.StripFromPreamble(recentMemories);
 
         var identityBlock = BuildIdentityBlock(identityAnchors);
+        // Reserve room for memory steering so it stays with [Memory], not after emotion.
+        var steeringBudget = MemorySteeringGuidance.Block.Length + 4;
         var (memoryBlock, droppedMemoryCount) = BuildMemoryBlock(
             safeMemories,
-            ContextPreambleCharLimit - identityBlock.Length);
+            ContextPreambleCharLimit - identityBlock.Length - steeringBudget);
 
         if (droppedMemoryCount > 0)
             memoryBlock += $"\n({droppedMemoryCount} older memories truncated)";
 
-        return string.Concat(identityBlock, memoryBlock, emotionPreamble);
+        var steeredMemory = MemorySteeringGuidance.AppendToPreamble(memoryBlock);
+        return string.Concat(identityBlock, steeredMemory, "\n\n", emotionPreamble);
     }
 
     private async Task<IReadOnlyList<string>> LoadIdentityAnchorsSafeAsync(CancellationToken cancellationToken)
@@ -219,7 +221,7 @@ public sealed class ChatContextBuilder : IChatContextBuilder
     /// Places known procedures after memory steering and before emotion so they
     /// sit with lived context, not after tool playbooks.
     /// </summary>
-    internal static string InsertBeforeEmotion(string preamble, string knownProceduresBlock)
+    public static string InsertBeforeEmotion(string preamble, string knownProceduresBlock)
     {
         if (string.IsNullOrWhiteSpace(knownProceduresBlock))
             return preamble;
