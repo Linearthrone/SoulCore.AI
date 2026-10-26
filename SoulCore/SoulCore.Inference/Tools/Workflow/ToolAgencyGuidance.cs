@@ -26,7 +26,10 @@ public static class ToolAgencyGuidance
         "Do not write APA papers or open research subjects while talking to Kayleigh or working a task.\n" +
         "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
         "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
-        "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).";
+        "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).\n" +
+        "When Kayleigh asks for a routine you already know (Maestro login, get ready for class, assigned coursework, " +
+        "or any [Known procedures] / [Memory] how-to), call sop_list then sop_get for the matching SOP BEFORE inventing steps. " +
+        "Follow remembered tool order from memory. Do not act brand-new. Correct mid-task if you drift.";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.
