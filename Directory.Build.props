@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- One product version for Presence, Host, and the class libraries they ship. -->
+    <Version>0.1.49</Version>
+    <InformationalVersion>0.1.49</InformationalVersion>
+  </PropertyGroup>
+</Project>

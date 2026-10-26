@@ -1,10 +1,9 @@
-# Bump Presence and/or Host build versions so Kayleigh can verify she is on the latest fix.
+# Bump the shared product version (Presence, Host, and Directory.Build.props) together.
 #
 # Usage (repo root):
 #   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1
-#   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1 -Target presence -Part patch
-#   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1 -Target host -Part patch
-#   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1 -Target all -Part minor
+#   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1 -Part patch
+#   powershell -NoProfile -ExecutionPolicy Bypass -File House/scripts/bump-versions.ps1 -Part minor
 #
 # Then: rebuild/restart Host (ALLSTART -RestartHost) and/or pack Presence (pack-presence.ps1).
 
@@ -67,20 +66,24 @@ function Bump-SemVer([string]$version, [string]$part) {
 
 $presenceProj = Join-Path $repo 'House\House.ChatDesktop\House.ChatDesktop.csproj'
 $hostProj = Join-Path $repo 'SoulCore\SoulCore.Host\SoulCore.Host.csproj'
+$props = Join-Path $repo 'Directory.Build.props'
 
-$targets = @()
-if ($Target -eq 'presence' -or $Target -eq 'all') { $targets += ,@('Presence', $presenceProj) }
-if ($Target -eq 'host' -or $Target -eq 'all') { $targets += ,@('Host', $hostProj) }
+if (-not (Test-Path $presenceProj)) { throw "Missing $presenceProj" }
+if (-not (Test-Path $hostProj)) { throw "Missing $hostProj" }
+if (-not (Test-Path $props)) { throw "Missing $props" }
 
-foreach ($pair in $targets) {
-  $name = $pair[0]
-  $path = $pair[1]
-  if (-not (Test-Path $path)) { throw "Missing $path" }
-  $old = Get-CsprojVersion $path
-  $new = Bump-SemVer $old $Part
-  Set-CsprojVersion $path $new
-  Write-Host "$name : $old -> $new ($Part)"
-}
+$presenceOld = Get-CsprojVersion $presenceProj
+$hostOld = Get-CsprojVersion $hostProj
+$propsOld = Get-CsprojVersion $props
+$basis = @($presenceOld, $hostOld, $propsOld) | Sort-Object { [version]$_ } | Select-Object -Last 1
+$new = Bump-SemVer $basis $Part
+
+Set-CsprojVersion $presenceProj $new
+Set-CsprojVersion $hostProj $new
+Set-CsprojVersion $props $new
+Write-Host "Presence : $presenceOld -> $new ($Part)"
+Write-Host "Host     : $hostOld -> $new ($Part)"
+Write-Host "Libraries: $propsOld -> $new ($Part)"
 
 Write-Host ''
 Write-Host 'Next:'
