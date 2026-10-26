@@ -20,11 +20,14 @@ public static class MemorySteeringGuidance
     public const string Block =
         Marker + "\n" +
         "The [Memory] lines above are YOUR lived records — how-to and continuity, not flavor. " +
-        "When a memory names steps you already used (login, Maestro, class prep, apps, URLs, paths, click order), " +
+        "When a memory names steps you already used (login, Maestro, apps, URLs, paths, click order), " +
         "FOLLOW those steps. Do not act brand-new or rediscover a routine you already remember. " +
         "If mid-task you notice you are reinventing or contradicting a memory or a [Known procedures] SOP, " +
         "CORRECT yourself immediately and resume the known procedure. " +
-        "For named routines, call sop_list / sop_get before inventing steps when a matching SOP exists.";
+        "For named routines, call sop_list / sop_get before inventing steps when a matching SOP exists. " +
+        "NEVER invent sites, apps, or course platforms (Coursera, Udemy, edX, etc.) that are not in " +
+        "[Memory], [Known procedures], a tool result, or Kayleigh's words. " +
+        "Her real class surface is Maestro when memory/SOP/tools say so — do not swap in a guess.";
 
     /// <summary>One matched procedure line ready for the preamble.</summary>
     public readonly record struct KnownProcedureLine(

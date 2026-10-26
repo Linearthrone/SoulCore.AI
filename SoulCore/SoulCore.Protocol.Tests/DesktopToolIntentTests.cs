@@ -157,6 +157,7 @@ public class DesktopToolIntentTests
         Assert.DoesNotContain("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("browser_click_text-only limitation", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("not Coursera unless she said so", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
     }
 
     [Fact]
