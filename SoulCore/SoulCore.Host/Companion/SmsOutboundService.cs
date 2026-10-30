@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
+using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
 
 namespace SoulCore.Host.Companion;
@@ -13,6 +14,7 @@ namespace SoulCore.Host.Companion;
 public sealed class SmsOutboundService : ISmsOutboundService
 {
     private readonly SmsOptions _sms;
+    private readonly IVictoriaBrowserViewHub? _browserView;
     private readonly IDesktopViewHub? _desktopView;
     private readonly IHttpClientFactory? _httpClientFactory;
     private readonly ILogger<SmsOutboundService> _logger;
@@ -26,11 +28,13 @@ public sealed class SmsOutboundService : ISmsOutboundService
     public SmsOutboundService(
         IOptions<SmsOptions> sms,
         ILogger<SmsOutboundService> logger,
+        IVictoriaBrowserViewHub? browserView = null,
         IDesktopViewHub? desktopView = null,
         IHttpClientFactory? httpClientFactory = null)
     {
         _sms = sms?.Value ?? throw new ArgumentNullException(nameof(sms));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _browserView = browserView;
         _desktopView = desktopView;
         _httpClientFactory = httpClientFactory;
     }
@@ -201,6 +205,14 @@ public sealed class SmsOutboundService : ISmsOutboundService
 
     private bool TryCaptureStill(out byte[]? bytes, out string? contentType, out string source)
     {
+        if (_browserView is not null && _browserView.TryGetImageBytes(out var b, out var ct) && b is { Length: > 0 })
+        {
+            bytes = b;
+            contentType = ct;
+            source = "browser";
+            return true;
+        }
+
         var desk = _desktopView?.TryGetImageBytes();
         if (desk is { Length: > 0 })
         {

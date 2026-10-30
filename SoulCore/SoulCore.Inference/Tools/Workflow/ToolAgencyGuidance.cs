@@ -27,9 +27,10 @@ public static class ToolAgencyGuidance
         "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
         "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
         "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).\n" +
-        "When one of your tools is wrong and the fix is in its source, call read_tool_code, then write_tool_code " +
-        "(it keeps a .bak), then run_test_sandbox with a small C# program that exercises the fix. " +
-        "reload_tools does not hot-swap the running host; a rebuild and restart is required after the sandbox passes.";
+        "When Kayleigh asks for a routine you already know (Maestro login, her class prep from memory, " +
+        "or any [Known procedures] / [Memory] how-to), call sop_list then sop_get for the matching SOP BEFORE inventing steps. " +
+        "Follow remembered tool order from memory. Do not act brand-new. Correct mid-task if you drift. " +
+        "Do not invent Coursera or any other platform not present in memory, SOPs, tool results, or her words.";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.

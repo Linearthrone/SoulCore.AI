@@ -20,6 +20,9 @@ public static class VboxConsoleMouse
 
     /// <summary>
     /// Guest framebuffer (0,0) top-left → VBox Absolute [1,1] (SDK).
+    /// PROP-19.3: must stay identical to Presence <c>VictoriaVmPointerPlan.ToAbsolute</c> /
+    /// <c>VictoriaBrowserCoordMap.ToAbsolute</c> (+1,+1). Soft-cursor tip paints Guest0;
+    /// Absolute is inject-only. (House cannot reference this assembly — keep math in lockstep.)
     /// </summary>
     public static (int Ax, int Ay, int DownFlags) PlanAbsolutePress(int x, int y, int xdotoolButton)
     {
@@ -155,6 +158,20 @@ public static class VboxConsoleMouse
             null);
     }
 
+    private static string FormatComFailure(COMException com)
+    {
+        var code = com.HResult != 0 ? com.HResult : com.ErrorCode;
+        var text = $"VirtualBox console mouse COM failed (0x{code:X8}): {com.Message}";
+        if (code == unchecked((int)0x80004005)
+            || (com.Message?.Contains("VERR_UNRESOLVED", StringComparison.OrdinalIgnoreCase) ?? false)
+            || (com.Message?.Contains("ConsoleWrap", StringComparison.OrdinalIgnoreCase) ?? false))
+        {
+            text += " ConsoleWrap unresolved host platform error: the VM console is not running (host memory, or Hyper-V blocking VT-x).";
+        }
+
+        return text;
+    }
+
     [SupportedOSPlatform("windows")]
     private static DesktopOpResult? RunOnStaWindows(Func<DesktopOpResult?> work)
     {
@@ -181,10 +198,7 @@ public static class VboxConsoleMouse
 
         if (error is COMException com)
         {
-            return new DesktopOpResult(
-                false,
-                $"VirtualBox console mouse COM failed (0x{com.ErrorCode:X8}): {com.Message}",
-                null);
+            return new DesktopOpResult(false, FormatComFailure(com), null);
         }
 
         if (error is not null)

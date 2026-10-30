@@ -32,6 +32,7 @@ public sealed class ChatContextBuilder : IChatContextBuilder
     private readonly ICharter _charter;
     private readonly IEmotionState _emotion;
     private readonly IToolsAccessSettings _toolsAccess;
+    private readonly IVictoriaSopStore? _sops;
     private readonly ILogger<ChatContextBuilder> _logger;
 
     public ChatContextBuilder(
@@ -40,7 +41,8 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         ICharter charter,
         IEmotionState emotion,
         IToolsAccessSettings toolsAccess,
-        ILogger<ChatContextBuilder> logger)
+        ILogger<ChatContextBuilder> logger,
+        IVictoriaSopStore? sops = null)
     {
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _embeddings = embeddings ?? throw new ArgumentNullException(nameof(embeddings));
@@ -48,6 +50,7 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         _emotion = emotion ?? throw new ArgumentNullException(nameof(emotion));
         _toolsAccess = toolsAccess ?? throw new ArgumentNullException(nameof(toolsAccess));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _sops = sops;
     }
 
     /// <inheritdoc />
@@ -82,6 +85,14 @@ public sealed class ChatContextBuilder : IChatContextBuilder
 
         if (useToolLoop)
         {
+            var knownProcedures = await LoadMatchingProceduresSafeAsync(
+                    userText,
+                    recentMemories,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (knownProcedures.Length > 0)
+                preamble = InsertBeforeEmotion(preamble, knownProcedures);
+
             preamble = ToolAgencyGuidance.AppendToPreamble(preamble);
             preamble = ComputerUseGuidance.AppendToPreamble(
                 preamble,
@@ -110,14 +121,17 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         var safeMemories = UntrustedObservation.StripFromPreamble(recentMemories);
 
         var identityBlock = BuildIdentityBlock(identityAnchors);
+        // Reserve room for memory steering so it stays with [Memory], not after emotion.
+        var steeringBudget = MemorySteeringGuidance.Block.Length + 4;
         var (memoryBlock, droppedMemoryCount) = BuildMemoryBlock(
             safeMemories,
-            ContextPreambleCharLimit - identityBlock.Length);
+            ContextPreambleCharLimit - identityBlock.Length - steeringBudget);
 
         if (droppedMemoryCount > 0)
             memoryBlock += $"\n({droppedMemoryCount} older memories truncated)";
 
-        return string.Concat(identityBlock, memoryBlock, emotionPreamble);
+        var steeredMemory = MemorySteeringGuidance.AppendToPreamble(memoryBlock);
+        return string.Concat(identityBlock, steeredMemory, "\n\n", emotionPreamble);
     }
 
     private async Task<IReadOnlyList<string>> LoadIdentityAnchorsSafeAsync(CancellationToken cancellationToken)
@@ -169,6 +183,55 @@ public sealed class ChatContextBuilder : IChatContextBuilder
             _logger.LogDebug(ex, "Episodic recall failed; chat continues without memory");
             return Array.Empty<string>();
         }
+    }
+
+    private async Task<string> LoadMatchingProceduresSafeAsync(
+        string userText,
+        IReadOnlyList<string> recentMemories,
+        CancellationToken cancellationToken)
+    {
+        if (_sops is null)
+            return string.Empty;
+
+        try
+        {
+            var list = await _sops.ListAsync(cancellationToken).ConfigureAwait(false);
+            if (list.Count == 0)
+                return string.Empty;
+
+            var rows = new List<(long Id, string Title, string WhenText, string Steps)>(list.Count);
+            foreach (var sop in list)
+                rows.Add((sop.Id, sop.Title, sop.WhenText, sop.Steps));
+
+            var matches = MemorySteeringGuidance.MatchProcedures(userText, recentMemories, rows);
+            if (matches.Count == 0)
+                return string.Empty;
+
+            _logger.LogDebug("Matched {Count} SOPs into chat preamble", matches.Count);
+            return MemorySteeringGuidance.BuildKnownProceduresBlock(matches);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "SOP procedure match failed; chat continues without known-procedures block");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Places known procedures after memory steering and before emotion so they
+    /// sit with lived context, not after tool playbooks.
+    /// </summary>
+    public static string InsertBeforeEmotion(string preamble, string knownProceduresBlock)
+    {
+        if (string.IsNullOrWhiteSpace(knownProceduresBlock))
+            return preamble;
+
+        const string emotionMarker = "[SoulCore emotion]";
+        var idx = preamble.IndexOf(emotionMarker, StringComparison.Ordinal);
+        if (idx < 0)
+            return preamble.TrimEnd() + "\n\n" + knownProceduresBlock.TrimEnd() + "\n";
+
+        return preamble[..idx] + knownProceduresBlock + preamble[idx..];
     }
 
     private async Task<IReadOnlyList<string>> RecallChatMemoriesAsync(

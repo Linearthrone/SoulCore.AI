@@ -223,19 +223,17 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest click ({x},{y}) is off the Ubuntu screen (origin 0,0).", null);
 
-        using (HostPointerPark.BeginAwayFromVm())
+        // Do not park the Windows cursor. Her screen and the operator mouse share this guest.
+        var console = await TryVboxConsoleClickAsync(x, y, btn, clicks, ct).ConfigureAwait(false);
+        if (console is null)
         {
-            var console = await TryVboxConsoleClickAsync(x, y, btn, clicks, ct).ConfigureAwait(false);
-            if (console is null)
-            {
-                return new DesktopOpResult(
-                    false,
-                    "desktop_click failed: VirtualBox console mouse unavailable.",
-                    null);
-            }
-
-            return console;
+            return new DesktopOpResult(
+                false,
+                "desktop_click failed: VirtualBox console mouse unavailable.",
+                null);
         }
+
+        return console;
     }
 
     private Task<DesktopOpResult?> TryVboxConsoleClickAsync(
@@ -253,21 +251,18 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
     {
         if (!TryMapMouseButton(button, out var btn, out var err))
             return new DesktopOpResult(false, err, null);
-        using (HostPointerPark.BeginAwayFromVm())
+        var console = await Task.Run(
+            () => VboxConsoleMouse.TryDrag(_vmName, x1, y1, x2, y2, btn),
+            ct).ConfigureAwait(false);
+        if (console is null)
         {
-            var console = await Task.Run(
-                () => VboxConsoleMouse.TryDrag(_vmName, x1, y1, x2, y2, btn),
-                ct).ConfigureAwait(false);
-            if (console is null)
-            {
-                return new DesktopOpResult(
-                    false,
-                    "desktop_drag failed: VirtualBox console mouse unavailable.",
-                    null);
-            }
-
-            return console;
+            return new DesktopOpResult(
+                false,
+                "desktop_drag failed: VirtualBox console mouse unavailable.",
+                null);
         }
+
+        return console;
     }
 
     public async Task<DesktopOpResult> TypeAsync(string text, CancellationToken ct = default)
@@ -310,8 +305,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         if (x < 0 || y < 0)
             return new DesktopOpResult(false, $"guest scroll ({x},{y}) is off the Ubuntu screen.", null);
 
-        // Do not park the host cursor away from the VM for console wheel — MI drops
-        // dz when Absolute reports "outside" (TASK-199). Clicks still park.
+        // Do not park the host cursor. Wheel and clicks both leave the operator mouse where it is.
         var console = await Task.Run(
                 () => VboxConsoleMouse.TryScroll(_vmName, x, y, deltaY, deltaX),
                 ct)
