@@ -52,6 +52,10 @@ public static class WakeContinuity
         var sb = new StringBuilder();
         sb.Append("[Where we left off]\n");
         sb.Append("This is the current thread. When Kayleigh asks you to continue, resume from this conversation.\n");
+        sb.Append(
+            "If the left-off work is a routine you already know (Maestro, login), " +
+            "use your remembered steps and SOPs — do not start as a beginner. " +
+            "Do not invent a different site or course platform.\n");
         if (at is not null)
             sb.Append("Last exchange: ").Append(at).Append('\n');
         if (user is not null)
