@@ -231,6 +231,7 @@ public partial class MainWindow
         ApplyServiceIndicators(snap);
         await RefreshServicesPanelAsync(snap).ConfigureAwait(true);
         ApplyHonestActivity(preferHost: true);
+        await RefreshBandTasksAsync().ConfigureAwait(true);
         UpdateIdentityDetail();
         UpdateEngagementState();
 
@@ -355,6 +356,7 @@ public partial class MainWindow
         SetLamp(LampComfy, GlowComfy, comfyUp ? "blue" : "off");
         SetLamp(LampCua, GlowCua, !snap.Reachable ? "red" : cuaOn ? "blue" : cuaWarn ? "warn" : "off");
         SetLamp(LampSandbox, GlowSandbox, sandboxUp ? "blue" : "off");
+        NoteSandboxRunning(sandboxUp);
 
         if (LampSoulCoreHint is not null)
             LampSoulCoreHint.Text = snap.Alive ? "HOLD TO GUARD" : "CLICK TO START";
@@ -871,6 +873,12 @@ public partial class MainWindow
         await RefreshEmailAccountsAsync().ConfigureAwait(true);
     }
 
+    private async void ResearchJournals_Click(object? sender, RoutedEventArgs e)
+    {
+        var dlg = new ResearchJournalsWindow();
+        await dlg.ShowDialog(this).ConfigureAwait(true);
+    }
+
     private async void EmailGateToggle_Click(object? sender, RoutedEventArgs e)
     {
         if (_toolsAccessHydrating) return;
@@ -978,6 +986,7 @@ public partial class MainWindow
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
+            || ToolsVmEmbedPaneCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
@@ -996,7 +1005,7 @@ public partial class MainWindow
             allowBrowserCapture: ToolsAllowBrowserCaptureCheck.IsChecked == true,
             allowComputerControl: ToolsAllowComputerControlCheck.IsChecked == true,
             softCursorRestore: ToolsSoftCursorRestoreCheck.IsChecked == true,
-            vmEmbedPane: false,
+            vmEmbedPane: ToolsVmEmbedPaneCheck.IsChecked == true,
             allowMt4Read: ToolsAllowMt4ReadCheck.IsChecked == true,
             allowMt4Trade: ToolsAllowMt4TradeCheck.IsChecked == true,
             allowEmailRead: ToolsAllowEmailReadCheck.IsChecked == true,
@@ -1022,6 +1031,7 @@ public partial class MainWindow
             || ToolsAllowBrowserCaptureCheck is null
             || ToolsAllowComputerControlCheck is null
             || ToolsSoftCursorRestoreCheck is null
+            || ToolsVmEmbedPaneCheck is null
             || ToolsAllowMt4ReadCheck is null
             || ToolsAllowMt4TradeCheck is null
             || ToolsAllowEmailReadCheck is null
@@ -1052,6 +1062,7 @@ public partial class MainWindow
             ToolsAllowBrowserCaptureCheck.IsChecked = snap.Reachable ? snap.AllowBrowserCapture : true;
             ToolsAllowComputerControlCheck.IsChecked = snap.Reachable ? snap.AllowComputerControl : true;
             ToolsSoftCursorRestoreCheck.IsChecked = snap.Reachable ? snap.SoftCursorRestore : true;
+            ToolsVmEmbedPaneCheck.IsChecked = snap.Reachable ? snap.VmEmbedPane : true;
             ToolsAllowMt4ReadCheck.IsChecked = snap.AllowMt4Read;
             ToolsAllowMt4TradeCheck.IsChecked = snap.AllowMt4Trade;
             ToolsAllowEmailReadCheck.IsChecked = snap.AllowEmailRead;
@@ -1300,6 +1311,176 @@ public partial class MainWindow
         _lastActivityPhrase = phrase;
         if (ActivityText is not null)
             ActivityText.Text = phrase;
+        RefreshActivityBand();
+    }
+
+    /// <summary>Activity band under the main split (honest stubs until Host wires park/interest).</summary>
+    private void RefreshActivityBand()
+    {
+        var doing = string.IsNullOrWhiteSpace(_lastActivityPhrase) ? "—" : _lastActivityPhrase.Trim();
+        if (BandDoingText is not null)
+            BandDoingText.Text = $"Doing — {doing}";
+
+        var mind = string.IsNullOrWhiteSpace(_lastHealth.OnHerMind)
+            ? "quiet between talks"
+            : _lastHealth.OnHerMind.Trim();
+        if (BandOnHerMindText is not null)
+            BandOnHerMindText.Text = $"On her mind — {mind}";
+
+        if (BandInfluencesText is not null)
+            BandInfluencesText.Text = "Influences — none yet";
+
+        RefreshBandMoodLine();
+    }
+
+    private bool _taskMutateBusy;
+
+    private async Task RefreshBandTasksAsync()
+    {
+        var fetch = await _taskClient.ListAsync().ConfigureAwait(true);
+        if (BandTaskList is not null)
+            BandTaskList.ItemsSource = fetch.Tasks;
+        if (BandTasksText is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(fetch.Problem))
+        {
+            BandTasksText.IsVisible = true;
+            BandTasksText.Text = fetch.Problem;
+            return;
+        }
+
+        if (fetch.Tasks.Count == 0)
+        {
+            BandTasksText.IsVisible = true;
+            var hostCount = _lastHealth.TaskCount;
+            BandTasksText.Text = hostCount is > 0
+                ? $"No tasks in list, but Host health reports {hostCount}. Restart Host / Presence."
+                : "No tasks.";
+            return;
+        }
+
+        BandTasksText.IsVisible = false;
+        BandTasksText.Text = "No tasks.";
+    }
+
+    private async void BandTaskAdd_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+
+        var dlg = new TaskAddWindow();
+        var accepted = await dlg.ShowDialog<bool>(this).ConfigureAwait(true);
+        if (!accepted || string.IsNullOrWhiteSpace(dlg.TitleText))
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.CreateAsync(dlg.TitleText).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? "Could not add task.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private async void BandTaskSuspend_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.SuspendAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? $"Could not suspend task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private async void BandTaskRelease_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var result = await _taskClient.ReleaseAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!result.Ok && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = result.Problem ?? $"Could not release task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private async void BandTaskDelete_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_taskMutateBusy)
+            return;
+        if (sender is not Button { DataContext: PresenceTaskRow row } || row.Id <= 0)
+            return;
+
+        var title = string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title.Trim();
+        var ok = await ConfirmYesNoAsync(
+            $"Delete task #{row.Id} permanently?\n\n{title}\n\nShe can also delete via task_delete. Neither of you can restore it.",
+            "Delete task").ConfigureAwait(true);
+        if (!ok)
+            return;
+
+        _taskMutateBusy = true;
+        try
+        {
+            var removed = await _taskClient.DeleteAsync(row.Id).ConfigureAwait(true);
+            await RefreshBandTasksAsync().ConfigureAwait(true);
+            if (!removed && BandTasksText is not null)
+            {
+                BandTasksText.IsVisible = true;
+                BandTasksText.Text = $"Could not delete task #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _taskMutateBusy = false;
+        }
+    }
+
+    private void RefreshBandMoodLine()
+    {
+        if (BandMoodText is null) return;
+        var label = MoodLabelText?.Text;
+        if (string.IsNullOrWhiteSpace(label) || label == "—")
+            label = "—";
+        var warmCool = _lastValence >= 0.25 ? "warm" : _lastValence <= -0.25 ? "cool" : "neutral";
+        var keyed = _lastArousal >= 0.55 ? "keyed-up" : "calm";
+        var steady = Math.Abs(_lastDominance - 0.5) < 0.2 ? "steady" : (_lastDominance >= 0.5 ? "firm" : "soft");
+        var focused = _lastFocus >= 0.55 ? "focused" : "open";
+        BandMoodText.Text = $"Mood — {label} · {warmCool} · {keyed} · {steady} · {focused}";
     }
 
     internal static (string? Category, string Phrase) ParseWantWire(string? want, string? categoryHint)
@@ -1378,6 +1559,8 @@ public partial class MainWindow
                 : valence <= -0.25 ? _warnBrush
                 : Res("AccentBrush");
         }
+
+        RefreshBandMoodLine();
     }
 
     /// <summary>

@@ -11,7 +11,7 @@ namespace SoulCore.Protocol.Tests;
 public class PlaywrightBrowserBridgeTests
 {
     [Fact]
-    public async Task Navigate_ExampleCom_GoalCompleteFalse()
+    public async Task Navigate_ExampleCom_PublishesFrame_AndGoalCompleteFalse()
     {
         var opts = Options.Create(new ToolsOptions
         {
@@ -19,7 +19,8 @@ public class PlaywrightBrowserBridgeTests
             PlaywrightHeaded = false,
             PlaywrightUserDataDir = Path.Combine(Path.GetTempPath(), "soulcore-pw-test-" + Guid.NewGuid().ToString("N"))
         });
-        await using var bridge = new PlaywrightBrowserBridge(opts, log: null);
+        var hub = new VictoriaBrowserViewHub();
+        await using var bridge = new PlaywrightBrowserBridge(opts, log: null, view: hub);
 
         var health = await bridge.HealthAsync();
         if (!health.Success)
@@ -32,6 +33,15 @@ public class PlaywrightBrowserBridgeTests
         var nav = await bridge.NavigateAsync("https://example.com");
         Assert.True(nav.Success, nav.Content);
         Assert.Contains("goal_complete=false", nav.Content, StringComparison.OrdinalIgnoreCase);
+
+        var snap = hub.GetSnapshot();
+        Assert.True(snap.HasImage, "expected published JPEG after navigate");
+        Assert.Contains("example.com", snap.Url ?? "", StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(hub.TryGetImageBytes(out var bytes, out var ct));
+        Assert.NotNull(bytes);
+        Assert.True(bytes!.Length > 100);
+        Assert.Equal("image/jpeg", ct);
     }
 
     [Fact]
@@ -216,10 +226,12 @@ public class PlaywrightBrowserBridgeTests
             PlaywrightHeaded = false,
             PlaywrightUserDataDir = Path.Combine(Path.GetTempPath(), "soulcore-pw-priv-" + Guid.NewGuid().ToString("N"))
         });
-        await using var bridge = new PlaywrightBrowserBridge(opts, log: null);
+        var hub = new VictoriaBrowserViewHub();
+        await using var bridge = new PlaywrightBrowserBridge(opts, log: null, view: hub);
 
         var nav = await bridge.NavigateAsync("http://127.0.0.1/");
         Assert.False(nav.Success);
         Assert.Contains("refused", nav.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.False(hub.GetSnapshot().HasImage);
     }
 }

@@ -1,7 +1,7 @@
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
-/// Timing for the agent cursor record on a desktop capture.
+/// Presence soft-cursor timing for Her screen (VM embed / guest JPEG).
 /// Matches Playwright aim dwell so Kayleigh sees pink move then teal click.
 /// </summary>
 public static class SoftCursorPresenceFeedback

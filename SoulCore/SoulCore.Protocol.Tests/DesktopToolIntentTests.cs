@@ -40,6 +40,7 @@ public class DesktopToolIntentTests
     [Theory]
     [InlineData("click the login button", "desktop_screenshot")]
     [InlineData("sign in on the page", "desktop_screenshot")]
+    [InlineData("click (488, 559)", "desktop_screenshot")]
     public void TryMatch_NativeBackend_LoginForcesScreenshot(string text, string expectedTool)
     {
         Assert.True(DesktopToolIntent.TryMatch(text, "native", out var match));
@@ -154,8 +155,9 @@ public class DesktopToolIntentTests
     public void ComputerUseGuidance_VmBlock_ForbidsChatOnlyClaim()
     {
         Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
-        Assert.DoesNotContain("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("When Kayleigh gives click", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("browser_click_text-only limitation", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("not Coursera unless she said so", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
     }
