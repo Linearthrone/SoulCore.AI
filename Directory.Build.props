@@ -4,4 +4,13 @@
     <Version>0.1.50</Version>
     <InformationalVersion>0.1.50</InformationalVersion>
   </PropertyGroup>
+
+  <!-- run_test_sandbox sets these so a fix compiles away from the host bin,
+       which stays locked while SoulCore.Host is running. Intermediate obj stays
+       in the project so the SDK's default obj exclude still applies. -->
+  <PropertyGroup Condition="'$(VictoriaToolSandbox)' == 'true' and '$(VictoriaToolSandboxRoot)' != ''">
+    <BaseOutputPath>$(VictoriaToolSandboxRoot)\bin\$(MSBuildProjectName)\</BaseOutputPath>
+    <RunAnalyzers>false</RunAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+  </PropertyGroup>
 </Project>

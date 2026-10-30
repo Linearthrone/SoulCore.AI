@@ -12,6 +12,7 @@ using SoulCore.Inference.Tools.Desktop;
 using SoulCore.Inference.Tools.Email;
 using SoulCore.Inference.Tools.FS;
 using SoulCore.Inference.Tools.Meta;
+using SoulCore.Inference.Tools.SelfRepair;
 using SoulCore.Inference.Tools.Trading;
 using SoulCore.Inference.Tools.Workflow;
 using SoulCore.Memory;
@@ -48,6 +49,14 @@ internal static class ToolsServiceCollectionExtensions
         services.AddSingleton<ITool, ReadFileTool>();
         services.AddSingleton<ITool, WriteFileTool>();
         services.AddSingleton<ITool, ListDirTool>();
+
+        // Self-repair: read / replace tool source, prove it in a side process.
+        // Source edits are not live until the host is rebuilt and restarted.
+        var selfRepair = ToolSourceStore.CreateDefault();
+        services.AddSingleton<ITool>(new ReadToolCodeTool(selfRepair));
+        services.AddSingleton<ITool>(new WriteToolCodeTool(selfRepair));
+        services.AddSingleton<ITool>(new RunTestSandboxTool(selfRepair));
+        services.AddSingleton<ITool>(new ReloadToolsTool(selfRepair));
 
         // Body tools (BED-132): speak / play_animation / move_to / look_at / set_emotion
         // wrap IUnrealVerbClient so the model can choose body actions mid-loop.
