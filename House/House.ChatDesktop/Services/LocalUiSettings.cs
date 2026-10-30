@@ -14,8 +14,17 @@ public sealed class LocalUiSettings
 
     public const double DefaultWindowWidth = 1180;
     public const double DefaultWindowHeight = 780;
+    /// <summary>Wide enough for a usable VM embed (guest was clipped at 260).</summary>
+    public const double DefaultSideColumnWidth = 520;
+    public const double DefaultSightRowHeight = 200;
     public const double MinWindowWidth = 900;
     public const double MinWindowHeight = 600;
+    public const double MinChatWidth = 320;
+    public const double MinSideColumnWidth = 200;
+    /// <summary>Soft cap when persisting; star layout can grow larger while the window is wide.</summary>
+    public const double MaxSideColumnWidth = 2400;
+    public const double MinSightRowHeight = 120;
+    public const double MinBrowserRowHeight = 120;
 
     public string DisplayName { get; set; } = "Victoria";
 
@@ -27,6 +36,12 @@ public sealed class LocalUiSettings
     public double? WindowX { get; set; }
     public double? WindowY { get; set; }
     public bool WindowMaximized { get; set; }
+
+    /// <summary>Right column width (Her browser + What she saw).</summary>
+    public double? SideColumnWidth { get; set; }
+
+    /// <summary>Sight panel row height inside the right column.</summary>
+    public double? SightRowHeight { get; set; }
 
     /// <summary>
     /// PROP-4.2 optional update feed override (GitHub repo URL or HTTP/file path).
@@ -92,13 +107,17 @@ public sealed class LocalUiSettings
 
     public void Normalize()
     {
-        // The shell header is her name. A stored operator name must not replace it.
-        DisplayName = "Victoria";
+        if (string.IsNullOrWhiteSpace(DisplayName))
+            DisplayName = "Victoria";
 
         if (WindowWidth is double w)
             WindowWidth = Clamp(w, MinWindowWidth, 4000);
         if (WindowHeight is double h)
             WindowHeight = Clamp(h, MinWindowHeight, 3000);
+        if (SideColumnWidth is double side)
+            SideColumnWidth = Clamp(side, MinSideColumnWidth, MaxSideColumnWidth);
+        if (SightRowHeight is double sight)
+            SightRowHeight = Clamp(sight, MinSightRowHeight, 800);
     }
 
     public double ResolvedWindowWidth() =>
@@ -106,6 +125,12 @@ public sealed class LocalUiSettings
 
     public double ResolvedWindowHeight() =>
         Clamp(WindowHeight ?? DefaultWindowHeight, MinWindowHeight, 3000);
+
+    public double ResolvedSideColumnWidth() =>
+        Clamp(SideColumnWidth ?? DefaultSideColumnWidth, MinSideColumnWidth, MaxSideColumnWidth);
+
+    public double ResolvedSightRowHeight() =>
+        Clamp(SightRowHeight ?? DefaultSightRowHeight, MinSightRowHeight, 800);
 
     private static double Clamp(double value, double min, double max) =>
         Math.Min(max, Math.Max(min, value));

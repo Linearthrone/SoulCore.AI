@@ -14,6 +14,8 @@ public class LocalUiSettingsLayoutTests
         {
             WindowWidth = 100,
             WindowHeight = 50,
+            SideColumnWidth = 10,
+            SightRowHeight = 5,
             DisplayName = "  "
         };
 
@@ -22,18 +24,37 @@ public class LocalUiSettingsLayoutTests
         Assert.Equal("Victoria", s.DisplayName);
         Assert.Equal(LocalUiSettings.MinWindowWidth, s.WindowWidth);
         Assert.Equal(LocalUiSettings.MinWindowHeight, s.WindowHeight);
+        Assert.Equal(LocalUiSettings.MinSideColumnWidth, s.SideColumnWidth);
+        Assert.Equal(LocalUiSettings.MinSightRowHeight, s.SightRowHeight);
     }
 
     [Fact]
-    public void Normalize_DoesNotKeepAnOperatorName()
+    public void Normalize_ClampsSideColumnToMax()
     {
-        var s = new LocalUiSettings { DisplayName = "Kurt" };
+        var s = new LocalUiSettings { SideColumnWidth = 5000 };
         s.Normalize();
-        Assert.Equal("Victoria", s.DisplayName);
+        Assert.Equal(LocalUiSettings.MaxSideColumnWidth, s.SideColumnWidth);
     }
 
     [Fact]
-    public void MainWindow_axaml_has_no_her_screen_or_sight_pane()
+    public void ResolvedSideColumnWidth_DefaultsWideEnoughForVmEmbed()
+    {
+        Assert.True(LocalUiSettings.DefaultSideColumnWidth >= 480);
+        Assert.Equal(
+            LocalUiSettings.DefaultSideColumnWidth,
+            new LocalUiSettings().ResolvedSideColumnWidth());
+    }
+
+    [Fact]
+    public void MinWindowWidthForSide_FitsChatSplitterSideAndEastGrip()
+    {
+        var min = PresencePaneLayout.MinWindowWidthForSide(520);
+        Assert.True(min >= LocalUiSettings.MinWindowWidth);
+        Assert.True(min >= LocalUiSettings.MinChatWidth + 6 + 520 + PresencePaneLayout.EastGripWidth);
+    }
+
+    [Fact]
+    public void MainWindow_axaml_has_avalonia_east_grip_beside_vm()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         string? path = null;
@@ -51,10 +72,9 @@ public class LocalUiSettingsLayoutTests
 
         Assert.True(path is not null, "MainWindow.axaml not found for layout assert");
         var axaml = File.ReadAllText(path!);
-        Assert.DoesNotContain("Her screen", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("What she saw", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("VictoriaBrowser", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("HerScreen", axaml, StringComparison.Ordinal);
+        Assert.Contains("ColumnDefinitions=\"*,6,520,10\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("HerScreenEastResizeGrip", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -72,7 +92,9 @@ public class LocalUiSettingsLayoutTests
                 WindowHeight = 900,
                 WindowX = 40,
                 WindowY = 60,
-                WindowMaximized = true
+                WindowMaximized = true,
+                SideColumnWidth = 320,
+                SightRowHeight = 240
             };
             original.Normalize();
             File.WriteAllText(path, JsonSerializer.Serialize(original, new JsonSerializerOptions
@@ -93,6 +115,8 @@ public class LocalUiSettingsLayoutTests
             Assert.Equal(40, loaded.WindowX);
             Assert.Equal(60, loaded.WindowY);
             Assert.True(loaded.WindowMaximized);
+            Assert.Equal(320, loaded.SideColumnWidth);
+            Assert.Equal(240, loaded.SightRowHeight);
         }
         finally
         {

@@ -17,6 +17,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 
     private readonly IOptions<ToolsOptions> _opts;
     private readonly ILogger<PlaywrightBrowserBridge>? _log;
+    private readonly IVictoriaBrowserViewHub? _view;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private IPlaywright? _playwright;
@@ -26,10 +27,12 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
 
     public PlaywrightBrowserBridge(
         IOptions<ToolsOptions> opts,
-        ILogger<PlaywrightBrowserBridge>? log = null)
+        ILogger<PlaywrightBrowserBridge>? log = null,
+        IVictoriaBrowserViewHub? view = null)
     {
         _opts = opts ?? throw new ArgumentNullException(nameof(opts));
         _log = log;
+        _view = view;
     }
 
     public string BackendName => BackendId;
@@ -77,6 +80,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             await ClickWithVisibleCursorAsync(page, x, y, ct).ConfigureAwait(false);
+            await PublishFrameAsync(page, $"click ({x},{y})", ct, clickX: x, clickY: y).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright click at ({x},{y}). url={page.Url}",
@@ -94,6 +98,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             await page.Keyboard.TypeAsync(text ?? "").ConfigureAwait(false);
+            await PublishFrameAsync(page, $"type {text?.Length ?? 0} chars", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright typed {text?.Length ?? 0} chars (value redacted in logs).",
@@ -111,6 +116,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             await page.Keyboard.PressAsync(key ?? "Enter").ConfigureAwait(false);
+            await PublishFrameAsync(page, $"key {key}", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(true, $"playwright key '{key}'. url={page.Url}",
                 new { key, url = page.Url, backend = BackendId, action_ok = true, goal_complete = false });
         }
@@ -126,6 +132,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         {
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             await page.Mouse.WheelAsync(dx, dy).ConfigureAwait(false);
+            await PublishFrameAsync(page, $"scroll dx={dx} dy={dy}", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(true, $"playwright scroll dx={dx} dy={dy}",
                 new { dx, dy, backend = BackendId, action_ok = true, goal_complete = false });
         }
@@ -168,6 +175,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                     _page = existing;
                     await existing.BringToFrontAsync().ConfigureAwait(false);
                     var existingTitle = await existing.TitleAsync().ConfigureAwait(false);
+                    await PublishFrameAsync(existing, $"reuse tab {uri.Host}", ct).ConfigureAwait(false);
                     return new BrowserBridgeResult(
                         true,
                         $"playwright reused existing tab {existing.Url} title='{existingTitle}'. one live tab per URL.",
@@ -206,6 +214,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             }
 
             var title = await page.TitleAsync().ConfigureAwait(false);
+            await PublishFrameAsync(page, $"navigate {uri.Host}", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright loaded {page.Url} title='{title}'. goal_complete=false (login/forms still need click/fill).",
@@ -225,6 +234,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             // Prefer AriaSnapshot (string) - Accessibility.SnapshotAsync is deprecated.
             var raw = await page.Locator("body").AriaSnapshotAsync().ConfigureAwait(false);
             var text = FormatA11yText(raw, query);
+            await PublishFrameAsync(page, "snapshot", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright a11y snapshot url={page.Url}\n{text}",
@@ -342,6 +352,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var action = clickX is int cx && clickY is int cy
                 ? $"click_text '{label}' via {how} @({cx},{cy})"
                 : $"click_text '{label}' via {how}";
+            await PublishFrameAsync(page, action, ct, clickX, clickY).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 FormatClickTextResult(label, n, how, urlBefore, urlAfter, pageChanged),
@@ -560,6 +571,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
                 "playwright fill field={Field} valueChars={Chars} (value redacted)",
                 field.Trim(),
                 value?.Length ?? 0);
+            await PublishFrameAsync(page, $"fill '{field}'", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(
                 true,
                 $"playwright filled '{field}' ({value?.Length ?? 0} chars) [value redacted]. url={page.Url}",
@@ -578,6 +590,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             await page.GoBackAsync(new PageGoBackOptions { WaitUntil = WaitUntilState.DOMContentLoaded })
                 .ConfigureAwait(false);
+            await PublishFrameAsync(page, "back", ct).ConfigureAwait(false);
             return new BrowserBridgeResult(true, $"playwright back → {page.Url}",
                 BrowserResultHonesty.Navigated(page.Url, await page.TitleAsync().ConfigureAwait(false), BackendId));
         }
@@ -617,6 +630,13 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
             var page = await EnsurePageAsync(ct).ConfigureAwait(false);
             var bytes = await page.ScreenshotAsync(new PageScreenshotOptions { Type = ScreenshotType.Jpeg, Quality = 70 })
                 .ConfigureAwait(false);
+            _view?.Publish(
+                bytes,
+                page.Url,
+                await page.TitleAsync().ConfigureAwait(false),
+                reason,
+                waitingOnYou: null,
+                backend: VictoriaBrowserViewHub.BackendPlaywright);
             return new BrowserBridgeResult(
                 true,
                 $"playwright screenshot ({reason}) url={page.Url}",
@@ -633,6 +653,38 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         catch (Exception ex)
         {
             return Fail("capture", ex);
+        }
+    }
+
+    private async Task PublishFrameAsync(IPage page, string action, CancellationToken ct, int? clickX = null, int? clickY = null)
+    {
+        if (_view is null)
+            return;
+        // PROP-13.3: honor AllowBrowserCapture before any hub JPEG publish.
+        if (!BrowserToolGate.IsCaptureAllowed(_opts.Value))
+        {
+            _log?.LogDebug("Playwright frame publish skipped — AllowBrowserCapture=false ({Action})", action);
+            return;
+        }
+
+        try
+        {
+            var bytes = await page.ScreenshotAsync(new PageScreenshotOptions { Type = ScreenshotType.Jpeg, Quality = 55 })
+                .ConfigureAwait(false);
+            if (clickX is int x && clickY is int y)
+                bytes = PlaywrightClickCursor.BurnInMarker(bytes, x, y);
+            var title = await page.TitleAsync().ConfigureAwait(false);
+            _view.Publish(
+                bytes,
+                page.Url,
+                title,
+                action,
+                waitingOnYou: null,
+                backend: VictoriaBrowserViewHub.BackendPlaywright);
+        }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "Playwright frame publish failed");
         }
     }
 
@@ -761,6 +813,7 @@ public sealed class PlaywrightBrowserBridge : IBrowserBridge, IAsyncDisposable
         }
 
         // Publish aim frame with teal burn-in BEFORE click — overlay alone is easy to miss between polls.
+        await PublishFrameAsync(page, actionLabel, ct, clickX: x, clickY: y).ConfigureAwait(false);
         await page.WaitForTimeoutAsync(AimDwellMs).ConfigureAwait(false);
     }
 

@@ -1,3 +1,5 @@
+using SoulCore.Inference.Tools.Browser;
+
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
@@ -188,13 +190,14 @@ public sealed class DesktopViewHub : IDesktopViewHub
     public static string InferSoftCursorState(string? action)
     {
         if (string.IsNullOrWhiteSpace(action))
-            return "idle";
+            return VictoriaBrowserViewHub.CursorIdle;
+        // Prefer click flash for press / drag end; keep moves idle (agent cursor →).
         if (action.Contains("clicked", StringComparison.OrdinalIgnoreCase)
             || action.Contains("dragged", StringComparison.OrdinalIgnoreCase)
             || action.Contains("double-click", StringComparison.OrdinalIgnoreCase)
             || action.Contains("browser click", StringComparison.OrdinalIgnoreCase))
-            return "click";
-        return "idle";
+            return VictoriaBrowserViewHub.CursorClick;
+        return VictoriaBrowserViewHub.CursorIdle;
     }
 
     public DesktopViewSnapshot GetSnapshot()
