@@ -11,6 +11,12 @@ public sealed class SoulCoreHealthSnapshot
     public bool MemoryOpen { get; init; }
     public string? MemoryPath { get; init; }
     public bool InferenceEnabled { get; init; }
+
+    /// <summary>Chat model Host is using (<c>/health</c> inference.model).</summary>
+    public string? InferenceModel { get; init; }
+
+    /// <summary>True when that model is served from Ollama Cloud.</summary>
+    public bool InferenceCloud { get; init; }
     public int? Phase { get; init; }
     public string? Detail { get; init; }
     public bool? UnrealEnabled { get; init; }
@@ -70,6 +76,15 @@ public sealed class SoulCoreHealthSnapshot
 
     /// <summary>Warm = memory open + inference enabled (model path ready).</summary>
     public bool Warm => Alive && MemoryOpen && InferenceEnabled;
+
+    /// <summary>Settings label for the model she is actually chatting with.</summary>
+    public string ActiveModelLabel()
+    {
+        if (!InferenceEnabled)
+            return "disabled";
+        var model = string.IsNullOrWhiteSpace(InferenceModel) ? "enabled" : InferenceModel.Trim();
+        return InferenceCloud ? model + " · cloud" : model;
+    }
 }
 
 public sealed class SoulCoreHealthClient : IDisposable
@@ -120,6 +135,8 @@ public sealed class SoulCoreHealthClient : IDisposable
                 MemoryOpen = dto?.Memory?.Open ?? false,
                 MemoryPath = dto?.Memory?.Path,
                 InferenceEnabled = dto?.Inference?.Enabled ?? false,
+                InferenceModel = dto?.Inference?.Model,
+                InferenceCloud = dto?.Inference?.Cloud ?? false,
                 Phase = dto?.Phase,
                 UnrealEnabled = dto?.Unreal?.Enabled,
                 UnrealTarget = dto?.Unreal?.Target,
@@ -179,7 +196,7 @@ public sealed class SoulCoreHealthClient : IDisposable
         public MemoryDto? Memory { get; set; }
 
         [JsonPropertyName("inference")]
-        public FlagDto? Inference { get; set; }
+        public InferenceDto? Inference { get; set; }
 
         [JsonPropertyName("hermes")]
         public FlagDto? Hermes { get; set; }
@@ -273,6 +290,18 @@ public sealed class SoulCoreHealthClient : IDisposable
     {
         [JsonPropertyName("enabled")]
         public bool Enabled { get; set; }
+    }
+
+    private sealed class InferenceDto
+    {
+        [JsonPropertyName("enabled")]
+        public bool Enabled { get; set; }
+
+        [JsonPropertyName("model")]
+        public string? Model { get; set; }
+
+        [JsonPropertyName("cloud")]
+        public bool Cloud { get; set; }
     }
 
     private sealed class UnrealDto

@@ -6,7 +6,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 public sealed class UnavailableGuestWorkspace : IGuestWorkspace
 {
     public const string Message =
-        "guest file and shell tools need DesktopTargetWindowTitle set to the VirtualBox guest (victoria-sandbox).";
+        "guest file and shell tools need DesktopTargetWindowTitle set to the VirtualBox guest (KsDevice).";
 
     public string Home => "/home/victoria";
 

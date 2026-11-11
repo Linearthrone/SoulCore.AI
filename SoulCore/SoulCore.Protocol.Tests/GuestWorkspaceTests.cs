@@ -184,7 +184,7 @@ public sealed class GuestWorkspaceTests
         var result = await launcher.OpenInEditorAsync("booklist", null, null);
         Assert.False(result.Success);
         Assert.Contains("no VS Code", result.Content, StringComparison.Ordinal);
-        Assert.DoesNotContain(calls, c => c.Contains("\nstart\n", StringComparison.Ordinal) || c.Contains("guestcontrol\nvictoria-sandbox\nstart", StringComparison.Ordinal));
+        Assert.DoesNotContain(calls, c => c.Contains("\nstart\n", StringComparison.Ordinal) || c.Contains("guestcontrol\nKsDevice\nstart", StringComparison.Ordinal));
     }
 
     private static VirtualBoxGuestAppLauncher Launcher(
@@ -192,7 +192,7 @@ public sealed class GuestWorkspaceTests
         Func<IReadOnlyList<string>, CancellationToken, (int Exit, string Stdout, string Stderr)> handle)
     {
         return new VirtualBoxGuestAppLauncher(
-            "victoria-sandbox",
+            "KsDevice",
             "VBoxManage",
             (exe, argv, ct) =>
             {

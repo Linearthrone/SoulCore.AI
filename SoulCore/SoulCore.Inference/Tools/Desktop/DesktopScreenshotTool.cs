@@ -98,7 +98,7 @@ public sealed class DesktopScreenshotTool : ITool
             "desktop_screenshot",
             VictoriaBrowserViewHub.BackendVboxGuest,
             url: null,
-            title: "victoria-sandbox");
+            title: "KsDevice");
 
         // Do not call ListWindowsAsync here — that is a second guestcontrol round
         // trip and was a major sandbox lag source. Window bounds stay available via

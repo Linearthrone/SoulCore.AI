@@ -43,7 +43,7 @@ You have these subordinates, with tasks relayed through the user:
 | **QA-01** | QA Testing | Simulated testing, issues, regression evidence |
 | **SLOP-01** | Slop Auditor | Post-QA slop / duplicate / alias audit (read-only) |
 | **REX-01** | UE LiveCoding | MyProject PIE / GameMode / Kayleigh possess / Live Coding (replaces BOB) |
-| **VBOX-01** | VirtualBox + Ubuntu | `victoria-sandbox` VM, VBoxManage, Guest Additions, Ubuntu guest admin |
+| **VBOX-01** | VirtualBox + Ubuntu | `KsDevice` VM, VBoxManage, Guest Additions, Ubuntu guest admin |
 | DEV-01 | *(removed)* | Do not ticket `to-DEV01` — split to FED/BED/DBD/SEC |
 
 Infrastructure / Host DI changes may be done by PM when they are architecture; still ticket BED for feature work.

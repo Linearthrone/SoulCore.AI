@@ -162,12 +162,12 @@ if (SoulCore.Inference.Tools.Desktop.DesktopToolIntent.IsPlaywrightBackend(brows
 {
     logger.LogInformation(
         "BrowserBackend=playwright — websites use Host Chromium (not the embedded VM). " +
-        "Desk default is native+VmEmbedPane; set Tools:BrowserBackend=native to drive victoria-sandbox in Her screen.");
+        "Desk default is native+VmEmbedPane; set Tools:BrowserBackend=native to drive KsDevice in Her screen.");
 }
 else
 {
     logger.LogInformation(
-        "BrowserBackend={BrowserBackend} vmEmbed={VmEmbed} — websites/desktop use VirtualBox victoria-sandbox (Her screen embed). " +
+        "BrowserBackend={BrowserBackend} vmEmbed={VmEmbed} — websites/desktop use VirtualBox KsDevice (Her screen embed). " +
         "Keep the VM running and SOULCORE_VBOX_GUEST_PASS set for guestcontrol.",
         browserBackend,
         toolsAccess.VmEmbedPane);

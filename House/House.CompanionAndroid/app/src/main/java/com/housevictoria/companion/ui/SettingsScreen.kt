@@ -173,7 +173,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("HTTP base (MediaGen / Gallery)") },
                 singleLine = true,
-                placeholder = { Text("http://127.0.0.1:7700") }
+                placeholder = { Text("http://127.0.0.1:7710") }
             )
             Spacer(Modifier.height(4.dp))
             Text(

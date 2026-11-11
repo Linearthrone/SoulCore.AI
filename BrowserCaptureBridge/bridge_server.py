@@ -1,12 +1,13 @@
 """Local HTTP + WebSocket bridge between the HV browser extension and MCP/HV.
 
-- HTTP :17891 — MCP on-demand capture (POST /capture), actions (POST /action), health, poll
-- WebSocket ws://127.0.0.1:17891/ws/cast — live tab cast (extension producer → HV consumer)
+- HTTP :18710 — MCP on-demand capture (POST /capture), actions (POST /action), health, poll
+- WebSocket ws://127.0.0.1:18710/ws/cast — live tab cast (extension producer → HV consumer)
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import base64
 import time
 import uuid
@@ -20,7 +21,8 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 import uvicorn
 
-DEFAULT_PORT = 17891
+DEFAULT_PORT = int(os.environ.get("HOUSE_BRIDGE_PORT", "18710"))
+CAST_SOCKET = f"ws://127.0.0.1:{DEFAULT_PORT}/ws/cast"
 JOB_TIMEOUT_SECONDS = 35.0
 POLL_INTERVAL_SECONDS = 0.1
 
@@ -167,7 +169,7 @@ async def health() -> dict[str, Any]:
         "latest_frame_age_seconds": latest_age,
         "cast_producers": len(_cast_producers),
         "cast_consumers": len(_cast_consumers),
-        "cast_socket": "ws://127.0.0.1:17891/ws/cast",
+        "cast_socket": CAST_SOCKET,
         "supports_actions": True,
     }
 
@@ -307,7 +309,7 @@ def _poll_payload_for_job(job: BridgeJob) -> dict[str, Any]:
     base: dict[str, Any] = {
         "pending": True,
         "stream_enabled": _stream_enabled,
-        "cast_socket": "ws://127.0.0.1:17891/ws/cast",
+        "cast_socket": CAST_SOCKET,
         "job_id": job.job_id,
         "kind": job.kind,
     }
@@ -345,7 +347,7 @@ async def poll() -> dict[str, Any]:
     return {
         "pending": False,
         "stream_enabled": _stream_enabled,
-        "cast_socket": "ws://127.0.0.1:17891/ws/cast",
+        "cast_socket": CAST_SOCKET,
     }
 
 

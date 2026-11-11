@@ -33,7 +33,7 @@ public interface IToolsAccessSettings
     /// </summary>
     string DesktopTargetWindowTitle { get; }
 
-    /// <summary>Presence Her screen SetParent of VirtualBox victoria-sandbox (session).</summary>
+    /// <summary>Presence Her screen SetParent of VirtualBox KsDevice (session).</summary>
     bool VmEmbedPane { get; }
 
     void SetAllowDesktopCapture(bool enabled);

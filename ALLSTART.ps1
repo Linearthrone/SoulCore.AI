@@ -21,8 +21,8 @@
 param(
     [ValidateSet("Release", "Debug")]
     [string]$Configuration = "Release",
-    [int]$Port = 7700,
-    [int]$AlternatePort = 7701,
+    [int]$Port = 7710,
+    [int]$AlternatePort = 7711,
     [switch]$SkipPreflight,
     [switch]$ForceRebuild,
     [int]$HealthTimeoutSec = 45,
@@ -241,7 +241,7 @@ if ($SkipTailscaleServe) {
     }
 }
 
-Write-Host "=== ALLSTART: BrowserCaptureBridge :17891 ==="
+Write-Host "=== ALLSTART: BrowserCaptureBridge :18710 ==="
 $browserBridgeOk = $false
 if ($SkipBrowserBridge) {
     Write-Host "Browser bridge skipped (-SkipBrowserBridge)."
@@ -261,9 +261,9 @@ if ($SkipBrowserBridge) {
             Write-Warning "start-browser-bridge exited $($bbResult.ExitCode) - continuing"
         } else {
             try {
-                $bh = Invoke-RestMethod -Uri "http://127.0.0.1:17891/health" -TimeoutSec 3 -ErrorAction Stop
+                $bh = Invoke-RestMethod -Uri "http://127.0.0.1:18710/health" -TimeoutSec 3 -ErrorAction Stop
                 if ($bh.ok -eq $true) {
-                    Write-Host "BrowserCaptureBridge OK: http://127.0.0.1:17891/health"
+                    Write-Host "BrowserCaptureBridge OK: http://127.0.0.1:18710/health"
                     $browserBridgeOk = $true
                 }
             } catch {
@@ -277,7 +277,7 @@ if ($SkipBrowserBridge) {
     Write-Host "Chrome extension (Load unpacked): $extDir"
 }
 if (-not $browserBridgeOk -and -not $SkipBrowserBridge) {
-    Write-Warning "BrowserCaptureBridge not confirmed on :17891 (soft-fail; Host continues)."
+    Write-Warning "BrowserCaptureBridge not confirmed on :18710 (soft-fail; Host continues)."
     Write-Warning "Load unpacked extension from BrowserCaptureExtension after bridge is up."
 }
 
@@ -376,7 +376,7 @@ if ($SkipPlaywrightInstall) {
 }
 
 # --- Tailscale serve: enable proxies now that Host is healthy ---
-# Applies TCP :7700 + HTTPS :8443 (tailnet-only). Soft-fail: local desktop
+# Applies TCP :7710 + HTTPS :8543 (tailnet-only). Soft-fail: local desktop
 # still works without it. Skipped entirely if -SkipTailscaleServe or sync failed.
 if ($SkipTailscaleServe) {
     Write-Host "=== ALLSTART: Tailscale serve enable skipped (-SkipTailscaleServe) ==="
@@ -385,7 +385,7 @@ if ($SkipTailscaleServe) {
 } elseif (-not (Test-Path -LiteralPath $TailscaleServe)) {
     Write-Warning "tailscale-serve-soulcore.ps1 not found - cannot enable serve"
 } else {
-    Write-Host "=== ALLSTART: Tailscale serve enable (TCP 7700 + HTTPS 8443) ==="
+    Write-Host "=== ALLSTART: Tailscale serve enable (TCP 7710 + HTTPS 8543) ==="
     try {
         $tsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$TailscaleServe,"-SkipAllowedHosts")
         $tsResult = Invoke-ScriptWithTimeout `

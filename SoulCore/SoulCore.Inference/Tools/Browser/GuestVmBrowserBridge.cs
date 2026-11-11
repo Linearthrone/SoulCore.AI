@@ -10,7 +10,7 @@ public sealed class GuestVmBrowserBridge : IBrowserBridge
 {
     public const string HostBlocked =
         "VM scope active: Kayleigh's Windows Chrome/bridge is blocked. " +
-        "browser_* tools drive Firefox inside the Ubuntu guest (victoria-sandbox). " +
+        "browser_* tools drive Firefox inside the Ubuntu guest (KsDevice). " +
         "The VirtualBox window can stay minimized.";
 
     private readonly IVmGuestDesktop _desktop;

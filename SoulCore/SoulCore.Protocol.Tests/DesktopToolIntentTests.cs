@@ -156,22 +156,22 @@ public class DesktopToolIntentTests
     {
         Assert.Contains("NEVER tell Kayleigh you can only text/chat", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("Her screen", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
-        Assert.Contains("victoria-sandbox", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("KsDevice", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("When Kayleigh gives click", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
         Assert.Contains("browser_click_text-only limitation", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
-        Assert.Contains("not Coursera unless she said so", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
+        Assert.Contains("Do not wait for a second permission", ComputerUseGuidance.VmBlock, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ComputerUseGuidance_ScopedBlock_LocksVmTitle_PlaywrightMode()
     {
-        var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox", "playwright");
+        var once = ComputerUseGuidance.AppendToPreamble("hello", "KsDevice", "playwright");
         Assert.Contains(ComputerUseGuidance.Marker, once, StringComparison.Ordinal);
         Assert.Contains(ComputerUseGuidance.Block, once, StringComparison.Ordinal);
-        Assert.Contains(ComputerUseGuidance.ScopedBlock("victoria-sandbox", "playwright"), once, StringComparison.Ordinal);
+        Assert.Contains(ComputerUseGuidance.ScopedBlock("KsDevice", "playwright"), once, StringComparison.Ordinal);
         Assert.Contains("Preferred workflow", once, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", once, StringComparison.Ordinal);
-        Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
+        Assert.Contains("KsDevice", once, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", once, StringComparison.Ordinal);
         Assert.Contains("browser_click_text", once, StringComparison.Ordinal);
         Assert.Contains("WEB IS NOT THE VM", once, StringComparison.Ordinal);
@@ -181,16 +181,16 @@ public class DesktopToolIntentTests
         Assert.True(
             once.IndexOf(ComputerUseGuidance.Block, StringComparison.Ordinal)
             < once.IndexOf("DESKTOP SCOPE", StringComparison.Ordinal));
-        Assert.Equal(once, ComputerUseGuidance.AppendToPreamble(once, "victoria-sandbox", "playwright"));
+        Assert.Equal(once, ComputerUseGuidance.AppendToPreamble(once, "KsDevice", "playwright"));
     }
 
     [Fact]
     public void ComputerUseGuidance_ScopedBlock_VmPrimary_WhenNotPlaywright()
     {
-        var once = ComputerUseGuidance.AppendToPreamble("hello", "victoria-sandbox", "native");
+        var once = ComputerUseGuidance.AppendToPreamble("hello", "KsDevice", "native");
         Assert.Contains(ComputerUseGuidance.VmBlock, once, StringComparison.Ordinal);
         Assert.Contains("VM PRIMARY", once, StringComparison.Ordinal);
-        Assert.Contains("victoria-sandbox", once, StringComparison.Ordinal);
+        Assert.Contains("KsDevice", once, StringComparison.Ordinal);
         Assert.Contains("desktop_open_app firefox", once, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("WEB IS NOT THE VM", once, StringComparison.Ordinal);
         Assert.Contains(ComputerUseGuidance.BlockFor("native"), once, StringComparison.Ordinal);
@@ -199,7 +199,7 @@ public class DesktopToolIntentTests
     [Theory]
     [InlineData("use the vm")]
     [InlineData("look inside the sandbox")]
-    [InlineData("drive victoria-sandbox")]
+    [InlineData("drive KsDevice")]
     public void TryMatch_VmPhrases_ForcesDesktopTool(string text)
     {
         Assert.True(DesktopToolIntent.TryMatch(text, out var match));

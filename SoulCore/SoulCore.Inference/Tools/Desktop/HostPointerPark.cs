@@ -17,10 +17,10 @@ public static class HostPointerPark
     }
 
     /// <summary>
-    /// Park outside the victoria-sandbox HWND (and its root owner/parent window).
+    /// Park outside the KsDevice HWND (and its root owner/parent window).
     /// Falls back to virtual-screen corners away from common top-left layouts.
     /// </summary>
-    public static IDisposable BeginAwayFromVm(string? titleSubstring = "victoria-sandbox")
+    public static IDisposable BeginAwayFromVm(string? titleSubstring = "KsDevice")
     {
         if (!OperatingSystem.IsWindows())
             return Noop.Instance;

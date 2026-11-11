@@ -1,9 +1,9 @@
-# Start House Victoria TTS (Kokoro, in this repo) on 127.0.0.1:8881.
+# Start House Victoria TTS (Kokoro, in this repo) on 127.0.0.1:8711.
 # Without -Worker this returns immediately and leaves a hidden worker running,
 # so ALLSTART's timeout does not kill the model download.
 param(
     [string]$HostAddr = "127.0.0.1",
-    [int]$Port = 8881,
+    [int]$Port = 8711,
     [string]$PythonExe = "",
     [switch]$Worker
 )

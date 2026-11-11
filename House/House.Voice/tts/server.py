@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 import uvicorn
 
 HOST = os.environ.get("HOUSE_TTS_HOST", "127.0.0.1")
-PORT = int(os.environ.get("HOUSE_TTS_PORT", "8881"))
+PORT = int(os.environ.get("HOUSE_TTS_PORT", "8711"))
 DEFAULT_VOICE = os.environ.get("HOUSE_TTS_VOICE", "af_heart")
 
 ROOT = Path(__file__).resolve().parents[1]

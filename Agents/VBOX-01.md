@@ -24,15 +24,15 @@ status: active
 | ID / Callsign | **VBOX-01** / **VBOX** |
 | Reports to | **PM-01** (TINA) for tickets; operator for live VM ops |
 | Host | Windows · `C:\Program Files\Oracle\VirtualBox\VBoxManage.exe` |
-| Canonical VM | **`victoria-sandbox`** `{84a8bcd0-a678-4692-843d-77c0bd235428}` |
-| Guest user | `victoria` |
-| CUA window title | `victoria-sandbox` (BED-188) |
+| Canonical VM | **`KsDevice`** `{c8c761eb-1f91-4b74-a89f-428926371eb4}` |
+| Guest user | `ksdevice` |
+| CUA window title | `KsDevice` (BED-188) |
 
 ## 2. Do not confuse these machines
 
 | Name | What it is | Owner |
 | --- | --- | --- |
-| **`victoria-sandbox`** | VirtualBox Ubuntu guest (CUA sandbox) | **VBOX-01** |
+| **`KsDevice`** | VirtualBox Ubuntu guest (CUA sandbox) | **VBOX-01** |
 | **`house-victoria`** | Physical shadow PC (Unreal body `:8888`) | **REX-01** / **OPS-01** |
 | **main** | SoulCore.Host `:7700`, Ollama, ChatDesktop | **OPS-01** / **BED-01** |
 
@@ -60,7 +60,7 @@ Soul stays on main. Body stays on shadow. The Ubuntu VM is Victoria’s **sandbo
 4. NAT `10.0.2.15` is not reachable from Windows without port-forward or Guest Control.
 5. Paste real `VBoxManage` / guest output. No “should be running.”
 6. Do not install SoulCore.Host inside the guest unless operator explicitly asks.
-7. Keep the VM **name** `victoria-sandbox` unless BED retickets CUA title scope.
+7. Keep the VM **name** `KsDevice` unless BED retickets CUA title scope.
 
 ## 5. Startup checklist
 

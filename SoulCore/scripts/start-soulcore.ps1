@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build (if needed) and start SoulCore.Host on loopback :7700.
+  Build (if needed) and start this checkout's SoulCore.Host on loopback :7710.
+  Does not stop a Host from another checkout (that one keeps :7700).
 .DESCRIPTION
   Inference/embed preflight (TASK-112): before starting the Host, probe the
   local Ollama server (/api/tags) and confirm the embedding model is present.
@@ -18,7 +19,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 7700,
+    [int]$Port = 7710,
     [switch]$ForceRebuild,
     # Stop any Host already on this port (pid file + listeners) then start fresh.
     # Needed after .env / branch changes - ALLSTART otherwise reuses a stale Host.
@@ -69,12 +70,16 @@ function Get-LoopbackListenerPids {
 }
 
 function Get-SoulCoreHostPids {
+    # Only this checkout. A Host launched from another tree (Soul_Core on :7700)
+    # must keep running when this tree starts on its own port.
+    $rootPattern = [regex]::Escape($SoulCoreRoot)
     $pids = New-Object 'System.Collections.Generic.HashSet[int]'
     Get-CimInstance Win32_Process -Filter "Name='dotnet.exe' OR Name='SoulCore.Host.exe'" -ErrorAction SilentlyContinue |
         ForEach-Object {
             $cl = [string]$_.CommandLine
             if ([string]::IsNullOrWhiteSpace($cl)) { return }
             if ($cl -notmatch 'SoulCore\.Host(\.dll|\.exe)?') { return }
+            if ($cl -notmatch $rootPattern) { return }
             if ($cl -match '(?i)[\\/]Cursor[\\/]|cursor-agent') { return }
             [void]$pids.Add([int]$_.ProcessId)
         }
@@ -107,29 +112,46 @@ function Stop-SoulCoreHostOrphans {
     )
     $listeners = @(Get-LoopbackListenerPids -LocalPort $LocalPort -Address $Address)
     $hosts = @(Get-SoulCoreHostPids)
-    $keep = @()
-    if (-not $KillListenerToo -and $listeners.Count -eq 1) {
-        $keep = @($listeners[0])
+    # One Host can show up as several TCP rows. That used to look like a herd,
+    # so every Presence open killed the live Host and then reported a timeout.
+    $listeningHosts = @($hosts | Where-Object { $listeners -contains $_ } | Select-Object -Unique)
+
+    if (-not $KillListenerToo) {
+        if ($listeners.Count -eq 0) {
+            Write-Host "Host inventory: no ${Address}:${LocalPort} listener seen; leaving $($hosts.Count) host process(es) alone"
+            return 0
+        }
+        if ($listeningHosts.Count -eq 0) {
+            Write-Host "Host inventory: ${Address}:${LocalPort} is held by PID $($listeners -join ',') which is not this checkout's Host; not killing it"
+            return 0
+        }
+
+        $killed = 0
+        foreach ($procId in $hosts) {
+            if ($listeningHosts -contains $procId) { continue }
+            if (Stop-PidSafe -ProcId $procId -Reason "orphan SoulCore.Host (not the :$LocalPort listener)") {
+                $killed++
+            }
+        }
+        if ($killed -gt 0) {
+            Write-Host "Reaped $killed leftover Host process(es) before start"
+            Start-Sleep -Milliseconds 600
+        } else {
+            Write-Host "Host inventory: listener PID $($listeningHosts -join ',') on :$LocalPort kept"
+        }
+        return $killed
     }
 
     $killed = 0
     foreach ($procId in $hosts) {
-        if ($keep -contains $procId) { continue }
-        if (Stop-PidSafe -ProcId $procId -Reason "orphan SoulCore.Host (not sole :$LocalPort listener)") {
+        if (Stop-PidSafe -ProcId $procId -Reason "SoulCore.Host (-RestartHost)") {
             $killed++
         }
     }
-
-    if ($KillListenerToo) {
-        foreach ($procId in $listeners) {
-            if (Stop-PidSafe -ProcId $procId -Reason "listener on ${Address}:${LocalPort}") {
-                $killed++
-            }
-        }
-    } elseif ($listeners.Count -gt 1) {
-        Write-Warning "Multiple listeners on ${Address}:${LocalPort} - clearing all and requiring a fresh start"
-        foreach ($procId in $listeners) {
-            if (Stop-PidSafe -ProcId $procId -Reason "duplicate listener") { $killed++ }
+    foreach ($procId in $listeners) {
+        if ($hosts -contains $procId) { continue }
+        if (Stop-PidSafe -ProcId $procId -Reason "listener on ${Address}:${LocalPort}") {
+            $killed++
         }
     }
 
@@ -238,14 +260,14 @@ if ($RestartHost) {
 if (-not $ForceRebuild -and -not $RestartHost -and (Test-PortListening -LocalPort $Port -Address $BindAddress)) {
     $listeners = @(Get-LoopbackListenerPids -LocalPort $Port -Address $BindAddress)
     $hosts = @(Get-SoulCoreHostPids)
-    if ($listeners.Count -eq 1 -and $hosts.Count -le 1) {
-        Write-Host "SoulCore already listening on ${BindAddress}:${Port} (PID $($listeners[0])) - reusing, not starting another"
+    $ours = @($listeners | Where-Object { $hosts -contains $_ } | Select-Object -Unique)
+    if ($ours.Count -ge 1) {
+        Write-Host "SoulCore already listening on ${BindAddress}:${Port} (PID $($ours[0])) - reusing, not starting another"
         Write-Host "Health: $HealthUrl"
         Write-Host "Tip: after changing SoulCore/.env or source, re-run with -RestartHost (rebuilds Host) so the process reloads."
         exit 0
     }
-    Write-Warning "Port :${Port} busy but Host inventory is messy (listeners=$($listeners.Count) hosts=$($hosts.Count)) - clearing and starting fresh"
-    Stop-SoulCoreOnPort -LocalPort $Port -Address $BindAddress -PidPath $PidFile
+    throw "Port ${BindAddress}:${Port} is in use by PID $($listeners -join ',') and it is not this checkout's Host. Not killing it."
 }
 
 $dll = Join-Path $SoulCoreRoot "SoulCore.Host\bin\Debug\net8.0\SoulCore.Host.dll"
@@ -273,6 +295,10 @@ $env:Host__Port = "$Port"
 # (child inherits). Never log values. .env overwrites stale Process/User-inherited
 # tokens so companion auth matches the file operator edits (PROP-1.2 401 footgun).
 $EnvFile = Join-Path $SoulCoreRoot ".env"
+if (-not (Test-Path -LiteralPath $EnvFile)) {
+    $repoEnv = Join-Path (Split-Path -Parent $SoulCoreRoot) ".env"
+    if (Test-Path -LiteralPath $repoEnv) { $EnvFile = $repoEnv }
+}
 $loadedCount = 0
 if (Test-Path -LiteralPath $EnvFile) {
     foreach ($line in Get-Content -LiteralPath $EnvFile -Encoding utf8) {

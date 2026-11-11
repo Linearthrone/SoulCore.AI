@@ -55,7 +55,7 @@
               <StackPanel Margin="24,0,0,0" VerticalAlignment="Center" Opacity="0.85">
                 <TextBlock Text="HOUSE VICTORIA" FontSize="11" FontWeight="Bold"
                            Foreground="{DynamicResource MutedBrush}" LetterSpacing="1.5"/>
-                <TextBlock x:Name="EndpointText" Text="127.0.0.1:7700" FontSize="10"
+                <TextBlock x:Name="EndpointText" Text="127.0.0.1:7710" FontSize="10"
                            Foreground="{DynamicResource MutedBrush}" Opacity="0.6"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock x:Name="BuildVersionsText" Text="" FontSize="10"
@@ -311,7 +311,7 @@
                     FontWeight="SemiBold"
                     VerticalAlignment="Center"
                     Click="VmPowerButton_Click"
-                    ToolTip.Tip="Start victoria-sandbox"/>
+                    ToolTip.Tip="Start KsDevice"/>
           </Grid>
           <!-- Plain Grid (not TabControl) so Her screen always measures to full slot —
                custom TabControl templates left the embed host at 0×0 / blank. -->
@@ -576,7 +576,7 @@
                     <Panel Width="52" Height="52">
                       <Ellipse x:Name="GlowSandbox" Width="52" Height="52" IsHitTestVisible="False"/>
                       <Button x:Name="LampSandbox" Classes="lamp" Tag="sandbox" IsEnabled="False"
-                              ToolTip.Tip="victoria-sandbox VM"
+                              ToolTip.Tip="KsDevice VM"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Panel>
                   </Border>
@@ -658,9 +658,9 @@
                           IsChecked="True" FontWeight="SemiBold" Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
                 <CheckBox x:Name="ToolsSoftCursorRestoreCheck" Content="Agent cursor — don't move my mouse"
                           IsChecked="True" Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
-                <CheckBox x:Name="ToolsVmEmbedPaneCheck" Content="Embed VirtualBox (victoria-sandbox) in Her screen"
+                <CheckBox x:Name="ToolsVmEmbedPaneCheck" Content="Embed VirtualBox (KsDevice) in Her screen"
                           IsChecked="True" FontWeight="SemiBold" Margin="0,0,0,16" Click="ToolsAccessToggle_Click"
-                          ToolTip.Tip="SetParent the running VM window into Her screen. Keep victoria-sandbox visible (not minimized)."/>
+                          ToolTip.Tip="SetParent the running VM window into Her screen. Keep KsDevice visible (not minimized)."/>
                 <TextBlock Text="Trading (MT4)" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <CheckBox x:Name="ToolsAllowMt4ReadCheck" Content="Allow MT4 read (status, symbols, positions)"
                           Margin="0,0,0,6" Click="ToolsAccessToggle_Click"/>
@@ -748,7 +748,7 @@
                              Text="None loaded — use Tools &amp; Access → Email setup."
                              Margin="0,0,0,12"/>
 
-                  <TextBlock Text="Guest VM (victoria-sandbox)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                  <TextBlock Text="Guest VM (KsDevice)" FontWeight="SemiBold" Margin="0,0,0,4"/>
                   <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"
                              Text="Operator buttons via VBoxManage. Presence does not auto-start the VM."/>
                   <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
@@ -818,8 +818,8 @@
                              Padding="6" Margin="0,0,0,6"/>
                     <TextBlock Grid.Row="1" Text="Port" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
                     <TextBox x:Name="SystemPortBox" Grid.Row="1" Grid.Column="1" Classes="input" IsReadOnly="True"
-                             Text="7700" Padding="6" Margin="0,0,0,6"/>
-                    <TextBlock Grid.Row="2" Text="Inference" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
+                             Text="7710" Padding="6" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="2" Text="Model" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>
                     <TextBox x:Name="SystemInferenceBox" Grid.Row="2" Grid.Column="1" Classes="input" IsReadOnly="True"
                              Text="—" Padding="6" Margin="0,0,0,6"/>
                     <TextBlock Grid.Row="3" Text="Memory path" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4"/>

@@ -31,7 +31,7 @@ public static class SecretNames
 
     /// <summary>
     /// Ubuntu guest password for VirtualBox Guest Additions <c>guestcontrol</c>
-    /// (victoria-sandbox). Never commit values. Optional alias: <c>VBOX_GUEST_PASS</c>.
+    /// (KsDevice). Never commit values. Optional alias: <c>VBOX_GUEST_PASS</c>.
     /// </summary>
     public const string VboxGuestPass = "SOULCORE_VBOX_GUEST_PASS";
 }

@@ -66,6 +66,6 @@ internal static class GuestControlProbe
         if (!string.IsNullOrWhiteSpace(fromEnv))
             return fromEnv.Trim();
 
-        return "victoria-sandbox";
+        return "KsDevice";
     }
 }

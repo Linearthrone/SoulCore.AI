@@ -509,7 +509,7 @@ public class DesktopToolsTests
         Assert.True(opts.AllowComputerControl);
         Assert.Equal("cua", opts.DesktopBackend);
         Assert.Equal("playwright", opts.BrowserBackend);
-        Assert.Equal("http://127.0.0.1:17891", opts.BrowserBridgeUrl);
+        Assert.Equal("http://127.0.0.1:18710", opts.BrowserBridgeUrl);
         Assert.Equal("", opts.DesktopTargetWindowTitle);
         Assert.False(opts.AllowEmailRead);
         Assert.False(opts.AllowEmailSend);

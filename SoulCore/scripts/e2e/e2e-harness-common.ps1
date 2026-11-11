@@ -11,8 +11,8 @@
 $ErrorActionPreference = 'Stop'
 
 # --- Config (overridable via env / params at call site) ---
-if (-not $script:HostUrl)     { $script:HostUrl    = $env:SOULCORE_E2E_HOST_URL    ; if (-not $script:HostUrl)    { $script:HostUrl    = 'http://127.0.0.1:7700' } }
-if (-not $script:HostWsUrl)   { $script:HostWsUrl  = $env:SOULCORE_E2E_HOST_WS_URL; if (-not $script:HostWsUrl)  { $script:HostWsUrl  = 'ws://127.0.0.1:7700/ws' } }
+if (-not $script:HostUrl)     { $script:HostUrl    = $env:SOULCORE_E2E_HOST_URL    ; if (-not $script:HostUrl)    { $script:HostUrl    = 'http://127.0.0.1:7710' } }
+if (-not $script:HostWsUrl)   { $script:HostWsUrl  = $env:SOULCORE_E2E_HOST_WS_URL; if (-not $script:HostWsUrl)  { $script:HostWsUrl  = 'ws://127.0.0.1:7710/ws' } }
 if (-not $script:UnrealWsUrl) { $script:UnrealWsUrl = $env:SOULCORE_E2E_UE_WS_URL ; if (-not $script:UnrealWsUrl){ $script:UnrealWsUrl = 'ws://127.0.0.1:8888' } }
 if (-not $script:TimeoutSec)  { $script:TimeoutSec = 15 }
 

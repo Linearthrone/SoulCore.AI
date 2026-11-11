@@ -46,7 +46,7 @@ public class VboxConsoleKeyboardTests
     {
         var calls = new List<string>();
         var launcher = new VirtualBoxGuestAppLauncher(
-            "victoria-sandbox",
+            "KsDevice",
             "VBoxManage",
             (_, argv, _) =>
             {
@@ -70,7 +70,7 @@ public class VboxConsoleKeyboardTests
     {
         var calls = new List<string>();
         var launcher = new VirtualBoxGuestAppLauncher(
-            "victoria-sandbox",
+            "KsDevice",
             "VBoxManage",
             (_, argv, _) =>
             {

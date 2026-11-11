@@ -9,7 +9,7 @@ using House.ChatDesktop.Services;
 namespace House.ChatDesktop.Controls;
 
 /// <summary>
-/// PROP-14.2 / VM embed: hosts an existing Win32 HWND (VirtualBox victoria-sandbox or
+/// PROP-14.2 / VM embed: hosts an existing Win32 HWND (VirtualBox KsDevice or
 /// Playwright Chromium) inside Presence Her screen via SetParent.
 /// Detach restores the prior parent — never DestroyWindow the guest/VM HWND.
 /// Non-Windows / zero hwnd → no native child (JPEG fallback stays visible).

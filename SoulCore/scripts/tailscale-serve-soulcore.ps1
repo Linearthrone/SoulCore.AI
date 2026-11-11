@@ -1,13 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Apply or tear down Tailscale serve proxies for SoulCore.Host :7700 (loopback),
+  Apply or tear down Tailscale serve proxies for this checkout's Host :7710 (loopback),
   and sync AllowedHosts so the Host actually accepts Tailscale-served requests.
 
 .DESCRIPTION
   Tailnet-only exposure (no Funnel / no LAN bind). Matches docs/runbooks/tailscale-serve-soulcore.md.
 
-  Default: sync AllowedHosts, enable TCP :7700 forward + HTTPS :8443 reverse proxy to http://127.0.0.1:7700
+  Default: sync AllowedHosts, enable TCP :7710 forward + HTTPS :8543 reverse proxy to http://127.0.0.1:7710
+  Does not remove another checkout's serve on TCP :7700 / HTTPS :8443.
 
   AllowedHosts sync (always on unless -SkipAllowedHosts):
     * Resolves Tailscale IPv4 (tailscale ip -4) + MagicDNS name (tailscale status --json).
@@ -20,14 +21,14 @@
   Print tailscale serve status only.
 
 .PARAMETER Off
-  Disable the SoulCore serve endpoints created by this script (TCP 7700 + HTTPS 8443).
+  Disable the SoulCore serve endpoints created by this script (TCP 7710 + HTTPS 8543).
   Does not touch unrelated handlers (e.g. Ollama on :443).
 
 .PARAMETER TcpOnly
-  Only enable TCP forward on 7700 (no HTTPS reverse proxy, no AllowedHosts sync).
+  Only enable TCP forward on 7710 (no HTTPS reverse proxy, no AllowedHosts sync).
 
 .PARAMETER HttpsOnly
-  Only enable HTTPS reverse proxy on 8443 (no TCP forward).
+  Only enable HTTPS reverse proxy on 8543 (no TCP forward).
 
 .PARAMETER SyncAllowedHostsOnly
   Only run the AllowedHosts sync; do not change tailscale serve state.
@@ -200,14 +201,14 @@ if ($Status) {
 
 # ---- Off (tear down) ----
 if ($Off) {
-    Write-Host "Disabling SoulCore serve endpoints (TCP 7700, HTTPS 8443)..."
+    Write-Host "Disabling SoulCore serve endpoints (TCP 7710, HTTPS 8543)..."
     # Already-off is success: Tailscale prints "serve config does not exist" and
     # PowerShell may treat stderr as a native error even with 2>$null.
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     foreach ($argsOff in @(
-        @("serve", "--tcp=7700", "off"),
-        @("serve", "--https=8443", "off")
+        @("serve", "--tcp=7710", "off"),
+        @("serve", "--https=8543", "off")
     )) {
         $err = & $script:Tailscale @argsOff 2>&1
         if ($LASTEXITCODE -ne 0) {
@@ -253,21 +254,21 @@ $doHttps = -not $TcpOnly
 
 # Probe local Host (advisory)
 try {
-    $health = Invoke-WebRequest -Uri "http://127.0.0.1:7700/health" -UseBasicParsing -TimeoutSec 3
+    $health = Invoke-WebRequest -Uri "http://127.0.0.1:7710/health" -UseBasicParsing -TimeoutSec 3
     Write-Host "Local Host health: HTTP $($health.StatusCode)"
 }
 catch {
-    Write-Warning "SoulCore Host not reachable at http://127.0.0.1:7700/health - start Host before phone clients connect."
+    Write-Warning "SoulCore Host not reachable at http://127.0.0.1:7710/health - start Host before phone clients connect."
 }
 
 if ($doTcp) {
-    Write-Host "Enabling TCP serve :7700 -> 127.0.0.1:7700"
-    Invoke-Tailscale -CliArgs @("serve", "--tcp=7700", "--bg", "--yes", "7700")
+    Write-Host "Enabling TCP serve :7710 -> 127.0.0.1:7710"
+    Invoke-Tailscale -CliArgs @("serve", "--tcp=7710", "--bg", "--yes", "7710")
 }
 
 if ($doHttps) {
-    Write-Host "Enabling HTTPS serve :8443 -> 127.0.0.1:7700"
-    Invoke-Tailscale -CliArgs @("serve", "--https=8443", "--bg", "--yes", "7700")
+    Write-Host "Enabling HTTPS serve :8543 -> 127.0.0.1:7710"
+    Invoke-Tailscale -CliArgs @("serve", "--https=8543", "--bg", "--yes", "7710")
 }
 
 Write-Host ""
@@ -277,11 +278,11 @@ Invoke-Tailscale -CliArgs @("serve", "status")
 Write-Host ""
 Write-Host "Phone examples (after AllowedHosts includes MagicDNS / TS IP):"
 if ($doHttps -and $identity.Dns) {
-    Write-Host "  wss://$($identity.Dns):8443/ws"
-    Write-Host "  https://$($identity.Dns):8443/health"
+    Write-Host "  wss://$($identity.Dns):8543/ws"
+    Write-Host "  https://$($identity.Dns):8543/health"
 }
 if ($doTcp -and $identity.Ip) {
-    Write-Host "  ws://$($identity.Ip):7700/ws"
-    Write-Host "  http://$($identity.Ip):7700/health"
+    Write-Host "  ws://$($identity.Ip):7710/ws"
+    Write-Host "  http://$($identity.Ip):7710/health"
 }
 Write-Host "See docs/runbooks/tailscale-serve-soulcore.md"

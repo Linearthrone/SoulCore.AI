@@ -99,7 +99,7 @@ class SoulCoreWsClient(
                     WsConnectionState.Failed,
                     "Host WS down at $endpoint ($detail: ${t.message}). " +
                         "Start SoulCore.Host, then reconnect. " +
-                        "Emulator tip: adb reverse tcp:7700 tcp:7700"
+                        "Emulator tip: adb reverse tcp:7710 tcp:7710"
                 )
             }
         })

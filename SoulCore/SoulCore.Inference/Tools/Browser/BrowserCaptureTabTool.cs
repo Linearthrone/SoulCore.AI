@@ -101,7 +101,7 @@ public sealed class BrowserCaptureTabTool : ITool
                 _browserView?.Publish(
                     bytes,
                     url: null,
-                    title: backend == VictoriaBrowserViewHub.BackendVboxGuest ? "victoria-sandbox" : null,
+                    title: backend == VictoriaBrowserViewHub.BackendVboxGuest ? "KsDevice" : null,
                     lastAction: "browser_capture_tab",
                     waitingOnYou: null,
                     backend: backend);

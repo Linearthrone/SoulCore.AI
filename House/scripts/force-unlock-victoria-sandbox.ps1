@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Unstick victoria-sandbox after a hung save-state / session lock.
+  Unstick KsDevice after a hung save-state / session lock.
 .DESCRIPTION
   Host COM (Presence clicks/wheel) and leftover VirtualBoxVM processes can leave
   the VM "saved" or "aborted" with a lock so GUI start and poweroff both refuse.
@@ -12,7 +12,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$VmName = "victoria-sandbox",
+    [string]$VmName = "KsDevice",
     [switch]$SkipStart
 )
 
@@ -120,7 +120,7 @@ if ($code -ne 0) {
     exit $code
 }
 
-# Give the top-level victoria-sandbox window a moment to appear before Host looks it up.
+# Give the top-level KsDevice window a moment to appear before Host looks it up.
 Start-Sleep -Seconds 2
 
 # We killed Host above so COM locks would release. Bring one Host back so Presence

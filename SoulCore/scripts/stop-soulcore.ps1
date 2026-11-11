@@ -1,18 +1,20 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop every local SoulCore.Host process (loopback :7700 listener + orphans).
+  Stop this checkout's SoulCore.Host (loopback :7710 listener + its orphans).
+  Leaves a Host from another checkout alone.
 .NOTES
   Safe local only: only targets 127.0.0.1 listeners and processes whose command
   line is SoulCore.Host. Never touches Cursor or non-loopback occupants.
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 7700
+    [int]$Port = 7710
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptsDir = $PSScriptRoot
+$SoulCoreRoot = Split-Path -Parent $ScriptsDir
 $PidFile = Join-Path $ScriptsDir ".soulcore-host.pid"
 $BindAddress = "127.0.0.1"
 
@@ -25,12 +27,14 @@ function Get-LoopbackListenerPids {
 }
 
 function Get-SoulCoreHostPids {
+    $rootPattern = [regex]::Escape($SoulCoreRoot)
     $pids = New-Object 'System.Collections.Generic.HashSet[int]'
     Get-CimInstance Win32_Process -Filter "Name='dotnet.exe' OR Name='SoulCore.Host.exe'" -ErrorAction SilentlyContinue |
         ForEach-Object {
             $cl = [string]$_.CommandLine
             if ([string]::IsNullOrWhiteSpace($cl)) { return }
             if ($cl -notmatch 'SoulCore\.Host(\.dll|\.exe)?') { return }
+            if ($cl -notmatch $rootPattern) { return }
             # Never kill Cursor / agent hosts that merely mention the string in args elsewhere.
             if ($cl -match '(?i)[\\/]Cursor[\\/]|cursor-agent') { return }
             [void]$pids.Add([int]$_.ProcessId)

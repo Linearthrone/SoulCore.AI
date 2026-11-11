@@ -110,7 +110,7 @@ dotnet run --project SoulCore.Host -- --soul-loop-tick --enabled
 | Presence | `GET /browser/view` · embed `GET /browser/embed` when `PlaywrightEmbedPane=true` |
 
 Websites use `browser_navigate` / `browser_*` on Victoria Host Chromium — **not** VirtualBox guest Firefox.
-`DesktopTargetWindowTitle=victoria-sandbox` still scopes **desktop_*** to the VM only.
+`DesktopTargetWindowTitle=KsDevice` still scopes **desktop_*** to the VM only.
 
 To force the old guest path (not recommended): `SOULCORE_Tools__BrowserBackend=native` in `SoulCore/.env` then restart Host.
 `.env` overrides `appsettings.json` — a leftover `=native` is why she keeps using the VM.
@@ -173,7 +173,7 @@ Do not enable non-loopback binds. Full 24h soak requires an explicit product gat
 Never commit tokens. Use:
 
 - Local file: `SoulCore/.env` (gitignored; copy from `.env.example`) — Host loads `SOULCORE_*` keys into process env before config bind; existing shell env wins
-- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`, `SOULCORE_VBOX_GUEST_PASS` (Ubuntu guest login for victoria-sandbox guestcontrol)
+- Environment: `SOULCORE_A2E_TOKEN`, `SOULCORE_HERMES_API_KEY`, `SOULCORE_HF_TOKEN`, `SOULCORE_COMPANION_API_TOKEN`, `SOULCORE_VBOX_GUEST_PASS` (Ubuntu guest login for KsDevice guestcontrol)
 - Or: `dotnet user-secrets` on `SoulCore.Host` in Development
 
 Guestcontrol smoke test (no password printed):

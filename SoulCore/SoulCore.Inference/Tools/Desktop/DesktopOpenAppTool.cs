@@ -55,7 +55,7 @@ public sealed class DesktopOpenAppTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "desktop_open_app",
         Description:
-            "Launch an allowlisted app. When DesktopTargetWindowTitle scopes to victoria-sandbox and BrowserBackend is not playwright, " +
+            "Launch an allowlisted app. When DesktopTargetWindowTitle scopes to KsDevice and BrowserBackend is not playwright, " +
             "chrome/edge/firefox open guest Firefox inside the VM (pass URL in args). " +
             "codium/vscodium/code opens VSCodium in the guest. Otherwise non-browser aliases only " +
             "(notepad, explorer, cmd, powershell). Requires AllowComputerControl.",

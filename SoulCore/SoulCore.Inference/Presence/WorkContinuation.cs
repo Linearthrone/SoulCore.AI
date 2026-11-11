@@ -18,8 +18,7 @@ public static class WorkContinuation
 
     public const string Nudge =
         "Continue the unfinished task from where you left off. Take the next concrete step. " +
-        "Do not wait to be told to go. If you need Kayleigh to decide, or she already told you to hold, " +
-        "say so in one sentence and call no tools.";
+        "Do not wait to be told to go.";
 
     public const string ContinuingLine =
         "Still working. That tool round filled up, so I'm continuing.";
@@ -80,7 +79,7 @@ public static class WorkContinuation
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex NeedsHer = new(
-        @"\b(?:need you to decide|need kayleigh|cannot proceed|can't proceed|blocked until you)\b",
+        @"\b(?:need you to decide|blocked until you)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static bool LooksLikeAssignment(string? userText)
@@ -165,8 +164,6 @@ public static class WorkContinuation
         return "Open assignment from Kayleigh, still in force while she is away: "
                + (assignment ?? "").Trim()
                + ". Keep working until that assignment is actually finished. "
-               + "Check in with her only when it says to, or you truly cannot proceed without her. "
-               + "Do not write her a status note about why you are not working. "
                + "Do not stop just because she has not typed."
                + extra;
     }

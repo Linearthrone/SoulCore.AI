@@ -275,7 +275,7 @@ public class ChatWebSocketHandlerToolLoopTests
             allowMt4Read: false,
             allowMt4Trade: false,
             browserBackend: "native",
-            desktopTargetWindowTitle: "victoria-sandbox");
+            desktopTargetWindowTitle: "KsDevice");
         var handler = MakeHandler(
             inference, registry, unreal, MakeChatOptions(useToolLoop: true),
             toolsAccess: native);
@@ -285,7 +285,7 @@ public class ChatWebSocketHandlerToolLoopTests
         Assert.True(inference.CompleteWithToolsCalled);
         Assert.Equal("desktop_open_app", inference.LastLoopOptions?.ForceToolName);
         Assert.Contains("[Computer]", inference.LastSystemContent ?? "", StringComparison.Ordinal);
-        Assert.Contains("victoria-sandbox", inference.LastSystemContent ?? "", StringComparison.Ordinal);
+        Assert.Contains("KsDevice", inference.LastSystemContent ?? "", StringComparison.Ordinal);
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class ChatWebSocketHandlerToolLoopTests
             allowComputerControl: true,
             allowMt4Read: false,
             allowMt4Trade: false,
-            desktopTargetWindowTitle: "victoria-sandbox",
+            desktopTargetWindowTitle: "KsDevice",
             browserBackend: "playwright");
         var handler = MakeHandler(
             inference, registry, unreal, MakeChatOptions(useToolLoop: true),
@@ -434,7 +434,7 @@ public class ChatWebSocketHandlerToolLoopTests
             allowMt4Read: false,
             allowMt4Trade: false,
             browserBackend: "native",
-            desktopTargetWindowTitle: "victoria-sandbox");
+            desktopTargetWindowTitle: "KsDevice");
         var handler = MakeHandler(
             inference, registry, unreal,
             MakeChatOptions(useToolLoop: true),

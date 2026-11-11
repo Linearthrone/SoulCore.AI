@@ -235,7 +235,7 @@ public static class VboxConsoleMouse
             {
                 dynamic console = session.Console
                     ?? throw new InvalidOperationException(
-                        "VirtualBox session.Console is null — is victoria-sandbox running?");
+                        "VirtualBox session.Console is null — is KsDevice running?");
                 dynamic mouse = console.Mouse
                     ?? throw new InvalidOperationException("VirtualBox Console.Mouse is null");
 
@@ -432,7 +432,7 @@ public static class VboxConsoleMouse
             {
                 dynamic console = session.Console
                     ?? throw new InvalidOperationException(
-                        "VirtualBox session.Console is null — is victoria-sandbox running?");
+                        "VirtualBox session.Console is null — is KsDevice running?");
                 dynamic mouse = console.Mouse
                     ?? throw new InvalidOperationException("VirtualBox Console.Mouse is null");
                 return body(mouse);

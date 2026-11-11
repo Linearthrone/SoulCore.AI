@@ -22,7 +22,7 @@ public sealed class GuestListDirTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "guest_list_dir",
         Description:
-            "List a directory inside the Ubuntu guest (victoria-sandbox), under /home/victoria. " +
+            "List a directory inside the Ubuntu guest (KsDevice), under /home/victoria. " +
             "Use this for the VSCodium project tree instead of clicking the file explorer. " +
             "Requires AllowComputerControl.",
         Parameters: Parameters);

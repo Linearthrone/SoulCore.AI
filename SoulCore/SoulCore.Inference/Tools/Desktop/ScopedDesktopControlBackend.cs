@@ -6,7 +6,7 @@ namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
 /// Hard-scopes desktop ops to a VirtualBox Ubuntu guest (title substring e.g.
-/// <c>victoria-sandbox</c>). When an <see cref="IVmGuestDesktop"/> is wired,
+/// <c>KsDevice</c>). When an <see cref="IVmGuestDesktop"/> is wired,
 /// clicks/keys/screenshots prefer <b>guest framebuffer coordinates</b> via Guest
 /// Additions. On guest failure, falls back to the host-scoped VirtualBox window
 /// soft path so screenshots/clicks still work (pre-guestcontrol path).
@@ -282,7 +282,7 @@ public sealed class ScopedDesktopControlBackend : IDesktopControlBackend
             return new DesktopOpResult(
                 true,
                 $"desktop scope '{_titleContains}': no matching window (is the VM running / visible?). " +
-                "Expected a title containing that substring (e.g. 'victoria-sandbox [Running] - Oracle VirtualBox').",
+                "Expected a title containing that substring (e.g. 'KsDevice [Running] - Oracle VirtualBox').",
                 Array.Empty<object>());
         }
 

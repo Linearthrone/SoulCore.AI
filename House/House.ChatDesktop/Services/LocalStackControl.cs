@@ -57,9 +57,9 @@ public sealed class LocalStackControl : IDisposable
     }
 
     /// <summary>Guest VM name for operator Start / Save / Power off.</summary>
-    public const string SandboxVmName = "victoria-sandbox";
+    public const string SandboxVmName = "KsDevice";
 
-    /// <summary>Is victoria-sandbox running? Loopback/local VBoxManage only.</summary>
+    /// <summary>Is KsDevice running? Loopback/local VBoxManage only.</summary>
     public async Task<bool> ProbeSandboxAsync(CancellationToken ct = default)
     {
         try
@@ -84,11 +84,11 @@ public sealed class LocalStackControl : IDisposable
     public Task<LocalStackActionResult> StartSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "startvm", SandboxVmName, "--type", "gui" }, ct);
 
-    /// <summary>Save state (hibernate-style) for victoria-sandbox.</summary>
+    /// <summary>Save state (hibernate-style) for KsDevice.</summary>
     public Task<LocalStackActionResult> SaveSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "savestate" }, ct);
 
-    /// <summary>Power off victoria-sandbox (caller confirms).</summary>
+    /// <summary>Power off KsDevice (caller confirms).</summary>
     public Task<LocalStackActionResult> PowerOffSandboxVmAsync(CancellationToken ct = default) =>
         RunVBoxManageAsync(new[] { "controlvm", SandboxVmName, "poweroff" }, ct);
 
@@ -506,28 +506,23 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             progress?.Report("Ollama already up");
         }
 
-        // Always run start-soulcore.ps1: it inventories SoulCore.Host processes, reaps
-        // orphans (the 11-dotnet herd), and reuses a single healthy :7700 listener.
-        // Skipping this when /health was up left zombies forever.
+        // A healthy Host on this checkout's port stays up. Running start-soulcore
+        // on every Presence open used to reap that process and then time out.
         var hostWasUp = await ProbeHostHealthAsync(ct).ConfigureAwait(false);
-        progress?.Report(hostWasUp
-            ? "Checking Host (reap orphans, reuse if clean)..."
-            : "Starting SoulCore.Host...");
+        if (hostWasUp)
+        {
+            progress?.Report("Host already listening");
+            return LocalStackEnsureResult.Succeed(
+                hostStarted: false,
+                ollamaStarted: !ollamaWasUp,
+                detail: "Host already listening.");
+        }
+
+        progress?.Report("Starting SoulCore.Host...");
         var start = await StartHostAsync(ct).ConfigureAwait(false);
         if (!start.Ok)
         {
             return LocalStackEnsureResult.Fail($"Host start failed: {start.Detail}");
-        }
-
-        if (hostWasUp && await ProbeHostHealthAsync(ct).ConfigureAwait(false))
-        {
-            progress?.Report("Host ready (reused)");
-            return LocalStackEnsureResult.Succeed(
-                hostStarted: false,
-                ollamaStarted: !ollamaWasUp,
-                detail: string.IsNullOrWhiteSpace(start.Detail)
-                    ? "Host already listening; orphans reaped if any."
-                    : start.Detail);
         }
 
         var deadline = DateTime.UtcNow.AddSeconds(Math.Clamp(hostReadyTimeoutSec, 15, 300));

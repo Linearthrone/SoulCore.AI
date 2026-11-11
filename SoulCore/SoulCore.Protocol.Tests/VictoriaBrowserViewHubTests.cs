@@ -12,12 +12,12 @@ public class VictoriaBrowserViewHubTests
         var hub = new VictoriaBrowserViewHub();
         var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2, 3, 4 };
 
-        hub.Publish(png, null, "victoria-sandbox", "desktop_screenshot", backend: VictoriaBrowserViewHub.BackendVboxGuest);
+        hub.Publish(png, null, "KsDevice", "desktop_screenshot", backend: VictoriaBrowserViewHub.BackendVboxGuest);
 
         var snap = hub.GetSnapshot();
         Assert.True(snap.HasImage);
         Assert.Equal(VictoriaBrowserViewHub.BackendVboxGuest, snap.Backend);
-        Assert.Equal("victoria-sandbox", snap.Title);
+        Assert.Equal("KsDevice", snap.Title);
         Assert.Equal("desktop_screenshot", snap.LastAction);
         Assert.True(hub.TryGetImageBytes(out var bytes, out var ct));
         Assert.Equal(png, bytes);

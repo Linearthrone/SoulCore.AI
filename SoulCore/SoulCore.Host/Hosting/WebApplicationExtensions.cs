@@ -41,7 +41,7 @@ internal static class WebApplicationExtensions
             if (!context.WebSockets.IsWebSocketRequest)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Expected WebSocket upgrade. Use ws://127.0.0.1:7700/ws");
+                await context.Response.WriteAsync("Expected WebSocket upgrade. Use ws://127.0.0.1:7710/ws");
                 return;
             }
 
@@ -738,7 +738,7 @@ internal static class WebApplicationExtensions
                 note = vmEmbed
                     ? "Her screen prefers VirtualBox HWND via GET /browser/embed (surface=vm). Soft cursor pink→teal on desktop_click/move. JPEG is fallback."
                     : snap.Backend == VictoriaBrowserViewHub.BackendVboxGuest
-                        ? "VirtualBox guest framebuffer (victoria-sandbox). Hover coords = guest origin 0,0 for desktop_click. In-memory only."
+                        ? "VirtualBox guest framebuffer (KsDevice). Hover coords = guest origin 0,0 for desktop_click. In-memory only."
                         : embed
                             ? "PROP-14: Prefer HWND embed via GET /browser/embed; JPEG is fallback only."
                             : "Victoria's dedicated Playwright Chromium (not Kayleigh's Chrome). In-memory stream only — not written to desktop screenshot gallery."
@@ -802,12 +802,12 @@ internal static class WebApplicationExtensions
                 });
             }
 
-            // VM embed wins when enabled — Her screen shows victoria-sandbox VirtualBox window.
+            // VM embed wins when enabled — Her screen shows KsDevice VirtualBox window.
             if (vmEmbed)
             {
                 var titleFilter = (opts.DesktopTargetWindowTitle ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(titleFilter))
-                    titleFilter = "victoria-sandbox";
+                    titleFilter = "KsDevice";
 
                 // TryFind caches HWND: after Presence SetParent the window is no longer
                 // top-level, so EnumWindows alone would miss it and Presence would tear down.
@@ -821,7 +821,7 @@ internal static class WebApplicationExtensions
                         hwnd = 0,
                         pid = 0,
                         title = (string?)null,
-                        detail = $"No VirtualBox window matching '{titleFilter}' yet - start victoria-sandbox (visible, not minimized) or use JPEG fallback."
+                        detail = $"No VirtualBox window matching '{titleFilter}' yet - start KsDevice (visible, not minimized) or use JPEG fallback."
                     });
                 }
 
@@ -954,7 +954,7 @@ internal static class WebApplicationExtensions
             cuaDriverAvailable = cuaPath is not null,
             cuaDriverPath = cuaPath,
             scope = "session",
-            note = "Session gates until Host restart. Seeded from Tools in appsettings.json. Presence Settings → Tools & Access → Embed VirtualBox in Her screen toggles VmEmbedPane (victoria-sandbox HWND)."
+            note = "Session gates until Host restart. Seeded from Tools in appsettings.json. Presence Settings → Tools & Access → Embed VirtualBox in Her screen toggles VmEmbedPane (KsDevice HWND)."
         };
     }
 

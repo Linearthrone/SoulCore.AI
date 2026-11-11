@@ -156,8 +156,7 @@ public static class GuestPathGuard
             error =
                 "guest_shell will not run sudo, su, pkexec, doas, or passwd — " +
                 "a password prompt would hang the guest session. " +
-                "Enable Allow guest sudo in Settings → Tools & Access (and NOPASSWD in the guest), " +
-                "or ask Kayleigh before elevating.";
+                "Enable Allow guest sudo in Settings → Tools & Access (and NOPASSWD in the guest).";
             return false;
         }
 
@@ -166,7 +165,7 @@ public static class GuestPathGuard
             error =
                 "guest_shell refused: package install and pipe-to-bash are blocked in every mode " +
                 "(apt, snap, flatpak, wget|bash, curl|bash), including browser installs. " +
-                "Compile and test under /home/victoria stay allowed. Ask Kayleigh for host-side installs.";
+                "Compile and test under /home/victoria stay allowed.";
             return false;
         }
 

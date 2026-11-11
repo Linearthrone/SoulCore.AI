@@ -48,7 +48,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
         Func<string?>? password = null,
         Func<string>? username = null)
     {
-        _vmName = string.IsNullOrWhiteSpace(vmName) ? "victoria-sandbox" : vmName.Trim();
+        _vmName = string.IsNullOrWhiteSpace(vmName) ? "KsDevice" : vmName.Trim();
         _vboxManage = string.IsNullOrWhiteSpace(vboxManage) ? DefaultVBoxManage : vboxManage.Trim();
         _run = run ?? throw new ArgumentNullException(nameof(run));
         _password = password ?? ResolveGuestPassword;

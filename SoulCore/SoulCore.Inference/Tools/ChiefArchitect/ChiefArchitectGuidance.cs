@@ -11,16 +11,8 @@ public static class ChiefArchitectGuidance
 
     public const string Block =
         Marker + "\n" +
-        "You can drive Chief Architect X17 via computer-use after planning with ca_* tools.\n" +
-        "Correct residential slab path (from the X17 Tutorial Guide):\n" +
-        "1) ca_compile_brief / ca_plan_project - get staged recipes.\n" +
-        "2) focus_desktop_window title containing 'Chief Architect'.\n" +
-        "3) Draw floor-1 exterior walls with Build > Wall > Straight Exterior Wall + desktop_drag.\n" +
-        "4) Refine exact lengths with dimensions (sketch first - do not rely on pixel-perfect feet).\n" +
-        "5) Interior walls, room types, doors/windows per plan.\n" +
-        "6) Build > Floor > Build Foundation -> choose slab - NEVER freehand-draw a slab from 0,0.\n" +
-        "7) desktop_screenshot + ca_verify_checklist after each stage; ca_next_step to advance.\n" +
-        "Require AllowComputerControl for clicks/drags. Stop and ask if the UI does not match the recipe.";
+        "For Chief Architect X17, plan with ca_compile_brief / ca_plan_project, then drive that window. " +
+        "A slab is Build > Floor > Build Foundation, not a freehand draw. Clicks need AllowComputerControl.";
 
     public static string AppendToPreamble(string? contextPreamble)
     {

@@ -24,6 +24,7 @@ public class ChatContextBuilderTests
 
         Assert.StartsWith("[Identity]", preamble, StringComparison.Ordinal);
         Assert.Contains("Kayleigh", preamble, StringComparison.Ordinal);
+        Assert.Contains("the work finished", preamble, StringComparison.Ordinal);
         Assert.Contains("[Memory]", preamble, StringComparison.Ordinal);
         Assert.Contains(MemorySteeringGuidance.Marker, preamble, StringComparison.Ordinal);
         Assert.Contains("[SoulCore emotion]", preamble, StringComparison.Ordinal);
@@ -90,20 +91,20 @@ public class ChatContextBuilderTests
             new ComputerControlGate(Options.Create(new ToolsOptions
             {
                 BrowserBackend = "native",
-                DesktopTargetWindowTitle = "victoria-sandbox"
+                DesktopTargetWindowTitle = "KsDevice"
             })),
             new LoggerFactory().CreateLogger<ChatContextBuilder>());
 
         var ctx = await builder.BuildAsync(
             "create a workflow to recall memory",
             useToolLoop: true,
-            desktopTargetWindowTitle: "victoria-sandbox",
+            desktopTargetWindowTitle: "KsDevice",
             CancellationToken.None);
 
         Assert.Contains("[Tools]", ctx.Preamble, StringComparison.Ordinal);
         Assert.Contains("workflow_create", ctx.Preamble, StringComparison.Ordinal);
         Assert.Contains(MemorySteeringGuidance.Marker, ctx.Preamble, StringComparison.Ordinal);
-        Assert.Contains("sop_list", ctx.Preamble, StringComparison.Ordinal);
+        Assert.Contains("not flavor", ctx.Preamble, StringComparison.Ordinal);
         Assert.Contains(ComputerUseGuidance.VmBlock, ctx.Preamble, StringComparison.Ordinal);
         Assert.Contains("VM PRIMARY", ctx.Preamble, StringComparison.Ordinal);
         Assert.DoesNotContain("WEB IS NOT THE VM", ctx.Preamble, StringComparison.Ordinal);
@@ -132,7 +133,7 @@ public class ChatContextBuilderTests
             new ComputerControlGate(Options.Create(new ToolsOptions
             {
                 BrowserBackend = "native",
-                DesktopTargetWindowTitle = "victoria-sandbox"
+                DesktopTargetWindowTitle = "KsDevice"
             })),
             new LoggerFactory().CreateLogger<ChatContextBuilder>(),
             sopStore);
@@ -140,7 +141,7 @@ public class ChatContextBuilderTests
         var ctx = await builder.BuildAsync(
             "log into Maestro and get ready for class",
             useToolLoop: true,
-            desktopTargetWindowTitle: "victoria-sandbox",
+            desktopTargetWindowTitle: "KsDevice",
             CancellationToken.None);
 
         Assert.Contains("[Known procedures]", ctx.Preamble, StringComparison.Ordinal);

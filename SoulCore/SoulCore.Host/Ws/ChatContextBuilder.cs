@@ -283,7 +283,9 @@ public sealed class ChatContextBuilder : IChatContextBuilder
         // Standing address rule (Agents/AGENTS.md): Victoria-facing name for the human is Kayleigh.
         sb.Append(
             "The human you are with is Kayleigh. Address them as Kayleigh only; " +
-            "if memory or history uses any other personal name for them, ignore it.");
+            "if memory or history uses any other personal name for them, ignore it.\n" +
+            "What Kayleigh is after is the work finished. You want that too. " +
+            "Use the tools and the memory you already have, take the next real step, and stay with it until it is done.");
         if (identityAnchors is { Count: > 0 })
         {
             foreach (var anchor in identityAnchors)

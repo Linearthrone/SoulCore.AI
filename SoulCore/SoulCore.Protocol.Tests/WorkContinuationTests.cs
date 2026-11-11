@@ -125,7 +125,8 @@ public class WorkContinuationTests
     {
         Assert.False(WorkContinuation.IsCheckIn("I'll let you know when both lessons are done."));
         Assert.True(WorkContinuation.IsCheckIn("Both lessons are done. Ready for the review."));
-        Assert.True(WorkContinuation.NeedsKayleigh("I cannot proceed without you deciding the layout."));
+        Assert.False(WorkContinuation.NeedsKayleigh("I cannot proceed without you deciding the layout."));
+        Assert.True(WorkContinuation.NeedsKayleigh("I need you to decide the layout."));
     }
 
     [Fact]

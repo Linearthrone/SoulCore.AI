@@ -168,7 +168,7 @@ public sealed class VictoriaBrowserViewHub : IVictoriaBrowserViewHub
             h = sh;
         }
 
-        hub.Publish(bytes, url, title ?? "victoria-sandbox", lastAction, waitingOnYou: null, backend, w, h);
+        hub.Publish(bytes, url, title ?? "KsDevice", lastAction, waitingOnYou: null, backend, w, h);
         // Seed soft-cursor so Her screen shows pink even before the first click/aim.
         var snap = hub.GetSnapshot();
         if (snap.CursorX is null && w is > 0 && h is > 0)

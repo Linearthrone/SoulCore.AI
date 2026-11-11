@@ -11,10 +11,10 @@ public sealed class VoiceOptions
     public bool Enabled { get; set; } = true;
 
     /// <summary>faster-whisper base URL (no trailing slash). POST /transcribe returns {"text"}.</summary>
-    public string SttUrl { get; set; } = "http://127.0.0.1:8000";
+    public string SttUrl { get; set; } = "http://127.0.0.1:8710";
 
     /// <summary>Kokoro TTS base URL (no trailing slash). POST / returns WAV.</summary>
-    public string TtsUrl { get; set; } = "http://127.0.0.1:8881";
+    public string TtsUrl { get; set; } = "http://127.0.0.1:8711";
 
     /// <summary>Voice id. "default" is Kokoro af_heart.</summary>
     public string DefaultVoice { get; set; } = "default";
@@ -31,7 +31,7 @@ public sealed class VoiceOptions
     /// <summary>
     /// Public URL UE should fetch for the last WAV (loopback when UE and Host share a machine).
     /// </summary>
-    public string LastWavPublicUrl { get; set; } = "http://127.0.0.1:7700/api/voice/last.wav";
+    public string LastWavPublicUrl { get; set; } = "http://127.0.0.1:7710/api/voice/last.wav";
 
     public int TimeoutSeconds { get; set; } = 60;
 }

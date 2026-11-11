@@ -10,9 +10,7 @@ public class MemorySteeringGuidanceTests
         var once = MemorySteeringGuidance.AppendToPreamble("hello");
         Assert.Contains(MemorySteeringGuidance.Marker, once, StringComparison.Ordinal);
         Assert.Contains("not flavor", once, StringComparison.Ordinal);
-        Assert.Contains("CORRECT yourself", once, StringComparison.Ordinal);
-        Assert.Contains("NEVER invent", once, StringComparison.Ordinal);
-        Assert.Contains("Coursera", once, StringComparison.Ordinal);
+        Assert.Contains("Follow the steps", once, StringComparison.Ordinal);
         Assert.Equal(once, MemorySteeringGuidance.AppendToPreamble(once));
     }
 
@@ -53,8 +51,7 @@ public class MemorySteeringGuidanceTests
 
         Assert.Contains("[Known procedures]", block, StringComparison.Ordinal);
         Assert.Contains("[7]", block, StringComparison.Ordinal);
-        Assert.Contains("sop_get", block, StringComparison.Ordinal);
-        Assert.Contains("do not invent a beginner path", block, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Use these steps", block, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -5,8 +5,8 @@ namespace SoulCore.Protocol.Tests;
 /// <summary>BED-188: hard-scope desktop ops to a VM/window title substring.</summary>
 public class ScopedDesktopControlBackendTests
 {
-    private const string VmTitle = "victoria-sandbox [Running] - Oracle VirtualBox";
-    private const string Scope = "victoria-sandbox";
+    private const string VmTitle = "KsDevice [Running] - Oracle VirtualBox";
+    private const string Scope = "KsDevice";
 
     private static string ListContent(params (string title, int x, int y, int w, int h)[] windows)
     {
@@ -260,7 +260,7 @@ public class ScopedDesktopControlBackendTests
     public void Wmctrl_ParsesBoundsLine()
     {
         Assert.True(VirtualBoxGuestAppLauncher.TryParseWmctrlLine(
-            "0x04600007  0 10   52   1260 720  victoria-sandbox Firefox",
+            "0x04600007  0 10   52   1260 720  KsDevice Firefox",
             out var x, out var y, out var w, out var h, out var title));
         Assert.Equal(10, x);
         Assert.Equal(52, y);
@@ -273,7 +273,7 @@ public class ScopedDesktopControlBackendTests
     public void GuestControlArgs_DoNotRepeatExeAfterDashDash()
     {
         var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
-            "victoria-sandbox",
+            "KsDevice",
             "run",
             "victoria",
             @"C:\temp\pass.txt",
@@ -294,7 +294,7 @@ public class ScopedDesktopControlBackendTests
     public void GuestControlArgs_UsePasswordFileNotInlinePassword()
     {
         var argv = VirtualBoxGuestAppLauncher.BuildGuestControl(
-            "victoria-sandbox",
+            "KsDevice",
             "start",
             "victoria",
             @"C:\temp\pass.txt",
@@ -337,7 +337,7 @@ public class ScopedDesktopControlBackendTests
         }
 
         var launcher = new VirtualBoxGuestAppLauncher(
-            "victoria-sandbox",
+            "KsDevice",
             "VBoxManage",
             Run,
             password: () => "guest-pass",
@@ -430,8 +430,8 @@ public class ScopedDesktopControlBackendTests
     [Fact]
     public void Guidance_ScopedBlock_MentionsTitle_PlaywrightMode()
     {
-        var block = ComputerUseGuidance.ScopedBlock("victoria-sandbox", "playwright");
-        Assert.Contains("victoria-sandbox", block, StringComparison.Ordinal);
+        var block = ComputerUseGuidance.ScopedBlock("KsDevice", "playwright");
+        Assert.Contains("KsDevice", block, StringComparison.Ordinal);
         Assert.Contains("DESKTOP SCOPE", block, StringComparison.Ordinal);
         Assert.Contains("hard error", block, StringComparison.Ordinal);
         Assert.Contains("guest framebuffer", block, StringComparison.OrdinalIgnoreCase);
@@ -441,9 +441,9 @@ public class ScopedDesktopControlBackendTests
     [Fact]
     public void Guidance_ScopedBlock_VmPrimary_WhenNative()
     {
-        var block = ComputerUseGuidance.ScopedBlock("victoria-sandbox", "native");
+        var block = ComputerUseGuidance.ScopedBlock("KsDevice", "native");
         Assert.Contains("VM PRIMARY", block, StringComparison.Ordinal);
-        Assert.Contains("victoria-sandbox", block, StringComparison.Ordinal);
+        Assert.Contains("KsDevice", block, StringComparison.Ordinal);
         Assert.DoesNotContain("WEB IS NOT THE VM", block, StringComparison.Ordinal);
     }
 

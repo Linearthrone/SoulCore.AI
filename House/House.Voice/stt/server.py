@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 HOST = os.environ.get("HOUSE_STT_HOST", "127.0.0.1")
-PORT = int(os.environ.get("HOUSE_STT_PORT", "8000"))
+PORT = int(os.environ.get("HOUSE_STT_PORT", "8710"))
 MODEL_NAME = os.environ.get("WHISPER_MODEL", "base")
 DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")

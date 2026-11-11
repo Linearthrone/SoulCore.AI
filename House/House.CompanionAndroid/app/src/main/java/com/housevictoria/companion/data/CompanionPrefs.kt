@@ -69,7 +69,7 @@ object CompanionPrefs {
     const val KEY_NOTIF_VIBRATION = "notif_vibration"
 
     /** Emulator / on-device loopback default — mirrors House.ChatDesktop ConnectionDefaults. */
-    const val DEFAULT_WS_URL = "ws://127.0.0.1:7700/ws"
+    const val DEFAULT_WS_URL = "ws://127.0.0.1:7710/ws"
     const val DEFAULT_CONTACT_ID = "victoria"
 
     /**

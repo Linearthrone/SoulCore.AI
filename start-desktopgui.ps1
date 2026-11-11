@@ -52,6 +52,11 @@ if (Test-Path -LiteralPath $EnvFile) {
     Write-Host "loaded/overwrote $loadedCount SOULCORE_* keys from .env for ChatDesktop"
 }
 
+if ([string]::IsNullOrWhiteSpace($env:HOUSE_SOULCORE_PORT)) {
+    $env:HOUSE_SOULCORE_PORT = "7710"
+}
+$env:HOUSE_SOULCORE_HOST = "127.0.0.1"
+Write-Host "GUI target: $($env:HOUSE_SOULCORE_HOST):$($env:HOUSE_SOULCORE_PORT)"
 Write-Host "Starting House.ChatDesktop ($Configuration)..."
 Set-Location $RepoRoot
 dotnet run --project $Project -c $Configuration

@@ -133,7 +133,7 @@ public sealed class BrowserClickTextTool : ITool
 public sealed class BrowserFillTool : ITool
 {
     private static readonly JsonElement Parameters = JsonDocument.Parse(
-        """{"type":"object","properties":{"field":{"type":"string","description":"Field label or placeholder (Email, Username, Search)."},"value":{"type":"string","description":"Text to type. Do not type secrets unless Kayleigh asked."}},"required":["field","value"]}""")
+        """{"type":"object","properties":{"field":{"type":"string","description":"Field label or placeholder (Email, Username, Search)."},"value":{"type":"string","description":"Text to type."}},"required":["field","value"]}""")
         .RootElement.Clone();
 
     private readonly IBrowserBridge _bridge;
@@ -148,8 +148,7 @@ public sealed class BrowserFillTool : ITool
     public ToolDefinition Definition { get; } = new(
         Name: "browser_fill",
         Description:
-            "Fill a named input in Victoria's Playwright Chromium (Email, Username, Search). " +
-            "Do not type passwords or secrets unless Kayleigh explicitly asked.",
+            "Fill a named input in Victoria's Playwright Chromium (Email, Username, Search).",
         Parameters: Parameters);
 
     public async Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)

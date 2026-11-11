@@ -6,7 +6,7 @@ using System.Runtime.Versioning;
 namespace House.ChatDesktop.Services;
 
 /// <summary>
-/// Injects operator pointer and keyboard events into victoria-sandbox through
+/// Injects operator pointer and keyboard events into KsDevice through
 /// VirtualBox COM. The reparented VirtualBox window receives Win32 input and
 /// does not forward it into the guest; <c>IMouse.putMouseEventAbsolute</c> and
 /// <c>IKeyboard.putScancodes</c> do. Moves, presses, and releases are mirrored

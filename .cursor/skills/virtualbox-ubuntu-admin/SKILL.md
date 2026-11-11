@@ -1,13 +1,13 @@
 ---
 name: virtualbox-ubuntu-admin
-description: Administer Oracle VirtualBox on Windows and Ubuntu guests with VBoxManage. Use when the user mentions VirtualBox, VBoxManage, victoria-sandbox, Ubuntu VM, Guest Additions, snapshots, NAT port-forward, shared folders, or guest SSH.
+description: Administer Oracle VirtualBox on Windows and Ubuntu guests with VBoxManage. Use when the user mentions VirtualBox, VBoxManage, KsDevice, Ubuntu VM, Guest Additions, snapshots, NAT port-forward, shared folders, or guest SSH.
 ---
 
 # VirtualBox + Ubuntu admin
 
 Host binary: `C:\Program Files\Oracle\VirtualBox\VBoxManage.exe` (`$VBox` below).
 
-Canonical guest: **`victoria-sandbox`**. Not the Tailscale PC `house-victoria`.
+Canonical guest: **`KsDevice`**. Not the Tailscale PC `house-victoria`.
 
 ## Inventory (always first)
 
@@ -15,8 +15,8 @@ Canonical guest: **`victoria-sandbox`**. Not the Tailscale PC `house-victoria`.
 $VBox = "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
 & $VBox list vms
 & $VBox list runningvms
-& $VBox showvminfo "victoria-sandbox" --machinereadable
-& $VBox guestproperty enumerate "victoria-sandbox"
+& $VBox showvminfo "KsDevice" --machinereadable
+& $VBox guestproperty enumerate "KsDevice"
 ```
 
 Guest IPv4 is under `/VirtualBox/GuestInfo/Net/0/V4/IP`. NAT guests are typically `10.0.2.15` and **not** pingable from Windows until you add a port-forward.
@@ -24,10 +24,10 @@ Guest IPv4 is under `/VirtualBox/GuestInfo/Net/0/V4/IP`. NAT guests are typicall
 ## Power / snapshots
 
 ```powershell
-& $VBox snapshot "victoria-sandbox" list
-& $VBox snapshot "victoria-sandbox" take "pre-reason-YYYYMMDD" --description "why"
-& $VBox controlvm "victoria-sandbox" acpipowerbutton   # prefer ACPI
-& $VBox startvm "victoria-sandbox" --type gui
+& $VBox snapshot "KsDevice" list
+& $VBox snapshot "KsDevice" take "pre-reason-YYYYMMDD" --description "why"
+& $VBox controlvm "KsDevice" acpipowerbutton   # prefer ACPI
+& $VBox startvm "KsDevice" --type gui
 ```
 
 Take a snapshot before kernel, Guest Additions, or NIC changes. Do not `poweroff` a dirty guest unless asked.
@@ -38,7 +38,7 @@ Guest listens on 22; host uses 2222:
 
 ```powershell
 # VM must be off for nicconf, or use controlvm while running:
-& $VBox controlvm "victoria-sandbox" natpf1 "ssh,tcp,127.0.0.1,2222,,22"
+& $VBox controlvm "KsDevice" natpf1 "ssh,tcp,127.0.0.1,2222,,22"
 ssh -p 2222 victoria@127.0.0.1
 ```
 
@@ -49,7 +49,7 @@ List rules from `showvminfo` (`Forwarding(...)`). Delete: `natpf1 delete ssh`.
 Needs Guest Additions + credentials operator supplies in-session (never commit):
 
 ```powershell
-& $VBox guestcontrol "victoria-sandbox" run --exe /usr/bin/lsb_release --username victoria --password $env:VBOX_GUEST_PASS --wait-stdout --wait-stderr -- -a
+& $VBox guestcontrol "KsDevice" run --exe /usr/bin/lsb_release --username victoria --password $env:VBOX_GUEST_PASS --wait-stdout --wait-stderr -- -a
 ```
 
 If password is missing, ask. Do not invent one.
@@ -70,7 +70,7 @@ Host and guest Additions versions should match (`guestproperty` `GuestAdd/Versio
 ## Shared folders
 
 ```powershell
-& $VBox sharedfolder add "victoria-sandbox" --name hv --hostpath "C:\Users\operator\Soul_Core" --automount
+& $VBox sharedfolder add "KsDevice" --name hv --hostpath "C:\Users\operator\Soul_Core" --automount
 ```
 
 Guest (Additions): `/media/sf_hv` ; user must be in `vboxsf`. None configured on last probe.
@@ -91,7 +91,7 @@ Network: netplan under `/etc/netplan/`. Do not switch the VM from NAT to bridged
 
 ## House Victoria coupling
 
-- CUA / desktop tools scope to window title **`victoria-sandbox`**. Keep that VM name unless BED retickets.
+- CUA / desktop tools scope to window title **`KsDevice`**. Keep that VM name unless BED retickets.
 - Do not move SoulCore.Host into the guest.
 - Unreal body is on **shadow** `house-victoria:8888` — out of scope.
 

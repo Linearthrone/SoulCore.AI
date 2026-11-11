@@ -734,8 +734,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
     /// status instead of ending the Host turn empty.
     /// </summary>
     private static string BuildEmptyFinalNudge() =>
-        "Reply in one short sentence about what you just did with the tool(s) and what you will do next. " +
-        "Do not call a tool in this reply unless the next step truly requires it.";
+        "Reply in one short sentence about what you just did with the tool(s) and what you will do next.";
 
     /// <summary>
     /// Non-empty continue line when the model still returns blank after tools.
@@ -1295,7 +1294,7 @@ public sealed class OllamaInferenceClient : IInferenceClient
         {
             return
                 "You must call desktop_open_app now with a non-browser alias " +
-                "(notepad, explorer, cmd, powershell). Websites are browser_navigate, never Firefox or VirtualBox. " +
+                "(notepad, explorer, cmd, powershell). " +
                 "Do not list windows or screenshot — emit the tool call only.";
         }
 

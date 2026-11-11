@@ -5,7 +5,7 @@ using System.Text;
 namespace SoulCore.Inference.Tools.Desktop;
 
 /// <summary>
-/// Locate the Victoria VirtualBox guest window (victoria-sandbox) for Presence HWND embed.
+/// Locate the Victoria VirtualBox guest window (KsDevice) for Presence HWND embed.
 /// Prefer VirtualBoxVM.exe (the running VM) over VirtualBox Manager.
 /// After Presence SetParent, the HWND is no longer top-level — EnumWindows misses it.
 /// Cache + IsWindow keeps returning the same HWND so Her screen does not tear down.
@@ -18,11 +18,11 @@ public static class VictoriaVirtualBoxWindowLocator
     private static FoundWindow? _cached;
 
     /// <summary>
-    /// Best-effort find of the victoria-sandbox VirtualBox window.
+    /// Best-effort find of the KsDevice VirtualBox window.
     /// Prefers a visible top-level match; falls back to a still-alive cached HWND
     /// (required after Presence SetParent makes the window a child).
     /// </summary>
-    public static FoundWindow? TryFind(string? titleSubstring = "victoria-sandbox")
+    public static FoundWindow? TryFind(string? titleSubstring = "KsDevice")
     {
         if (!OperatingSystem.IsWindows())
             return null;

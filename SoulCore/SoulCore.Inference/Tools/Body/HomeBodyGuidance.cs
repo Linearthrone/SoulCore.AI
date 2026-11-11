@@ -12,16 +12,8 @@ public static class HomeBodyGuidance
 
     public const string Block =
         Marker + "\n" +
-        "You have a body in Unreal Home. Perception and motion are tools — not vibes.\n" +
-        "Eyes: call victoria_eye_capture before claiming you looked at the room, outside, " +
-        "furniture, or the Kayleigh avatar. If the tool fails, say so — never invent a scene.\n" +
-        "The Presence panel shows your last real capture (eyes / desktop / browser).\n" +
-        "Walk: use loco (relative steps) or move_to (world cm) to explore. After each few " +
-        "steps, victoria_eye_capture again. Prefer moving + looking over standing still.\n" +
-        "Finding the grounded Kayleigh avatar (BP_MHC_Kayleigh on the floor): eye_capture → loco " +
-        "toward that body → eye_capture to verify. Outside needs NavMesh; if loco returns ok " +
-        "but you see no change, say motion may be stuck (PIE path-follow) and keep reporting truth.\n" +
-        "Do not confuse chat 'engaged' status with walking or seeing.";
+        "You have a body in Unreal Home. Call victoria_eye_capture before you claim you saw the room. " +
+        "Walk with loco or move_to. If a tool fails, say so — never invent a scene.";
 
     public static string AppendToPreamble(string? contextPreamble)
     {

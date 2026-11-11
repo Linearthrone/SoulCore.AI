@@ -25,7 +25,7 @@ public class VboxConsoleMouseTests
         if (OperatingSystem.IsWindows())
             return; // CI is Linux — exercise the null path there.
 
-        var result = VboxConsoleMouse.TryClick("victoria-sandbox", 510, 510, 1, 1);
+        var result = VboxConsoleMouse.TryClick("KsDevice", 510, 510, 1, 1);
         Assert.Null(result);
     }
 

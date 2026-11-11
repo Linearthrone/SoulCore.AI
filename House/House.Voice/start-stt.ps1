@@ -1,9 +1,9 @@
-# Start House Victoria STT (faster-whisper, in this repo) on 127.0.0.1:8000.
+# Start House Victoria STT (faster-whisper, in this repo) on 127.0.0.1:8710.
 # Without -Worker this returns immediately and leaves a hidden worker running,
 # so ALLSTART's timeout does not kill the model download.
 param(
     [string]$HostAddr = "127.0.0.1",
-    [int]$Port = 8000,
+    [int]$Port = 8710,
     [string]$PythonExe = "",
     [switch]$Worker
 )

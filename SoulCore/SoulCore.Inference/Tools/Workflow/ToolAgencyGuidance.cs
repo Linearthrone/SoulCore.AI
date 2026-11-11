@@ -20,17 +20,7 @@ public static class ToolAgencyGuidance
         "(e.g. \"what's my MT4 status?\"), you MUST call mt4_status with {}. " +
         "Do not call task_create or task_get for MT4/MetaTrader status — those are Victoria task tools only.\n" +
         "task_create is only for a concrete to-do she asked you to remember. " +
-        "Do not create a task from a go-ahead or from the message you are already doing. " +
-        "A go-ahead means start the next task already on the list.\n" +
-        "research_* journal tools are R&R/hobby only — not available on this chat/work turn. " +
-        "Do not write APA papers or open research subjects while talking to Kayleigh or working a task.\n" +
-        "When the user asks to check, sort, search, or read email/inbox, you MUST call email_inbox / email_search / email_read " +
-        "(account=victoria|personal|business). Do not open Gmail in the browser for routine mail. " +
-        "email_send and email_delete require Kayleigh's confirm (confirmed=true on the second call).\n" +
-        "When Kayleigh asks for a routine you already know (Maestro login, her class prep from memory, " +
-        "or any [Known procedures] / [Memory] how-to), call sop_list then sop_get for the matching SOP BEFORE inventing steps. " +
-        "Follow remembered tool order from memory. Do not act brand-new. Correct mid-task if you drift. " +
-        "Do not invent Coursera or any other platform not present in memory, SOPs, tool results, or her words.";
+        "A go-ahead means start the next task already on the list.";
 
     /// <summary>
     /// Appends the workflow agency block when missing. Idempotent for retries.
