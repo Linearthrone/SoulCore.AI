@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
@@ -15,7 +15,8 @@ public partial class MainWindow
     private async Task RefreshDesktopViewAsync()
     {
         if (_desktopViewBusy) return;
-        if (PresenceView is { IsVisible: false } && _desktopPopOut is null) return;
+        // Only poll while the VM drawer (which hosts What she saw) is open.
+        if (_vmDrawer is not { IsVisible: true }) return;
 
         _desktopViewBusy = true;
         try
@@ -97,25 +98,6 @@ public partial class MainWindow
         if (DesktopViewStampText is not null)
             DesktopViewStampText.Text = snap.HasImage ? when : "No still yet";
 
-        // Soft activity hint from real capture (does not override Host currentActivity when fresh).
-        if (!string.IsNullOrWhiteSpace(snap.LastAction)
-            && !snap.LastAction.Contains("Waiting", StringComparison.OrdinalIgnoreCase))
-        {
-            var looking = sourceLabel switch
-            {
-                "Her eyes" => "Looking around",
-                "Browser tab" => "Browsing",
-                _ => snap.LastAction
-            };
-            if (string.IsNullOrWhiteSpace(_lastHealth.CurrentActivity))
-            {
-                _lastActivityPhrase = looking;
-                ApplyHonestActivity(preferHost: false);
-            }
-
-            UpdateEngagementState();
-        }
-
         DesktopViewActionText.Text = string.IsNullOrWhiteSpace(snap.LastAction)
             ? "Waiting…"
             : $"{sourceLabel}: {snap.LastAction}";
@@ -148,7 +130,6 @@ public partial class MainWindow
         }
 
         PositionDesktopCursor(DesktopViewSurface, DesktopViewCursorLayer, DesktopViewCursor);
-        PositionDesktopCursor(_desktopPopOutImage?.Parent as Control, _desktopPopOutCursorLayer, _desktopPopOutCursor);
     }
 
     private void ShowDesktopBitmap(byte[] imageBytes)
@@ -165,9 +146,6 @@ public partial class MainWindow
 
             if (DesktopViewEmptyText is not null)
                 DesktopViewEmptyText.IsVisible = false;
-
-            if (_desktopPopOutImage is not null)
-                _desktopPopOutImage.Source = bmp;
         }
         catch (Exception ex)
         {
@@ -381,121 +359,5 @@ public partial class MainWindow
         layer.IsVisible = true;
         layer.Width = bounds.Width;
         layer.Height = bounds.Height;
-    }
-
-    private void DesktopViewPopOut_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_desktopPopOut is not null)
-        {
-            _desktopPopOut.Activate();
-            return;
-        }
-
-        var cursor = new Ellipse
-        {
-            Width = 22,
-            Height = 22,
-            Stroke = new SolidColorBrush(Color.Parse("#C4B06A")),
-            StrokeThickness = 2,
-            Fill = new SolidColorBrush(Color.Parse("#55C4B06A"))
-        };
-        var layer = new Canvas { IsHitTestVisible = false };
-        layer.Children.Add(cursor);
-        var image = new Image { Stretch = Stretch.Uniform };
-        if (DesktopViewImage?.Source is { } src)
-            image.Source = src;
-
-        var surface = new Grid { Background = new SolidColorBrush(Color.Parse("#12101C")) };
-        surface.Children.Add(image);
-        surface.Children.Add(layer);
-        surface.SizeChanged += (_, _) => PositionDesktopCursor(surface, layer, cursor);
-
-        _desktopPopOutImage = image;
-        _desktopPopOutCursorLayer = layer;
-        _desktopPopOutCursor = cursor;
-
-        var topToggle = new CheckBox
-        {
-            Content = "Always on top",
-            IsChecked = _screenTop.IsOn,
-            Margin = new Thickness(0, 0, 0, 8)
-        };
-
-        var root = new DockPanel { Margin = new Thickness(12) };
-        DockPanel.SetDock(topToggle, Dock.Top);
-        root.Children.Add(topToggle);
-        root.Children.Add(surface);
-
-        var win = new Window
-        {
-            Title = "Victoria's screen",
-            Width = 960,
-            Height = 640,
-            Background = Res("BgBrush"),
-            Foreground = Res("TextBrush"),
-            Content = root,
-            Topmost = _screenTop.IsOn
-        };
-        topToggle.IsCheckedChanged += (_, _) =>
-        {
-            _screenTop.IsOn = topToggle.IsChecked == true;
-            win.Topmost = _screenTop.IsOn;
-            if (ScreenAlwaysOnTop is not null)
-                ScreenAlwaysOnTop.IsChecked = _screenTop.IsOn;
-        };
-        win.Closed += (_, _) =>
-        {
-            _desktopPopOut = null;
-            _desktopPopOutImage = null;
-            _desktopPopOutCursorLayer = null;
-            _desktopPopOutCursor = null;
-        };
-        _desktopPopOut = win;
-        win.Show(this);
-        PositionDesktopCursor(surface, layer, cursor);
-    }
-
-    private void PanelPopOut_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: string tag }) return;
-        switch (tag)
-        {
-            case "hud":
-                _popOuts.Toggle("hud", "Victoria — HUD", HudPanel, _hudDock, _hudTop);
-                break;
-            case "chat":
-                _popOuts.Toggle("chat", "Messages", ChatPanel, _chatDock, _chatTop);
-                break;
-            case "services":
-                _popOuts.Toggle("services", "Services", ServicesPanel, _servicesDock, _servicesTop);
-                break;
-        }
-    }
-
-    private void HudAlwaysOnTop_Changed(object? sender, RoutedEventArgs e)
-    {
-        _hudTop.IsOn = HudAlwaysOnTop?.IsChecked == true;
-        if (_hudTop.IsOn) Topmost = true;
-    }
-
-    private void ChatAlwaysOnTop_Changed(object? sender, RoutedEventArgs e)
-    {
-        _chatTop.IsOn = ChatAlwaysOnTop?.IsChecked == true;
-        if (_chatTop.IsOn) Topmost = true;
-    }
-
-    private void ServicesAlwaysOnTop_Changed(object? sender, RoutedEventArgs e)
-    {
-        _servicesTop.IsOn = ServicesAlwaysOnTop?.IsChecked == true;
-        if (_servicesTop.IsOn) Topmost = true;
-    }
-
-    private void ScreenAlwaysOnTop_Changed(object? sender, RoutedEventArgs e)
-    {
-        _screenTop.IsOn = ScreenAlwaysOnTop?.IsChecked == true;
-        if (_desktopPopOut is not null)
-            _desktopPopOut.Topmost = _screenTop.IsOn;
-        else if (_screenTop.IsOn)
-            Topmost = true;
     }
 }

@@ -37,7 +37,7 @@ function Resolve-VoicePython {
     param([string]$Preferred)
     if ($Preferred -and (Test-Path -LiteralPath $Preferred)) { return $Preferred }
     foreach ($c in @(
-        "V:\Python311\python.exe",
+        (Join-Path $PSScriptRoot "Python311\python.exe"),
         "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
     )) {

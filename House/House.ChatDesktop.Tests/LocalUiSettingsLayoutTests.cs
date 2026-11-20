@@ -54,7 +54,38 @@ public class LocalUiSettingsLayoutTests
     }
 
     [Fact]
-    public void MainWindow_axaml_has_avalonia_east_grip_beside_vm()
+    public void Defaults_are_portrait_glass_slab_with_right_drawer()
+    {
+        var s = new LocalUiSettings();
+        s.Normalize();
+        Assert.Equal(460, s.ResolvedWindowWidth());
+        Assert.Equal(996, s.ResolvedWindowHeight());
+        Assert.Equal(LocalUiSettings.VmDrawerRight, s.VmDrawerSide);
+        Assert.False(s.VmDrawerOnLeft());
+    }
+
+    [Fact]
+    public void AspectRatio_is_19_5_by_9_and_height_follows_width()
+    {
+        Assert.Equal(19.5 / 9.0, LocalUiSettings.AspectRatio, 6);
+        Assert.Equal(997.0, LocalUiSettings.HeightForWidth(460), 0);
+        Assert.Equal(460.0, LocalUiSettings.WidthForHeight(996), 0);
+    }
+
+    [Fact]
+    public void VmDrawerSide_normalizes_unknown_values_to_right()
+    {
+        var s = new LocalUiSettings { VmDrawerSide = "sideways" };
+        s.Normalize();
+        Assert.Equal(LocalUiSettings.VmDrawerRight, s.VmDrawerSide);
+
+        s.VmDrawerSide = "LEFT";
+        s.Normalize();
+        Assert.True(s.VmDrawerOnLeft());
+    }
+
+    [Fact]
+    public void MainWindow_axaml_is_glass_shell_without_old_side_column()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         string? path = null;
@@ -72,11 +103,12 @@ public class LocalUiSettingsLayoutTests
 
         Assert.True(path is not null, "MainWindow.axaml not found for layout assert");
         var axaml = File.ReadAllText(path!);
-        Assert.Contains("ColumnDefinitions=\"*,6,520,10\"", axaml, StringComparison.Ordinal);
-        Assert.Contains("HerScreenEastResizeGrip", axaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ColumnDefinitions=\"*,6,*\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"StatusOrbButton\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"VmDrawerTab\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"TranscriptList\"", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("HerScreenEastResizeGrip", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,6,520,10\"", axaml, StringComparison.Ordinal);
     }
-
     [Fact]
     public void RoundTrip_PersistsLayoutFields()
     {

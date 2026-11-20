@@ -46,6 +46,17 @@ public static class CompanionTokenStore
             return;
         }
 
+        // A previous Save marked the file Hidden; Windows refuses to overwrite a hidden file.
+        try
+        {
+            if (File.Exists(StorePath))
+                File.SetAttributes(StorePath, FileAttributes.Normal);
+        }
+        catch
+        {
+            // ignore — the write below reports a real failure
+        }
+
         File.WriteAllText(StorePath, token.Trim());
         try
         {

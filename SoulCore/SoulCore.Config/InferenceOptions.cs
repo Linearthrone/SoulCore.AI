@@ -22,8 +22,21 @@ public sealed class InferenceOptions
     /// Optional override for embeddings only. When empty and <see cref="BaseUrl"/> is
     /// Ollama Cloud, Host defaults embeddings to local <c>http://127.0.0.1:11434</c>
     /// so <c>nomic-embed-text</c> stays on-box (BED-187).
+    /// Also defaults to local Ollama when <see cref="PreferOpenAiCompat"/> is true
+    /// (e.g. Colibri / other OpenAI-compat servers that do not serve embeddings).
     /// </summary>
     public string EmbeddingBaseUrl { get; set; } = "";
+
+    /// <summary>
+    /// When true, chat/tool inference uses OpenAI-compatible
+    /// <c>/v1/chat/completions</c> for every turn instead of Ollama
+    /// <c>/api/chat</c> / <c>/api/generate</c>. Use with servers like Colibri
+    /// (<c>http://127.0.0.1:8000</c>, model id e.g. <c>qwen3.6-colibri</c>).
+    /// Set <see cref="BaseUrl"/> to the server root (no trailing <c>/v1</c>).
+    /// Keep embeddings on local Ollama via empty <see cref="EmbeddingBaseUrl"/>
+    /// (auto) or an explicit loopback URL.
+    /// </summary>
+    public bool PreferOpenAiCompat { get; set; }
 
     /// <summary>
     /// Optional API key for direct Ollama Cloud (<c>https://ollama.com</c>).
@@ -183,20 +196,21 @@ public sealed class InferenceOptions
     {
         if (!string.IsNullOrWhiteSpace(EmbeddingBaseUrl))
             return EmbeddingBaseUrl.Trim();
-        if (IsCloudEndpoint)
+        if (IsCloudEndpoint || PreferOpenAiCompat)
             return "http://127.0.0.1:11434";
         return string.IsNullOrWhiteSpace(BaseUrl) ? "http://127.0.0.1:11434" : BaseUrl.Trim();
     }
 
     /// <summary>
     /// PROP-17.3: leisure / R&amp;R base URL — embedding-style local only.
-    /// Never reuses a cloud <see cref="BaseUrl"/>. Missing pull → R&amp;R stays quiet.
+    /// Never reuses a cloud <see cref="BaseUrl"/> or an OpenAI-compat chat server.
+    /// Missing pull → R&amp;R stays quiet.
     /// </summary>
     public string ResolveLeisureBaseUrl()
     {
         if (!string.IsNullOrWhiteSpace(EmbeddingBaseUrl) && !IsOllamaCloudUrl(EmbeddingBaseUrl))
             return EmbeddingBaseUrl.Trim();
-        if (!IsCloudEndpoint && !string.IsNullOrWhiteSpace(BaseUrl))
+        if (!IsCloudEndpoint && !PreferOpenAiCompat && !string.IsNullOrWhiteSpace(BaseUrl))
             return BaseUrl.Trim();
         return "http://127.0.0.1:11434";
     }

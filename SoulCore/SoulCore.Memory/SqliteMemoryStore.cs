@@ -69,6 +69,10 @@ public sealed class SqliteMemoryStore :
         _episodic.RecallSimilarAsync(q, limit, ct);
     public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken ct = default) =>
         _episodic.RecallRecentAsync(limit, ct);
+    public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(float[] q, int limit, CancellationToken ct = default) =>
+        _episodic.RecallSimilarDatedAsync(q, limit, ct);
+    public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(int limit, CancellationToken ct = default) =>
+        _episodic.RecallRecentDatedAsync(limit, ct);
     public Task<IReadOnlyDictionary<string, double>> GetAsync(CancellationToken ct = default) => _emotion.GetAsync(ct);
     public Task<long> GetRevisionAsync(CancellationToken ct = default) => _emotion.GetRevisionAsync(ct);
     public Task SetAsync(IReadOnlyDictionary<string, double> c, CancellationToken ct = default) => _emotion.SetAsync(c, ct);

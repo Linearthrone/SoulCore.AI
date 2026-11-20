@@ -29,6 +29,8 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
     private readonly SqliteConnection _connection;
     private readonly SemaphoreSlim _dbGate;
     private bool _disposed;
+    /// <summary>Cached PROP-20.14 soft-dep: null until probed; false when book column absent.</summary>
+    private bool? _hasBookColumn;
 
     /// <summary>
     /// Opens a read/write connection at <paramref name="dbPath"/> (same file as memory).
@@ -113,55 +115,131 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
     }
 
     /// <summary>
-    /// Returns structured anchor rows (id/kind/title/body/…) ordered by priority.
-    /// Optional <paramref name="kind"/> filter (identity / safety / value / boundary / ritual).
-    /// Used by Host <c>GET /settings/identity</c> for the FED Identity tab.
+    /// Returns structured anchor rows (id/kind/title/body/book/…) ordered by priority.
+    /// Optional <paramref name="kind"/> and <paramref name="book"/> filters.
+    /// PROP-20.15 soft-dep: when <c>book</c> column is missing, Book is null and book
+    /// filters apply via the locked title map (fail closed for unknown titles).
     /// </summary>
     public async Task<IReadOnlyList<CharterAnchorInfo>> ListAnchorDetailsAsync(
         string? kind = null,
+        string? book = null,
         CancellationToken cancellationToken = default)
     {
         return await RunDbAsync(async ct =>
         {
             await using var cmd = _connection.CreateCommand();
-            if (string.IsNullOrWhiteSpace(kind))
+            var hasKind = !string.IsNullOrWhiteSpace(kind);
+            var hasBookFilter = !string.IsNullOrWhiteSpace(book);
+            var schemaHasBook = DetectBookColumn();
+            if (hasKind)
+                ValidateKind(kind!);
+            if (hasBookFilter)
+                ValidateBook(book!);
+
+            var bookSelect = schemaHasBook ? ", book" : string.Empty;
+            if (!hasKind)
             {
                 cmd.CommandText =
-                    """
-                    SELECT id, kind, title, body, priority, is_locked, source
+                    $"""
+                    SELECT id, kind, title, body, priority, is_locked, source{bookSelect}
                     FROM charter_anchors
                     ORDER BY priority ASC, id ASC;
                     """;
             }
             else
             {
-                ValidateKind(kind);
                 cmd.CommandText =
-                    """
-                    SELECT id, kind, title, body, priority, is_locked, source
+                    $"""
+                    SELECT id, kind, title, body, priority, is_locked, source{bookSelect}
                     FROM charter_anchors
                     WHERE kind = $kind
                     ORDER BY priority ASC, id ASC;
                     """;
-                cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind));
+                cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind!));
+            }
+
+            // Schema book filter in SQL when column exists; otherwise filter after resolve.
+            if (schemaHasBook && hasBookFilter)
+            {
+                cmd.CommandText = hasKind
+                    ? """
+                      SELECT id, kind, title, body, priority, is_locked, source, book
+                      FROM charter_anchors
+                      WHERE kind = $kind AND book = $book
+                      ORDER BY priority ASC, id ASC;
+                      """
+                    : """
+                      SELECT id, kind, title, body, priority, is_locked, source, book
+                      FROM charter_anchors
+                      WHERE book = $book
+                      ORDER BY priority ASC, id ASC;
+                      """;
+                cmd.Parameters.Clear();
+                if (hasKind)
+                    cmd.Parameters.AddWithValue("$kind", NormalizeKind(kind!));
+                cmd.Parameters.AddWithValue("$book", NormalizeBook(book!));
             }
 
             var list = new List<CharterAnchorInfo>();
             await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
             while (await reader.ReadAsync(ct).ConfigureAwait(false))
             {
+                string? rowBook = null;
+                if (schemaHasBook && !reader.IsDBNull(7))
+                {
+                    var raw = reader.GetString(7);
+                    if (!string.IsNullOrWhiteSpace(raw))
+                        rowBook = raw.Trim().ToLowerInvariant();
+                }
+
+                var title = reader.GetString(2);
+                if (!schemaHasBook && hasBookFilter)
+                {
+                    // Fail closed: only mapped titles matching the requested book.
+                    if (!CharterBooks.FloorMapByTitle.TryGetValue(title.Trim(), out var mapped)
+                        || !string.Equals(mapped, NormalizeBook(book!), StringComparison.Ordinal))
+                        continue;
+                }
+
                 list.Add(new CharterAnchorInfo(
                     Id: reader.GetInt64(0),
                     Kind: reader.GetString(1),
-                    Title: reader.GetString(2),
+                    Title: title,
                     Body: reader.GetString(3),
                     Priority: reader.GetInt32(4),
                     IsLocked: reader.GetInt32(5) == 1,
-                    Source: reader.GetString(6)));
+                    Source: reader.GetString(6),
+                    Book: rowBook));
             }
 
             return (IReadOnlyList<CharterAnchorInfo>)list;
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Soft-dep PROP-20.14: probe once whether <c>charter_anchors.book</c> exists.
+    /// </summary>
+    private bool DetectBookColumn()
+    {
+        if (_hasBookColumn.HasValue)
+            return _hasBookColumn.Value;
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "PRAGMA table_info(charter_anchors);";
+        using var reader = cmd.ExecuteReader();
+        var found = false;
+        while (reader.Read())
+        {
+            if (reader.FieldCount > 1
+                && string.Equals(reader.GetString(1), "book", StringComparison.OrdinalIgnoreCase))
+            {
+                found = true;
+                break;
+            }
+        }
+
+        _hasBookColumn = found;
+        return found;
     }
 
     /// <inheritdoc />
@@ -219,6 +297,7 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         {
             ValidateKind(seed.Kind);
             ValidateSource(seed.Source);
+            ValidateBook(seed.Book);
             if (string.IsNullOrWhiteSpace(seed.Title))
                 throw new ArgumentException($"Seed title must be non-empty (kind={seed.Kind}).", nameof(seeds));
             if (string.IsNullOrWhiteSpace(seed.Body))
@@ -229,6 +308,7 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
         {
             var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
             var inserted = 0;
+            var schemaHasBook = DetectBookColumn();
 
             await using var tx = await _connection.BeginTransactionAsync(ct).ConfigureAwait(false);
             try
@@ -237,11 +317,24 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
                 {
                     await using var cmd = _connection.CreateCommand();
                     cmd.Transaction = (SqliteTransaction)tx;
-                    cmd.CommandText =
-                        """
-                        INSERT INTO charter_anchors (kind, title, body, priority, is_locked, source, created_at, updated_at)
-                        VALUES ($kind, $title, $body, $priority, $locked, $source, $created_at, $updated_at);
-                        """;
+                    if (schemaHasBook)
+                    {
+                        cmd.CommandText =
+                            """
+                            INSERT INTO charter_anchors (kind, title, body, priority, is_locked, source, book, created_at, updated_at)
+                            VALUES ($kind, $title, $body, $priority, $locked, $source, $book, $created_at, $updated_at);
+                            """;
+                        cmd.Parameters.AddWithValue("$book", NormalizeBook(seed.Book));
+                    }
+                    else
+                    {
+                        cmd.CommandText =
+                            """
+                            INSERT INTO charter_anchors (kind, title, body, priority, is_locked, source, created_at, updated_at)
+                            VALUES ($kind, $title, $body, $priority, $locked, $source, $created_at, $updated_at);
+                            """;
+                    }
+
                     cmd.Parameters.AddWithValue("$kind", NormalizeKind(seed.Kind));
                     cmd.Parameters.AddWithValue("$title", seed.Title.Trim());
                     cmd.Parameters.AddWithValue("$body", seed.Body.Trim());
@@ -344,6 +437,8 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
                                 CHECK (is_locked IN (0, 1)),
                 source          TEXT        NOT NULL DEFAULT 'seed'
                                 CHECK (source IN ('seed', 'imported', 'calibration', 'system')),
+                book            TEXT        NOT NULL DEFAULT 'constitution'
+                                CHECK (book IN ('constitution', 'personality', 'attributes', 'compass')),
                 created_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 updated_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 CONSTRAINT charter_title_nonempty CHECK (length(trim(title)) > 0),
@@ -356,6 +451,9 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
             CREATE INDEX IF NOT EXISTS idx_charter_locked
                 ON charter_anchors (is_locked)
                 WHERE is_locked = 1;
+
+            CREATE INDEX IF NOT EXISTS idx_charter_book_priority
+                ON charter_anchors (book, priority ASC);
             """;
         cmd.ExecuteNonQuery();
     }
@@ -376,9 +474,20 @@ public sealed class CharterService : ICharter, IAsyncDisposable, IDisposable
                 nameof(source));
     }
 
+    private static void ValidateBook(string book)
+    {
+        if (!CharterBooks.IsAllowed(book))
+            throw new ArgumentException(
+                $"book must be one of: {CharterBooks.Constitution}, {CharterBooks.Personality}, {CharterBooks.Attributes}, {CharterBooks.Compass}. Got: '{book}'.",
+                nameof(book));
+    }
+
     private static string NormalizeKind(string kind)
         => kind.Trim().ToLowerInvariant();
 
     private static string NormalizeSource(string source)
         => source.Trim().ToLowerInvariant();
+
+    private static string NormalizeBook(string book)
+        => book.Trim().ToLowerInvariant();
 }

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using Avalonia;
@@ -25,18 +25,20 @@ public partial class MainWindow : Window
     private readonly SoulCoreWsClient _ws = new();
     private readonly SoulCoreToolsSettingsClient _toolsSettings = new();
     private readonly SoulCoreEmailSettingsClient _emailSettings = new();
+    private readonly SoulCoreIdentitySettingsClient _identitySettings = new();
+    private readonly SoulCoreActivitiesClient _activities = new();
     private readonly SoulCoreDesktopViewClient _desktopView = new();
     private readonly SoulCoreBrowserViewClient _browserView = new();
+    private int _identityRefreshGeneration;
+    private bool _identityPendingBusy;
     private readonly CompanionMediaClient _media = new();
     private readonly LocalStackControl _stack;
     private readonly ChatHistoryStore _chatHistory = new();
     private readonly SoulCoreVoiceClient _voice = new();
     private readonly PushToTalkRecorder _ptt = new();
-    private readonly PanelPopOutService _popOuts = new();
-    private readonly ToggleButtonState _hudTop = new();
-    private readonly ToggleButtonState _chatTop = new();
-    private readonly ToggleButtonState _servicesTop = new();
-    private readonly ToggleButtonState _screenTop = new();
+    private readonly CallMicStreamer _callMic = new();
+    private readonly CallAudioPlayer _callPlayer = new();
+    private bool _callActive;
 
     private bool _pttBusy;
     private bool _toolsAccessHydrating;
@@ -49,9 +51,6 @@ public partial class MainWindow : Window
     private int _hostActionGeneration;
     private string? _activeServiceTag;
     private CancellationTokenSource? _hostActionCts;
-    private bool _houseDrawerOpen;
-    private DateTimeOffset? _soulCoreHoldStarted;
-    private DispatcherTimer? _soulCoreHoldTimer;
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _desktopViewTimer;
     private readonly DispatcherTimer _browserViewTimer;
@@ -68,10 +67,6 @@ public partial class MainWindow : Window
     private string? _lastDesktopGallerySignature;
     private string? _lastNewestGalleryFileName;
     private string? _pinnedGalleryFileName;
-    private Window? _desktopPopOut;
-    private Image? _desktopPopOutImage;
-    private Canvas? _desktopPopOutCursorLayer;
-    private Ellipse? _desktopPopOutCursor;
     private readonly IBrush _okBrush;
     private readonly IBrush _warnBrush;
     private readonly IBrush _badBrush;
@@ -88,15 +83,15 @@ public partial class MainWindow : Window
     private double _lastDominance = 0.5;
     private double _lastFocus = 0.5;
     private string? _lastWantCategory;
+    private string? _lastWantPhrase;
     private string? _lastActivityPhrase;
+    private string? _lastJournalCrumb;
     private DateTimeOffset? _lastChatActivityUtc;
     private DateTimeOffset? _lastWantUtc;
+    private DateTimeOffset? _lastTickUtc;
+    private bool _whileYouWereGoneLoaded;
     private string? _pendingImagePath;
     private Bitmap? _pendingImageBitmap;
-    private Panel? _hudDock;
-    private Panel? _chatDock;
-    private Panel? _servicesDock;
-    private Panel? _screenDock;
 
     public MainWindow()
     {
@@ -116,6 +111,7 @@ public partial class MainWindow : Window
         InitLayoutChrome();
         InitPresenceUpdates();
         InitStackSettingsUi();
+        InitGlassShell();
 
         _okBrush = Res("OkBrush");
         _warnBrush = Res("WarnBrush");
@@ -124,12 +120,6 @@ public partial class MainWindow : Window
 
         _notifications = new NotificationService(_uiSettings.Notifications);
         _notifications.ReloadPlayer();
-
-        _hudDock = HudPanel.Parent as Panel;
-        _chatDock = ChatPanel.Parent as Panel;
-        _servicesDock = ServicesPanel.Parent as Panel;
-        // ScreenPanel docks in a TabItem now (What she saw); pop-out uses a twin window, not reparent.
-        _screenDock = ScreenPanel.Parent as Panel;
 
         _ws.StateChanged += OnWsStateChanged;
         _ws.FrameReceived += OnFrameReceived;
@@ -153,10 +143,13 @@ public partial class MainWindow : Window
         Opened += async (_, _) =>
         {
             LoadChatHistory();
-            UpdateIdentityDetail();
+            _ = RefreshIdentityDetailAsync();
+            // PROP-22.3: API keys saved from Settings reach a Presence-started Host via process env.
+            SecretOverrideStore.ApplyToProcessEnv();
             await EnsureLocalStackOnOpenAsync().ConfigureAwait(true);
             await _ws.ConnectAsync();
             await ProbeHealthAsync();
+            await LoadWhileYouWereGoneOnOpenAsync().ConfigureAwait(true);
             _pollTimer.Start();
             _desktopViewTimer.Start();
             _browserViewTimer.Start();
@@ -170,6 +163,7 @@ public partial class MainWindow : Window
         // destroyed while the VM process kept "running" (JPEG forever, no HerScreenInput).
         Closing += (_, _) =>
         {
+            try { PersistPresenceSeenAt(); } catch { /* ignore */ }
             try { _browserViewTimer.Stop(); } catch { /* ignore */ }
             try { DestroyVictoriaBrowserEmbedHost(); } catch { /* ignore */ }
             try { CloseHerScreenOverlay(); } catch { /* ignore */ }
@@ -181,13 +175,14 @@ public partial class MainWindow : Window
             _desktopViewTimer.Stop();
             _browserViewTimer.Stop();
             CloseHerScreenOverlay();
-            _desktopPopOut?.Close();
-            _popOuts.CloseAll();
+            DisposeGlassShell();
             await _ws.DisposeAsync();
             _notifications.Dispose();
             _health.Dispose();
             _toolsSettings.Dispose();
             _emailSettings.Dispose();
+            _identitySettings.Dispose();
+            _activities.Dispose();
             _desktopView.Dispose();
             _browserView.Dispose();
             _media.Dispose();
@@ -205,6 +200,10 @@ public partial class MainWindow : Window
             _messages.Clear();
             foreach (var m in prior)
             {
+                // PROP-22.4: system rows from older builds never render in the transcript.
+                if (m.IsSystem)
+                    continue;
+
                 if (!string.IsNullOrWhiteSpace(m.MediaPath) && File.Exists(m.MediaPath))
                 {
                     try { m.Image = new Bitmap(m.MediaPath); }
@@ -229,59 +228,6 @@ public partial class MainWindow : Window
             ? b
             : Brushes.Gray;
 
-    private void Nav_Changed(object? sender, RoutedEventArgs e)
-    {
-        // Legacy radio path — Presence is default; Settings toggled via NavSettings_Click.
-        if (PresenceView is null || SettingsView is null) return;
-        if (NavPresence is not null && NavPresence.IsChecked == true)
-            ShowPresenceView();
-    }
-
-    private void NavSettings_Click(object? sender, RoutedEventArgs e)
-    {
-        if (SettingsView is { IsVisible: true })
-        {
-            ShowPresenceView();
-            return;
-        }
-
-        ShowSettingsView();
-    }
-
-    private void ShowPresenceView()
-    {
-        if (PresenceView is null || SettingsView is null) return;
-        PresenceView.IsVisible = true;
-        SettingsView.IsVisible = false;
-        if (NavSettings is not null)
-            NavSettings.Classes.Remove("active");
-        if (NavPresence is not null)
-            NavPresence.IsChecked = true;
-        Title = "House Victoria — Presence";
-        _ = RefreshDesktopViewAsync();
-        _ = RefreshVictoriaBrowserViewAsync();
-    }
-
-    private void ShowSettingsView()
-    {
-        if (PresenceView is null || SettingsView is null) return;
-        PresenceView.IsVisible = false;
-        SettingsView.IsVisible = true;
-        if (NavSettings is not null && !NavSettings.Classes.Contains("active"))
-            NavSettings.Classes.Add("active");
-        if (NavPresence is not null)
-            NavPresence.IsChecked = false;
-        Title = "House Victoria — Settings";
-        ApplySystemStatus(_lastHealth);
-        SeedNotificationControls();
-        UpdateIdentityDetail();
-        _ = RefreshToolsAccessAsync();
-        _ = RefreshEmailAccountsAsync();
-    }
-
-    private void OpenPresenceFromIdentity_Click(object? sender, RoutedEventArgs e) =>
-        ShowPresenceView();
-
     private void TitleDragRegion_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -297,68 +243,172 @@ public partial class MainWindow : Window
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 
-    private void UpdateIdentityDetail()
-    {
-        var name = string.IsNullOrWhiteSpace(_uiSettings.DisplayName) ? "Victoria" : _uiSettings.DisplayName.Trim();
-        if (DisplayNameBox is not null)
-            DisplayNameBox.Text = name;
-        if (IdentityNameText is not null)
-            IdentityNameText.Text = name;
+    /// <summary>PROP-20.1: Identity tab paints live GET /settings/identity anchors (not /health lock fraction alone).</summary>
+    private void UpdateIdentityDetail() => _ = RefreshIdentityDetailAsync();
 
-        var snap = _lastHealth;
-        var charter = FormatCharterLine(snap);
+    private async Task RefreshIdentityDetailAsync()
+    {
+        var gen = Interlocked.Increment(ref _identityRefreshGeneration);
+        var localName = string.IsNullOrWhiteSpace(_uiSettings.DisplayName)
+            ? "Victoria"
+            : _uiSettings.DisplayName.Trim();
+        ApplyIdentityDisplayName(localName);
+
+        if (IdentityCharterKindsText is not null && IdentityCharterKindsText.Text is "Loading charter…" or null or "")
+            IdentityCharterKindsText.Text = "Loading charter from Host…";
+        if (IdentityRestingTraitsText is not null &&
+            IdentityRestingTraitsText.Text is "Loading resting traits…" or null or "")
+            IdentityRestingTraitsText.Text = "Loading resting traits from Host…";
+        if (IdentityContextTraitsText is not null &&
+            IdentityContextTraitsText.Text is "Loading context traits…" or null or "")
+            IdentityContextTraitsText.Text = "Loading context traits from Host…";
+        if (IdentityBondCountersText is not null &&
+            IdentityBondCountersText.Text is "Loading bond counters…" or null or "")
+            IdentityBondCountersText.Text = "Loading bond counters from Host…";
+        if (IdentitySoakText is not null && IdentitySoakText.Text is "Loading soak…" or null or "")
+            IdentitySoakText.Text = "Loading soak from Host…";
+        if (IdentityGrowthTraitsText is not null &&
+            IdentityGrowthTraitsText.Text is "Loading growth traits…" or null or "")
+            IdentityGrowthTraitsText.Text = "Loading growth traits from Host…";
+        if (IdentityPendingBandCrossText is not null &&
+            IdentityPendingBandCrossText.Text is "Loading pending…" or null or "")
+            IdentityPendingBandCrossText.Text = "Loading pending band-cross from Host…";
+        if (IdentityGrowthLedgerText is not null &&
+            IdentityGrowthLedgerText.Text is "Loading growth ledger…" or null or "")
+            IdentityGrowthLedgerText.Text = "Loading growth ledger from Host…";
+
+        var identity = await _identitySettings.GetAsync().ConfigureAwait(true);
+        if (gen != _identityRefreshGeneration)
+            return;
+        _lastIdentity = identity;
+        ApplyPortraitIdentity(identity);
+
+        var name = !string.IsNullOrWhiteSpace(identity.DisplayName)
+            ? identity.DisplayName.Trim()
+            : localName;
+        ApplyIdentityDisplayName(name);
+
+        var charterSummary = IdentityAnchorsFormatter.FormatCharterSummary(identity);
         if (IdentityCharterBox is not null)
-            IdentityCharterBox.Text = charter;
+            IdentityCharterBox.Text = charterSummary;
         if (IdentityDetailBox is not null)
-            IdentityDetailBox.Text = $"{name} · {charter}";
+            IdentityDetailBox.Text = $"{name} · {charterSummary}";
 
         if (IdentityCharterKindsText is not null)
+            IdentityCharterKindsText.Text = IdentityAnchorsFormatter.FormatAnchorsBlock(identity);
+
+        // PROP-20.31: weight / band / ledgerReason from Host restingTraits (+ context/catalog).
+        if (IdentityRestingTraitsText is not null)
+            IdentityRestingTraitsText.Text = IdentityAnchorsFormatter.FormatRestingTraitsBlock(identity);
+        if (IdentityContextTraitsText is not null)
+            IdentityContextTraitsText.Text = IdentityAnchorsFormatter.FormatContextTraitsBlock(identity);
+
+        // PROP-20.38: bond counters, soak, growth traits, pending band-cross, ledger.
+        if (IdentityBondCountersText is not null)
+            IdentityBondCountersText.Text = IdentityAnchorsFormatter.FormatBondCountersBlock(identity);
+        if (IdentitySoakText is not null)
+            IdentitySoakText.Text = IdentityAnchorsFormatter.FormatSoakBlock(identity);
+        if (IdentityGrowthTraitsText is not null)
+            IdentityGrowthTraitsText.Text = IdentityAnchorsFormatter.FormatGrowthTraitsBlock(identity);
+        if (IdentityPendingBandCrossText is not null)
+            IdentityPendingBandCrossText.Text = IdentityAnchorsFormatter.FormatPendingBandCrossStatus(identity);
+        if (IdentityPendingBandCrossList is not null)
         {
-            // Host /health reports counts only — per-kind rows await a richer charter endpoint.
-            IdentityCharterKindsText.Text =
-                "identity — in her prompt (Host ChatContextBuilder uses kind=identity only)\n" +
-                "safety / value / boundary / ritual — stored, not in the prompt yet\n\n" +
-                $"Host report: {charter}\n" +
-                "Per-anchor priority ranking needs Host charter detail (not invented here).";
+            IdentityPendingBandCrossList.ItemsSource = identity.Reachable &&
+                                                       string.IsNullOrWhiteSpace(identity.Detail)
+                ? identity.PendingBandCross
+                : Array.Empty<IdentityPendingBandCrossSnapshot>();
         }
+
+        if (IdentityGrowthLedgerText is not null)
+            IdentityGrowthLedgerText.Text = IdentityAnchorsFormatter.FormatGrowthLedgerBlock(identity);
 
         if (IdentityStatsText is not null)
         {
             IdentityStatsText.Text =
-                "Memories — live / quarantined / newest: Host detail not on /health yet\n" +
-                "Books — feeling · animation · environment · life-hacks (life-hacks awaits PROP-17.2)\n" +
+                "Memories — live / quarantined / newest: Host detail not on /settings/identity\n" +
+                "Books — feeling · animation · environment · life-hacks · thoughts · wants · dreams (Her journal…)\n" +
                 "SOP count — awaits PROP-17.2 store\n" +
                 "Tasks — listed under Her screen; only you can delete one\n" +
-                "Workflows — not reported on /health yet\n" +
+                "Workflows — not reported on /settings/identity\n" +
                 "Parked + next probe — shown on the task row when the Host reports it\n" +
                 "Current interest — On her mind, in the band under Her screen";
         }
 
+        var health = _lastHealth;
         if (IdentityPromptMixText is not null)
         {
+            var soakPhase = identity.Soak is null
+                ? "—"
+                : (string.IsNullOrWhiteSpace(identity.Soak.Phase) ? "?" : identity.Soak.Phase);
             IdentityPromptMixText.Text =
-                $"Alive {(snap.Alive ? "yes" : "no")} · Warm {(snap.Warm ? "yes" : "no")} · " +
-                $"SoulLoop {FormatSoulLoop(snap)} · Charter {charter}";
+                $"Alive {(health.Alive ? "yes" : "no")} · Warm {(health.Warm ? "yes" : "no")} · " +
+                $"SoulLoop {FormatSoulLoop(health)} · Charter {charterSummary} · " +
+                $"Resting {identity.RestingTraits.Count} · Context this turn {identity.ContextTraits.Count} · " +
+                $"Growth {identity.GrowthTraits.Count} · Soak {soakPhase} · " +
+                $"Pending band-cross {identity.PendingBandCross.Count}";
         }
+    }
+
+    private async void IdentityPendingConfirm_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_identityPendingBusy)
+            return;
+        if (sender is not Button { DataContext: IdentityPendingBandCrossSnapshot row } || row.Id <= 0)
+            return;
+
+        _identityPendingBusy = true;
+        try
+        {
+            var result = await _identitySettings.ConfirmPendingAsync(row.Id).ConfigureAwait(true);
+            await RefreshIdentityDetailAsync().ConfigureAwait(true);
+            if (!result.Ok && IdentityPendingBandCrossText is not null)
+            {
+                IdentityPendingBandCrossText.Text =
+                    result.Detail ?? $"Could not confirm pending #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _identityPendingBusy = false;
+        }
+    }
+
+    private async void IdentityPendingDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_identityPendingBusy)
+            return;
+        if (sender is not Button { DataContext: IdentityPendingBandCrossSnapshot row } || row.Id <= 0)
+            return;
+
+        _identityPendingBusy = true;
+        try
+        {
+            var result = await _identitySettings.DismissPendingAsync(row.Id).ConfigureAwait(true);
+            await RefreshIdentityDetailAsync().ConfigureAwait(true);
+            if (!result.Ok && IdentityPendingBandCrossText is not null)
+            {
+                IdentityPendingBandCrossText.Text =
+                    result.Detail ?? $"Could not dismiss pending #{row.Id}.";
+            }
+        }
+        finally
+        {
+            _identityPendingBusy = false;
+        }
+    }
+
+    private void ApplyIdentityDisplayName(string name)
+    {
+        if (DisplayNameBox is not null)
+            DisplayNameBox.Text = name;
+        if (IdentityNameText is not null)
+            IdentityNameText.Text = name;
     }
 
     private static string FormatSoulLoop(SoulCoreHealthSnapshot snap) =>
         snap.SoulLoopEnabled is null ? "(not reported)"
         : snap.SoulLoopEnabled.Value ? "enabled" : "disabled";
-
-    private static string FormatCharterLine(SoulCoreHealthSnapshot snap)
-    {
-        if (!snap.Reachable)
-            return snap.Detail ?? "Host unreachable";
-
-        if (string.IsNullOrWhiteSpace(snap.CharterMode) && snap.CharterFullyLocked is null)
-            return "(charter not reported on /health)";
-
-        var locked = snap.CharterLocked ?? 0;
-        var total = snap.CharterAnchors ?? 0;
-        var mode = snap.CharterMode ?? (snap.CharterFullyLocked == true ? "locked" : "calibration");
-        return $"{mode} · {locked}/{total} anchors locked";
-    }
 
     private async void SoulLoopTick_Click(object? sender, RoutedEventArgs e) =>
         await ForceSoulLoopTickAsync(restartWs: false).ConfigureAwait(true);
@@ -395,11 +445,7 @@ public partial class MainWindow : Window
 
     private void ChatInput_TextChanged(object? sender, TextChangedEventArgs e)
     {
-        if (ChatInput is null) return;
-        // Grow with draft; collapse toward one line when short.
-        var lines = Math.Max(1, (ChatInput.Text ?? string.Empty).Split('\n').Length);
-        var target = Math.Clamp(28 + lines * 18, 40, 140);
-        ChatInput.Height = target;
+        // The composer grows through MinHeight/MaxHeight in XAML — nothing to size by hand.
     }
 
     private void CorrectEmotion_Click(object? sender, RoutedEventArgs e)
@@ -415,12 +461,8 @@ public partial class MainWindow : Window
         CorrectNoteBox.Focus();
     }
 
-    private void UpdateAvailableMark_Click(object? sender, RoutedEventArgs e)
-    {
-        ShowSettingsView();
-        if (SettingsTabs is not null && SystemTab is not null)
-            SettingsTabs.SelectedItem = SystemTab;
-    }
+    private void UpdateAvailableMark_Click(object? sender, RoutedEventArgs e) =>
+        ShowScreen(Screen.Settings);
 
     private void CorrectEmotionCancel_Click(object? sender, RoutedEventArgs e) =>
         EmotionCorrectPanel.IsVisible = false;
@@ -556,7 +598,6 @@ public partial class MainWindow : Window
             text = $"{text}\n[image] {IoPath.GetFileName(_pendingImagePath)}";
 
         ChatInput.Text = string.Empty;
-        ChatInput.Height = 40;
         _streamingAssistant = null;
         var quoted = _pendingQuote;
         ClearQuote();
@@ -599,16 +640,10 @@ public partial class MainWindow : Window
         if (!sent)
         {
             SetTyping(false);
-            var err = new ChatMessage
-            {
-                Role = "system",
-                Text =
-                    "Host WS unavailable — message not sent. " +
-                    $"Start SoulCore.Host on {ConnectionDefaults.WsUri} (Presence auto-starts it when Auto-start is on), then Settings → System → Refresh. " +
-                    $"Detail: {_ws.LastError}"
-            };
-            _messages.Add(err);
-            PersistMessage(err);
+            AppendSystemNotice(
+                "Host WS unavailable — message not sent. " +
+                $"Start SoulCore.Host on {ConnectionDefaults.WsUri} (Presence auto-starts it when Auto-start is on). " +
+                $"Detail: {_ws.LastError}");
             ScrollTranscriptToEnd();
         }
     }
@@ -659,6 +694,8 @@ public partial class MainWindow : Window
     {
         if (TypingIndicator is not null)
             TypingIndicator.IsVisible = on;
+        _typingActive = on;
+        RefreshStatusOrb();
     }
 
     private void PersistMessage(ChatMessage message)

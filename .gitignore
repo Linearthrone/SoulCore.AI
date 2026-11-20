@@ -10,6 +10,10 @@ secrets.json
 appsettings.*.local.json
 **/secrets.json
 **/Properties/launchSettings.local.json
+# SixLabors ImageSharp license (Release builds) — never commit keys/contents
+sixlabors.lic
+**/sixlabors.lic
+*.lic
 
 # .NET user-secrets / IDE
 bin/
@@ -28,6 +32,7 @@ __pycache__/
 *.py[cod]
 .ruff_cache/
 House/House.Voice/models/
+House/House.Voice/Python311/
 
 # OS / editor
 Thumbs.db

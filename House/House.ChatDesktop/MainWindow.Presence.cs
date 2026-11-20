@@ -31,10 +31,10 @@ public partial class MainWindow
     {
         if (CompanionTokenStatusText is null)
             return;
-        CompanionTokenStatusText.Text = CompanionToken.DescribePresence()
-            + (CompanionTokenStore.HasSavedToken()
-                ? " · saved on this PC"
-                : " · not saved in Settings (will use .env if found)");
+        // PROP-22.3 SEC: never reveal the value or its length — only whether one is in use.
+        CompanionTokenStatusText.Text = CompanionToken.Resolve() is null
+            ? "Not set"
+            : CompanionTokenStore.HasSavedToken() ? "Saved" : "Saved (.env)";
         if (CompanionTokenBox is not null && string.IsNullOrEmpty(CompanionTokenBox.Text))
         {
             CompanionTokenBox.Watermark = CompanionTokenStore.HasSavedToken()
@@ -58,7 +58,7 @@ public partial class MainWindow
         if (CompanionTokenBox is not null)
             CompanionTokenBox.Text = "";
         RefreshCompanionTokenStatus();
-        AppendSystemNotice($"Companion token saved · {CompanionToken.DescribePresence()}");
+        AppendSystemNotice("Companion token saved.");
         await _ws.ConnectAsync().ConfigureAwait(true);
         await ProbeHealthAsync().ConfigureAwait(true);
     }
@@ -72,7 +72,7 @@ public partial class MainWindow
         if (CompanionTokenBox is not null)
             CompanionTokenBox.Text = "";
         RefreshCompanionTokenStatus();
-        AppendSystemNotice($"Companion token cleared from Settings · {CompanionToken.DescribePresence()}");
+        AppendSystemNotice("Companion token cleared from Settings.");
         await _ws.ConnectAsync().ConfigureAwait(true);
         await ProbeHealthAsync().ConfigureAwait(true);
     }
@@ -217,10 +217,8 @@ public partial class MainWindow
     {
         if (string.IsNullOrWhiteSpace(text))
             return;
-        var msg = new ChatMessage { Role = "system", Text = text };
-        _messages.Add(msg);
-        try { PersistMessage(msg); } catch { /* best-effort */ }
-        ScrollTranscriptToEnd();
+        // PROP-22.4: system notices never enter the transcript — they land in Settings → Performance log.
+        _performanceLog.Add(text);
     }
 
     private async Task ProbeHealthAsync()
@@ -232,6 +230,7 @@ public partial class MainWindow
         await RefreshServicesPanelAsync(snap).ConfigureAwait(true);
         ApplyHonestActivity(preferHost: true);
         await RefreshBandTasksAsync().ConfigureAwait(true);
+        RefreshHonestyBand();
         UpdateIdentityDetail();
         UpdateEngagementState();
 
@@ -294,200 +293,21 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// PROP-22.5: probe the local stack (Ollama / ComfyUI / KsDevice VM) and feed the status orb.
+    /// The old lamp tray is gone — this only caches the facts the aggregator needs.
+    /// </summary>
     private async Task RefreshServicesPanelAsync(SoulCoreHealthSnapshot? health = null)
     {
-        if (LampSoulCore is null && SvcHostDot is null)
-            return;
-
-        var snap = health ?? _lastHealth;
+        _ = health;
         var ollamaUp = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
         var comfyUp = await _stack.ProbeComfyAsync().ConfigureAwait(true);
         var sandboxUp = await _stack.ProbeSandboxAsync().ConfigureAwait(true);
 
-        // Legacy shim text (hidden)
-        if (SvcHostDot is not null)
-        {
-            SvcHostDot.Fill = snap.Alive ? _okBrush : _badBrush;
-            if (SvcHostStatus is not null) SvcHostStatus.Text = snap.Alive ? "up" : "down";
-            if (SvcHostDetail is not null) SvcHostDetail.Text = snap.Alive ? "SoulCore" : (snap.Detail ?? "down");
-        }
-
-        if (SvcOllamaDot is not null)
-        {
-            SvcOllamaDot.Fill = ollamaUp ? _okBrush : _badBrush;
-            if (SvcOllamaStatus is not null) SvcOllamaStatus.Text = ollamaUp ? "up" : "down";
-            if (SvcOllamaDetail is not null) SvcOllamaDetail.Text = ollamaUp ? "up" : "down";
-        }
-
-        var backend = snap.DesktopBackend ?? "cua";
-        var driverOk = snap.CuaDriverAvailable != false || !backend.Equals("cua", StringComparison.OrdinalIgnoreCase);
-        var cuaOn = snap.Reachable && _lastAllowComputerControl == true && driverOk;
-        var cuaWarn = snap.Reachable && _lastAllowDesktopCapture == true && !cuaOn;
-
-        if (SvcCuaDot is not null)
-        {
-            SvcCuaDot.Fill = !snap.Reachable ? _badBrush
-                : cuaOn ? _okBrush
-                : cuaWarn ? _warnBrush
-                : _mutedBrush;
-            if (SvcCuaStatus is not null)
-                SvcCuaStatus.Text = cuaOn ? "on" : (cuaWarn ? "capture" : "off");
-        }
-
-        var ueOk = snap.UnrealConnected == true;
-        var ueWarn = snap.UnrealEnabled == true && !ueOk;
-        if (SvcUeDot is not null)
-        {
-            SvcUeDot.Fill = ueOk ? _okBrush : ueWarn ? _warnBrush : (snap.Reachable ? _mutedBrush : _badBrush);
-            if (SvcUeStatus is not null)
-                SvcUeStatus.Text = ueOk ? "connected" : ueWarn ? "enabled" : "off";
-        }
-
-        if (SvcComfyDot is not null)
-        {
-            SvcComfyDot.Fill = comfyUp ? _okBrush : _mutedBrush;
-            if (SvcComfyStatus is not null) SvcComfyStatus.Text = comfyUp ? "up" : "down";
-        }
-
-        // PROP-4 House lamps — neon orbs (radial + halo) like the mockup
-        SetLamp(LampSoulCore, GlowSoulCore, snap.Alive ? "blue" : "red");
-        SetLamp(LampOllama, GlowOllama, ollamaUp ? "green" : "red");
-        SetLamp(LampUnreal, GlowUnreal, ueOk ? "blue" : "red");
-        SetLamp(LampComfy, GlowComfy, comfyUp ? "blue" : "off");
-        SetLamp(LampCua, GlowCua, !snap.Reachable ? "red" : cuaOn ? "blue" : cuaWarn ? "warn" : "off");
-        SetLamp(LampSandbox, GlowSandbox, sandboxUp ? "blue" : "off");
+        _ollamaUp = ollamaUp;
+        _comfyUp = comfyUp;
         NoteSandboxRunning(sandboxUp);
-
-        if (LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = snap.Alive ? "HOLD TO GUARD" : "CLICK TO START";
-
-        // Closed-drawer pip: red if SoulCore or Unreal down
-        var criticalDown = !snap.Alive || !ueOk;
-        if (HouseDrawerPip is not null)
-            HouseDrawerPip.Fill = criticalDown ? _badBrush : Brushes.Transparent;
-    }
-
-    private static void SetLamp(Button? lamp, Ellipse? glow, string state)
-    {
-        if (lamp is null) return;
-
-        var (core, mid, halo, haloOpacity) = state switch
-        {
-            "blue" or "accent" => (Color.Parse("#E8F2FF"), Color.Parse("#3D8BFF"), Color.Parse("#4BA3FF"), 0.55),
-            "green" or "ok" => (Color.Parse("#E8FFF0"), Color.Parse("#2EE66A"), Color.Parse("#3DFF8A"), 0.55),
-            "red" or "bad" => (Color.Parse("#FFE8EA"), Color.Parse("#FF3D4A"), Color.Parse("#FF5A64"), 0.50),
-            "warn" => (Color.Parse("#FFF6E8"), Color.Parse("#FFB84D"), Color.Parse("#FFC866"), 0.45),
-            _ => (Color.Parse("#6A6E78"), Color.Parse("#3A3D46"), Color.Parse("#2A2D33"), 0.12),
-        };
-
-        lamp.Background = new RadialGradientBrush
-        {
-            GradientOrigin = new RelativePoint(0.35, 0.3, RelativeUnit.Relative),
-            Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            RadiusX = new RelativeScalar(0.75, RelativeUnit.Relative),
-            RadiusY = new RelativeScalar(0.75, RelativeUnit.Relative),
-            GradientStops =
-            {
-                new GradientStop(core, 0),
-                new GradientStop(mid, 0.45),
-                new GradientStop(mid, 1),
-            }
-        };
-
-        if (glow is not null)
-        {
-            glow.Fill = new RadialGradientBrush
-            {
-                GradientStops =
-                {
-                    new GradientStop(Color.FromArgb(0xCC, halo.R, halo.G, halo.B), 0),
-                    new GradientStop(Color.FromArgb(0x00, halo.R, halo.G, halo.B), 1),
-                }
-            };
-            glow.Opacity = haloOpacity;
-        }
-    }
-
-    private void HouseDrawerToggle_Click(object? sender, RoutedEventArgs e)
-    {
-        _houseDrawerOpen = !_houseDrawerOpen;
-        if (ServicesPanel is not null)
-            ServicesPanel.IsVisible = _houseDrawerOpen;
-        if (HouseDrawerChevron is not null)
-            HouseDrawerChevron.Text = _houseDrawerOpen ? "▾" : "▴";
-    }
-
-    private async void LampClick_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_servicesBusy) return;
-        if (sender is not Button { Tag: string tag }) return;
-
-        // SoulCore click: start only when down (stop is hold-guarded).
-        if (tag == "soulcore")
-        {
-            if (_lastHealth.Alive) return;
-            await RunServiceActionAsync("host-start").ConfigureAwait(true);
-            return;
-        }
-
-        if (tag == "ollama")
-        {
-            var up = await _stack.ProbeOllamaAsync().ConfigureAwait(true);
-            if (!up)
-                await RunServiceActionAsync("ollama-start").ConfigureAwait(true);
-            return;
-        }
-
-        if (tag == "cua")
-        {
-            if (_lastAllowComputerControl == true)
-                await RunServiceActionAsync("cua-disable").ConfigureAwait(true);
-            else
-                await RunServiceActionAsync("cua-enable").ConfigureAwait(true);
-        }
-    }
-
-    private void LampSoulCore_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (!_lastHealth.Alive) return;
-        _soulCoreHoldStarted = DateTimeOffset.UtcNow;
-        _soulCoreHoldTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _soulCoreHoldTimer.Tick -= SoulCoreHoldTimer_Tick;
-        _soulCoreHoldTimer.Tick += SoulCoreHoldTimer_Tick;
-        _soulCoreHoldTimer.Start();
-        if (LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = "holding…";
-    }
-
-    private void LampSoulCore_PointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        CancelSoulCoreHold(resetHint: true);
-    }
-
-    private async void SoulCoreHoldTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_soulCoreHoldStarted is null) return;
-        var held = DateTimeOffset.UtcNow - _soulCoreHoldStarted.Value;
-        if (held < TimeSpan.FromMilliseconds(1500))
-        {
-            if (LampSoulCoreHint is not null)
-                LampSoulCoreHint.Text = $"hold {Math.Ceiling((1500 - held.TotalMilliseconds) / 100) / 10:0.0}s";
-            return;
-        }
-
-        CancelSoulCoreHold(resetHint: false);
-        if (LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = "stopping…";
-        await InterruptOrStopHostAsync().ConfigureAwait(true);
-    }
-
-    private void CancelSoulCoreHold(bool resetHint)
-    {
-        _soulCoreHoldStarted = null;
-        if (_soulCoreHoldTimer is not null)
-            _soulCoreHoldTimer.Stop();
-        if (resetHint && LampSoulCoreHint is not null)
-            LampSoulCoreHint.Text = _lastHealth.Alive ? "HOLD TO GUARD" : "CLICK TO START";
+        RefreshStatusOrb();
     }
 
     /// <summary>
@@ -719,6 +539,10 @@ public partial class MainWindow
     private async Task RefreshVoiceStatusAsync()
     {
         var h = await _voice.GetHealthAsync();
+        _voiceEnabled = h.Enabled;
+        _voiceSttOk = h.Stt?.Ok == true;
+        _voiceTtsOk = h.Tts?.Ok == true;
+        RefreshStatusOrb();
         var compact = h.Enabled
             ? $"Voice · STT={(h.Stt?.Ok == true ? "ok" : "down")} · TTS={(h.Tts?.Ok == true ? "ok" : "down")}"
             : "Voice off in Host";
@@ -739,8 +563,9 @@ public partial class MainWindow
             && (string.IsNullOrWhiteSpace(PttHintText.Text)
                 || PttHintText.Text.StartsWith("Voice", StringComparison.Ordinal)))
         {
+            // The compact STT/TTS line lives on the right; the hint area only explains an off Host.
             PttHintText.Text = h.Enabled
-                ? compact
+                ? string.Empty
                 : "Voice off in Host — hold-to-talk ready when STT is up";
         }
     }
@@ -752,7 +577,7 @@ public partial class MainWindow
         {
             _ptt.Start();
             if (PttHintText is not null) PttHintText.Text = "Listening… release to send.";
-            if (PttButton is not null) PttButton.Content = "Recording…";
+            SetPttLive(true);
         }
         catch (Exception ex)
         {
@@ -772,7 +597,7 @@ public partial class MainWindow
         _pttBusy = true;
         try
         {
-            if (PttButton is not null) PttButton.Content = "Transcribing…";
+            SetPttLive(true);
             var wav = await Task.Run(() => _ptt.Stop());
             if (wav.Length < 1000)
             {
@@ -797,7 +622,7 @@ public partial class MainWindow
         }
         finally
         {
-            if (PttButton is not null) PttButton.Content = "Hold to talk";
+            SetPttLive(false);
             _pttBusy = false;
         }
     }
@@ -873,10 +698,50 @@ public partial class MainWindow
         await RefreshEmailAccountsAsync().ConfigureAwait(true);
     }
 
-    private async void ResearchJournals_Click(object? sender, RoutedEventArgs e)
+    private void WhileYouWereGoneDismiss_Click(object? sender, RoutedEventArgs e)
     {
-        var dlg = new ResearchJournalsWindow();
-        await dlg.ShowDialog(this).ConfigureAwait(true);
+        if (WhileYouWereGonePanel is not null)
+            WhileYouWereGonePanel.IsVisible = false;
+    }
+
+    /// <summary>PROP-18.3: chat-open strip from Host store; empty is honest.</summary>
+    private async Task LoadWhileYouWereGoneOnOpenAsync()
+    {
+        if (_whileYouWereGoneLoaded)
+            return;
+        _whileYouWereGoneLoaded = true;
+
+        var since = _uiSettings.LastPresenceSeenAtUtc;
+        var fetch = await _activities.WhileYouWereGoneAsync(since).ConfigureAwait(true);
+        var body = PresenceResidueFormatter.FormatWhileYouWereGoneBody(fetch);
+        if (WhileYouWereGoneText is not null)
+            WhileYouWereGoneText.Text = body;
+        if (WhileYouWereGonePanel is not null)
+            WhileYouWereGonePanel.IsVisible = true;
+
+        // PROP-18.31 F2: Last journal is journal crumbs only — no activity Desc fallback.
+        var journal = PresenceResidueFormatter.NewestJournalPreview(fetch);
+        _lastJournalCrumb = string.IsNullOrWhiteSpace(journal) ? null : journal;
+
+        RefreshHonestyBand();
+    }
+
+    private void PersistPresenceSeenAt()
+    {
+        _uiSettings.LastPresenceSeenAtUtc =
+            DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", System.Globalization.CultureInfo.InvariantCulture);
+        _uiSettings.Save();
+    }
+
+    private void RefreshHonestyBand()
+    {
+        if (BandHonestyText is null)
+            return;
+        BandHonestyText.Text = PresenceResidueFormatter.FormatHonestyLine(
+            _lastHealth.Alive,
+            _lastTickUtc,
+            _lastWantPhrase,
+            _lastJournalCrumb);
     }
 
     private async void EmailGateToggle_Click(object? sender, RoutedEventArgs e)
@@ -915,7 +780,7 @@ public partial class MainWindow
         if (SystemMailboxesText is null) return;
         if (_emailAccounts.Count == 0)
         {
-            SystemMailboxesText.Text = "No mailboxes yet — Tools & Access → Email setup (unlimited ids).";
+            SystemMailboxesText.Text = "No mailboxes yet — Settings → Advanced → Mailbox form.";
             return;
         }
 
@@ -1123,7 +988,8 @@ public partial class MainWindow
 
         if (SystemEndpointBox is not null)
             SystemEndpointBox.Text = ConnectionDefaults.DisplayEndpoint;
-        SystemBindBox.Text = ConnectionDefaults.Host;
+        // PROP-22.3: the Host bind is fixed loopback — shown, never editable.
+        SystemBindBox.Text = ConnectionDefaults.DefaultHost;
         SystemPortBox.Text = ConnectionDefaults.Port.ToString();
         if (SystemVersionsBox is not null)
         {
@@ -1198,6 +1064,7 @@ public partial class MainWindow
         }
 
         RefreshBuildVersionChrome(snap.HostVersion);
+        RefreshStatusOrb();
     }
 
     private void OnWsStateChanged(WsConnectionState state, string detail)
@@ -1235,6 +1102,8 @@ public partial class MainWindow
                 ApplyLoopWant(frame);
                 break;
             case SoulCoreFrameTypes.LoopTickOk:
+                _lastTickUtc = DateTimeOffset.UtcNow;
+                RefreshHonestyBand();
                 break;
             case SoulCoreFrameTypes.ChatDelta:
                 AppendOrUpdateAssistant(frame, finalize: false);
@@ -1250,14 +1119,140 @@ public partial class MainWindow
                 SetTyping(false);
                 var code = ReadPayloadString(frame, "code");
                 var msg = ReadPayloadString(frame, "message") ?? frame.Payload?.ToString() ?? frame.Type;
-                _messages.Add(new ChatMessage { Role = "system", Text = $"{code ?? "error"}: {msg}" });
-                ScrollTranscriptToEnd();
+                AppendSystemNotice($"{code ?? "error"}: {msg}");
                 break;
             case SoulCoreFrameTypes.Pong:
+                break;
+            case SoulCoreFrameTypes.VoiceSpeaking:
+                ApplyVoiceSpeaking(frame);
+                break;
+            case SoulCoreFrameTypes.VoiceAudio:
+                ApplyVoiceAudio(frame);
+                break;
+            case SoulCoreFrameTypes.VoiceTranscript:
+                ApplyVoiceTranscript(frame);
                 break;
             default:
                 break;
         }
+    }
+
+    private async void CallToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_callActive)
+        {
+            await EndCallAsync().ConfigureAwait(true);
+            return;
+        }
+
+        await StartCallAsync().ConfigureAwait(true);
+    }
+
+    private async void CallEnd_Click(object? sender, RoutedEventArgs e) =>
+        await EndCallAsync().ConfigureAwait(true);
+
+    private async Task StartCallAsync()
+    {
+        if (_callActive) return;
+
+        // PROP-22.4: connecting = glass scrim over the whole content area.
+        SetCallPhase(CallPhase.Connecting);
+        if (CallStatusText is not null) CallStatusText.Text = "Connecting…";
+        if (CallTranscriptPreview is not null) CallTranscriptPreview.Text = "";
+
+        var ok = await _ws.SendVoiceCallStartAsync().ConfigureAwait(true);
+        if (!ok)
+        {
+            // Overlay stays up (full) so the reason is readable; End call dismisses it.
+            if (CallStatusText is not null)
+                CallStatusText.Text = _ws.LastError ?? "Call start failed — Host WS?";
+            return;
+        }
+
+        _callActive = true;
+        // Connected = overlay shrinks to the top third; the transcript stays usable below.
+        SetCallPhase(CallPhase.Connected);
+        if (CallStatusText is not null) CallStatusText.Text = "Listening…";
+        CallSphere?.SetSpeaking(false);
+
+        _callMic.ChunkReady -= OnCallMicChunk;
+        _callMic.ChunkReady += OnCallMicChunk;
+        _callMic.Start();
+    }
+
+    private async Task EndCallAsync()
+    {
+        _callMic.ChunkReady -= OnCallMicChunk;
+        _callMic.Stop();
+        _callPlayer.Stop();
+        if (_callActive)
+            await _ws.SendVoiceCallEndAsync().ConfigureAwait(true);
+        _callActive = false;
+        SetCallPhase(CallPhase.None);
+        CallSphere?.SetSpeaking(false);
+    }
+
+    private void OnCallMicChunk(byte[] pcm)
+    {
+        if (!_callActive || pcm.Length == 0) return;
+        var b64 = Convert.ToBase64String(pcm);
+        _ = _ws.SendVoiceCallAudioAsync(b64);
+    }
+
+    private void ApplyVoiceSpeaking(SoulCoreFrame frame)
+    {
+        var speaking = ReadPayloadBool(frame, "speaking") == true;
+        var level = ReadPayloadDouble(frame, "level") ?? (speaking ? 0.55 : 0.1);
+        CallSphere?.SetSpeaking(speaking, level);
+        if (CallStatusText is not null)
+            CallStatusText.Text = speaking ? "Speaking…" : (_callActive ? "Listening…" : "");
+    }
+
+    private void ApplyVoiceAudio(SoulCoreFrame frame)
+    {
+        var end = ReadPayloadBool(frame, "end") == true;
+        var rate = (int)(ReadPayloadDouble(frame, "sampleRate") ?? 24000);
+        var b64 = ReadPayloadString(frame, "audio");
+        if (!string.IsNullOrEmpty(b64))
+        {
+            try
+            {
+                var pcm = Convert.FromBase64String(b64);
+                _callPlayer.EnsureFormat(rate);
+                _callPlayer.AddPcm(pcm);
+                CallSphere?.SetSpeaking(true, 0.7);
+            }
+            catch
+            {
+                /* ignore bad chunk */
+            }
+        }
+
+        if (end)
+            CallSphere?.SetSpeaking(false);
+    }
+
+    private void ApplyVoiceTranscript(SoulCoreFrame frame)
+    {
+        var text = ReadPayloadString(frame, "text");
+        var final = ReadPayloadBool(frame, "final") == true;
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (CallTranscriptPreview is not null)
+            CallTranscriptPreview.Text = text;
+        if (final && _callActive)
+        {
+            // Final user utterance → chat.send so Victoria answers over Call TTS stream.
+            _ = SendChatFromCallAsync(text);
+        }
+    }
+
+    private async Task SendChatFromCallAsync(string text)
+    {
+        if (CallStatusText is not null)
+            CallStatusText.Text = "Thinking…";
+        _messages.Add(new ChatMessage { Role = "user", Text = text });
+        ScrollTranscriptToEnd();
+        await _ws.SendChatAsync(text).ConfigureAwait(true);
     }
 
     private void ApplyPresenceStatus(SoulCoreFrame frame)
@@ -1267,6 +1262,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(activity))
         {
             _lastActivityPhrase = activity;
+            _presenceCurrentActivity = activity.Trim();
             if (ActivityText is not null)
                 ActivityText.Text = activity;
             if (TypingLabel is not null)
@@ -1286,10 +1282,14 @@ public partial class MainWindow
         var parsed = ParseWantWire(want, category);
 
         _lastWantCategory = parsed.Category;
+        _lastWantPhrase = string.IsNullOrWhiteSpace(parsed.Phrase) ? want?.Trim() : parsed.Phrase;
         _lastWantUtc = DateTimeOffset.UtcNow;
+        // A want frame implies a tick completed on Host.
+        _lastTickUtc ??= DateTimeOffset.UtcNow;
 
         UpdateEngagementState();
         ApplyHonestActivity(preferHost: true);
+        RefreshHonestyBand();
     }
 
     /// <summary>
@@ -1298,28 +1298,28 @@ public partial class MainWindow
     /// </summary>
     private void ApplyHonestActivity(bool preferHost = false)
     {
-        string? phrase = null;
-        if (preferHost || string.IsNullOrWhiteSpace(_lastActivityPhrase))
-            phrase = _lastHealth.CurrentActivity;
+        // Host currentActivity is the only authority. Empty means nothing is open —
+        // never invent "Working" / "No open assignment" (PROP-22 honesty rule).
+        if (preferHost)
+        {
+            var host = _lastHealth.CurrentActivity;
+            _presenceCurrentActivity = string.IsNullOrWhiteSpace(host) ? null : host.Trim();
+            _lastActivityPhrase = _presenceCurrentActivity;
+        }
 
-        if (string.IsNullOrWhiteSpace(phrase))
-            phrase = _lastActivityPhrase;
-
-        if (string.IsNullOrWhiteSpace(phrase))
-            phrase = "No open assignment";
-
-        _lastActivityPhrase = phrase;
         if (ActivityText is not null)
-            ActivityText.Text = phrase;
+            ActivityText.Text = _presenceCurrentActivity ?? NothingRightNow;
         RefreshActivityBand();
+        RefreshStatusOrb();
     }
 
-    /// <summary>Activity band under the main split (honest stubs until Host wires park/interest).</summary>
+    /// <summary>Victoria drawer: doing-now, on her mind, last activity, mood.</summary>
     private void RefreshActivityBand()
     {
-        var doing = string.IsNullOrWhiteSpace(_lastActivityPhrase) ? "—" : _lastActivityPhrase.Trim();
+        if (DoingNowText is not null)
+            DoingNowText.Text = _presenceCurrentActivity ?? NothingRightNow;
         if (BandDoingText is not null)
-            BandDoingText.Text = $"Doing — {doing}";
+            BandDoingText.Text = _presenceCurrentActivity ?? NothingRightNow;
 
         var mind = string.IsNullOrWhiteSpace(_lastHealth.OnHerMind)
             ? "quiet between talks"
@@ -1327,12 +1327,8 @@ public partial class MainWindow
         if (BandOnHerMindText is not null)
             BandOnHerMindText.Text = $"On her mind — {mind}";
 
-        if (BandInfluencesText is not null)
-            BandInfluencesText.Text = "Influences — none yet";
-
         RefreshBandMoodLine();
     }
-
     private bool _taskMutateBusy;
 
     private async Task RefreshBandTasksAsync()
@@ -1543,16 +1539,6 @@ public partial class MainWindow
         if (MoodLabelText is not null)
             MoodLabelText.Text = label;
 
-        if (ValenceText is not null)
-            ValenceText.Text = valence.ToString("0.0");
-        if (ArousalText is not null)
-            ArousalText.Text = arousal.ToString("0.0");
-
-        if (ValenceGauge is not null)
-            ValenceGauge.Value = Math.Clamp((valence + 1.0) / 2.0, 0, 1);
-        if (ArousalGauge is not null)
-            ArousalGauge.Value = Math.Clamp(arousal, 0, 1);
-
         if (MoodColorDot is not null)
         {
             MoodColorDot.Fill = valence >= 0.25 ? _okBrush
@@ -1600,11 +1586,6 @@ public partial class MainWindow
         {
             state = "Sleeping";
             brush = _mutedBrush;
-            if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
-            {
-                ActivityText.Text = "Resting";
-                _lastActivityPhrase = ActivityText.Text;
-            }
         }
         else if (recentChat || activeCat || TypingIndicator is { IsVisible: true })
         {
@@ -1615,11 +1596,6 @@ public partial class MainWindow
         {
             state = "Idle";
             brush = _warnBrush;
-            if (ActivityText is not null && (string.IsNullOrWhiteSpace(ActivityText.Text) || ActivityText.Text == "—"))
-            {
-                ActivityText.Text = "No open assignment";
-                _lastActivityPhrase = ActivityText.Text;
-            }
         }
         else
         {

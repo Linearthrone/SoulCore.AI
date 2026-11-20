@@ -15,6 +15,10 @@ internal static class InferenceServiceCollectionExtensions
         this IServiceCollection services,
         InferenceOptions inferenceOptions)
     {
+        // PROP-22.2: live model/cloud override (in-memory; null = InferenceOptions defaults).
+        services.AddSingleton<InferenceRuntimeSelection>();
+        services.AddTransient<InferenceRuntimeRouteHandler>();
+
         if (inferenceOptions.Enabled)
         {
             if (inferenceOptions.IsCloudEndpoint && string.IsNullOrWhiteSpace(inferenceOptions.ResolveApiKey()))
@@ -31,7 +35,7 @@ internal static class InferenceServiceCollectionExtensions
                     opts.BaseUrl,
                     opts.TimeoutSeconds,
                     InferenceOptions.IsOllamaCloudUrl(opts.BaseUrl) ? opts.ResolveApiKey() : null);
-            });
+            }).AddHttpMessageHandler<InferenceRuntimeRouteHandler>();
             // BED-126: expose the typed client as IInferenceClient. The 3-arg ctor
             // (http + options + logger) is what HttpClientFactory builds; the
             // tool-loop CompleteWithToolsAsync accepts an IToolRegistry at call time

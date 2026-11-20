@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="House.ChatDesktop.Controls.ConfirmDialogWindow"
+        Title="Confirm"
+        Width="380" SizeToContent="Height"
+        CanResize="False"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Foreground="{DynamicResource TextBrush}"
+        WindowStartupLocation="CenterOwner">
+  <Border Classes="panel" Margin="10" Padding="18" CornerRadius="22"
+          BoxShadow="0 12 32 0 #AA000000">
+    <StackPanel Spacing="10">
+      <TextBlock x:Name="TitleText" Text="Confirm" Classes="screen-title"/>
+      <TextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="13"
+                 Foreground="{DynamicResource TextBrush}"/>
+      <TextBlock x:Name="WarningText" TextWrapping="Wrap" FontSize="12" IsVisible="False"
+                 Foreground="{DynamicResource AmberBrush}"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+        <Button Classes="ghost" Content="Cancel" Click="Cancel_Click"/>
+        <Button x:Name="ConfirmButton" Classes="primary" Content="Confirm" Click="Confirm_Click"/>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

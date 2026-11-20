@@ -21,6 +21,17 @@ public interface ICharter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Structured rows (id/kind/title/body/book/…) ordered by priority.
+    /// Optional <paramref name="kind"/> filter (identity / safety / value / boundary / ritual).
+    /// Optional <paramref name="book"/> filter (constitution / personality / attributes / compass).
+    /// Used for mind-block Constitution floors (title + floor line) and Settings.
+    /// </summary>
+    Task<IReadOnlyList<CharterAnchorInfo>> ListAnchorDetailsAsync(
+        string? kind = null,
+        string? book = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Inserts initial charter anchors. Intended for test/staging seeding only —
     /// not wired to the live Host. Returns the number of rows inserted.
     /// </summary>

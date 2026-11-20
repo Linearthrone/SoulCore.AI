@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="House.ChatDesktop.Controls.VmDrawerWindow"
+        Title="Victoria — Her screen"
+        Width="1280" Height="800"
+        MinWidth="640" MinHeight="480"
+        SystemDecorations="None"
+        CanResize="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Background="#0A0D11"
+        Foreground="{DynamicResource TextBrush}"
+        WindowStartupLocation="Manual">
+  <!-- PROP-22.6 / v3: opaque popup that PROTRUDES beside the slab. Sized for a full guest
+       display without scrollbars (scale-to-fit). NativeControlHost is added to
+       VictoriaBrowserEmbedSlot only after a bind (real layout rectangle). -->
+  <Border BorderBrush="#566170" BorderThickness="1.5" Background="#0A0D11" Padding="8"
+          BoxShadow="0 12 36 0 #99000000">
+    <Grid RowDefinitions="Auto,*">
+      <!-- Her screen | What she saw | last click coords | Start/Stop -->
+      <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6">
+        <Button x:Name="HerScreenHeaderButton" Classes="side-tab selected" Content="Her screen"/>
+        <Button x:Name="SightHeaderButton" Grid.Column="1" Classes="side-tab" Content="What she saw"/>
+        <Border x:Name="VictoriaBrowserCoordBadge" Grid.Column="2" IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Margin="8,0" Padding="8,4" CornerRadius="6"
+                Background="#CC0A0A0A" BorderBrush="#FFFF2D55" BorderThickness="1"
+                IsHitTestVisible="False">
+          <TextBlock x:Name="VictoriaBrowserCoordText"
+                     FontSize="12" FontWeight="SemiBold"
+                     Foreground="#FFFF2D55"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="click (0, 0)"/>
+        </Border>
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button x:Name="VmPowerButton"
+                  Classes="chrome"
+                  Content="Start"
+                  Padding="14,8"
+                  FontSize="12"
+                  FontWeight="SemiBold"
+                  ToolTip.Tip="Start KsDevice"/>
+          <Button x:Name="VmDrawerCloseButton" Classes="round" Width="30" Height="30"
+                  ToolTip.Tip="Close drawer">
+            <Path Width="12" Height="12" Stretch="Uniform"
+                  Data="{StaticResource IconClose}"
+                  Fill="{Binding $parent[Button].Foreground}"/>
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <!-- Plain Grid (not TabControl): the embed host must measure to a real rectangle. -->
+      <Grid Grid.Row="1">
+        <Border x:Name="VictoriaBrowserPanel" Background="Transparent" Padding="0">
+          <Grid RowDefinitions="*,Auto">
+            <Border x:Name="VictoriaBrowserSurface" Classes="carbon inset" ClipToBounds="True" MinHeight="200"
+                    ToolTip.Tip="VM embed: live VirtualBox + her pink/teal cursor. Clicks go to the VM.">
+              <Grid>
+                <TextBlock x:Name="VictoriaBrowserEmptyText"
+                           Text="Waiting for Victoria's browser — pink cursor idle, teal on click"
+                           Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
+                           Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <Image x:Name="VictoriaBrowserImage" Stretch="Uniform" IsVisible="False"
+                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                <!-- Created only when embedding (cold start must not hit Win32 CreateWindowEx). -->
+                <Panel x:Name="VictoriaBrowserEmbedSlot"
+                       IsVisible="False"
+                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                <Canvas x:Name="VictoriaBrowserCursorLayer" IsHitTestVisible="False" IsVisible="False">
+                  <Path x:Name="VictoriaBrowserCursor" Width="18" Height="28"
+                        Stretch="Fill" StrokeJoin="Round" StrokeLineCap="Round"
+                        Stroke="#FFFF2D55" StrokeThickness="1.5"
+                        Fill="#E6FF2D55"
+                        Data="M0,0 L0,16 L4.4,12.2 L7.2,21.2 L10.4,19.8 L7.4,11.2 L13.2,11 Z"/>
+                </Canvas>
+              </Grid>
+            </Border>
+            <!-- Compact one-line chrome so the guest display keeps the space (no scrollbars). -->
+            <DockPanel Grid.Row="1" Margin="0,4,0,0">
+              <TextBlock x:Name="VictoriaBrowserWaitingText" DockPanel.Dock="Right" FontSize="10"
+                         Foreground="{DynamicResource AccentBrush}" Text="" IsVisible="False"
+                         Margin="8,0,0,0" VerticalAlignment="Center"/>
+              <TextBlock x:Name="VictoriaBrowserActionText" DockPanel.Dock="Right" FontSize="10"
+                         Foreground="{DynamicResource MutedBrush}" Text="" Margin="8,0,0,0"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="VictoriaBrowserTitleText" DockPanel.Dock="Right" FontSize="10"
+                         Foreground="{DynamicResource MutedBrush}" Text="" Margin="8,0,0,0"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+              <TextBlock x:Name="VictoriaBrowserUrlText" FontSize="10" Foreground="{DynamicResource AccentBrush}"
+                         Text="—" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </DockPanel>
+          </Grid>
+        </Border>
+
+        <!-- What she saw: frame + stamp + folder. -->
+        <Border x:Name="ScreenPanel" Background="Transparent" Padding="0" IsVisible="False">
+          <Grid RowDefinitions="Auto,*,Auto">
+            <DockPanel Margin="0,0,0,6">
+              <Button x:Name="DesktopViewFolderButton" DockPanel.Dock="Right" Classes="chrome" Content="Folder"
+                      Padding="8,3" ToolTip.Tip="Open scratch sight gallery (not memory copies)"/>
+              <TextBlock Text="Last capture" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                         VerticalAlignment="Center"/>
+            </DockPanel>
+            <Border Grid.Row="1" Classes="carbon inset" ClipToBounds="True" MinHeight="90">
+              <Grid x:Name="DesktopViewSurface">
+                <TextBlock x:Name="DesktopViewEmptyText" Text="No still yet"
+                           Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap"
+                           Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <Image x:Name="DesktopViewImage" Stretch="Uniform" IsVisible="False"/>
+                <Canvas x:Name="DesktopViewCursorLayer" IsHitTestVisible="False" IsVisible="False">
+                  <Ellipse x:Name="DesktopViewCursor" Width="16" Height="16"
+                           Stroke="#C4B06A" StrokeThickness="2" Fill="#55C4B06A"/>
+                </Canvas>
+              </Grid>
+            </Border>
+            <DockPanel Grid.Row="2" Margin="0,6,0,0">
+              <TextBlock x:Name="DesktopViewStampText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                         VerticalAlignment="Center" Text="—"/>
+              <!-- Kept for code-behind compatibility (hidden) -->
+              <StackPanel IsVisible="False">
+                <TextBlock x:Name="DesktopViewActionText"/>
+                <TextBlock x:Name="DesktopViewMetaText"/>
+                <TextBlock x:Name="DesktopViewPathText"/>
+                <StackPanel x:Name="DesktopViewGalleryPanel" Orientation="Horizontal"/>
+              </StackPanel>
+            </DockPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

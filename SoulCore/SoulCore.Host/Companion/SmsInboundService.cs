@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
+using SoulCore.Core;
+using SoulCore.Host.Ws;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
@@ -11,11 +14,16 @@ using SoulCore.Protocol;
 namespace SoulCore.Host.Companion;
 
 /// <summary>
-/// PROP-1.2: tablet gateway SMS/MMS → One Thread (<c>presence-local</c>), no tools.
+/// PROP-1.2 / PROP-20.7: tablet gateway SMS/MMS → One Thread (<c>presence-local</c>).
+/// Filtered tool loop (PROP-20.5 allow list); outbound = short answer + public URL within 480 chars;
+/// long findings → research paper (not private journals).
 /// </summary>
 public sealed class SmsInboundService : ISmsInboundService
 {
     public const string Channel = "sms";
+
+    /// <summary>PROP-18.1: max dated episodic lines injected into SMS [Memory].</summary>
+    public const int SmsMemoryRecallLimit = 6;
 
     private readonly SmsOptions _sms;
     private readonly InferenceOptions _inference;
@@ -30,6 +38,9 @@ public sealed class SmsInboundService : ISmsInboundService
     private readonly IChatTranscriptStore? _transcript;
     private readonly IInferenceLease? _lease;
     private readonly ILeisureSession? _leisure;
+    private readonly IToolRegistry? _tools;
+    private readonly IVictoriaResearchStore? _research;
+    private readonly IVictoriaMindBlockBuilder? _mindBlock;
     private readonly ILogger<SmsInboundService> _logger;
 
     public SmsInboundService(
@@ -46,7 +57,10 @@ public sealed class SmsInboundService : ISmsInboundService
         ILogger<SmsInboundService> logger,
         IChatTranscriptStore? transcript = null,
         IInferenceLease? lease = null,
-        ILeisureSession? leisure = null)
+        ILeisureSession? leisure = null,
+        IToolRegistry? toolRegistry = null,
+        IVictoriaResearchStore? research = null,
+        IVictoriaMindBlockBuilder? mindBlock = null)
     {
         _sms = sms?.Value ?? throw new ArgumentNullException(nameof(sms));
         _inference = inference?.Value ?? throw new ArgumentNullException(nameof(inference));
@@ -62,6 +76,9 @@ public sealed class SmsInboundService : ISmsInboundService
         _transcript = transcript;
         _lease = lease;
         _leisure = leisure;
+        _tools = toolRegistry;
+        _research = research;
+        _mindBlock = mindBlock;
     }
 
     public async Task<SmsInboundResult> HandleAsync(
@@ -147,6 +164,8 @@ public sealed class SmsInboundService : ISmsInboundService
         string provider;
         var usedStub = false;
         var stubOk = _sms.StubWhenModelDown || _chatWs.StubWhenModelDown;
+        var publicUrls = (IReadOnlyList<string>)Array.Empty<string>();
+        var usedToolLoop = false;
 
         try
         {
@@ -155,25 +174,73 @@ public sealed class SmsInboundService : ISmsInboundService
                 throw new InvalidOperationException("Inference:Enabled=false");
             }
 
-            IReadOnlyList<string> memories = Array.Empty<string>();
+            // PROP-18.1: dated recall so [Memory] shows occurred_at (same contract as desk chat).
+            IReadOnlyList<MemoryRecallLine> memories = Array.Empty<MemoryRecallLine>();
             try
             {
-                memories = await _memory.RecallRecentAsync(6, cancellationToken).ConfigureAwait(false);
+                memories = await _memory
+                    .RecallRecentDatedAsync(SmsMemoryRecallLimit, cancellationToken)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "SMS memory recall failed");
             }
 
-            var preamble = BuildSmsPreamble(memories);
-            // Force no-tools: CompleteAsync only (never CompleteWithToolsAsync).
+            string? mindBlock = null;
+            if (_mindBlock is not null)
+            {
+                try
+                {
+                    // PROP-20.27: userVisible drives Compass retrieve (cap 3); floors+resting always-on.
+                    mindBlock = await _mindBlock
+                        .TryBuildAsync(userVisible, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "SMS mind-block build failed (soft-depend 20.4)");
+                }
+            }
+
+            // PROP-20.5: when a registry is wired, always run the filtered tool loop.
+            var useTools = _tools is not null;
+            var preamble = BuildSmsPreamble(memories, useTools, mindBlock);
+
+            // Images are never tool arguments — caption/note only (SEC MMS≠tools).
             var modelPrompt = string.IsNullOrWhiteSpace(mediaId)
                 ? userVisible
-                : userVisible + "\n\n(Kayleigh also attached an image; it is stored as media — do not invent tool calls.)";
+                : userVisible + "\n\n(Kayleigh also attached an image; it is stored as media — not tool input.)";
 
-            reply = await _inferenceClient
-                .CompleteAsync(modelPrompt, preamble, cancellationToken)
-                .ConfigureAwait(false);
+            if (useTools)
+            {
+                usedToolLoop = true;
+                var filtered = SmsToolGate.FilterRegistry(_tools!);
+                var trace = new List<(string Name, JsonElement? Arguments, string? Content)>();
+                var tracking = new SmsTrackingRegistry(filtered, trace);
+
+                var messages = new List<ChatMessage>
+                {
+                    new() { Role = "system", Content = preamble },
+                    new() { Role = "user", Content = modelPrompt }
+                };
+
+                reply = await _inferenceClient
+                    .CompleteWithToolsAsync(
+                        messages,
+                        filtered.GetDefinitions(),
+                        tracking,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                publicUrls = SmsOutboundComposer.CollectPublicUrlsFromToolTrace(trace);
+            }
+            else
+            {
+                reply = await _inferenceClient
+                    .CompleteAsync(modelPrompt, preamble, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             if (string.IsNullOrWhiteSpace(reply))
                 throw new InvalidOperationException("empty model reply");
             reply = reply.Trim();
@@ -193,13 +260,18 @@ public sealed class SmsInboundService : ISmsInboundService
             reply = BuildStubReply(userVisible);
         }
 
-        // Keep SMS replies short for carrier (PROP-1.3 outbound SMS).
-        reply = TruncateForSms(reply, 480);
+        // PROP-20.7: answer + public URL(s) within 480; long body → research paper.
+        var shape = SmsOutboundComposer.Compose(reply, publicUrls);
+        reply = shape.OutboundText;
+        await PersistLongFindingsAsync(userVisible, shape, cancellationToken).ConfigureAwait(false);
+
+        // Final carrier safety (OutboundService also truncates).
+        reply = SmsOutboundComposer.TruncateForCarrier(reply, SmsOutboundComposer.MaxSmsChars);
 
         string? outboundJobId = null;
         string? mmsJobId = null;
 
-        // Screenshot / still ask on SMS path (no tools) → one MMS queue job.
+        // Screenshot / still ask on SMS path → one MMS queue job (no document/image research MMS).
         if (_sms.OutboundEnabled
             && SmsScreenshotAsk.LooksLikeScreenshotAsk(userVisible))
         {
@@ -217,7 +289,7 @@ public sealed class SmsInboundService : ISmsInboundService
                     if (!reply.Contains("still", StringComparison.OrdinalIgnoreCase)
                         && !reply.Contains("screenshot", StringComparison.OrdinalIgnoreCase))
                     {
-                        reply = TruncateForSms(reply + " Sending a still now.", 480);
+                        reply = SmsOutboundComposer.TruncateForCarrier(reply + " Sending a still now.", SmsOutboundComposer.MaxSmsChars);
                     }
                 }
                 else if (mms.RateLimited)
@@ -245,7 +317,7 @@ public sealed class SmsInboundService : ISmsInboundService
                     .EnqueueSmsAsync(
                         request.FromE164!,
                         reply,
-                        source: "sms:auto-reply",
+                        source: usedToolLoop ? "sms:auto-reply:tools" : "sms:auto-reply",
                         cancellationToken)
                     .ConfigureAwait(false);
                 if (smsOut.Ok)
@@ -278,7 +350,8 @@ public sealed class SmsInboundService : ISmsInboundService
                     hasMedia = false,
                     mediaId = (string?)null,
                     outboundSmsJobId = outboundJobId,
-                    outboundMmsJobId = mmsJobId
+                    outboundMmsJobId = mmsJobId,
+                    publicUrls = shape.PublicUrlsIncluded
                 },
                 id: replyFrameId);
             await _hub.SendAsync(done.ToJson(), cancellationToken).ConfigureAwait(false);
@@ -303,9 +376,7 @@ public sealed class SmsInboundService : ISmsInboundService
             _logger.LogDebug(ex, "SMS history append failed");
         }
 
-        // PROP-3 Wave 1: the same turn into the durable transcript, so a phone that was not
-        // connected when the text arrived still hydrates it. Frame ids match the broadcast
-        // frames above, letting a client that did see them live skip the duplicate.
+        // PROP-3 Wave 1: durable transcript with matching frame ids.
         if (_transcript is not null)
         {
             try
@@ -326,8 +397,8 @@ public sealed class SmsInboundService : ISmsInboundService
         try
         {
             var episode = string.IsNullOrWhiteSpace(mediaId)
-                ? $"[SMS] Kayleigh → Victoria: {Truncate(userVisible, 200)} | Victoria: {Truncate(reply, 200)}"
-                : $"[SMS] Kayleigh → Victoria: {Truncate(userVisible, 160)} [media={mediaId}] | Victoria: {Truncate(reply, 160)}";
+                ? $"[SMS] Kayleigh → Victoria: {SmsOutboundComposer.TruncateForCarrier(userVisible, 200)} | Victoria: {SmsOutboundComposer.TruncateForCarrier(reply, 200)}"
+                : $"[SMS] Kayleigh → Victoria: {SmsOutboundComposer.TruncateForCarrier(userVisible, 160)} [media={mediaId}] | Victoria: {SmsOutboundComposer.TruncateForCarrier(reply, 160)}";
             await _memory.WriteEpisodicAsync(episode, "chat", cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -336,10 +407,12 @@ public sealed class SmsInboundService : ISmsInboundService
         }
 
         _logger.LogInformation(
-            "SMS inbound ok from={From} media={Media} stub={Stub} replyChars={Chars}",
+            "SMS inbound ok from={From} media={Media} stub={Stub} tools={Tools} urls={Urls} replyChars={Chars}",
             SmsE164.Redact(request.FromE164),
             mediaId ?? "(none)",
             usedStub,
+            usedToolLoop,
+            shape.PublicUrlsIncluded.Count,
             reply.Length);
 
         return new SmsInboundResult(
@@ -347,29 +420,137 @@ public sealed class SmsInboundService : ISmsInboundService
             outboundJobId, mmsJobId);
     }
 
-    public static string BuildSmsPreamble(IReadOnlyList<string> recentMemories)
+    private async Task PersistLongFindingsAsync(
+        string userVisible,
+        SmsOutboundShape shape,
+        CancellationToken cancellationToken)
     {
-        // No ToolAgency / ComputerUse / desktop guidance — SMS must not invite tools.
+        if (_research is null || string.IsNullOrWhiteSpace(shape.LongFindingsForPaper))
+            return;
+
+        try
+        {
+            var subjectTitle = DeriveSubjectTitle(userVisible);
+            var subject = await _research
+                .OpenOrCreateSubjectAsync(
+                    subjectTitle,
+                    summary: "SMS research findings (PROP-20.7)",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var bib = shape.PublicUrlsIncluded.Count == 0
+                ? null
+                : string.Join("\n", shape.PublicUrlsIncluded.Select(u => u));
+
+            var paper = await _research
+                .UpsertPaperAsync(
+                    subject.Id,
+                    title: SmsOutboundComposer.TruncateForCarrier($"SMS: {subjectTitle}", 120),
+                    kind: "review",
+                    abstractText: SmsOutboundComposer.TruncateForCarrier(shape.LongFindingsForPaper, 280),
+                    bodyApa: shape.LongFindingsForPaper,
+                    bibliographyApa: bib,
+                    status: "draft",
+                    paperId: null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "SMS long findings → research paper id={Id} subject={Subject} (not private journals)",
+                paper.Id,
+                subject.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SMS research paper persist failed");
+        }
+    }
+
+    private static string DeriveSubjectTitle(string userVisible)
+    {
+        var t = (userVisible ?? string.Empty).Trim();
+        if (t.Length == 0)
+            return "SMS research";
+        // Keep first clause / line as subject seed.
+        var cut = t.IndexOfAny(new[] { '\n', '.', '?', '!' });
+        if (cut > 12)
+            t = t[..cut];
+        t = t.Trim();
+        if (t.Length < 3)
+            return "SMS research";
+        return SmsOutboundComposer.TruncateForCarrier(t, 80);
+    }
+
+    /// <param name="useToolLoop">When true, invite only PROP-20.5 allow-listed tools.</param>
+    /// <param name="mindBlock">Optional PROP-20.4 mind block (floors + resting); never private journals.</param>
+    /// <remarks>String memories are undated (empty OccurredAt). Prefer the dated overload (PROP-18.1).</remarks>
+    public static string BuildSmsPreamble(
+        IReadOnlyList<string> recentMemories,
+        bool useToolLoop = false,
+        string? mindBlock = null)
+    {
+        if (recentMemories is null || recentMemories.Count == 0)
+            return BuildSmsPreamble((IReadOnlyList<MemoryRecallLine>)Array.Empty<MemoryRecallLine>(), useToolLoop, mindBlock);
+
+        var dated = new MemoryRecallLine[recentMemories.Count];
+        for (var i = 0; i < recentMemories.Count; i++)
+            dated[i] = new MemoryRecallLine(recentMemories[i], string.Empty);
+        return BuildSmsPreamble(dated, useToolLoop, mindBlock);
+    }
+
+    /// <summary>
+    /// PROP-18.1: SMS [Memory] uses dated lines (occurred_at | content), today-first.
+    /// </summary>
+    public static string BuildSmsPreamble(
+        IReadOnlyList<MemoryRecallLine> recentMemories,
+        bool useToolLoop = false,
+        string? mindBlock = null,
+        DateTimeOffset? utcNow = null)
+    {
         var sb = new System.Text.StringBuilder();
         sb.Append(
             "You are Victoria — the same person as on Presence/desk chat, texting Kayleigh. " +
             "Kayleigh just texted you from her phone (SMS). " +
             "Address her only as Kayleigh. If older memory or history uses any other personal name for her, ignore it and still say Kayleigh. " +
             "Stay continuous with who you are on desk (warm, specific, her partner) — do not become a generic assistant. " +
-            "Reply as a short text message — a few sentences max. " +
-            "Do not call tools, open apps, or invent function calls.\n");
+            "Reply as a short text message — a few sentences max. ");
+
+        if (useToolLoop)
+        {
+            sb.Append(
+                "You may use only these tools when needed: browser_navigate, browser_snapshot, browser_health, " +
+                "browser_tabs, browser_back, browser_scroll, browser_click_text, desktop_screenshot, " +
+                "memory_recall, memory_search, research_subject_list, research_subject_open, " +
+                "research_paper_list, research_paper_get, research_paper_write. " +
+                "Never call desktop_open_app, desktop_click/type/key/drag, browser_fill/type/key, " +
+                "guest_shell, email_*, mt4_*, workflow_execute, or task_release/delete/update_status. " +
+                "When you open a public page, your texted reply should be the short answer plus that public URL " +
+                "(not an internal paper address). Put long findings in research_paper_write, not in private journals.\n");
+        }
+        else
+        {
+            sb.Append("Do not call tools, open apps, or invent function calls.\n");
+        }
+
+        // Soft-depend 20.4: same mind voice as desk when available. Private journals never ride here.
+        if (!string.IsNullOrWhiteSpace(mindBlock))
+        {
+            sb.Append("[Mind]\n").Append(mindBlock.Trim()).Append('\n');
+        }
+
+        // PROP-18.12: one assembly path with desk — MemoryTape.BuildMemoryBlock + shared steering.
         if (recentMemories is { Count: > 0 })
         {
-            sb.Append("[Memory]\n");
-            var n = 0;
-            foreach (var m in recentMemories)
-            {
-                if (string.IsNullOrWhiteSpace(m))
-                    continue;
-                sb.Append("- ").Append(m.Trim()).Append('\n');
-                if (++n >= 6)
-                    break;
-            }
+            // Generous char budget; count hard-cap matches prior SMS loop (SmsMemoryRecallLimit).
+            const int smsMemoryCharBudget = 4000;
+            var (memoryBlock, _) = MemoryTape.BuildMemoryBlock(
+                MemoryTape.StripUntrusted(recentMemories),
+                budget: smsMemoryCharBudget,
+                utcNow: utcNow,
+                linePrefix: "- ",
+                maxLines: SmsMemoryRecallLimit);
+            if (!string.IsNullOrEmpty(memoryBlock))
+                sb.Append(MemorySteeringGuidance.AppendToPreamble(memoryBlock)).Append('\n');
         }
 
         return sb.ToString();
@@ -378,13 +559,29 @@ public sealed class SmsInboundService : ISmsInboundService
     internal static string BuildStubReply(string userText) =>
         "Got your text — I'm here. (stub; model offline)";
 
-    internal static string TruncateForSms(string s, int max)
+    private sealed class SmsTrackingRegistry : IToolRegistry
     {
-        if (string.IsNullOrEmpty(s) || s.Length <= max)
-            return s;
-        return s[..(max - 1)].TrimEnd() + "…";
-    }
+        private readonly IToolRegistry _inner;
+        private readonly List<(string Name, JsonElement? Arguments, string? Content)> _trace;
 
-    private static string Truncate(string s, int max) =>
-        s.Length <= max ? s : s[..(max - 1)].TrimEnd() + "…";
+        public SmsTrackingRegistry(
+            IToolRegistry inner,
+            List<(string Name, JsonElement? Arguments, string? Content)> trace)
+        {
+            _inner = inner;
+            _trace = trace;
+        }
+
+        public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
+
+        public async Task<ToolResult> ExecuteAsync(string name, JsonElement args, CancellationToken ct = default)
+        {
+            var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
+            JsonElement? cloned = null;
+            if (args.ValueKind is not JsonValueKind.Undefined and not JsonValueKind.Null)
+                cloned = args.Clone();
+            _trace.Add((name ?? string.Empty, cloned, result.Content));
+            return result;
+        }
+    }
 }

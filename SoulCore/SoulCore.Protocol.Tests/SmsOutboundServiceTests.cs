@@ -198,6 +198,13 @@ public class SmsOutboundServiceTests
 
         public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(
+            float[] queryVector, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
+
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
     }
 
     private sealed class InboundFakeMedia : ICompanionMediaService

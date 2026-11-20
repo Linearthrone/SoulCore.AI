@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="House.ChatDesktop.Controls.CallSpeakingSphere"
+             Width="180" Height="180">
+  <Panel>
+    <Ellipse x:Name="GlowRing" Width="180" Height="180" Opacity="0.25"
+             Fill="{DynamicResource AccentBrush}">
+      <Ellipse.RenderTransform>
+        <ScaleTransform ScaleX="1" ScaleY="1"/>
+      </Ellipse.RenderTransform>
+    </Ellipse>
+    <Ellipse x:Name="CoreSphere" Width="120" Height="120"
+             HorizontalAlignment="Center" VerticalAlignment="Center"
+             Fill="{DynamicResource AccentBrush}" Opacity="0.85">
+      <Ellipse.RenderTransform>
+        <ScaleTransform ScaleX="1" ScaleY="1"/>
+      </Ellipse.RenderTransform>
+    </Ellipse>
+  </Panel>
+</UserControl>

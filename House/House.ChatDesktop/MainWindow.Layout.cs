@@ -1,7 +1,6 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -14,52 +13,34 @@ public partial class MainWindow
     private DispatcherTimer? _layoutSaveTimer;
     private bool _layoutReady;
     private bool _applyingLayout;
-    private bool _eastSideResizeDragging;
-    private double _eastSideResizeStartX;
-    private double _eastSideResizeStartSide;
-    private double _eastSideResizeStartWindow;
+    private Size _lastLockedSize;
 
     private void InitLayoutChrome()
     {
         ApplyStoredWindowBounds();
-        ApplyStoredPaneSizes();
         UpdateMaximizeCaption();
         SyncResizeGripState();
-        WirePaneSplitterPersistence();
 
         Opened += (_, _) =>
         {
             _layoutReady = true;
-            // Re-apply after first measure so ActualWidth/Height mins stick.
-            ApplyStoredPaneSizes();
             // Frameless transparent window off a disconnected monitor = "starts then nothing".
             EnsureWindowOnScreen();
+            FitToWorkingArea();
+            _lastLockedSize = new Size(Width, Height);
             PresenceStartupLog.Write(
                 $"MainWindow opened at {Position.X},{Position.Y} size {Width}x{Height} state={WindowState}");
         };
         Closing += (_, _) => PersistLayoutNow();
         PropertyChanged += MainWindow_LayoutPropertyChanged;
         // Window.Position is a CLR property (not AvaloniaProperty) - use PositionChanged.
-        PositionChanged += (_, _) => ScheduleLayoutSave();
-    }
-
-    private void WirePaneSplitterPersistence()
-    {
-        // GridSplitter inherits Thumb drag events; window size does not change when panes move.
-        if (PresenceColumnSplitter is not null)
+        PositionChanged += (_, _) =>
         {
-            PresenceColumnSplitter.AddHandler(
-                Thumb.DragDeltaEvent,
-                (_, _) => _victoriaBrowserEmbedHost?.SyncSizeToSlot());
-            PresenceColumnSplitter.AddHandler(
-                Thumb.DragCompletedEvent,
-                (_, _) =>
-                {
-                    _victoriaBrowserEmbedHost?.SyncSizeToSlot();
-                    ScheduleLayoutSave();
-                });
-        }
-        // PresenceRowSplitter removed — What she saw is a tab beside Her screen.
+            ScheduleLayoutSave();
+            RepositionVmDrawer();
+            RepositionRadial();
+        };
+        Resized += MainWindow_Resized;
     }
 
     private void MainWindow_LayoutPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -70,16 +51,58 @@ public partial class MainWindow
         {
             UpdateMaximizeCaption();
             SyncResizeGripState();
-            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
+            RepositionVmDrawer();
             ScheduleLayoutSave();
             return;
         }
 
         if (e.Property == WidthProperty || e.Property == HeightProperty)
-        {
-            _victoriaBrowserEmbedHost?.SyncSizeToSlot();
             ScheduleLayoutSave();
+    }
+
+    /// <summary>
+    /// PROP-22.4 aspect lock: the shell is a phone slab. Width drives height (least fighty); when
+    /// only the height moved (top/bottom edge drag) the width follows it instead.
+    /// </summary>
+    private void MainWindow_Resized(object? sender, WindowResizedEventArgs e)
+    {
+        if (!_layoutReady || _applyingLayout || WindowState != WindowState.Normal)
+            return;
+
+        var w = e.ClientSize.Width;
+        var h = e.ClientSize.Height;
+        if (w <= 0 || h <= 0)
+            return;
+
+        var expectedHeight = LocalUiSettings.HeightForWidth(w);
+        if (Math.Abs(h - expectedHeight) <= 1.5)
+        {
+            _lastLockedSize = e.ClientSize;
+            RepositionVmDrawer();
+            return;
         }
+
+        var widthMoved = _lastLockedSize.Width <= 0 || Math.Abs(w - _lastLockedSize.Width) > 0.5;
+        _applyingLayout = true;
+        try
+        {
+            if (widthMoved)
+            {
+                Height = Math.Max(MinHeight, expectedHeight);
+            }
+            else
+            {
+                Width = Math.Max(MinWidth, LocalUiSettings.WidthForHeight(h));
+            }
+        }
+        finally
+        {
+            _applyingLayout = false;
+        }
+
+        _lastLockedSize = new Size(Width, Height);
+        RepositionVmDrawer();
+        ScheduleLayoutSave();
     }
 
     private void ApplyStoredWindowBounds()
@@ -87,10 +110,14 @@ public partial class MainWindow
         _applyingLayout = true;
         try
         {
-            Width = _uiSettings.ResolvedWindowWidth();
-            Height = _uiSettings.ResolvedWindowHeight();
+            var width = Math.Max(LocalUiSettings.MinWindowWidth, _uiSettings.ResolvedWindowWidth());
+            Width = width;
+            Height = LocalUiSettings.HeightForWidth(width);
             MinWidth = LocalUiSettings.MinWindowWidth;
-            MinHeight = LocalUiSettings.MinWindowHeight;
+            // 360 wide at 19.5:9 is 780 tall — that, not the 640 floor, is the effective minimum.
+            MinHeight = Math.Max(
+                LocalUiSettings.MinWindowHeight,
+                LocalUiSettings.HeightForWidth(LocalUiSettings.MinWindowWidth));
 
             // Screens may be empty before the window handle exists; Opened re-checks.
             var areas = CollectScreenWorkingAreas();
@@ -116,6 +143,39 @@ public partial class MainWindow
 
             if (_uiSettings.WindowMaximized)
                 WindowState = WindowState.Maximized;
+        }
+        finally
+        {
+            _applyingLayout = false;
+        }
+    }
+
+    /// <summary>Shrink the slab (keeping 19.5:9) when the default 996 tall does not fit this screen.</summary>
+    private void FitToWorkingArea()
+    {
+        if (WindowState != WindowState.Normal)
+            return;
+
+        var areas = CollectScreenWorkingAreas();
+        if (areas.Count == 0)
+            return;
+
+        var scaling = DesktopScaling <= 0 ? 1.0 : DesktopScaling;
+        var area = Screens.ScreenFromWindow(this)?.WorkingArea ?? areas[0];
+        var maxHeight = area.Height / scaling - 16;
+        if (Height <= maxHeight)
+            return;
+
+        var height = Math.Max(MinHeight, maxHeight);
+        var width = Math.Max(MinWidth, LocalUiSettings.WidthForHeight(height));
+        _applyingLayout = true;
+        try
+        {
+            Width = width;
+            Height = Math.Max(height, LocalUiSettings.HeightForWidth(width));
+            var pos = Position;
+            var y = Math.Max(area.Y, Math.Min(pos.Y, area.Bottom - (int)Math.Round(Height * scaling)));
+            Position = new PixelPoint(pos.X, y);
         }
         finally
         {
@@ -178,129 +238,6 @@ public partial class MainWindow
         }
     }
 
-    private void ApplyStoredPaneSizes()
-    {
-        if (PresenceMainSplit?.ColumnDefinitions is { Count: >= 3 } cols)
-        {
-            // Pixel Her screen (stable HWND embed). Col 3 is Avalonia-only east grip.
-            var side = _uiSettings.ResolvedSideColumnWidth();
-            cols[0].Width = new GridLength(1, GridUnitType.Star);
-            cols[0].MinWidth = LocalUiSettings.MinChatWidth;
-            cols[2].Width = new GridLength(side);
-            cols[2].MinWidth = LocalUiSettings.MinSideColumnWidth;
-            if (cols.Count >= 4)
-                cols[3].Width = new GridLength(PresencePaneLayout.EastGripWidth);
-            MinWidth = PresencePaneLayout.MinWindowWidthForSide(side);
-        }
-
-        // Sight row height no longer applies — Her screen / What she saw share a tabbed column.
-    }
-
-    private void CapturePaneSizesIntoSettings()
-    {
-        if (PresenceMainSplit?.ColumnDefinitions is { Count: >= 3 } cols)
-        {
-            var side = cols[2].ActualWidth;
-            if (side >= LocalUiSettings.MinSideColumnWidth)
-                _uiSettings.SideColumnWidth = Math.Min(side, LocalUiSettings.MaxSideColumnWidth);
-        }
-    }
-
-    /// <summary>
-    /// Right grip beside the VM: grow Her screen + window together. Needed because the
-    /// embedded VirtualBox HWND sits on top of the window's ResizeEast strip.
-    /// </summary>
-    private void HerScreenEastResize_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (WindowState == WindowState.Maximized)
-            return;
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            return;
-        if (PresenceMainSplit?.ColumnDefinitions is not { Count: >= 3 } cols)
-            return;
-
-        _eastSideResizeDragging = true;
-        _eastSideResizeStartX = e.GetPosition(this).X;
-        _eastSideResizeStartSide = cols[2].ActualWidth > 1
-            ? cols[2].ActualWidth
-            : _uiSettings.ResolvedSideColumnWidth();
-        _eastSideResizeStartWindow = Width;
-        if (sender is Control grip)
-            e.Pointer.Capture(grip);
-        e.Handled = true;
-    }
-
-    private void HerScreenEastResize_PointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (!_eastSideResizeDragging)
-            return;
-
-        var delta = e.GetPosition(this).X - _eastSideResizeStartX;
-        ApplyHerScreenEastExpand(_eastSideResizeStartSide + delta, _eastSideResizeStartWindow + delta);
-        e.Handled = true;
-    }
-
-    private void HerScreenEastResize_PointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_eastSideResizeDragging)
-            return;
-        EndHerScreenEastResize(e.Pointer);
-        e.Handled = true;
-    }
-
-    private void HerScreenEastResize_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
-    {
-        if (!_eastSideResizeDragging)
-            return;
-        EndHerScreenEastResize(pointer: null);
-    }
-
-    private void EndHerScreenEastResize(IPointer? pointer)
-    {
-        _eastSideResizeDragging = false;
-        try
-        {
-            pointer?.Capture(null);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        _victoriaBrowserEmbedHost?.SyncSizeToSlot();
-        ScheduleLayoutSave();
-    }
-
-    private void ApplyHerScreenEastExpand(double desiredSide, double desiredWindow)
-    {
-        if (PresenceMainSplit?.ColumnDefinitions is not { Count: >= 3 } cols)
-            return;
-
-        var side = Math.Clamp(
-            desiredSide,
-            LocalUiSettings.MinSideColumnWidth,
-            LocalUiSettings.MaxSideColumnWidth);
-        var minWindow = PresencePaneLayout.MinWindowWidthForSide(side);
-        var window = Math.Max(desiredWindow, minWindow);
-
-        _applyingLayout = true;
-        try
-        {
-            cols[2].Width = new GridLength(side);
-            if (WindowState == WindowState.Normal)
-            {
-                MinWidth = minWindow;
-                Width = window;
-            }
-        }
-        finally
-        {
-            _applyingLayout = false;
-        }
-
-        _victoriaBrowserEmbedHost?.SyncSizeToSlot();
-    }
-
     private void CaptureWindowBoundsIntoSettings()
     {
         _uiSettings.WindowMaximized = WindowState == WindowState.Maximized;
@@ -338,7 +275,6 @@ public partial class MainWindow
         try
         {
             CaptureWindowBoundsIntoSettings();
-            CapturePaneSizesIntoSettings();
             _uiSettings.Save();
         }
         catch
@@ -361,8 +297,7 @@ public partial class MainWindow
         foreach (var grip in new[]
                  {
                      ResizeWest, ResizeEast, ResizeNorth, ResizeSouth,
-                     ResizeNorthWest, ResizeNorthEast, ResizeSouthWest, ResizeSouthEast,
-                     HerScreenEastResizeGrip
+                     ResizeNorthWest, ResizeNorthEast, ResizeSouthWest, ResizeSouthEast
                  })
         {
             if (grip is null) continue;

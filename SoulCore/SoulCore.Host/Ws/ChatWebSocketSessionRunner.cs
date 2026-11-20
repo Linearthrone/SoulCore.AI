@@ -16,6 +16,7 @@ public sealed class ChatWebSocketSessionRunner
     private readonly ChatSendHandler _chatSend;
     private readonly EmotionCorrectHandler _emotionCorrect;
     private readonly LoopTickHandler _loopTick;
+    private readonly VoiceCallHandler _voiceCall;
     private readonly ILogger<ChatWebSocketSessionRunner> _logger;
 
     public ChatWebSocketSessionRunner(
@@ -24,6 +25,7 @@ public sealed class ChatWebSocketSessionRunner
         ChatSendHandler chatSend,
         EmotionCorrectHandler emotionCorrect,
         LoopTickHandler loopTick,
+        VoiceCallHandler voiceCall,
         ILogger<ChatWebSocketSessionRunner> logger)
     {
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
@@ -31,6 +33,7 @@ public sealed class ChatWebSocketSessionRunner
         _chatSend = chatSend ?? throw new ArgumentNullException(nameof(chatSend));
         _emotionCorrect = emotionCorrect ?? throw new ArgumentNullException(nameof(emotionCorrect));
         _loopTick = loopTick ?? throw new ArgumentNullException(nameof(loopTick));
+        _voiceCall = voiceCall ?? throw new ArgumentNullException(nameof(voiceCall));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,7 +54,7 @@ public sealed class ChatWebSocketSessionRunner
             await _emotionSnapshot.SendAsync(socket, correlationId: null, cancellationToken)
                 .ConfigureAwait(false);
 
-            var buffer = new byte[16 * 1024];
+            var buffer = new byte[64 * 1024];
             while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
                 using var ms = new MemoryStream();
@@ -122,6 +125,21 @@ public sealed class ChatWebSocketSessionRunner
 
             case SoulCoreFrameTypes.LoopTick:
                 await _loopTick.HandleAsync(socket, frame, cancellationToken).ConfigureAwait(false);
+                break;
+
+            case SoulCoreFrameTypes.VoiceCallStart:
+                await _voiceCall.HandleStartAsync(socket, frame, connectionSessionId, cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+
+            case SoulCoreFrameTypes.VoiceCallAudio:
+                await _voiceCall.HandleAudioAsync(socket, frame, connectionSessionId, cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+
+            case SoulCoreFrameTypes.VoiceCallEnd:
+                await _voiceCall.HandleEndAsync(socket, frame, connectionSessionId, cancellationToken)
+                    .ConfigureAwait(false);
                 break;
 
             default:

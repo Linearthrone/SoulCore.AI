@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
@@ -16,6 +15,8 @@ public static class VoiceApiEndpoints
         {
             if (!options.Value.Enabled)
                 return Results.Json(new { ok = false, error = "voice disabled" }, statusCode: 503);
+            if (!options.Value.HasApiKey)
+                return Results.Json(new { ok = false, error = "SONIOX_API_KEY not configured" }, statusCode: 503);
 
             if (!request.HasFormContentType)
                 return Results.BadRequest(new { ok = false, error = "expected multipart form with 'audio' or 'file'" });
@@ -33,7 +34,7 @@ public static class VoiceApiEndpoints
             {
                 var text = await stt.TranscribeAsync(bytes, file.FileName, request.HttpContext.RequestAborted)
                     .ConfigureAwait(false);
-                return Results.Json(new { ok = true, text });
+                return Results.Json(new { ok = true, text, provider = "soniox" });
             }
             catch (Exception ex)
             {
@@ -49,35 +50,29 @@ public static class VoiceApiEndpoints
             return Results.File(wav, "audio/wav", "last.wav");
         });
 
-        app.MapGet("/api/voice/health", async (IOptions<VoiceOptions> options, IHttpClientFactory httpFactory) =>
+        app.MapGet("/api/voice/health", (IOptions<VoiceOptions> options) =>
         {
             var opts = options.Value;
-            var sttOk = false;
-            var ttsOk = false;
-            if (opts.Enabled)
-            {
-                var http = httpFactory.CreateClient();
-                http.Timeout = TimeSpan.FromSeconds(3);
-                try
-                {
-                    using var r = await http.GetAsync($"{opts.SttUrl.TrimEnd('/')}/health").ConfigureAwait(false);
-                    sttOk = r.IsSuccessStatusCode;
-                }
-                catch { /* down */ }
-
-                try
-                {
-                    using var r = await http.GetAsync($"{opts.TtsUrl.TrimEnd('/')}/").ConfigureAwait(false);
-                    ttsOk = r.IsSuccessStatusCode;
-                }
-                catch { /* down */ }
-            }
-
+            var keyOk = opts.HasApiKey;
             return Results.Json(new
             {
                 enabled = opts.Enabled,
-                stt = new { url = opts.SttUrl, ok = sttOk },
-                tts = new { url = opts.TtsUrl, ok = ttsOk },
+                provider = "soniox",
+                apiKeyConfigured = keyOk,
+                stt = new
+                {
+                    url = opts.SttWsUrl,
+                    asyncModel = opts.SttAsyncModel,
+                    realtimeModel = opts.SttRealtimeModel,
+                    ok = opts.Enabled && keyOk
+                },
+                tts = new
+                {
+                    url = opts.TtsWsUrl,
+                    model = opts.TtsModel,
+                    voice = opts.DefaultVoice,
+                    ok = opts.Enabled && keyOk
+                },
                 playOnHostSpeakers = opts.PlayOnHostSpeakers,
                 playInUnreal = opts.PlayInUnreal
             });

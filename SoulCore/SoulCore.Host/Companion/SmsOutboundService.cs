@@ -55,7 +55,8 @@ public sealed class SmsOutboundService : ISmsOutboundService
         var body = (text ?? string.Empty).Trim();
         if (body.Length == 0)
             return new SmsOutboundEnqueueResult(false, null, false, "text_required");
-        body = SmsInboundService.TruncateForSms(body, 480);
+        // PROP-20.7: 480-char carrier pipe remains the hard cut (answer + public URL shaped upstream).
+        body = SmsOutboundComposer.TruncateForCarrier(body, SmsOutboundComposer.MaxSmsChars);
 
         if (!TryTakeSmsSlot(out var rateErr))
         {
@@ -99,7 +100,7 @@ public sealed class SmsOutboundService : ISmsOutboundService
         var ct = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType.Trim();
         var cap = string.IsNullOrWhiteSpace(caption)
             ? null
-            : SmsInboundService.TruncateForSms(caption.Trim(), 200);
+            : SmsOutboundComposer.TruncateForCarrier(caption.Trim(), 200);
 
         if (!TryTakeMmsSlot(out var rateErr))
         {

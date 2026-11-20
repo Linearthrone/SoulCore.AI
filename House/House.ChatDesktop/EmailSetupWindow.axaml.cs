@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using House.ChatDesktop.Controls;
 using House.ChatDesktop.Models;
 using House.ChatDesktop.Services;
 
@@ -89,6 +90,20 @@ public partial class EmailSetupWindow : Window
         var username = (EmailUsernameBox?.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(username))
             username = address;
+
+        // PROP-22.3 SEC: naming the exact account before anything is written to the Host.
+        var verb = existing is null ? "Add" : "Update";
+        var confirmed = await ConfirmDialogWindow.ShowAsync(
+            this,
+            $"{verb} mailbox",
+            $"{verb} mailbox \"{id}\" for {address}?\n\nHer mailbox access follows the gates in Settings → Access tools. "
+            + "The password is sent to the local Host only and is never shown again.",
+            confirmText: $"{verb} {address}");
+        if (!confirmed)
+        {
+            SetEmailStatus("Cancelled — nothing was saved", bad: false);
+            return;
+        }
 
         var write = new SoulCoreEmailSettingsClient.EmailAccountWriteDto
         {

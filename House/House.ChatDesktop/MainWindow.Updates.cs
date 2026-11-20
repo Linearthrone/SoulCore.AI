@@ -105,7 +105,8 @@ public partial class MainWindow
         }
 
         _updateBusy = true;
-        SetUpdateUiBusy(true, fromButton ? "Checking for updates…" : null);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+            SetUpdateUiBusy(true, fromButton ? "Checking for updates…" : null));
         try
         {
             var git = await _stack.GetGitStatusAsync().ConfigureAwait(false);
@@ -126,7 +127,9 @@ public partial class MainWindow
         finally
         {
             _updateBusy = false;
-            SetUpdateUiBusy(false, null);
+            // PROP-22: SetUpdateUiBusy touches controls — must stay on the UI thread
+            // after ConfigureAwait(false) work above.
+            await Dispatcher.UIThread.InvokeAsync(() => SetUpdateUiBusy(false, null));
         }
     }
 
@@ -413,6 +416,13 @@ public partial class MainWindow
 
     private void SetUpdateUiBusy(bool busy, string? status)
     {
+        // PROP-22: callers often resume after ConfigureAwait(false); marshal control touches.
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => SetUpdateUiBusy(busy, status));
+            return;
+        }
+
         var enable = !busy;
         if (UpdateCheckButton is not null)
             UpdateCheckButton.IsEnabled = enable;

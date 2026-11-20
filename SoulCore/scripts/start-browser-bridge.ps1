@@ -50,12 +50,13 @@ function Prefer-Pythonw {
 function Resolve-Python {
     # Prefer a normal Python install — never the old Hermes agent venv.
     # Returns console python.exe (for pip / -c). Long-running bridge uses Prefer-Pythonw.
+    $voicePython = Join-Path $PSScriptRoot "..\..\House\House.Voice\Python311\python.exe"
     $candidates = @(
+        $voicePython,
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
         "$env:LOCALAPPDATA\Python\pythoncore-3.12-64\python.exe",
         "$env:LOCALAPPDATA\Python\pythoncore-3.11-64\python.exe",
-        "V:\Python311\python.exe",
         "C:\Python312\python.exe",
         "C:\Python311\python.exe"
     )

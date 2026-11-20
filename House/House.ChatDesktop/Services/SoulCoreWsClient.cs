@@ -176,6 +176,24 @@ public sealed class SoulCoreWsClient : IAsyncDisposable
         return await SendFrameAsync(frame, "emotion.correct", cancellationToken).ConfigureAwait(false);
     }
 
+    public Task<bool> SendVoiceCallStartAsync(CancellationToken cancellationToken = default) =>
+        SendFrameAsync(
+            SoulCoreFrame.Create(SoulCoreFrameTypes.VoiceCallStart, new { }),
+            "voice.call.start",
+            cancellationToken);
+
+    public Task<bool> SendVoiceCallAudioAsync(string audioBase64, CancellationToken cancellationToken = default) =>
+        SendFrameAsync(
+            SoulCoreFrame.Create(SoulCoreFrameTypes.VoiceCallAudio, new { audio = audioBase64 }),
+            "voice.call.audio",
+            cancellationToken);
+
+    public Task<bool> SendVoiceCallEndAsync(CancellationToken cancellationToken = default) =>
+        SendFrameAsync(
+            SoulCoreFrame.Create(SoulCoreFrameTypes.VoiceCallEnd, new { }),
+            "voice.call.end",
+            cancellationToken);
+
     private async Task<bool> SendFrameAsync(
         SoulCoreFrame frame,
         string typeLabel,

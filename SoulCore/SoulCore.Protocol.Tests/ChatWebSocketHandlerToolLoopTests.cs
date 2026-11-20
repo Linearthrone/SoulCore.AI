@@ -125,15 +125,30 @@ public class ChatWebSocketHandlerToolLoopTests
             soulLoop,
             loggerFactory.CreateLogger<LoopTickHandler>());
 
+        var voiceOpts = Options.Create(new SoulCore.Config.VoiceOptions { Enabled = false });
+        var voiceCall = new VoiceCallHandler(
+            new NullRealtimeSttFactory(),
+            voiceOpts,
+            loggerFactory.CreateLogger<VoiceCallHandler>());
+
         var runner = new ChatWebSocketSessionRunner(
             hub,
             emotionSnapshot,
             chatSend,
             emotionCorrect,
             loopTick,
+            voiceCall,
             loggerFactory.CreateLogger<ChatWebSocketSessionRunner>());
 
         return new ChatWebSocketHandler(runner);
+    }
+
+    private sealed class NullRealtimeSttFactory : SoulCore.Host.Voice.IRealtimeSttSessionFactory
+    {
+        public Task<SoulCore.Host.Voice.IRealtimeSttSession> StartAsync(
+            Func<string, bool, CancellationToken, Task> onTranscript,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("STT not used in tool-loop unit tests");
     }
 
     private static string ChatSendFrame(string text, string? sessionId = null) =>
@@ -830,6 +845,10 @@ public class ChatWebSocketHandlerToolLoopTests
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
         public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(float[] queryVector, int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
     }
 
     private sealed class StubEmotionState : IEmotionState
@@ -910,6 +929,10 @@ public class ChatWebSocketHandlerToolLoopTests
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
         public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(float[] queryVector, int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(int limit, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
     }
 
     private sealed class StubCharter : ICharter
@@ -918,6 +941,9 @@ public class ChatWebSocketHandlerToolLoopTests
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
         public Task<IReadOnlyList<string>> GetAnchorsByKindAsync(string kind, bool? lockedOnly = null, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        public Task<IReadOnlyList<CharterAnchorInfo>> ListAnchorDetailsAsync(
+            string? kind = null, string? book = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CharterAnchorInfo>>(Array.Empty<CharterAnchorInfo>());
         public Task<int> SeedAsync(IReadOnlyList<CharterAnchorSeed> seeds, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
     }

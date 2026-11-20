@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Start local SoulCore.Host (Victoria), wait until healthy, then launch House.ChatDesktop.
@@ -125,7 +125,8 @@ function Start-LocalSoulCore {
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", $StartHost,
-        "-Port", "$LocalPort"
+        "-Port", "$LocalPort",
+        "-Configuration", $Configuration
     )
     if ($SkipPreflight) { $hostArgList += "-SkipPreflight" }
     if ($ForceRebuild) { $hostArgList += "-ForceRebuild" }
@@ -404,45 +405,21 @@ if ($SkipTailscaleServe) {
     }
 }
 
-Write-Host "=== ALLSTART: House.Voice (STT + Chatterbox TTS) ==="
-$StartStt = Join-Path $RepoRoot "House\House.Voice\start-stt.ps1"
-$StartTts = Join-Path $RepoRoot "House\House.Voice\start-tts.ps1"
+Write-Host "=== ALLSTART: Voice (Soniox cloud — PROP-21) ==="
 if ($SkipVoice) {
     Write-Host "Voice skipped (-SkipVoice)."
 } else {
-    if (Test-Path -LiteralPath $StartStt) {
-        try {
-            $sttArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$StartStt)
-            $sttResult = Invoke-ScriptWithTimeout `
-                -Label "start-stt" `
-                -ArgumentList $sttArgs `
-                -WorkingDirectory $RepoRoot `
-                -TimeoutSec $VoiceTimeoutSec
-            if ($sttResult.TimedOut) {
-                Write-Warning "STT start timed out after ${VoiceTimeoutSec}s - continuing"
-            } elseif ($sttResult.ExitCode -ne 0) {
-                Write-Warning "STT start exited $($sttResult.ExitCode) - continuing"
-            }
-        } catch { Write-Warning "STT start: $_" }
-    } else {
-        Write-Warning "Missing $StartStt"
+    # Local House.Voice Whisper/Kokoro no longer started. Host uses SONIOX_API_KEY from .env.
+    $envFile = Join-Path $RepoRoot ".env"
+    $hasSoniox = $false
+    if (Test-Path -LiteralPath $envFile) {
+        $hasSoniox = Select-String -Path $envFile -Pattern '^\s*SONIOX_API_KEY\s*=\s*\S+' -Quiet
     }
-    if (Test-Path -LiteralPath $StartTts) {
-        try {
-            $ttsArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$StartTts)
-            $ttsResult = Invoke-ScriptWithTimeout `
-                -Label "start-tts" `
-                -ArgumentList $ttsArgs `
-                -WorkingDirectory $RepoRoot `
-                -TimeoutSec $VoiceTimeoutSec
-            if ($ttsResult.TimedOut) {
-                Write-Warning "TTS start timed out after ${VoiceTimeoutSec}s - continuing"
-            } elseif ($ttsResult.ExitCode -ne 0) {
-                Write-Warning "TTS start exited $($ttsResult.ExitCode) - continuing"
-            }
-        } catch { Write-Warning "TTS start: $_" }
+    if (-not $hasSoniox -and $env:SONIOX_API_KEY) { $hasSoniox = $true }
+    if ($hasSoniox) {
+        Write-Host "Soniox API key present (Host Voice:ApiKey). No local STT/TTS satellites."
     } else {
-        Write-Warning "Missing $StartTts"
+        Write-Warning "SONIOX_API_KEY missing in .env — Call / PTT / TTS will be unavailable until set."
     }
 }
 

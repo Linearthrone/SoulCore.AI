@@ -117,4 +117,17 @@ public static class SoulCoreFrameTypes
     public const string Error = "error";
     public const string Ping = "ping";
     public const string Pong = "pong";
+
+    /// <summary>Client → Host: start Call session (realtime STT).</summary>
+    public const string VoiceCallStart = "voice.call.start";
+    /// <summary>Client → Host: mic audio chunk (base64).</summary>
+    public const string VoiceCallAudio = "voice.call.audio";
+    /// <summary>Client → Host: end Call session.</summary>
+    public const string VoiceCallEnd = "voice.call.end";
+    /// <summary>Host → client: partial/final user transcript during Call.</summary>
+    public const string VoiceTranscript = "voice.transcript";
+    /// <summary>Host → client: she is speaking (sphere pulse).</summary>
+    public const string VoiceSpeaking = "voice.speaking";
+    /// <summary>Host → client: TTS audio chunk (base64 PCM).</summary>
+    public const string VoiceAudio = "voice.audio";
 }

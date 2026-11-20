@@ -7,6 +7,7 @@ using SoulCore.Config;
 using SoulCore.Core;
 using SoulCore.Core.Abstractions;
 using SoulCore.Core.Safety;
+using SoulCore.Host.Inference;
 using SoulCore.Host.Loop;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
@@ -48,6 +49,8 @@ public sealed class ChatSendHandler
     private readonly WorkTurnGate? _turnGate;
     private readonly IInferenceLease? _lease;
     private readonly ILeisureSession? _leisure;
+    private readonly VoiceCallHandler? _voiceCall;
+    private readonly InferenceRuntimeSelection? _runtimeSelection;
     private readonly ILogger<ChatSendHandler> _logger;
 
     public ChatSendHandler(
@@ -71,7 +74,9 @@ public sealed class ChatSendHandler
         IVictoriaTaskStore? tasks = null,
         IOperatorConsentGate? consent = null,
         IInferenceLease? lease = null,
-        ILeisureSession? leisure = null)
+        ILeisureSession? leisure = null,
+        VoiceCallHandler? voiceCall = null,
+        InferenceRuntimeSelection? runtimeSelection = null)
     {
         _inference = inference ?? throw new ArgumentNullException(nameof(inference));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
@@ -94,6 +99,8 @@ public sealed class ChatSendHandler
         _consent = consent;
         _lease = lease;
         _leisure = leisure;
+        _voiceCall = voiceCall;
+        _runtimeSelection = runtimeSelection;
     }
 
     public async Task HandleAsync(
@@ -326,7 +333,27 @@ public sealed class ChatSendHandler
         if (!usedStub)
             await WriteEpisodicAfterChatAsync(modelUserText, reply, toolTrace, cancellationToken).ConfigureAwait(false);
 
-        await _postEffects.ApplyAsync(chatText, reply, dispatchedToolNames, cancellationToken).ConfigureAwait(false);
+        var inCall = _voiceCall?.IsInCall(connectionSessionId) == true;
+        await _postEffects.ApplyAsync(
+                chatText,
+                reply,
+                dispatchedToolNames,
+                cancellationToken,
+                audibleSpeak: !inCall)
+            .ConfigureAwait(false);
+
+        if (inCall && _voiceCall is not null)
+        {
+            try
+            {
+                await _voiceCall.StreamReplyAsync(socket, frame.Id, reply, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Call TTS stream failed");
+            }
+        }
         }
         finally
         {
@@ -608,7 +635,7 @@ public sealed class ChatSendHandler
         string? replyText = null;
         string? provider = null;
 
-        ToolLoopOptions? ollamaLoopOptions = ResolveForcedTool(text);
+        ToolLoopOptions? ollamaLoopOptions = ApplyRuntimeModel(ResolveForcedTool(text));
 
         if (replyText is null && _inferenceOptions.Enabled)
         {
@@ -657,6 +684,23 @@ public sealed class ChatSendHandler
         AppendToolLoopTurn(historySessionId, text, toolTrace, replyText);
 
         return new ChatCompletionResult(replyText, provider);
+    }
+
+    /// <summary>
+    /// PROP-22.2: prefer the operator's live model selection (Presence Settings) over
+    /// <see cref="InferenceOptions.Model"/> for normal chat. Leisure model is unaffected
+    /// (it uses its own <c>ModelOverride</c> path in LeisureRunner).
+    /// </summary>
+    private ToolLoopOptions? ApplyRuntimeModel(ToolLoopOptions? loop)
+    {
+        var overrideModel = _runtimeSelection?.ModelOverride;
+        if (string.IsNullOrWhiteSpace(overrideModel))
+            return loop;
+        return new ToolLoopOptions
+        {
+            ForceToolName = loop?.ForceToolName,
+            ModelOverride = loop?.ModelOverride is { Length: > 0 } existing ? existing : overrideModel
+        };
     }
 
     private ToolLoopOptions? ResolveForcedTool(string text)
@@ -884,7 +928,9 @@ public sealed class ChatSendHandler
         bool continuing,
         CancellationToken cancellationToken)
     {
-        foreach (var partial in ChunkReply(reply))
+        // PROP-21: chat shows tag-stripped text; TTS keeps Soniox audio tags via post-effects / Call stream.
+        var display = SoulCore.Host.Voice.SonioxSpeechText.StripAudioTagsForDisplay(reply);
+        foreach (var partial in ChunkReply(display))
         {
             await WsFrameSender.SendFrameAsync(
                 socket,
@@ -899,7 +945,7 @@ public sealed class ChatSendHandler
             socket,
             SoulCoreFrame.Create(
                 SoulCoreFrameTypes.ChatDone,
-                new { text = reply, stub = usedStub, provider, continuing },
+                new { text = display, stub = usedStub, provider, continuing, speakText = reply },
                 id: correlationId),
             cancellationToken).ConfigureAwait(false);
     }

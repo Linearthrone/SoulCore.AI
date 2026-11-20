@@ -34,6 +34,15 @@ internal static class MemoryServiceCollectionExtensions
         services.AddSingleton<IVictoriaSopStore>(sp => sp.GetRequiredService<SqliteVictoriaSopRepository>());
         services.AddSingleton<SqliteVictoriaResearchRepository>();
         services.AddSingleton<IVictoriaResearchStore>(sp => sp.GetRequiredService<SqliteVictoriaResearchRepository>());
+        // PROP-18.6: activities log (Q1 residue); writers land in BED-18.7.
+        services.AddSingleton<SqliteVictoriaActivitiesLogRepository>();
+        services.AddSingleton<IVictoriaActivitiesLogStore>(sp =>
+            sp.GetRequiredService<SqliteVictoriaActivitiesLogRepository>());
+        // PROP-22.1: operator work items + week agenda (migration 016).
+        services.AddSingleton<SqliteOperatorWorkItemRepository>();
+        services.AddSingleton<IOperatorWorkItemStore>(sp => sp.GetRequiredService<SqliteOperatorWorkItemRepository>());
+        services.AddSingleton<SqliteOperatorAgendaRepository>();
+        services.AddSingleton<IOperatorAgendaStore>(sp => sp.GetRequiredService<SqliteOperatorAgendaRepository>());
         services.AddSingleton<SqliteMemoryStore>(sp => new SqliteMemoryStore(sp.GetRequiredService<SqliteMemorySession>()));
 
         // PROP-3 Wave 1: durable operator <-> Victoria transcript (migration 007), so a fresh
@@ -41,6 +50,10 @@ internal static class MemoryServiceCollectionExtensions
         // IChatSessionHistoryStore (bounded RAM context) — see IChatTranscriptStore.
         services.AddSingleton<SqliteChatTranscriptRepository>();
         services.AddSingleton<IChatTranscriptStore>(sp => sp.GetRequiredService<SqliteChatTranscriptRepository>());
+
+        // PROP-20.37: growth bond soak / weights / ledger / pending + bond counters.
+        services.AddSingleton<SqliteGrowthRepository>();
+        services.AddSingleton<IGrowthStore>(sp => sp.GetRequiredService<SqliteGrowthRepository>());
 
         // Safety / spend layer (BED-080 libs wired by BED-082; TASK-102 hard gate on CapExceeded).
         // PROP-5.3: Charter shares the memory DB file; both serialize via SqlitePathGate on ResolveDbPath().
@@ -63,6 +76,8 @@ internal static class MemoryServiceCollectionExtensions
         // ITool singletons — ToolRegistry collects them via IEnumerable<ITool>.
         services.AddSingleton<ITool, RecallMemoryTool>();
         services.AddSingleton<ITool, StoreMemoryTool>();
+        // PROP-18.2: optional dated timeline (journal + activity-log + episodic).
+        services.AddSingleton<ITool, RecallTimelineTool>();
 
         return services;
     }

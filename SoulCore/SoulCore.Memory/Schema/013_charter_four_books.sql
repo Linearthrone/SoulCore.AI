@@ -1,0 +1,7 @@
+-- Schema companion for migration 013 (charter four books).
+-- Documentation only — not embedded. Runtime DDL lives in
+-- Migrations/013_charter_four_books.sql (applied at SqliteMemorySession open).
+--
+-- book CHECK: constitution | personality | attributes | compass
+-- Floor map SoT: docs/agents/unexecuted_proposals/prop-20-floor-map-decision.md
+-- No weight column on charter_anchors (Constitution lines must stay loadable).

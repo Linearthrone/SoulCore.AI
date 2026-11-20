@@ -20,6 +20,8 @@
 [CmdletBinding()]
 param(
     [int]$Port = 7710,
+    [ValidateSet("Release", "Debug")]
+    [string]$Configuration = "Release",
     [switch]$ForceRebuild,
     # Stop any Host already on this port (pid file + listeners) then start fresh.
     # Needed after .env / branch changes - ALLSTART otherwise reuses a stale Host.
@@ -270,14 +272,21 @@ if (-not $ForceRebuild -and -not $RestartHost -and (Test-PortListening -LocalPor
     throw "Port ${BindAddress}:${Port} is in use by PID $($listeners -join ',') and it is not this checkout's Host. Not killing it."
 }
 
-$dll = Join-Path $SoulCoreRoot "SoulCore.Host\bin\Debug\net8.0\SoulCore.Host.dll"
+$dll = Join-Path $SoulCoreRoot "SoulCore.Host\bin\${Configuration}\net8.0\SoulCore.Host.dll"
 # -RestartHost alone used to reuse a stale DLL (no embedPane / wrong BrowserBackend).
 # Always rebuild when restarting or when the DLL is missing.
 $needBuild = $ForceRebuild -or $RestartHost -or -not (Test-Path -LiteralPath $dll)
 
 if ($needBuild) {
-    Write-Host "Building SoulCore..."
-    & dotnet build $Sln -c Debug --nologo
+    Write-Host "Building SoulCore ($Configuration)..."
+    # Presence may lock House.ChatDesktop\bin\<cfg>\*.dll during solution build.
+    Get-Process -Name "House.ChatDesktop" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            Write-Host "Stopping House.ChatDesktop PID $($_.Id) (unlock build outputs)"
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+    Start-Sleep -Milliseconds 400
+    & dotnet build $Sln -c $Configuration --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet build failed (exit $LASTEXITCODE)"
     }

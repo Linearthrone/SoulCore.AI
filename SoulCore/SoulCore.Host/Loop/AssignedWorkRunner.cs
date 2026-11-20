@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SoulCore.Adapters.Ws;
@@ -19,6 +20,7 @@ namespace SoulCore.Host.Loop;
 /// Reads the victoria_tasks row pointed by <see cref="IAssignedWorkStore.RunningId"/>.
 /// Never schedules parked/suspended. Parks after identical surface failures.
 /// A tool name in the transcript is not progress.
+/// PROP-18.8: parked probes consume B3 soft budget (advances + tool wall time).
 /// </summary>
 public sealed class AssignedWorkRunner
 {
@@ -35,10 +37,13 @@ public sealed class AssignedWorkRunner
     private readonly IEmotionState? _emotion;
     private readonly SpendMeter _spend;
     private readonly IBlockedAsideNotice _aside;
+    private readonly IIdleParkedWorkBudget _budget;
+    private readonly IActivityResidueWriter? _residue;
     private readonly ILogger<AssignedWorkRunner> _logger;
     private int _noToolStreak;
     private long? _streakFor;
     private bool _probePass;
+    private bool _budgetSession;
 
     public AssignedWorkRunner(
         IAssignedWorkStore store,
@@ -52,9 +57,11 @@ public sealed class AssignedWorkRunner
         SpendMeter spend,
         ILogger<AssignedWorkRunner> logger,
         IBlockedAsideNotice aside,
+        IIdleParkedWorkBudget budget,
         IPresenceActivityHub? activity = null,
         IChatTranscriptStore? transcript = null,
-        IEmotionState? emotion = null)
+        IEmotionState? emotion = null,
+        IActivityResidueWriter? residue = null)
     {
         _store = store;
         _tasks = tasks;
@@ -66,10 +73,12 @@ public sealed class AssignedWorkRunner
         _hub = hub;
         _spend = spend;
         _aside = aside;
+        _budget = budget;
         _logger = logger;
         _activity = activity;
         _transcript = transcript;
         _emotion = emotion;
+        _residue = residue;
     }
 
     public async Task<TimeSpan> RunOnePassAsync(CancellationToken cancellationToken)
@@ -81,7 +90,7 @@ public sealed class AssignedWorkRunner
         var task = await _tasks.GetAsync(runningId.Value, cancellationToken).ConfigureAwait(false);
         if (task is null)
         {
-            _store.Clear();
+            ClearRunning(runningId);
             return TimeSpan.FromSeconds(5);
         }
 
@@ -91,14 +100,14 @@ public sealed class AssignedWorkRunner
                 && await TryProbeParkedAsync(task, cancellationToken).ConfigureAwait(false) is { } probeDelay)
                 return probeDelay;
 
-            _store.Clear();
+            ClearRunning(task.Id);
             Note($"Parked — {task.ParkReason}".TrimEnd(' ', '—'));
             return TimeSpan.FromSeconds(30);
         }
 
         if (!string.Equals(task.Status, "in_progress", StringComparison.OrdinalIgnoreCase))
         {
-            _store.Clear();
+            ClearRunning(task.Id);
             return TimeSpan.FromSeconds(5);
         }
 
@@ -108,10 +117,29 @@ public sealed class AssignedWorkRunner
         {
             await _tasks.SuspendAsync(task.Id, "Monthly spend cap. The assignment is saved.", cancellationToken)
                 .ConfigureAwait(false);
-            _store.Clear();
+            ClearRunning(task.Id);
             Note("Waiting on you — spend cap");
             await PushStatusAsync("Waiting on you — spend cap", "waiting", cancellationToken).ConfigureAwait(false);
             return TimeSpan.FromSeconds(30);
+        }
+
+        // PROP-18.8: tool-time day cap mid-session → stop advancing, repark.
+        // Advance-count exhaustion only blocks new starts (current 3rd session may finish).
+        if (_budgetSession && _budget.IsToolTimeExhausted())
+        {
+            var reason = "B3 daily parked tool-time budget exhausted";
+            await _tasks
+                .ParkAsync(task.Id, reason, DateTimeOffset.UtcNow.AddHours(1), cancellationToken)
+                .ConfigureAwait(false);
+            ClearRunning(task.Id);
+            _probePass = false;
+            Note("Parked — " + reason);
+            await PushStatusAsync("Parked — " + reason, "parked", cancellationToken)
+                .ConfigureAwait(false);
+            _logger.LogInformation(
+                "Assigned work reparked — B3 tool-time budget exhausted. id={Id}",
+                task.Id);
+            return TimeSpan.FromSeconds(60);
         }
 
         if (_streakFor != task.Id)
@@ -146,9 +174,13 @@ public sealed class AssignedWorkRunner
 
         _logger.LogInformation("Assigned work pass starting. id={Id} streak={Streak}", task.Id, _noToolStreak);
         var workTools = LeisureTools.ForWorkSurface(_tools.GetDefinitions());
+        var sw = Stopwatch.StartNew();
         var reply = await _inference
             .CompleteWithToolsAsync(messages, workTools, noting, cancellationToken)
             .ConfigureAwait(false);
+        sw.Stop();
+        if (_budgetSession)
+            _budget.RecordToolTime(sw.Elapsed);
 
         reply = (reply ?? "").Trim();
         if (reply.Length == 0)
@@ -214,6 +246,9 @@ public sealed class AssignedWorkRunner
                 _aside.WorkCanRun();
             _noToolStreak = 0;
             await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
+            // PROP-18.7: B3 parked-work advances leave inspectable residue (leisure/research separate).
+            if (_budgetSession)
+                await WriteParkedWorkResidueAsync(task, visible, cancellationToken).ConfigureAwait(false);
             _probePass = false;
         }
         else
@@ -234,7 +269,7 @@ public sealed class AssignedWorkRunner
                 var reason = OneLineParkReason(key, count);
                 await _tasks.ParkAsync(task.Id, reason, DateTimeOffset.UtcNow.Add(cooldown), cancellationToken)
                     .ConfigureAwait(false);
-                _store.Clear();
+                ClearRunning(task.Id);
                 _probePass = false;
                 Note("Parked — " + reason);
                 await PushStatusAsync("Parked — " + reason, "parked", cancellationToken).ConfigureAwait(false);
@@ -249,7 +284,7 @@ public sealed class AssignedWorkRunner
         if (WorkContinuation.NeedsKayleigh(reply))
         {
             await _tasks.UpdateStatusAsync(task.Id, "blocked", cancellationToken).ConfigureAwait(false);
-            _store.Clear();
+            ClearRunning(task.Id);
             Note(WorkContinuation.WaitingLine);
             await AnnounceAsideOnceAsync(cancellationToken).ConfigureAwait(false);
             await PushStatusAsync(WorkContinuation.WaitingLine, "waiting", cancellationToken).ConfigureAwait(false);
@@ -261,7 +296,7 @@ public sealed class AssignedWorkRunner
         if (refreshed is not null
             && string.Equals(refreshed.Status, "done", StringComparison.OrdinalIgnoreCase))
         {
-            _store.Clear();
+            ClearRunning(task.Id);
             Note("Assignment done");
             await BroadcastAsync(visible, continuing: false, cancellationToken).ConfigureAwait(false);
             await PushStatusAsync("Assignment done", "done", cancellationToken).ConfigureAwait(false);
@@ -287,6 +322,7 @@ public sealed class AssignedWorkRunner
     /// <summary>
     /// After park_until: one probe. Still down → repark 120m. Up → leave as parked for operator release
     /// unless we set in_progress for the single probe attempt via running pointer.
+    /// PROP-18.8: consumes one B3 advance; refuses when budget exhausted or serial-busy.
     /// </summary>
     private async Task<TimeSpan?> TryProbeParkedAsync(VictoriaTask task, CancellationToken cancellationToken)
     {
@@ -296,16 +332,78 @@ public sealed class AssignedWorkRunner
             return null;
         }
 
+        // PROP-18.19 / F2: parked-work must consume budget — exemption only via IsExemptKind catalog.
+        if (FileIdleParkedWorkBudget.IsExemptKind("parked-work"))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: parked-work must not be IsExemptKind — probes consume idle parked budget.");
+        }
+
+        if (!_budget.TryBeginAdvance(task.Id))
+        {
+            var snap = _budget.GetSnapshot();
+            _logger.LogInformation(
+                "Parked probe refused — B3 budget (exhausted={Exhausted} reason={Reason} advances={Used}/{Cap})",
+                snap.Exhausted,
+                snap.ExhaustReason,
+                snap.AdvancesUsed,
+                snap.AdvancesCap);
+            ClearRunning(task.Id);
+            Note(snap.Exhausted
+                ? "Parked budget exhausted for today"
+                : "Another parked advance is already open");
+            return TimeSpan.FromSeconds(60);
+        }
+
+        _budgetSession = true;
         await _tasks.UpdateStatusAsync(task.Id, "in_progress", cancellationToken).ConfigureAwait(false);
         await _tasks.ClearFailureCounterAsync(task.Id, cancellationToken).ConfigureAwait(false);
         var resumed = await _tasks.GetAsync(task.Id, cancellationToken).ConfigureAwait(false);
         if (resumed is null)
+        {
+            ClearRunning(task.Id);
             return TimeSpan.FromSeconds(5);
+        }
         _probePass = true;
         _store.Project(resumed);
         Note("Probe after park — " + task.Title);
         await PushStatusAsync("Probe after park", "working", cancellationToken).ConfigureAwait(false);
         return TimeSpan.FromSeconds(1);
+    }
+
+    private void ClearRunning(long? taskId)
+    {
+        if (_budgetSession)
+        {
+            _budget.EndAdvance(taskId);
+            _budgetSession = false;
+        }
+        _store.Clear();
+    }
+
+    /// <summary>PROP-18.7: activities log + topic journal for parked/assigned work passes.</summary>
+    private async Task WriteParkedWorkResidueAsync(
+        VictoriaTask task,
+        string visible,
+        CancellationToken cancellationToken)
+    {
+        if (_residue is null || string.IsNullOrWhiteSpace(visible))
+            return;
+        try
+        {
+            var subject = string.IsNullOrWhiteSpace(task.Title) ? "assigned work" : task.Title.Trim();
+            await _residue.TryWriteAsync(
+                    "parked-work",
+                    subject,
+                    visible,
+                    occurredAt: null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Assigned work activity residue write failed");
+        }
     }
 
     private static string? SurfaceFailureKey(string name, string? content, string surface)

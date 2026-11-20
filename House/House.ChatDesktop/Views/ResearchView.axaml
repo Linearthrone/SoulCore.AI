@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="House.ChatDesktop.Views.ResearchView">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="6">
+    <DockPanel LastChildFill="False">
+      <TextBlock x:Name="StatusText" DockPanel.Dock="Left" FontSize="11" TextWrapping="Wrap" MaxWidth="280"
+                 Foreground="{DynamicResource MutedBrush}" Text="Loading…" VerticalAlignment="Center"/>
+      <Button DockPanel.Dock="Right" Classes="chrome" Content="Refresh" Click="Refresh_Click"/>
+    </DockPanel>
+    <Border Grid.Row="1" Classes="card" MaxHeight="150">
+      <DockPanel LastChildFill="True">
+        <TextBlock DockPanel.Dock="Top" Text="Subjects" Classes="section" Margin="0,0,0,4"/>
+        <ListBox x:Name="SubjectList" Background="Transparent" SelectionChanged="SubjectList_SelectionChanged">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Spacing="2" Margin="0,3">
+                <TextBlock Text="{Binding Line}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Summary}" FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+    <TextBlock Grid.Row="2" x:Name="PapersHeader" Text="Papers" Classes="section" Margin="0,4,0,0"/>
+    <Border Grid.Row="3" Classes="card" MaxHeight="150">
+      <ListBox x:Name="PaperList" Background="Transparent" SelectionChanged="PaperList_SelectionChanged">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Line}" TextWrapping="Wrap" Margin="0,3"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+    <TextBox Grid.Row="4" x:Name="PaperBody" Classes="input" AcceptsReturn="True" TextWrapping="Wrap"
+             IsReadOnly="True" MinHeight="140" VerticalAlignment="Stretch"
+             Watermark="Select a paper to read the APA draft and references."/>
+  </Grid>
+</UserControl>

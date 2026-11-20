@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="House.ChatDesktop.Views.ActivitiesView">
+  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+    <StackPanel Spacing="6">
+      <DockPanel LastChildFill="True">
+        <Button DockPanel.Dock="Right" Classes="chrome" Content="Filter" Margin="6,0,0,0" Click="Filter_Click"/>
+        <Button DockPanel.Dock="Right" Classes="chrome" Content="Refresh" Margin="6,0,0,0" Click="Refresh_Click"/>
+        <TextBox x:Name="SubjectFilterBox" Classes="input" Watermark="Subject / focus filter (optional)"/>
+      </DockPanel>
+      <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}" Text="Loading…"/>
+    </StackPanel>
+    <Border Grid.Row="1" Classes="card">
+      <ListBox x:Name="ActivityList" Background="Transparent" SelectionChanged="ActivityList_SelectionChanged">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Spacing="1" Margin="0,4">
+              <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding DateTimeText}" FontSize="10"
+                           Foreground="{DynamicResource MutedBrush}"/>
+                <TextBlock Text="{Binding ActivityText}" FontWeight="SemiBold" FontSize="12"/>
+              </DockPanel>
+              <TextBlock Text="{Binding SubjectText}" FontSize="11" Foreground="{DynamicResource AccentBrush}"
+                         TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding DescText}" FontSize="11" TextWrapping="Wrap"
+                         Foreground="{DynamicResource MutedBrush}" MaxHeight="48"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+    <TextBox Grid.Row="2" x:Name="DetailBox" Classes="input" AcceptsReturn="True" TextWrapping="Wrap"
+             IsReadOnly="True" MinHeight="70" MaxHeight="160"
+             Watermark="Select a row to read the full Desc (and journal soft-link if present)."/>
+  </Grid>
+</UserControl>

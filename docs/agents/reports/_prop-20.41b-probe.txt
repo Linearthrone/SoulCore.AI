@@ -1,0 +1,19 @@
+﻿GET http://127.0.0.1:7710/health -> status=ok service=SoulCore.Host version=0.1.54 port=7710 memory.open=True
+memory.path=C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db
+inference.provider=ollama-cloud model=deepseek-v4.1-flash:cloud
+GET http://127.0.0.1:7710/settings/identity
+HAS_bondCounters=True
+HAS_soak=True
+BOND={"contactTimeMinutes":0,"daysWithContact":0,"entrustedTasks":0,"operatorCorrections":0,"herInitiatedReaches":0,"journalOpens":21}
+SOAK={"phase":"display_only","startedAt":"2026-11-19T02:11:04.143Z","daysElapsed":0,"daysRemaining":14,"contactDaysInWindow":0,"contactGateMet":false,"minContactDays":3,"displayOnlyDays":14,"isFirstWeekAfterOpen":false,"mayChangePrompt":false}
+HostPID=4896 StartTime=11/18/2026 21:22:46
+HostDLL=2026-11-18T21:22:45.4491600-05:00
+CoreDLL=2026-11-18T21:22:44.1461273-05:00
+GrowthService.cs=2026-11-18T21:19:55.3348427-05:00
+dll_includes_PROP2041_source=True
+ResolveSoakAsync_refs_in_GrowthService=5
+ChatDesktopPID=57492 StartTime=11/18/2026 21:22:59
+LOCK=holder=OPS-01
+prop=PROP-20.41b
+acquired=2026-11-18T21:22:31.0241494-05:00
+pid=21308

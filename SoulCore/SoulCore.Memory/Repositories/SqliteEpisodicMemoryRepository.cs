@@ -138,16 +138,30 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
         int limit,
         CancellationToken cancellationToken = default)
     {
+        var dated = await RecallSimilarDatedAsync(queryVector, limit, cancellationToken).ConfigureAwait(false);
+        return ProjectContent(dated);
+    }
 
+    public async Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        var dated = await RecallRecentDatedAsync(limit, cancellationToken).ConfigureAwait(false);
+        return ProjectContent(dated);
+    }
+
+    public async Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(
+        float[] queryVector,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(queryVector);
         if (limit <= 0 || queryVector.Length == 0)
-            return Array.Empty<string>();
+            return Array.Empty<MemoryRecallLine>();
         return await _session.RunDbAsync(async ct =>
         {
         await using var cmd = _session.Connection.CreateCommand();
         cmd.CommandText =
             """
-            SELECT e.content, v.vector
+            SELECT e.content, e.occurred_at, v.vector
             FROM episodic_embedding_vectors v
             INNER JOIN episodic_memories e ON e.id = v.episodic_id
             WHERE e.is_quarantined = 0
@@ -158,46 +172,60 @@ public async Task<long> CountEpisodicAsync(CancellationToken cancellationToken =
         cmd.Parameters.AddWithValue("$dims", queryVector.Length);
         cmd.Parameters.AddWithValue("$scan_cap", SimilarRecallScanCap);
 
-        var candidates = new List<(string Item, float[] Vector)>();
+        var candidates = new List<(MemoryRecallLine Item, float[] Vector)>();
         await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
             var content = Utf8TextRepair.Repair(reader.GetString(0));
-            var blob = (byte[])reader.GetValue(1);
+            var occurredAt = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+            var blob = (byte[])reader.GetValue(2);
             var vector = VectorSimilarity.FromLittleEndianBlob(blob);
             if (vector.Length == queryVector.Length)
-                candidates.Add((content, vector));
+                candidates.Add((new MemoryRecallLine(content, occurredAt), vector));
         }
 
         return VectorSimilarity.RankByCosineTopK(queryVector, candidates, limit);
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
     {
-
         if (limit <= 0)
-            return Array.Empty<string>();
+            return Array.Empty<MemoryRecallLine>();
         return await _session.RunDbAsync(async ct =>
         {
         await using var cmd = _session.Connection.CreateCommand();
         cmd.CommandText =
             """
-            SELECT content FROM episodic_memories
+            SELECT content, occurred_at FROM episodic_memories
             WHERE is_quarantined = 0
             ORDER BY occurred_at DESC, id DESC
             LIMIT $limit;
             """;
         cmd.Parameters.AddWithValue("$limit", limit);
 
-        var list = new List<string>();
+        var list = new List<MemoryRecallLine>();
         await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
-            list.Add(Utf8TextRepair.Repair(reader.GetString(0)));
+        {
+            var content = Utf8TextRepair.Repair(reader.GetString(0));
+            var occurredAt = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+            list.Add(new MemoryRecallLine(content, occurredAt));
+        }
 
         return list;
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    
+    private static IReadOnlyList<string> ProjectContent(IReadOnlyList<MemoryRecallLine> dated)
+    {
+        if (dated.Count == 0)
+            return Array.Empty<string>();
+        var list = new List<string>(dated.Count);
+        for (var i = 0; i < dated.Count; i++)
+            list.Add(dated[i].Content);
+        return list;
+    }
 }

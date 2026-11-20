@@ -8,10 +8,10 @@ using SoulCore.Config;
 namespace SoulCore.Host.Voice;
 
 /// <summary>
-/// Synthesize via Chatterbox, cache last WAV, play on Host speakers, forward to UE speak.
+/// PROP-21: Synthesize via Soniox, cache last WAV, play on Host speakers, forward to UE speak.
 /// </summary>
 [SupportedOSPlatform("windows")]
-public sealed class VoiceSpeakService : Adapters.Ws.IVoiceSpeakService
+public sealed class VoiceSpeakService : IVoiceSpeakService
 {
     private readonly ITtsClient _tts;
     private readonly IUnrealVerbClient _unreal;
@@ -48,19 +48,21 @@ public sealed class VoiceSpeakService : Adapters.Ws.IVoiceSpeakService
 
         if (!_options.Enabled)
         {
-            await _unreal.SpeakAsync(text, cancellationToken).ConfigureAwait(false);
+            await _unreal.SpeakAsync(SonioxSpeechText.StripAudioTagsForDisplay(text), cancellationToken)
+                .ConfigureAwait(false);
             return;
         }
 
+        var speakText = SonioxSpeechText.NormalizeForSpeak(text);
         byte[]? wav = null;
         try
         {
-            wav = await _tts.SynthesizeAsync(text, _options.DefaultVoice, cancellationToken)
+            wav = await _tts.SynthesizeAsync(speakText, _options.DefaultVoice, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "TTS synthesize failed — falling back to UE speak text only");
+            _logger.LogWarning(ex, "Soniox TTS synthesize failed — falling back to UE speak text only");
         }
 
         if (wav is { Length: > 0 })
@@ -74,15 +76,29 @@ public sealed class VoiceSpeakService : Adapters.Ws.IVoiceSpeakService
 
         try
         {
+            var display = SonioxSpeechText.StripAudioTagsForDisplay(speakText);
             object payload = (_options.PlayInUnreal && wav is { Length: > 0 })
-                ? (object)new { text, audio_url = _options.LastWavPublicUrl }
-                : new { text };
+                ? (object)new { text = display, audio_url = _options.LastWavPublicUrl }
+                : new { text = display };
             await _unreal.SpeakAsync(payload, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Unreal SpeakAsync after TTS failed (Host audio may still have played)");
         }
+    }
+
+    /// <summary>Stream TTS chunks (PCM) for Call / desk playback.</summary>
+    public Task SpeakStreamingAsync(
+        string text,
+        Func<ReadOnlyMemory<byte>, bool, CancellationToken, Task> onAudio,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled || string.IsNullOrWhiteSpace(text))
+            return Task.CompletedTask;
+
+        var speakText = SonioxSpeechText.NormalizeForSpeak(text);
+        return _tts.SynthesizeStreamingAsync(speakText, onAudio, _options.DefaultVoice, cancellationToken);
     }
 
     private void TryPlayOnHost(byte[] wav)

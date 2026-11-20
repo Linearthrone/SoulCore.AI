@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SoulCore.Adapters.Ws;
 using SoulCore.Config;
+using SoulCore.Core;
 using SoulCore.Host.Companion;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
@@ -59,8 +60,9 @@ public class SmsInboundServiceTests
     }
 
     [Fact]
-    public async Task Allowlisted_UsesCompleteAsync_NeverTools_AppendsPresenceHistory()
+    public async Task Allowlisted_WithoutRegistry_UsesCompleteAsync_AppendsPresenceHistory()
     {
+        // No IToolRegistry → CompleteAsync fallback (tests / degraded host).
         var inference = new CountingInference { Reply = "hey AllowlistedPhone" };
         var history = new ChatSessionHistoryStore(32);
         var sut = CreateSut(inference, allow: AllowlistedPhone, stub: false, history: history);
@@ -92,14 +94,50 @@ public class SmsInboundServiceTests
     }
 
     [Fact]
-    public void BuildSmsPreamble_HasNoToolAgencyGuidance()
+    public void BuildSmsPreamble_SmsAllowListOnly_NoDeniedToolAgency()
     {
-        var p = SmsInboundService.BuildSmsPreamble(new[] { "prior note" });
-        Assert.Contains("Do not call tools", p, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("desktop_open_app", p, StringComparison.OrdinalIgnoreCase);
+        var p = SmsInboundService.BuildSmsPreamble(new[] { "prior note" }, useToolLoop: true);
+        Assert.Contains("browser_navigate", p, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("memory_recall", p, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Never call desktop_open_app", p, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("guest_shell", p, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ComputerUse", p, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[Memory]", p);
         Assert.Contains("Kayleigh", p, StringComparison.Ordinal);
         Assert.Contains("same person as on Presence", p, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>PROP-18.1: SMS [Memory] shows occurred_at and today-first order.</summary>
+    [Fact]
+    public void BuildSmsPreamble_DatedLines_TodayFirstWithOccurredAt()
+    {
+        var now = new DateTimeOffset(2026, 11, 19, 18, 0, 0, TimeSpan.Zero);
+        var p = SmsInboundService.BuildSmsPreamble(
+            new[]
+            {
+                new MemoryRecallLine("older episode tea", "2026-11-10T09:00:00.000Z"),
+                new MemoryRecallLine("today episode coffee", "2026-11-19T08:00:00.000Z"),
+            },
+            useToolLoop: false,
+            mindBlock: null,
+            utcNow: now);
+
+        Assert.Contains("[Memory]", p, StringComparison.Ordinal);
+        Assert.Contains("- 2026-11-19T08:00:00.000Z | today episode coffee", p, StringComparison.Ordinal);
+        Assert.Contains("- 2026-11-10T09:00:00.000Z | older episode tea", p, StringComparison.Ordinal);
+        Assert.True(
+            p.IndexOf("today episode coffee", StringComparison.Ordinal)
+            < p.IndexOf("older episode tea", StringComparison.Ordinal));
+        // PROP-18.12 F1: same chronology steering as desk after [Memory].
+        Assert.Contains(MemorySteeringGuidance.Marker, p, StringComparison.Ordinal);
+        Assert.Contains("do not invent a clock", p, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildSmsPreamble_WithoutToolLoop_ForbidsTools()
+    {
+        var p = SmsInboundService.BuildSmsPreamble(Array.Empty<string>(), useToolLoop: false);
+        Assert.Contains("Do not call tools", p, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -250,6 +288,13 @@ public class SmsInboundServiceTests
 
         public Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(
+            float[] queryVector, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
+
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MemoryRecallLine>>(Array.Empty<MemoryRecallLine>());
     }
 
     private sealed class FakeMedia : ICompanionMediaService

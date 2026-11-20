@@ -1,4 +1,5 @@
 using SoulCore.Config;
+using SoulCore.Inference.Presence;
 
 namespace SoulCore.Host.Companion;
 
@@ -22,8 +23,8 @@ public static class SmsHealthSnapshot
             victoriaMdnLength = mdnNorm.Length,
             outboundEnabled = sms.OutboundEnabled,
             autoReplyEnabled = sms.AutoReplySmsEnabled,
-            // Hard SEC gate: inbound SMS/MMS never enters tool-loop (CompleteAsync only).
-            inboundUsesToolLoop = false
+            // PROP-20.5: filtered tool loop (SmsToolGate allow list only).
+            inboundUsesToolLoop = SmsToolGate.InboundUsesToolLoop
         };
     }
 }

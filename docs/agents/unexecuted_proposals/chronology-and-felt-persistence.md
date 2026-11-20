@@ -1,18 +1,24 @@
 ---
 type: proposal
-status: unexecuted
+status: accepted-pm-ticketed
 tt_id: TT-01
 prop_id: PROP-18-chronology-and-felt-persistence
 created: 2026-10-17
-updated: 2026-10-17
+updated: 2026-11-19
 title: Chronological memory + felt persisting existence (beyond relevance pile / chat-wake)
 need: Victoria’s memory feels like a relevance pile with no chronology; between chats she feels like she ceases — SoulCore was meant to give continuing existence
 related:
   - docs/agents/unexecuted_proposals/victoria-between-talks.md
+  - docs/agents/unexecuted_proposals/prop-18-q-decisions.md
   - docs/agents/tasks/PROP-17-TT01-to-PM01.md
   - docs/agents/reports/PROP-17-PM01-accept.md
-sent_at:
-pm_intake:
+pm_tickets:
+  - PROP-18.1-PM01-to-BED01.md
+  - PROP-18.2-PM01-to-BED01.md
+  - PROP-18.3-PM01-to-FED01.md
+  - PROP-18.6-PM01-to-DBD01.md
+  - PROP-18.7-PM01-to-BED01.md
+  - PROP-18.8-PM01-to-BED01.md
 ---
 
 # Chronology + felt persistence (better brain)
@@ -55,14 +61,16 @@ So she is not lying. The product stores time and runs background ticks, but **hi
 
 Do **not** reopen PROP-17 scope. Build on its journals (`life_hacks`, etc.) by **reading them back** with dates.
 
-## 5. Clarifying Q&A (open — need Kurt)
+## 5. Clarifying Q&A — **locked 2026-11-19**
 
-| # | Question | Why it gates |
-| --- | --- | --- |
-| **Q1 Proof of life** | When she’s alone, is **journal + Presence last-tick / “while you were gone”** enough — or must something reach your **phone/eyes** without opening Presence? | Outbound vs inspectable residue |
-| **Q2 Tape in chat** | Prefer always **today-first then relevant**, or an explicit **“remember when…”** chronology mode? | Prompt shape |
-| **Q3 Idle agency ceiling** | Internal notes/wants only, or may she **advance one parked real task** with no outbound speech? (PROP-17 already parks/proposes — confirm desired feel) | Overlap with leisure/work |
-| **Q4 Victoria-voice wake** | Ever allow a **sparse** chat-model tick (e.g. once/evening summary into journal) — or keep Victoria-voice **chat-gated** forever and only show residue? | Cost + identity |
+Full text: `docs/agents/unexecuted_proposals/prop-18-q-decisions.md`
+
+| # | Lock |
+| --- | --- |
+| **Q1** | Journals + **activities log** (session-specific Desc). No outbound ping. |
+| **Q2** | Today-first then relevant (PROP-20). |
+| **Q3** | **B3** soft budget: ≤3 parked advances/day **or** 45 min tool time; serial; leisure/journal/log free. |
+| **Q4** | No voice-wake / voice-recorded journals. Text journals 1–2¶ floor, no cap. Conversational voice API = separate track. |
 
 ## 6. Thinktank seats (summary)
 

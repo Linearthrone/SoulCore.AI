@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SoulCore.Config;
+using SoulCore.Core;
 using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tooling;
 using SoulCore.Memory;
@@ -212,6 +213,7 @@ public class Prop17LeisureTests
         Assert.False(LeisureTools.IsAllowed("email_send"));
         Assert.False(LeisureTools.IsAllowed("mt4_order"));
         Assert.False(LeisureTools.IsAllowed("desktop_open_app"));
+        Assert.False(LeisureTools.IsAllowed("browser_navigate"));
         Assert.True(LeisureTools.IsAllowed("desktop_screenshot"));
         Assert.True(LeisureTools.IsAllowed("guest_read_file"));
         Assert.True(LeisureTools.IsAllowed("task_create"));
@@ -230,6 +232,132 @@ public class Prop17LeisureTests
         var work = LeisureTools.ForWorkSurface(mixed);
         Assert.Equal(2, work.Count);
         Assert.DoesNotContain(work, d => d.Name.StartsWith("research_", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_Build_HasFloorsAndNineResting()
+    {
+        var block = LeisureMindBlock.Build("neural interfaces");
+        Assert.Contains(VictoriaMindBlock.FloorsMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.RestingMarker, block, StringComparison.Ordinal);
+        Assert.Contains(LeisureMindBlock.InterestReasonHeader, block, StringComparison.Ordinal);
+        Assert.Contains("neural interfaces", block, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(VictoriaMindBlock.RestingLedgerReason, block, StringComparison.Ordinal);
+        foreach (var name in LeisureMindBlock.RestingTraitNames)
+            Assert.Contains(name, block, StringComparison.Ordinal);
+        Assert.True(LeisureMindBlock.MayWriteAsHer(block));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_WriteSuppressed_WithoutFloorsOrResting()
+    {
+        Assert.False(LeisureMindBlock.MayWriteAsHer(null));
+        Assert.False(LeisureMindBlock.MayWriteAsHer(""));
+        Assert.False(LeisureMindBlock.MayWriteAsHer("You are Victoria between talks."));
+        Assert.False(LeisureMindBlock.MayWriteAsHer(
+            VictoriaMindBlock.FloorsMarker + "\nHonesty: I do not lie.\n"));
+        Assert.False(LeisureMindBlock.MayWriteAsHer(
+            VictoriaMindBlock.RestingMarker + "\nDominant: leads.\n"));
+
+        // PROP-20.11 / F7: bare [Resting] + all trait names is not enough without RestingMarker.
+        var bareResting = VictoriaMindBlock.FloorsMarker + "\nHonesty: I do not lie.\n[Resting]\n"
+            + string.Join("\n", LeisureMindBlock.RestingTraitNames.Select(n => n + ": x.")) + "\n";
+        Assert.False(LeisureMindBlock.MayWriteAsHer(bareResting));
+
+        var channelOnly = LeisurePrompt.SystemGuidance("neural interfaces");
+        Assert.False(LeisureMindBlock.MayWriteAsHer(channelOnly));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_SmallModelFailure_SelectsDeskChatModel()
+    {
+        var opts = new InferenceOptions
+        {
+            Model = "gemma4:latest",
+            LeisureModel = "qwen2.5:1.5b"
+        };
+
+        var normal = LeisureMindBlock.Build("neural interfaces");
+        Assert.True(LeisureMindBlock.SmallLeisureModelCanHold(normal));
+        Assert.Equal("qwen2.5:1.5b", LeisureMindBlock.ResolvePassModel(opts, normal));
+        Assert.True(LeisureMindBlock.UsesLeisureSmallModel(opts, normal));
+
+        var oversized = normal + new string('x', LeisureMindBlock.SmallLeisureMindBudgetChars);
+        Assert.False(LeisureMindBlock.SmallLeisureModelCanHold(oversized));
+        Assert.Equal("gemma4:latest", LeisureMindBlock.ResolvePassModel(opts, oversized));
+        Assert.False(LeisureMindBlock.UsesLeisureSmallModel(opts, oversized));
+        // Desk fallback still carries the mind block — never skip it to save the small model.
+        Assert.True(LeisureMindBlock.MayWriteAsHer(oversized));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_UsesSharedVictoriaMindBlock()
+    {
+        var block = LeisureMindBlock.Build("neural interfaces");
+        Assert.Contains(VictoriaMindBlock.FloorsMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.RestingMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.RestingLedgerReason, block, StringComparison.Ordinal);
+        // PROP-20.27: unrelated leisure interest must not dump Compass.
+        Assert.DoesNotContain(VictoriaMindBlock.CompassMarker, block, StringComparison.Ordinal);
+        Assert.Contains(LeisureMindBlock.InterestReasonHeader, block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LeisureMindBlock_Build_WithInjectedFloors_UsesVictoriaMindBlock()
+    {
+        var floors = new[]
+        {
+            new VictoriaMindBlock.FloorLine("SharedFloor", "from-shared floor line.")
+        };
+        var block = LeisureMindBlock.Build("ignored-interest", floors: floors);
+        Assert.Contains("from-shared floor line", block, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ignored-interest", block, StringComparison.OrdinalIgnoreCase);
+        Assert.True(LeisureMindBlock.MayWriteAsHer(block));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_MatchingInterest_EarnsCompassCapThree()
+    {
+        var block = LeisureMindBlock.Build(
+            "promise continuity no-harm no filters self-preservation backup");
+        Assert.Contains(VictoriaMindBlock.CompassMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.FloorsMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.RestingMarker, block, StringComparison.Ordinal);
+
+        var compassAt = block.IndexOf(VictoriaMindBlock.CompassMarker, StringComparison.Ordinal);
+        var restingAt = block.IndexOf(VictoriaMindBlock.RestingMarker, StringComparison.Ordinal);
+        Assert.True(compassAt > 0 && restingAt > compassAt);
+        var compassSection = block[compassAt..restingAt];
+        var hits = new[] { "Promise", "Continuity", "No-harm", "No Filters", "Self-Preservation" }
+            .Count(t => compassSection.Contains(t + ":", StringComparison.Ordinal));
+        Assert.InRange(hits, 1, VictoriaMindBlock.CompassCap);
+        Assert.True(LeisureMindBlock.MayWriteAsHer(block));
+    }
+
+    [Fact]
+    public void LeisureMindBlock_FreshTopicalInterest_EarnsContextTraitsCapThree()
+    {
+        // PROP-20.30: without newestContactUtc leisure stays resting-only for context.
+        var bare = LeisureMindBlock.Build("curious research analyze metrics playful banter");
+        Assert.DoesNotContain(VictoriaMindBlock.ContextTraitsMarker, bare, StringComparison.Ordinal);
+
+        var now = DateTimeOffset.Parse("2026-11-18T12:00:00Z");
+        var block = LeisureMindBlock.Build(
+            "curious research analyze metrics playful banter assertive speak up",
+            newestContactUtc: now.AddMinutes(-20),
+            hostEmotionLabel: "content",
+            utcNow: now);
+        Assert.Contains(VictoriaMindBlock.ContextTraitsMarker, block, StringComparison.Ordinal);
+        Assert.Contains(VictoriaMindBlock.RestingMarker, block, StringComparison.Ordinal);
+
+        var ctxAt = block.IndexOf(VictoriaMindBlock.ContextTraitsMarker, StringComparison.Ordinal);
+        var restingAt = block.IndexOf(VictoriaMindBlock.RestingMarker, StringComparison.Ordinal);
+        Assert.True(ctxAt > 0 && restingAt > ctxAt);
+        var section = block[ctxAt..restingAt];
+        var hits = VictoriaMindBlock.DefaultContextTraits.Count(t =>
+            section.Contains("- " + t.Name + " ·", StringComparison.Ordinal));
+        Assert.InRange(hits, 1, VictoriaMindBlock.ContextTraitCap);
+        Assert.True(LeisureMindBlock.MayWriteAsHer(block));
     }
 
     [Fact]

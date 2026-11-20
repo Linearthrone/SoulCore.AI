@@ -6,12 +6,14 @@ using SoulCore.Config;
 using SoulCore.Inference.Clients;
 using SoulCore.Inference.Tooling;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Growth;
 using SoulCore.Core.Abstractions;
 using SoulCore.Host.Loop;
 using SoulCore.Host.Ws;
 using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
+using SoulCore.Memory;
 
 namespace SoulCore.Host.Hosting.ServiceCollectionExtensions;
 
@@ -34,7 +36,25 @@ internal static class CompanionServiceCollectionExtensions
             sp.GetService<IVictoriaBrowserViewHub>(),
             sp.GetService<IDesktopViewHub>(),
             sp.GetService<IHttpClientFactory>()));
-        services.AddSingleton<ISmsInboundService, SmsInboundService>();
+        // PROP-20.7: wire tool registry + research store; soft-depend 20.4 mind block when present.
+        services.AddSingleton<ISmsInboundService>(sp => new SmsInboundService(
+            sp.GetRequiredService<IOptions<SmsOptions>>(),
+            sp.GetRequiredService<IOptions<InferenceOptions>>(),
+            sp.GetRequiredService<IOptions<ChatWsOptions>>(),
+            sp.GetRequiredService<IOptions<CompanionOptions>>(),
+            sp.GetRequiredService<IInferenceClient>(),
+            sp.GetRequiredService<IMemoryStore>(),
+            sp.GetRequiredService<IChatSessionHistoryStore>(),
+            sp.GetRequiredService<ICompanionMediaService>(),
+            sp.GetRequiredService<PresenceWsHub>(),
+            sp.GetRequiredService<ISmsOutboundService>(),
+            sp.GetRequiredService<ILogger<SmsInboundService>>(),
+            transcript: sp.GetService<IChatTranscriptStore>(),
+            lease: sp.GetService<IInferenceLease>(),
+            leisure: sp.GetService<ILeisureSession>(),
+            toolRegistry: sp.GetService<IToolRegistry>(),
+            research: sp.GetService<IVictoriaResearchStore>(),
+            mindBlock: sp.GetService<IVictoriaMindBlockBuilder>()));
         services.AddSingleton<ITool, SendScreenshotMmsTool>();
         services.AddHttpClient("sms-outbound-webhook");
         services.AddSingleton<SoulLoopScaffold>();
@@ -43,6 +63,10 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<WorkTurnGate>();
         services.AddSingleton<IOperatorConsentGate, OperatorConsentGate>();
         services.AddSingleton<IAssignedWorkStore, FileAssignedWorkStore>();
+        // PROP-18.8: idle parked-work B3 soft budget (3 advances / 45 min tool time per local day).
+        services.AddSingleton<IIdleParkedWorkBudget, FileIdleParkedWorkBudget>();
+        // PROP-18.7: activities-log Desc + topic journal residue writers.
+        services.AddSingleton<IActivityResidueWriter, ActivityResidueWriter>();
         services.AddSingleton<IInferenceLease, InferenceLease>();
         services.AddSingleton<ILeisureSession, LeisureSession>();
         services.AddSingleton<IBlockedAsideNotice, BlockedAsideNotice>();
@@ -51,9 +75,13 @@ internal static class CompanionServiceCollectionExtensions
         services.AddSingleton<LeisureRunner>();
         services.AddHostedService<AssignedWorkHostedService>();
         services.AddHostedService<LeisureHostedService>();
+        // PROP-20.4: shared mind-block (floors + resting) for chat + SMS/leisure soft-deps.
+        services.AddSingleton<IGrowthService, GrowthService>();
+        services.AddSingleton<IVictoriaMindBlockBuilder, VictoriaMindBlockBuilder>();
         services.AddSingleton<IChatContextBuilder, ChatContextBuilder>();
         services.AddSingleton<EmotionSnapshotSender>();
         services.AddSingleton<ChatPostEffectsHandler>();
+        services.AddSingleton<VoiceCallHandler>();
         services.AddSingleton<ChatSendHandler>();
         services.AddSingleton<EmotionCorrectHandler>();
         services.AddSingleton<LoopTickHandler>();

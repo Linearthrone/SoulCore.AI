@@ -1,0 +1,28 @@
+﻿=== PROP-20.34b+20.31b ALLSTART start 2026-11-18T04:14:01.7542217-05:00 ===
+=== ALLSTART: Ollama chat model ===
+Ollama chat model OK: gemma4:latest
+=== ALLSTART: Tailscale AllowedHosts sync ===
+[tailscale AllowedHosts sync] starting (timeout 30s) ...
+=== ALLSTART: BrowserCaptureBridge :18710 ===
+[start-browser-bridge] starting (timeout 45s) ...
+BrowserCaptureBridge OK: http://127.0.0.1:18710/health
+Chrome extension (Load unpacked): C:\Users\kurtw\.house_victoria\SoulCore.AI\BrowserCaptureExtension
+CUA gate: AllowComputerControl stays off until ChatDesktop Services or Tools and Access enable it.
+=== ALLSTART: locate local Victoria Host ===
+RestartHost: replacing local Victoria on :7710
+[start-soulcore :7710] starting (timeout 180s) ...
+Waiting for local Victoria Host at http://127.0.0.1:7710/health ...
+Local Victoria Host healthy.
+  memory: C:\Users\kurtw\AppData\Local\SoulCore\memory\soulcore_memory.db
+  model:  deepseek-v4.1-flash:cloud
+GUI target: 127.0.0.1:7710
+=== ALLSTART: Playwright verify skipped (desk uses VM embed / BrowserBackend=native) ===
+=== ALLSTART: Tailscale serve enable (TCP 7710 + HTTPS 8543) ===
+[tailscale serve enable] starting (timeout 30s) ...
+=== ALLSTART: House.Voice (STT + Chatterbox TTS) ===
+[start-stt] starting (timeout 45s) ...
+[start-tts] starting (timeout 45s) ...
+=== ALLSTART: House.ChatDesktop (Victoria Presence) ===
+GUI target: 127.0.0.1:7710
+Starting House.ChatDesktop (Release)...
+# Presence stays foreground under dotnet run; Host/Presence stack live after RestartHost+ForceRebuild.

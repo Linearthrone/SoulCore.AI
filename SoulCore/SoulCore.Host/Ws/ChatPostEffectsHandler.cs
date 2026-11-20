@@ -37,7 +37,8 @@ public sealed class ChatPostEffectsHandler
         string originalUserText,
         string reply,
         IReadOnlySet<string> dispatchedToolNames,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool audibleSpeak = true)
     {
         var driftStatus = _driftWatcher.GetStatus();
         if (driftStatus.SloExceeded)
@@ -55,13 +56,13 @@ public sealed class ChatPostEffectsHandler
         // Best-effort CT — client abort after chat.done must not skip speak/emotion.
         var sideEffectCt = CancellationToken.None;
 
-        await ApplySpeakAndEmotionAsync(reply, sideEffectCt).ConfigureAwait(false);
+        await ApplySpeakAndEmotionAsync(reply, sideEffectCt, audibleSpeak).ConfigureAwait(false);
         await ApplyLocoIntentAsync(originalUserText, dispatchedToolNames, sideEffectCt).ConfigureAwait(false);
         await ApplyAnimationIntentAsync(originalUserText, dispatchedToolNames, sideEffectCt).ConfigureAwait(false);
         await ApplyLookIntentAsync(originalUserText, dispatchedToolNames, sideEffectCt).ConfigureAwait(false);
     }
 
-    private async Task ApplySpeakAndEmotionAsync(string reply, CancellationToken sideEffectCt)
+    private async Task ApplySpeakAndEmotionAsync(string reply, CancellationToken sideEffectCt, bool audibleSpeak)
     {
         try
         {
@@ -77,6 +78,12 @@ public sealed class ChatPostEffectsHandler
                 dominance = fields.Dominance
             }, sideEffectCt).ConfigureAwait(false);
 
+            if (!audibleSpeak)
+            {
+                _logger.LogInformation("Post-chat audible speak skipped (Call streams TTS to desk)");
+                return;
+            }
+
             var spoke = false;
             if (_voiceSpeak is not null)
             {
@@ -85,7 +92,9 @@ public sealed class ChatPostEffectsHandler
             }
             else
             {
-                spoke = await _unreal.SpeakAsync(reply, sideEffectCt).ConfigureAwait(false);
+                spoke = await _unreal.SpeakAsync(
+                    SoulCore.Host.Voice.SonioxSpeechText.StripAudioTagsForDisplay(reply),
+                    sideEffectCt).ConfigureAwait(false);
             }
 
             if (spoke)

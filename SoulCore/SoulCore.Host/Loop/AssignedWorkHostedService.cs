@@ -10,6 +10,7 @@ namespace SoulCore.Host.Loop;
 /// keep taking the next step after the chat turn has returned.
 /// Never schedules suspended. Parked rows are only probed after park_until.
 /// PROP-17.3: does not tick while the leisure inference lease is held.
+/// PROP-18.8: parked probe pickup respects idle B3 soft budget (advances / tool time).
 /// </summary>
 public sealed class AssignedWorkHostedService : BackgroundService
 {
@@ -18,6 +19,7 @@ public sealed class AssignedWorkHostedService : BackgroundService
     private readonly AssignedWorkRunner _runner;
     private readonly WorkTurnGate _gate;
     private readonly IInferenceLease _lease;
+    private readonly IIdleParkedWorkBudget _budget;
     private readonly ILogger<AssignedWorkHostedService> _logger;
 
     public AssignedWorkHostedService(
@@ -26,6 +28,7 @@ public sealed class AssignedWorkHostedService : BackgroundService
         AssignedWorkRunner runner,
         WorkTurnGate gate,
         IInferenceLease lease,
+        IIdleParkedWorkBudget budget,
         ILogger<AssignedWorkHostedService> logger)
     {
         _store = store;
@@ -33,6 +36,7 @@ public sealed class AssignedWorkHostedService : BackgroundService
         _runner = runner;
         _gate = gate;
         _lease = lease;
+        _budget = budget;
         _logger = logger;
     }
 
@@ -118,11 +122,36 @@ public sealed class AssignedWorkHostedService : BackgroundService
 
     /// <summary>
     /// When idle, find one parked row whose park_until has elapsed and set it as running for a single probe.
+    /// PROP-18.8: skips entirely when B3 budget is exhausted or a serial advance is already open.
     /// </summary>
     private async Task EnsureProbeCandidateAsync(CancellationToken cancellationToken)
     {
         if (_store.RunningId is not null)
             return;
+
+        // PROP-18.19 / F2: probe pickup is parked-work (not exempt) — gate through IsExemptKind.
+        if (FileIdleParkedWorkBudget.IsExemptKind("parked-work"))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: parked-work must not be IsExemptKind — probes consume idle parked budget.");
+        }
+
+        if (!_budget.CanStartAdvance())
+        {
+            var snap = _budget.GetSnapshot();
+            if (snap.Exhausted)
+            {
+                _logger.LogDebug(
+                    "Parked probe scan skipped — B3 budget exhausted ({Reason}) day={Day} advances={Used}/{Cap} toolMin={Tool:F1}/{ToolCap}",
+                    snap.ExhaustReason,
+                    snap.LocalDay,
+                    snap.AdvancesUsed,
+                    snap.AdvancesCap,
+                    snap.ToolMinutesUsed,
+                    snap.ToolMinutesCap);
+            }
+            return;
+        }
 
         var parked = await _tasks.ListAsync("parked", cancellationToken).ConfigureAwait(false);
         var now = DateTimeOffset.UtcNow;

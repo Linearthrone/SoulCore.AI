@@ -44,4 +44,21 @@ public interface IMemoryStore
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> RecallRecentAsync(int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Same as <see cref="RecallSimilarAsync"/> but includes <c>occurred_at</c> per hit
+    /// (PROP-20.2 dated recall).
+    /// </summary>
+    Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(
+        float[] queryVector,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Same as <see cref="RecallRecentAsync"/> but includes <c>occurred_at</c> per hit
+    /// (PROP-20.2 dated recall).
+    /// </summary>
+    Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
 }

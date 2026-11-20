@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="02147385-212b-49fb-ab68-626b4dc43cb7" name="kurtw@KAIA-REIMAGINED 2026-11-19 05:13:08" runUser="KAIA-REIMAGINED\kurtw" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-19T05:13:08.6187404-05:00" queuing="2026-11-19T05:13:08.6187407-05:00" start="2026-11-19T05:13:07.2658053-05:00" finish="2026-11-19T05:13:08.6227082-05:00" />
+  <TestSettings name="default" id="f2b23603-9dc3-4827-b406-2c89e8f020c4">
+    <Deployment runDeploymentRoot="kurtw_KAIA-REIMAGINED_2026-11-19_05_13_08" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7df54fb8-9609-46f0-a2df-de6a42ca60b4" testId="c060d854-ec0c-560f-9c03-e7db1794efe1" testName="SoulCore.Protocol.Tests.DaybookTapeTests.FromJournal_TagsLeisureSourceInProvenance" computerName="KAIA-REIMAGINED" duration="00:00:00.0006009" startTime="2026-11-19T05:13:07.7869605-05:00" endTime="2026-11-19T05:13:07.7869606-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7df54fb8-9609-46f0-a2df-de6a42ca60b4" />
+    <UnitTestResult executionId="7d2b6d7e-8616-42a6-85c3-db5a29ca6aee" testId="32b836ab-08b9-b21b-39fa-67244c61a9da" testName="SoulCore.Protocol.Tests.DaybookTapeTests.BuildAsync_InjectsDaybookFromJournalAndActivityLog" computerName="KAIA-REIMAGINED" duration="00:00:00.3812167" startTime="2026-11-19T05:13:08.1683586-05:00" endTime="2026-11-19T05:13:08.1683588-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7d2b6d7e-8616-42a6-85c3-db5a29ca6aee" />
+    <UnitTestResult executionId="6d310c93-a4ab-4a8f-8317-01ab15368563" testId="4a78e987-ea2b-4de2-c1fb-766999e4c6e9" testName="SoulCore.Protocol.Tests.DaybookTapeTests.RecallTimelineTool_ReturnsProvenanceTaggedRows" computerName="KAIA-REIMAGINED" duration="00:00:00.3563846" startTime="2026-11-19T05:13:08.5248701-05:00" endTime="2026-11-19T05:13:08.5248703-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6d310c93-a4ab-4a8f-8317-01ab15368563" />
+    <UnitTestResult executionId="f398a52c-fc0a-424c-8547-fa7fcad8020a" testId="0c882f54-7936-ea4d-bbdf-e8f82cabf061" testName="SoulCore.Protocol.Tests.DaybookTapeTests.FormatLine_ExposesProvenanceAndOccurredAt" computerName="KAIA-REIMAGINED" duration="00:00:00.0000530" startTime="2026-11-19T05:13:07.7871209-05:00" endTime="2026-11-19T05:13:07.7871210-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f398a52c-fc0a-424c-8547-fa7fcad8020a" />
+    <UnitTestResult executionId="402ecf4e-c7b5-4e44-9fd2-3ff58f3d9261" testId="ae8974a0-a7f4-85bb-b022-1a1b247efbca" testName="SoulCore.Protocol.Tests.DaybookTapeTests.BuildDaybookBlock_TightBudget_DropsLeisureTailKeepsHeaderProvenance" computerName="KAIA-REIMAGINED" duration="00:00:00.0015802" startTime="2026-11-19T05:13:07.7871358-05:00" endTime="2026-11-19T05:13:07.7871358-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="402ecf4e-c7b5-4e44-9fd2-3ff58f3d9261" />
+    <UnitTestResult executionId="4fe998b9-c08b-49a3-80d5-9dfbb91a6d85" testId="7c928a3d-4bad-7bd2-f160-cbb6aa9ded75" testName="SoulCore.Protocol.Tests.DaybookTapeTests.BuildContextPreamble_InjectsDaybookBeforeMemoryInsideBudget" computerName="KAIA-REIMAGINED" duration="00:00:00.0084971" startTime="2026-11-19T05:13:07.7851126-05:00" endTime="2026-11-19T05:13:07.7851216-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4fe998b9-c08b-49a3-80d5-9dfbb91a6d85" />
+    <UnitTestResult executionId="b38a9ece-02e7-48b1-8de4-1c2bdd49930d" testId="f45bcb02-79eb-7385-aaea-04a6f834404c" testName="SoulCore.Protocol.Tests.DaybookTapeTests.BuildDaybookBlock_TodayPreferredFirst_ActivityCrumbsTagged" computerName="KAIA-REIMAGINED" duration="00:00:00.0013715" startTime="2026-11-19T05:13:08.5262860-05:00" endTime="2026-11-19T05:13:08.5262861-05:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b38a9ece-02e7-48b1-8de4-1c2bdd49930d" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.RecallTimelineTool_ReturnsProvenanceTaggedRows" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="4a78e987-ea2b-4de2-c1fb-766999e4c6e9">
+      <Execution id="6d310c93-a4ab-4a8f-8317-01ab15368563" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="RecallTimelineTool_ReturnsProvenanceTaggedRows" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.FromJournal_TagsLeisureSourceInProvenance" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="c060d854-ec0c-560f-9c03-e7db1794efe1">
+      <Execution id="7df54fb8-9609-46f0-a2df-de6a42ca60b4" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="FromJournal_TagsLeisureSourceInProvenance" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.BuildDaybookBlock_TodayPreferredFirst_ActivityCrumbsTagged" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="f45bcb02-79eb-7385-aaea-04a6f834404c">
+      <Execution id="b38a9ece-02e7-48b1-8de4-1c2bdd49930d" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="BuildDaybookBlock_TodayPreferredFirst_ActivityCrumbsTagged" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.BuildContextPreamble_InjectsDaybookBeforeMemoryInsideBudget" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="7c928a3d-4bad-7bd2-f160-cbb6aa9ded75">
+      <Execution id="4fe998b9-c08b-49a3-80d5-9dfbb91a6d85" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="BuildContextPreamble_InjectsDaybookBeforeMemoryInsideBudget" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.BuildDaybookBlock_TightBudget_DropsLeisureTailKeepsHeaderProvenance" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="ae8974a0-a7f4-85bb-b022-1a1b247efbca">
+      <Execution id="402ecf4e-c7b5-4e44-9fd2-3ff58f3d9261" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="BuildDaybookBlock_TightBudget_DropsLeisureTailKeepsHeaderProvenance" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.FormatLine_ExposesProvenanceAndOccurredAt" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="0c882f54-7936-ea4d-bbdf-e8f82cabf061">
+      <Execution id="f398a52c-fc0a-424c-8547-fa7fcad8020a" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="FormatLine_ExposesProvenanceAndOccurredAt" />
+    </UnitTest>
+    <UnitTest name="SoulCore.Protocol.Tests.DaybookTapeTests.BuildAsync_InjectsDaybookFromJournalAndActivityLog" storage="c:\users\kurtw\.house_victoria\soulcore.ai\soulcore\soulcore.protocol.tests\bin\debug\net8.0\soulcore.protocol.tests.dll" id="32b836ab-08b9-b21b-39fa-67244c61a9da">
+      <Execution id="7d2b6d7e-8616-42a6-85c3-db5a29ca6aee" />
+      <TestMethod codeBase="C:\Users\kurtw\.house_victoria\SoulCore.AI\SoulCore\SoulCore.Protocol.Tests\bin\Debug\net8.0\SoulCore.Protocol.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="SoulCore.Protocol.Tests.DaybookTapeTests" name="BuildAsync_InjectsDaybookFromJournalAndActivityLog" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c060d854-ec0c-560f-9c03-e7db1794efe1" executionId="7df54fb8-9609-46f0-a2df-de6a42ca60b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="32b836ab-08b9-b21b-39fa-67244c61a9da" executionId="7d2b6d7e-8616-42a6-85c3-db5a29ca6aee" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4a78e987-ea2b-4de2-c1fb-766999e4c6e9" executionId="6d310c93-a4ab-4a8f-8317-01ab15368563" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0c882f54-7936-ea4d-bbdf-e8f82cabf061" executionId="f398a52c-fc0a-424c-8547-fa7fcad8020a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ae8974a0-a7f4-85bb-b022-1a1b247efbca" executionId="402ecf4e-c7b5-4e44-9fd2-3ff58f3d9261" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7c928a3d-4bad-7bd2-f160-cbb6aa9ded75" executionId="4fe998b9-c08b-49a3-80d5-9dfbb91a6d85" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f45bcb02-79eb-7385-aaea-04a6f834404c" executionId="b38a9ece-02e7-48b1-8de4-1c2bdd49930d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="7" executed="7" passed="7" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.31)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: SoulCore.Protocol.Tests&#xD;
+[xUnit.net 00:00:00.15]   Discovered:  SoulCore.Protocol.Tests&#xD;
+[xUnit.net 00:00:00.16]   Starting:    SoulCore.Protocol.Tests&#xD;
+[xUnit.net 00:00:00.93]   Finished:    SoulCore.Protocol.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

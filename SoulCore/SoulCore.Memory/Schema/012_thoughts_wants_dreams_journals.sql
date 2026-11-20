@@ -1,0 +1,3 @@
+-- Schema companion for migration 012 (thoughts / wants / dreams journal books).
+-- Documentation only — not embedded. No standalone DDL here: SQLite CHECK recreation
+-- lives entirely in Migrations/012_thoughts_wants_dreams_journals.sql (applied at runtime).

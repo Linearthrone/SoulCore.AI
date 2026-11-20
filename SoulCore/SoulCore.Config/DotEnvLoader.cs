@@ -1,7 +1,8 @@
 namespace SoulCore.Config;
 
 /// <summary>
-/// Loads local <c>.env</c> into the process environment for <c>SOULCORE_*</c> keys only.
+/// Loads local <c>.env</c> into the process environment for <c>SOULCORE_*</c> keys
+/// and maps <c>SONIOX_API_KEY</c> → <c>SOULCORE_Voice__ApiKey</c> (PROP-21).
 /// Never logs secret values.
 /// <para>
 /// <b>.env wins:</b> non-empty values from the file overwrite existing process env.
@@ -12,9 +13,11 @@ namespace SoulCore.Config;
 public static class DotEnvLoader
 {
     public const string KeyPrefix = "SOULCORE_";
+    public const string SonioxApiKeyEnv = "SONIOX_API_KEY";
+    public const string VoiceApiKeyConfigEnv = "SOULCORE_Voice__ApiKey";
 
     /// <summary>
-    /// Apply <c>SOULCORE_*</c> entries from <paramref name="explicitPath"/> or a resolved <c>.env</c>.
+    /// Apply <c>SOULCORE_*</c> (+ Soniox key mapping) from <paramref name="explicitPath"/> or a resolved <c>.env</c>.
     /// </summary>
     /// <returns>Count of keys set or updated on the process environment.</returns>
     public static int TryLoad(string? explicitPath = null)
@@ -24,31 +27,54 @@ public static class DotEnvLoader
             return 0;
 
         var applied = 0;
+        string? sonioxKey = null;
         foreach (var rawLine in File.ReadLines(path))
         {
             if (!TryParseLine(rawLine, out var key, out var value))
                 continue;
 
-            if (!key.StartsWith(KeyPrefix, StringComparison.Ordinal))
-                continue;
-
-            // Empty .env value clears the process var so Host falls open (no companion gate).
-            if (string.IsNullOrEmpty(value))
+            if (string.Equals(key, SonioxApiKeyEnv, StringComparison.Ordinal))
             {
-                Environment.SetEnvironmentVariable(key, null);
-                applied++;
+                sonioxKey = value;
+                ApplyEnv(SonioxApiKeyEnv, value, ref applied);
                 continue;
             }
 
-            var existing = Environment.GetEnvironmentVariable(key);
-            if (string.Equals(existing, value, StringComparison.Ordinal))
+            if (!key.StartsWith(KeyPrefix, StringComparison.Ordinal))
                 continue;
 
-            Environment.SetEnvironmentVariable(key, value);
-            applied++;
+            ApplyEnv(key, value, ref applied);
+        }
+
+        // Config bind uses SOULCORE_ prefix → Voice:ApiKey
+        if (!string.IsNullOrEmpty(sonioxKey))
+            ApplyEnv(VoiceApiKeyConfigEnv, sonioxKey, ref applied);
+        else
+        {
+            var fromProcess = Environment.GetEnvironmentVariable(SonioxApiKeyEnv);
+            if (!string.IsNullOrEmpty(fromProcess))
+                ApplyEnv(VoiceApiKeyConfigEnv, fromProcess, ref applied);
         }
 
         return applied;
+    }
+
+    private static void ApplyEnv(string key, string value, ref int applied)
+    {
+        // Empty .env value clears the process var so Host falls open (no companion gate).
+        if (string.IsNullOrEmpty(value))
+        {
+            Environment.SetEnvironmentVariable(key, null);
+            applied++;
+            return;
+        }
+
+        var existing = Environment.GetEnvironmentVariable(key);
+        if (string.Equals(existing, value, StringComparison.Ordinal))
+            return;
+
+        Environment.SetEnvironmentVariable(key, value);
+        applied++;
     }
 
     /// <summary>

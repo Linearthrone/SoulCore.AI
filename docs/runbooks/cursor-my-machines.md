@@ -91,6 +91,9 @@ Leave that WSL window open. Machine shows as **`home-pc`** in
 - Live `.env` stays on the Windows tree; don’t commit secrets from the WSL clone.
 - Prefer `powershell.exe -File …\ws-companion-auth-probe.ps1` (Windows) over curling
   loopback from inside WSL.
+- **ImageSharp Release license:** Host/Inference Release builds need `SixLaborsLicenseKey` or
+  `SIXLABORS_LICENSE_KEY` in the environment, or a gitignored `sixlabors.lic` at repo root /
+  `SoulCore/` (see `Directory.Build.props`). Debug builds warn only and continue.
 
 ## Tablet (Termux) — no My Machines worker (for now)
 

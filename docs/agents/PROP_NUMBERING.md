@@ -1,7 +1,7 @@
 ---
 type: config
 id: PROP-NUMBERING
-updated: 2026-10-19
+updated: 2026-11-17
 owner: PM-01 / TT-01
 ---
 
@@ -57,8 +57,11 @@ Reconciled against `main` on **2026-09-15**; re-verified **2026-09-27** (see
 | PROP-15-persona-creation-platform | CreatorEdition persona platform — in-app create/edit, trait scales, total memory quarantine, VM+tooling; single-active now | **Sent to PM** 2026-10-05 — Kurt-locked; execute on `House-VictoriAI/SoulCore.AI_CreatorEdition` | 15.0–15.6 suggested |
 | PROP-16-presence-host-update-and-stack-restart | Chrome Update = Presence+Host (git pull → Host rebuild); Restart stack = detached ALLSTOP→ALLSTART | **In progress** 2026-10-05 — `cursor/prop16-host-update-stack-9531` | 16.1 FED · 16.2 OPS |
 | PROP-17-victoria-between-talks | Park dead work, suspend tasks, self-started R&R on a local model, Presence shell to three tabs | **Code complete** 2026-10-12 — 17.2–17.6 Pass; 17.1 Partial+17.6; PRs #149–#152; Windows/device smoke remaining | 17.1–17.6 |
-| PROP-18-chronology-and-felt-persistence | Dated memory compose + felt persistence (HUD / while-you-were-gone); dual-path beyond relevance pile | **Unexecuted** — parked pending Kurt Q1–Q4 (proof of life, tape shape, idle ceiling, voice wake) | 18.1–18.5 suggested |
+| PROP-18-chronology-and-felt-persistence | Dated memory + activities log + felt persistence; idle B3 budget | **18.1** Accepted; QA **18.9** / BED **18.2** in flight; 18.6/18.8 open; FED 18.3 Held | 18.1–18.9 |
 | PROP-19-her-screen-operator-clicks | Her screen: Kurt intervene clicks dead; Victoria Absolute lands but soft-cursor offset | **Executing** 2026-10-19 — 19.2–19.4 Pass on `cursor/prop19-execute-6372` (Presence 0.1.47); 19.1/19.5 desk smoke open | 19.1–19.5 |
+| PROP-20-victoria-mind-path | One mind on chat/SMS/leisure; dated tape; journals thoughts/wants/dreams; SMS allow-list tools | **1.0.0 shipped** (steps 1–7); step 8 Open (operator start) | 20.1–20.44 |
+| PROP-21-soniox-voice-call | Replace Whisper/Kokoro with Soniox STT/TTS; Call overlay + speaking sphere; emotional audio tags | **Implementing** 2026-11-19 — 21.1–21.3 code landed; OPS/QA in flight | 21.1–21.5 |
+| PROP-22-presence-glass-shell | Portrait glass Presence (S26 Ultra 19.5:9), radial status, VM drawer, Victoria/settings screens, operator work+agenda | **Shipped 1.1.1** 2026-11-20 — v3 style lock; Host+Presence on home PC | 22.1–22.11 |
 
 **Report-only splits (PROP-7…11).** No `PROP-7.1`…`PROP-11.1` ticket files exist. Each shipped
 straight off its proposal + intake and filed a `PROP-{N}.1-BED01-to-PM01.md` Pass report. Recorded
@@ -69,7 +72,7 @@ Cluster map (closed): `docs/archive/proposals/architecture-eval-backlog-cluster-
 Program accept (closed): `docs/archive/tasks/PROP-5-11-PM01-program-accept.md`  
 Scoreboard: `docs/agents/reports/PROP-5-11-TINA-wipeout-final.md`
 
-Next free `N`: **20**.
+Next free `N`: **23**.
 
 ## Open items (not on `main`)
 

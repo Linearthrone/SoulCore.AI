@@ -31,7 +31,12 @@ public sealed class SqliteMemorySession : IAsyncDisposable, IDisposable {
     ApplyIfMissing("008","SoulCore.Memory.Migrations.008_victoria_tasks_park.sql");
     ApplyIfMissing("009","SoulCore.Memory.Migrations.009_victoria_sops.sql");
     ApplyIfMissing("010","SoulCore.Memory.Migrations.010_life_hacks_journal.sql");
-    ApplyIfMissing("011","SoulCore.Memory.Migrations.011_victoria_research.sql");}
+    ApplyIfMissing("011","SoulCore.Memory.Migrations.011_victoria_research.sql");
+    ApplyIfMissing("012","SoulCore.Memory.Migrations.012_thoughts_wants_dreams_journals.sql");
+    ApplyIfMissing("013","SoulCore.Memory.Migrations.013_charter_four_books.sql");
+    ApplyIfMissing("014","SoulCore.Memory.Migrations.014_growth_bond.sql");
+    ApplyIfMissing("015","SoulCore.Memory.Migrations.015_victoria_activities_log.sql");
+    ApplyIfMissing("016","SoulCore.Memory.Migrations.016_operator_work_and_agenda.sql");}
   private void ApplyIfMissing(string v, params string[] scripts){ if(IsMigrationApplied(v))return; foreach(var s in scripts) ExecuteScript(ReadEmbedded(s)); _logger.LogInformation("Applied Memory migration {Version} to {DbPath}", v, DatabasePath);} 
   private bool IsMigrationApplied(string v){ try{ using var c=_connection.CreateCommand(); c.CommandText="SELECT 1 FROM schema_migrations WHERE version = $version LIMIT 1;"; c.Parameters.AddWithValue("$version", v); var r=c.ExecuteScalar(); return r is not null and not DBNull;} catch(SqliteException){return false;}}
   private void ExecuteScript(string sql){using var c=_connection.CreateCommand();c.CommandText=sql;c.ExecuteNonQuery();}

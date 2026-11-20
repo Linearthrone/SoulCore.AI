@@ -20,7 +20,8 @@ public static class MemorySteeringGuidance
     public const string Block =
         Marker + "\n" +
         "The [Memory] lines above are your lived records — how-to and continuity, not flavor. " +
-        "Follow the steps they already name.";
+        "Follow the steps they already name. " +
+        "When a line starts with occurred_at, that stamp is from the store — order days from it; do not invent a clock.";
 
     /// <summary>One matched procedure line ready for the preamble.</summary>
     public readonly record struct KnownProcedureLine(

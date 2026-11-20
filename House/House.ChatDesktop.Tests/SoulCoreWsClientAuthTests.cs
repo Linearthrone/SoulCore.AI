@@ -7,6 +7,7 @@ namespace House.ChatDesktop.Tests;
 /// Lightweight coverage for WS auth header choice + error classification (no Host required).
 /// Live Host probe: SoulCore/scripts/ws-companion-auth-probe.ps1
 /// </summary>
+[Collection("CompanionTokenState")]
 public class SoulCoreWsClientAuthTests
 {
     [Fact]

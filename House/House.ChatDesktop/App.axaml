@@ -4,62 +4,85 @@
              RequestedThemeVariant="Dark">
 
   <Application.Resources>
-    <!-- PROP-4 mockup: charcoal / brushed metal + neon lamps (not purple glass) -->
-    <SolidColorBrush x:Key="BgBrush" Color="#0B0C0E"/>
-    <SolidColorBrush x:Key="ShellBrush" Color="#121316"/>
-    <SolidColorBrush x:Key="PanelBrush" Color="#17191C"/>
-    <SolidColorBrush x:Key="PanelBrushSoft" Color="#1C1E22"/>
-    <SolidColorBrush x:Key="PanelBorderBrush" Color="#2A2E36"/>
-    <SolidColorBrush x:Key="MetalHighlightBrush" Color="#3A404C"/>
-    <SolidColorBrush x:Key="CarbonBrush" Color="#0E0F12"/>
-    <SolidColorBrush x:Key="CarbonEdgeBrush" Color="#23262D"/>
+    <!-- PROP-22: near-black, cool-tinted glass + a thin, dull neon rim (low-saturation cool white). -->
+    <SolidColorBrush x:Key="BgBrush" Color="#07090C"/>
+    <SolidColorBrush x:Key="ShellBrush" Color="#0B0E12"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#0F1318"/>
+    <SolidColorBrush x:Key="PanelBrushSoft" Color="#141920"/>
+    <SolidColorBrush x:Key="PanelBorderBrush" Color="#262D37"/>
+    <SolidColorBrush x:Key="MetalHighlightBrush" Color="#39424F"/>
+    <SolidColorBrush x:Key="CarbonBrush" Color="#0A0D11"/>
+    <SolidColorBrush x:Key="CarbonEdgeBrush" Color="#1F262F"/>
     <SolidColorBrush x:Key="ScrewBrush" Color="#5A5E68"/>
     <SolidColorBrush x:Key="ScrewSlotBrush" Color="#0A0A0C"/>
-    <SolidColorBrush x:Key="TextBrush" Color="#E6E7EA"/>
-    <SolidColorBrush x:Key="MutedBrush" Color="#8B8E97"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#4BA3FF"/>
-    <SolidColorBrush x:Key="AccentDimBrush" Color="#2A5F99"/>
-    <SolidColorBrush x:Key="OkBrush" Color="#3DFF8A"/>
-    <SolidColorBrush x:Key="WarnBrush" Color="#FFB84D"/>
-    <SolidColorBrush x:Key="BadBrush" Color="#FF3D4A"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#E6EAF0"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#8A93A1"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#6FB4FF"/>
+    <SolidColorBrush x:Key="AccentDimBrush" Color="#2F5D8C"/>
+    <SolidColorBrush x:Key="OkBrush" Color="#3DE08A"/>
+    <SolidColorBrush x:Key="WarnBrush" Color="#F2C94C"/>
+    <SolidColorBrush x:Key="BadBrush" Color="#FF4A57"/>
     <SolidColorBrush x:Key="LampBlueBrush" Color="#3D8BFF"/>
     <SolidColorBrush x:Key="LampGreenBrush" Color="#2EE66A"/>
     <SolidColorBrush x:Key="LampRedBrush" Color="#FF3D4A"/>
-    <SolidColorBrush x:Key="LampOffBrush" Color="#3A3D46"/>
-    <SolidColorBrush x:Key="UserBubbleBrush" Color="#2A2D33"/>
-    <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#22252A"/>
-    <SolidColorBrush x:Key="InputBrush" Color="#14161A"/>
-    <SolidColorBrush x:Key="GaugeTrackBrush" Color="#1A1C20"/>
-    <SolidColorBrush x:Key="GaugeFillBrush" Color="#3D8BFF"/>
-    <SolidColorBrush x:Key="ShellGlowBrush" Color="#334BA3FF"/>
-    <!-- Mockup metal: dark → bright refraction → dark (bevel / light strike) -->
+    <SolidColorBrush x:Key="LampOffBrush" Color="#2A303A"/>
+    <SolidColorBrush x:Key="UserBubbleBrush" Color="#1B2634"/>
+    <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#151A21"/>
+    <SolidColorBrush x:Key="InputBrush" Color="#0D1116"/>
+    <SolidColorBrush x:Key="GaugeTrackBrush" Color="#181D24"/>
+    <SolidColorBrush x:Key="GaugeFillBrush" Color="#6FB4FF"/>
+    <SolidColorBrush x:Key="ShellGlowBrush" Color="#224BA3FF"/>
+
+    <!-- PROP-22 glass tokens — polished main fill; frost stays on the rim only (v3). -->
+    <SolidColorBrush x:Key="GlassFillBrush" Color="#0A0D11"/>
+    <SolidColorBrush x:Key="GlassPanelBrush" Color="#F2141920"/>
+    <SolidColorBrush x:Key="GlassScrimBrush" Color="#E6080B10"/>
+    <SolidColorBrush x:Key="PinkPulseBrush" Color="#FF5FB8"/>
+    <SolidColorBrush x:Key="AmberBrush" Color="#FF9F2E"/>
+    <SolidColorBrush x:Key="YellowBrush" Color="#F2D24B"/>
+    <SolidColorBrush x:Key="OffDimBrush" Color="#3A424E"/>
+    <LinearGradientBrush x:Key="NeonRimBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#6A7584" Offset="0"/>
+      <GradientStop Color="#A9B6C7" Offset="0.5"/>
+      <GradientStop Color="#566170" Offset="1"/>
+    </LinearGradientBrush>
+    <!-- Legacy keys kept so older windows (email setup, task add) still resolve. -->
     <LinearGradientBrush x:Key="MetalBevelBrush" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Color="#060708" Offset="0"/>
-      <GradientStop Color="#1E2228" Offset="0.22"/>
-      <GradientStop Color="#9AA3B0" Offset="0.44"/>
-      <GradientStop Color="#FFFFFF" Offset="0.50"/>
-      <GradientStop Color="#8A93A2" Offset="0.56"/>
-      <GradientStop Color="#16191F" Offset="0.78"/>
-      <GradientStop Color="#060708" Offset="1"/>
+      <GradientStop Color="#2A323D" Offset="0"/>
+      <GradientStop Color="#6B7787" Offset="0.5"/>
+      <GradientStop Color="#222A33" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="MetalBevelHorizBrush" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Color="#050607" Offset="0"/>
-      <GradientStop Color="#7A8494" Offset="0.40"/>
-      <GradientStop Color="#FFFFFF" Offset="0.50"/>
-      <GradientStop Color="#5A6474" Offset="0.60"/>
-      <GradientStop Color="#0A0B0E" Offset="1"/>
+      <GradientStop Color="#566170" Offset="0"/>
+      <GradientStop Color="#A9B6C7" Offset="0.5"/>
+      <GradientStop Color="#3A4350" Offset="1"/>
     </LinearGradientBrush>
+    <!-- Polished slab face: near-opaque cool glass with a soft specular ramp (not milky frost). -->
     <LinearGradientBrush x:Key="ShellFaceBrush" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Color="#22252B" Offset="0"/>
-      <GradientStop Color="#14161A" Offset="0.28"/>
-      <GradientStop Color="#0E0F12" Offset="1"/>
+      <GradientStop Color="#12171E" Offset="0"/>
+      <GradientStop Color="#0A0D11" Offset="0.35"/>
+      <GradientStop Color="#07090C" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassSheenBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#18C8D8FF" Offset="0"/>
+      <GradientStop Color="#00B8D4FF" Offset="0.4"/>
+      <GradientStop Color="#0AC8D8FF" Offset="1"/>
     </LinearGradientBrush>
     <FontFamily x:Key="DisplayFont">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
-    <ImageBrush x:Key="BrushedTextureBrush"
-                Source="avares://House.ChatDesktop/Assets/brushed-charcoal.png"
-                Stretch="UniformToFill"
-                TileMode="Tile"
-                DestinationRect="0,0,64,256"/>
+
+    <!-- Icons (24x24 Material-style outlines). -->
+    <StreamGeometry x:Key="IconSend">M2,21L23,12L2,3V10L17,12L2,14V21Z</StreamGeometry>
+    <StreamGeometry x:Key="IconPhone">M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.68,14.91 16.08,14.82 16.43,14.94C17.55,15.31 18.76,15.51 20,15.51C20.55,15.51 21,15.96 21,16.51V20C21,20.55 20.55,21 20,21C10.61,21 3,13.39 3,4C3,3.45 3.45,3 4,3H7.5C8.05,3 8.5,3.45 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z</StreamGeometry>
+    <StreamGeometry x:Key="IconGear">M19.14,12.94C19.18,12.64 19.2,12.33 19.2,12C19.2,11.68 19.18,11.36 19.13,11.06L21.16,9.48C21.34,9.34 21.39,9.07 21.28,8.87L19.36,5.55C19.24,5.33 18.99,5.26 18.77,5.33L16.38,6.29C15.88,5.91 15.35,5.59 14.76,5.35L14.4,2.81C14.36,2.57 14.16,2.4 13.92,2.4H10.08C9.84,2.4 9.65,2.57 9.61,2.81L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33C5.02,5.25 4.77,5.33 4.65,5.55L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48L4.89,11.06C4.84,11.36 4.8,11.69 4.8,12C4.8,12.31 4.82,12.64 4.87,12.94L2.84,14.52C2.66,14.66 2.61,14.93 2.72,15.13L4.64,18.45C4.76,18.67 5.01,18.74 5.23,18.67L7.62,17.71C8.12,18.09 8.65,18.41 9.24,18.65L9.6,21.19C9.65,21.43 9.84,21.6 10.08,21.6H13.92C14.16,21.6 14.36,21.43 14.39,21.19L14.75,18.65C15.34,18.41 15.88,18.09 16.37,17.71L18.76,18.67C18.98,18.75 19.23,18.67 19.35,18.45L21.27,15.13C21.39,14.91 21.34,14.66 21.15,14.52L19.14,12.94ZM12,15.6C10.02,15.6 8.4,13.98 8.4,12C8.4,10.02 10.02,8.4 12,8.4C13.98,8.4 15.6,10.02 15.6,12C15.6,13.98 13.98,15.6 12,15.6Z</StreamGeometry>
+    <StreamGeometry x:Key="IconClip">M16.5,6V17.5C16.5,19.71 14.71,21.5 12.5,21.5C10.29,21.5 8.5,19.71 8.5,17.5V5C8.5,3.62 9.62,2.5 11,2.5C12.38,2.5 13.5,3.62 13.5,5V15.5C13.5,16.05 13.05,16.5 12.5,16.5C11.95,16.5 11.5,16.05 11.5,15.5V6H10V15.5C10,16.88 11.12,18 12.5,18C13.88,18 15,16.88 15,15.5V5C15,2.79 13.21,1 11,1C8.79,1 7,2.79 7,5V17.5C7,20.54 9.46,23 12.5,23C15.54,23 18,20.54 18,17.5V6H16.5Z</StreamGeometry>
+    <StreamGeometry x:Key="IconMic">M12,14C13.66,14 15,12.66 15,11V5C15,3.34 13.66,2 12,2C10.34,2 9,3.34 9,5V11C9,12.66 10.34,14 12,14ZM17.3,11C17.3,14 14.76,16.1 12,16.1C9.24,16.1 6.7,14 6.7,11H5C5,14.41 7.72,17.23 11,17.72V21H13V17.72C16.28,17.23 19,14.41 19,11H17.3Z</StreamGeometry>
+    <StreamGeometry x:Key="IconPerson">M12,12C14.21,12 16,10.21 16,8C16,5.79 14.21,4 12,4C9.79,4 8,5.79 8,8C8,10.21 9.79,12 12,12ZM12,14C9.33,14 4,15.34 4,18V20H20V18C20,15.34 14.67,14 12,14Z</StreamGeometry>
+    <StreamGeometry x:Key="IconClose">M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z</StreamGeometry>
+    <StreamGeometry x:Key="IconBack">M20,11H7.83L13.42,5.41L12,4L4,12L12,20L13.42,18.59L7.83,13H20V11Z</StreamGeometry>
+    <StreamGeometry x:Key="IconPlus">M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z</StreamGeometry>
+    <StreamGeometry x:Key="IconChevronLeft">M15.41,7.41L14,6L8,12L14,18L15.41,16.59L10.83,12L15.41,7.41Z</StreamGeometry>
+    <StreamGeometry x:Key="IconChevronRight">M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z</StreamGeometry>
+    <StreamGeometry x:Key="IconMonitor">M20,3H4C2.9,3 2,3.9 2,5V15C2,16.1 2.9,17 4,17H10V19H8V21H16V19H14V17H20C21.1,17 22,16.1 22,15V5C22,3.9 21.1,3 20,3ZM20,15H4V5H20V15Z</StreamGeometry>
   </Application.Resources>
 
   <Application.Styles>
@@ -71,38 +94,71 @@
       <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}"/>
     </Style>
 
+    <!-- Outer shell: the 1.5px dull rim around the glass slab. -->
     <Style Selector="Border.shell-bevel">
-      <Setter Property="Background" Value="{DynamicResource MetalBevelBrush}"/>
-      <Setter Property="CornerRadius" Value="18"/>
-      <Setter Property="Padding" Value="5"/>
-      <Setter Property="BoxShadow" Value="0 0 0 1 #554BA3FF, 0 24 60 0 #EE000000, inset 0 1 0 0 #AAFFFFFF, inset 0 -1 0 0 #88000000"/>
+      <Setter Property="Background" Value="{DynamicResource NeonRimBrush}"/>
+      <Setter Property="CornerRadius" Value="34"/>
+      <Setter Property="Padding" Value="1.5"/>
+      <Setter Property="BoxShadow" Value="0 0 22 0 #224B7CAA, 0 18 48 0 #CC000000"/>
     </Style>
 
     <Style Selector="Border.shell">
       <Setter Property="Background" Value="{DynamicResource ShellFaceBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource MetalBevelHorizBrush}"/>
-      <Setter Property="BorderThickness" Value="1.5"/>
-      <Setter Property="CornerRadius" Value="13"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="33"/>
       <Setter Property="ClipToBounds" Value="True"/>
-      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #77FFFFFF, inset 0 -1 0 0 #CC000000, inset 1 0 0 0 #33FFFFFF, inset -1 0 0 0 #66000000"/>
+      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #28FFFFFF, inset 0 -18 36 0 #66000000"/>
     </Style>
 
     <Style Selector="Border.shell-inner">
-      <Setter Property="Background" Value="{DynamicResource BrushedTextureBrush}"/>
+      <!-- Soft specular sheen only — keep the fill polished, not frosted. -->
+      <Setter Property="Background" Value="{DynamicResource GlassSheenBrush}"/>
       <Setter Property="Opacity" Value="0.55"/>
       <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
     <Style Selector="Border.shell-rim">
-      <Setter Property="BorderBrush" Value="#CCD8DEE8"/>
+      <Setter Property="BorderBrush" Value="#33D0DCEB"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="CornerRadius" Value="33"/>
       <Setter Property="IsHitTestVisible" Value="False"/>
-      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #BBFFFFFF, inset 0 -1 0 0 #88000000"/>
+    </Style>
+
+    <!-- Floating glass panel (drawers, cards, in-glass screens). -->
+    <Style Selector="Border.panel">
+      <!-- Near-opaque polished panel — not milky frost (v3). -->
+      <Setter Property="Background" Value="{DynamicResource GlassPanelBrush}"/>
+      <Setter Property="BorderBrush" Value="#3A4654"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="18"/>
+      <Setter Property="Padding" Value="14"/>
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#F2121820"/>
+      <Setter Property="BorderBrush" Value="#262F3A"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Padding" Value="12,10"/>
+    </Style>
+    <Style Selector="TextBlock.screen-title">
+      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="Margin" Value="0,10,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
 
     <Style Selector="Button.frame-nav">
-      <Setter Property="Background" Value="#1A1C20"/>
+      <Setter Property="Background" Value="#141920"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -115,9 +171,8 @@
           <Border Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="6"
-                  Padding="{TemplateBinding Padding}"
-                  BoxShadow="inset 0 1 0 0 #22FFFFFF">
+                  CornerRadius="12"
+                  Padding="{TemplateBinding Padding}">
             <ContentPresenter Content="{TemplateBinding Content}"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"/>
@@ -132,14 +187,14 @@
     <Style Selector="Button.frame-nav.active">
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
+      <Setter Property="Background" Value="#18212C"/>
     </Style>
 
     <Style Selector="Button.window-chrome">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-      <Setter Property="Width" Value="36"/>
-      <Setter Property="Height" Value="28"/>
+      <Setter Property="Width" Value="34"/>
+      <Setter Property="Height" Value="26"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -155,7 +210,7 @@
 
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Foreground" Value="#0B0C0E"/>
+      <Setter Property="Foreground" Value="#071018"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="16,8"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
@@ -164,9 +219,9 @@
       <Setter Property="Template">
         <ControlTemplate>
           <Border Background="{TemplateBinding Background}"
-                  CornerRadius="6"
+                  CornerRadius="12"
                   Padding="{TemplateBinding Padding}"
-                  BoxShadow="0 0 12 0 #554BA3FF">
+                  BoxShadow="0 0 14 0 #334B9CFF">
             <ContentPresenter Content="{TemplateBinding Content}"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"/>
@@ -194,7 +249,7 @@
           <Border Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="6"
+                  CornerRadius="10"
                   Padding="{TemplateBinding Padding}">
             <ContentPresenter Content="{TemplateBinding Content}"
                               HorizontalAlignment="Center"
@@ -212,7 +267,7 @@
     </Style>
 
     <Style Selector="Button.chrome">
-      <Setter Property="Background" Value="#16181C"/>
+      <Setter Property="Background" Value="#12161B"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -224,7 +279,7 @@
           <Border Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="5"
+                  CornerRadius="9"
                   Padding="{TemplateBinding Padding}">
             <ContentPresenter Content="{TemplateBinding Content}"
                               HorizontalAlignment="Center"
@@ -235,6 +290,130 @@
     </Style>
     <Style Selector="Button.chrome:pointerover">
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
+    <!-- Round icon button: Send / Attach / PTT / Call / Victoria / Settings. -->
+    <Style Selector="Button.round">
+      <Setter Property="Width" Value="40"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Background" Value="#1A212A"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="BorderBrush" Value="#3A4654"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="RoundBd"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="100">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.round:pointerover /template/ Border#RoundBd">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="Button.round:disabled">
+      <Setter Property="Opacity" Value="0.4"/>
+    </Style>
+    <Style Selector="Button.round.send">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+      <Setter Property="Foreground" Value="#071018"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.round.call">
+      <Setter Property="Width" Value="64"/>
+      <Setter Property="Height" Value="64"/>
+      <Setter Property="Background" Value="#14301F"/>
+      <Setter Property="BorderBrush" Value="#3DE08A"/>
+      <Setter Property="Foreground" Value="#3DE08A"/>
+    </Style>
+    <Style Selector="Button.round.call.live">
+      <Setter Property="Background" Value="#3A1218"/>
+      <Setter Property="BorderBrush" Value="#FF4A57"/>
+      <Setter Property="Foreground" Value="#FF4A57"/>
+    </Style>
+    <Style Selector="Button.round.live">
+      <Setter Property="BorderBrush" Value="#FF4A57"/>
+      <Setter Property="Foreground" Value="#FF4A57"/>
+    </Style>
+    <Style Selector="Button.round.orb">
+      <Setter Property="Width" Value="30"/>
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="Background" Value="#0A0D11"/>
+    </Style>
+
+    <!-- Drawer edge tab for the VM popup. -->
+    <Style Selector="Button.vm-tab">
+      <Setter Property="Width" Value="22"/>
+      <Setter Property="Height" Value="96"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Background" Value="#CC10151B"/>
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="BorderBrush" Value="#3A4654"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="TabBd"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="11">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.vm-tab:pointerover /template/ Border#TabBd">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <!-- Row buttons inside drawers / settings. -->
+    <Style Selector="Button.nav-tile">
+      <Setter Property="Background" Value="#99121820"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="BorderBrush" Value="#262F3A"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="TileBd"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="12"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.nav-tile:pointerover /template/ Border#TileBd">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
+    </Style>
+
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
 
     <Style Selector="TabControl.settings-tabs">
@@ -253,12 +432,11 @@
       <Setter Property="Template">
         <ControlTemplate>
           <Border Name="TabBd"
-                  Background="#1A1C20"
+                  Background="#141920"
                   BorderBrush="{DynamicResource PanelBorderBrush}"
                   BorderThickness="1"
-                  CornerRadius="6"
-                  Padding="{TemplateBinding Padding}"
-                  BoxShadow="inset 0 1 0 0 #22FFFFFF">
+                  CornerRadius="10"
+                  Padding="{TemplateBinding Padding}">
             <ContentPresenter Content="{TemplateBinding Header}"
                               ContentTemplate="{TemplateBinding HeaderTemplate}"
                               HorizontalAlignment="Center"
@@ -275,10 +453,10 @@
     </Style>
     <Style Selector="TabItem:selected /template/ Border#TabBd">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
+      <Setter Property="Background" Value="#18212C"/>
     </Style>
 
-    <!-- Header stand-ins for Her screen / What she saw (tab strip is hidden so coords can sit between them and Start/Stop). -->
+    <!-- Header stand-ins for Her screen / What she saw inside the VM drawer. -->
     <Style Selector="Button.side-tab">
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="FontSize" Value="12"/>
@@ -286,7 +464,7 @@
       <Setter Property="Padding" Value="14,8"/>
       <Setter Property="Margin" Value="0,0,8,0"/>
       <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Background" Value="#1A1C20"/>
+      <Setter Property="Background" Value="#141920"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Template">
@@ -295,9 +473,8 @@
                   Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="6"
-                  Padding="{TemplateBinding Padding}"
-                  BoxShadow="inset 0 1 0 0 #22FFFFFF">
+                  CornerRadius="10"
+                  Padding="{TemplateBinding Padding}">
             <ContentPresenter Content="{TemplateBinding Content}"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"/>
@@ -313,24 +490,23 @@
     </Style>
     <Style Selector="Button.side-tab.selected /template/ Border#TabBd">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Background" Value="#1E2430"/>
+      <Setter Property="Background" Value="#18212C"/>
     </Style>
 
-    <!-- Message row with contact bubbles outside the text bubble -->
+    <!-- Message rows (no avatars in the glass shell). -->
     <Style Selector="Grid.msg-row">
-      <Setter Property="Margin" Value="4,6"/>
+      <Setter Property="Margin" Value="2,4"/>
     </Style>
 
     <Style Selector="Border.contact-bubble">
-      <Setter Property="Width" Value="34"/>
-      <Setter Property="Height" Value="34"/>
-      <Setter Property="CornerRadius" Value="17"/>
-      <Setter Property="Background" Value="#1A1C20"/>
+      <Setter Property="Width" Value="30"/>
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="CornerRadius" Value="15"/>
+      <Setter Property="Background" Value="#141920"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="VerticalAlignment" Value="Top"/>
       <Setter Property="Margin" Value="0,2,8,0"/>
-      <Setter Property="BoxShadow" Value="0 0 8 0 #33000000"/>
     </Style>
     <Style Selector="Border.contact-bubble.user">
       <Setter Property="Margin" Value="8,2,0,0"/>
@@ -342,30 +518,26 @@
 
     <Style Selector="Border.bubble">
       <Setter Property="Background" Value="{DynamicResource AssistantBubbleBrush}"/>
-      <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="CornerRadius" Value="18,18,18,6"/>
+      <Setter Property="Padding" Value="13,10"/>
       <Setter Property="HorizontalAlignment" Value="Left"/>
-      <Setter Property="MaxWidth" Value="520"/>
-      <Setter Property="BorderBrush" Value="#2C3038"/>
+      <Setter Property="MaxWidth" Value="330"/>
+      <Setter Property="BorderBrush" Value="#262F3A"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="BoxShadow" Value="0 4 12 0 #44000000, inset 0 1 0 0 #18FFFFFF"/>
     </Style>
     <Style Selector="Border.bubble.user">
       <Setter Property="Background" Value="{DynamicResource UserBubbleBrush}"/>
       <Setter Property="HorizontalAlignment" Value="Right"/>
-      <Setter Property="BorderBrush" Value="#343842"/>
+      <Setter Property="CornerRadius" Value="18,18,6,18"/>
+      <Setter Property="BorderBrush" Value="#2F4A66"/>
     </Style>
+    <!-- Kept so stale templates still resolve; the glass shell never renders system rows. -->
     <Style Selector="Border.bubble.system">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-      <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="4,6"/>
-      <Setter Property="Opacity" Value="0.8"/>
-      <Setter Property="MaxWidth" Value="10000"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Opacity" Value="0.7"/>
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="BoxShadow" Value="none"/>
-      <Setter Property="Margin" Value="8,2"/>
+      <Setter Property="MaxWidth" Value="10000"/>
     </Style>
 
     <Style Selector="TextBox.input">
@@ -373,7 +545,19 @@
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
       <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    <Style Selector="TextBox.composer">
+      <Setter Property="Background" Value="#0D1116"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="BorderBrush" Value="#3A4654"/>
+      <Setter Property="CornerRadius" Value="20"/>
+      <Setter Property="Padding" Value="14,8"/>
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="MaxHeight" Value="140"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="AcceptsReturn" Value="True"/>
     </Style>
 
     <Style Selector="ProgressBar.gauge">
@@ -387,82 +571,30 @@
     <Style Selector="Border.metal">
       <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource MetalBevelBrush}"/>
-      <Setter Property="BorderThickness" Value="1.5"/>
-      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
     </Style>
 
     <Style Selector="Border.glass">
-      <Setter Property="BoxShadow" Value="0 10 28 0 #66000000, inset 0 1 0 0 #44FFFFFF, inset 0 -1 0 0 #44000000, inset 1 0 0 0 #22FFFFFF"/>
+      <Setter Property="BoxShadow" Value="0 10 28 0 #66000000"/>
     </Style>
 
     <Style Selector="Border.inset">
-      <Setter Property="Background" Value="#0C0D10"/>
+      <Setter Property="Background" Value="#080A0E"/>
       <Setter Property="BoxShadow" Value="inset 0 3 10 0 #AA000000"/>
     </Style>
 
     <Style Selector="Border.mood-gem-well">
-      <Setter Property="Background" Value="#0C0D10"/>
+      <Setter Property="Background" Value="#080A0E"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="BoxShadow" Value="inset 0 2 4 0 #88000000"/>
     </Style>
 
     <Style Selector="Border.carbon">
       <Setter Property="Background" Value="{DynamicResource CarbonBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="6"/>
-    </Style>
-
-    <Style Selector="Button.house-tab">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-      <Setter Property="Padding" Value="12,10"/>
-      <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="HorizontalContentAlignment" Value="Center"/>
-      <Setter Property="BorderThickness" Value="0"/>
-    </Style>
-    <Style Selector="Button.house-tab:pointerover">
-      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-      <Setter Property="Background" Value="#18FFFFFF"/>
-    </Style>
-
-    <Style Selector="Border.house-drawer-body">
-      <Setter Property="Background" Value="#14161A"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource MetalHighlightBrush}"/>
-      <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #33FFFFFF"/>
-    </Style>
-
-    <Style Selector="Border.lamp-well">
-      <Setter Property="Width" Value="56"/>
-      <Setter Property="Height" Value="56"/>
-      <Setter Property="CornerRadius" Value="28"/>
-      <Setter Property="Background" Value="#07080A"/>
-      <Setter Property="BorderBrush" Value="#3A404C"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Padding" Value="2"/>
-      <Setter Property="HorizontalAlignment" Value="Center"/>
-      <Setter Property="BoxShadow" Value="inset 0 5 14 0 #EE000000, inset 0 -1 0 0 #33FFFFFF"/>
-    </Style>
-
-    <Style Selector="Button.lamp">
-      <Setter Property="Width" Value="28"/>
-      <Setter Property="Height" Value="28"/>
-      <Setter Property="CornerRadius" Value="14"/>
-      <Setter Property="Background" Value="{DynamicResource LampOffBrush}"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
-      <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  CornerRadius="14"
-                  Width="{TemplateBinding Width}"
-                  Height="{TemplateBinding Height}"
-                  BoxShadow="inset 0 2 3 0 #88FFFFFF, inset 0 -2 4 0 #44000000"/>
-        </ControlTemplate>
-      </Setter>
+      <Setter Property="CornerRadius" Value="12"/>
     </Style>
 
     <Style Selector="Ellipse.screw">
@@ -474,7 +606,7 @@
     </Style>
 
     <Style Selector="ToggleButton.chrome">
-      <Setter Property="Background" Value="#16181C"/>
+      <Setter Property="Background" Value="#12161B"/>
       <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource CarbonEdgeBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>

@@ -3,6 +3,7 @@ using Xunit;
 
 namespace House.ChatDesktop.Tests;
 
+[Collection("CompanionTokenState")]
 public class CompanionTokenStoreTests : IDisposable
 {
     private readonly string _dir;

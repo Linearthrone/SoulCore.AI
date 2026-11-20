@@ -1,0 +1,12 @@
+-- Schema fragment 015: PROP-18.6 activities log (documentation companion).
+-- Runtime apply path: Migrations/015_victoria_activities_log.sql via SqliteMemorySession.
+-- Rollback notes: Migrations/015_victoria_activities_log_rollback.sql
+
+-- See Migrations/015_victoria_activities_log.sql for CREATE TABLE definitions:
+--   victoria_activities_log
+--     entry_no, occurred_at, activity, subject, session_desc,
+--     journal_book_id?, journal_entry_id?, created_at
+-- Indexes:
+--   idx_activities_occurred (recent-first)
+--   idx_activities_subject_occurred (filter by subject)
+-- Boundary: research papers remain in victoria_research_* (011) — not this table.

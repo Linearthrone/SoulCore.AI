@@ -1,24 +1,7 @@
-# House.Voice
+# House.Voice (deprecated — PROP-21)
 
-Local ears and voice for Presence. Both servers live in this repo.
+Local faster-whisper STT and Kokoro TTS satellites are **no longer used** by Presence / SoulCore.Host.
 
-| Service | Port | Where |
-|---|---|---|
-| Kokoro TTS | `127.0.0.1:8881` | `House/House.Voice/tts/server.py` |
-| faster-whisper STT | `127.0.0.1:8000` | `House/House.Voice/stt/server.py` |
+Voice now goes through **Soniox** (`SONIOX_API_KEY` in repo `.env` → Host `Voice:ApiKey`).
 
-The Host posts `{ "text", "voice" }` to the TTS URL and expects a WAV back.
-Voice name `default` is Kokoro's `af_heart`. It posts a WAV to STT
-`/transcribe` and reads `{ "text" }` back.
-
-## Start
-
-```powershell
-.\House\House.Voice\start-tts.ps1
-.\House\House.Voice\start-stt.ps1
-```
-
-ALLSTART runs both. The first start installs the Python packages and downloads
-the models into `House/House.Voice/models` (not committed).
-
-Prefer Python 3.11 at `V:\Python311\python.exe`.
+Scripts `start-stt.ps1` / `start-tts.ps1` remain for offline experiments only. ALLSTART skips them by default.

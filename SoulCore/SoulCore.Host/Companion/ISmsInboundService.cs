@@ -21,7 +21,7 @@ public sealed record SmsInboundResult(
 public interface ISmsInboundService
 {
     /// <summary>
-    /// Allowlist → optional media store → no-tools chat turn on
+    /// Allowlist → optional media store → filtered-tools (PROP-20.5) chat turn on
     /// <c>presence-local</c> → broadcast to Presence WS so ChatDesktop sees it.
     /// </summary>
     Task<SmsInboundResult> HandleAsync(

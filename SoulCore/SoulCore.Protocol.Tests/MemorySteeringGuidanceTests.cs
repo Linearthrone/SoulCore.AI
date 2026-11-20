@@ -11,6 +11,7 @@ public class MemorySteeringGuidanceTests
         Assert.Contains(MemorySteeringGuidance.Marker, once, StringComparison.Ordinal);
         Assert.Contains("not flavor", once, StringComparison.Ordinal);
         Assert.Contains("Follow the steps", once, StringComparison.Ordinal);
+        Assert.Contains("do not invent a clock", once, StringComparison.Ordinal);
         Assert.Equal(once, MemorySteeringGuidance.AppendToPreamble(once));
     }
 

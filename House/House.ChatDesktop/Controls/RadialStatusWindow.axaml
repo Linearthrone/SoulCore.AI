@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="House.ChatDesktop.Controls.RadialStatusWindow"
+        Title="Status"
+        Width="340" Height="340"
+        CanResize="False"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        ShowActivated="True"
+        Topmost="True"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Foreground="{DynamicResource TextBrush}"
+        WindowStartupLocation="Manual">
+  <!-- PROP-22.5 / v3: three-quarter radial OUTSIDE the upper-left corner.
+       Large status orbs dominate each wedge; labels stay small under the orbs. -->
+  <Canvas x:Name="RadialCanvas" Width="340" Height="340" Background="Transparent">
+    <!-- Origin marker (orb corner of the main slab) — not hit-testable. -->
+    <Ellipse Canvas.Left="292" Canvas.Top="292" Width="16" Height="16"
+             Fill="#22000000" IsHitTestVisible="False"/>
+  </Canvas>
+</Window>

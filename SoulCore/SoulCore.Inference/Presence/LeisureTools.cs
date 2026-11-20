@@ -3,8 +3,9 @@ using SoulCore.Inference.Tooling;
 namespace SoulCore.Inference.Presence;
 
 /// <summary>
-/// PROP-17.3: light tools only for R&amp;R. Host rejects (email/MT4/guest_shell/
-/// settings/downloads/second browser) stay refused by existing tool code.
+/// PROP-17.3 / PROP-20.6: light tools only for R&amp;R. Host rejects (email/MT4/
+/// guest_shell/settings/downloads/<c>desktop_open_app</c>/<c>browser_navigate</c>)
+/// stay refused. Do not widen SMS allow tools into leisure.
 /// </summary>
 public static class LeisureTools
 {

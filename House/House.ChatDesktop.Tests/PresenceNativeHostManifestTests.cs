@@ -60,9 +60,10 @@ public sealed class PresenceNativeHostManifestTests
     }
 
     [Fact]
-    public void MainWindow_axaml_defers_NativeControlHost_out_of_cold_start_tree()
+    public void VmDrawer_axaml_defers_NativeControlHost_out_of_cold_start_tree()
     {
-        var path = Path.Combine(ChatDesktopDir, "MainWindow.axaml");
+        // PROP-22.6: the Her-screen embed slot lives in the VM drawer popup window, not MainWindow.
+        var path = Path.Combine(ChatDesktopDir, "Controls", "VmDrawerWindow.axaml");
         var axaml = File.ReadAllText(path);
         Assert.Contains("VictoriaBrowserEmbedSlot", axaml, StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -71,6 +72,14 @@ public sealed class PresenceNativeHostManifestTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MainWindow_axaml_has_no_native_host_and_no_tab_wall()
+    {
+        var axaml = File.ReadAllText(Path.Combine(ChatDesktopDir, "MainWindow.axaml"));
+        Assert.DoesNotContain("VictoriaBrowserEmbedHost", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("NativeControlHost", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<TabControl", axaml, StringComparison.Ordinal);
+    }
     [Fact]
     public void EmbedHost_exposes_NativeHostUnavailable_for_soft_fail()
     {

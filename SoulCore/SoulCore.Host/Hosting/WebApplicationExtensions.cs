@@ -15,10 +15,14 @@ using SoulCore.Inference.Tooling;
 using SoulCore.Core.Charter;
 using SoulCore.Core.Safety;
 using SoulCore.Host.Companion;
+using SoulCore.Host.Growth;
 using SoulCore.Host.Voice;
 using SoulCore.Host.Ws;
+using SoulCore.Core.Growth;
+using SoulCore.Inference.Presence;
 using SoulCore.Inference.Tools.Browser;
 using SoulCore.Inference.Tools.Desktop;
+using System.Globalization;
 using System.Text.Json;
 
 namespace SoulCore.Host.Hosting;
@@ -70,6 +74,8 @@ internal static class WebApplicationExtensions
 
         app.MapCompanionApi();
         app.MapVoiceApi();
+        // PROP-22.2: operator work items / agenda / inference profiles / host log tail.
+        app.MapOperatorSurfaceApi();
 
         app.MapGet("/health", async (
             IOptions<HostBindOptions> opts,
@@ -88,9 +94,13 @@ internal static class WebApplicationExtensions
             SoulCore.Inference.Presence.ILeisureSession leisure,
             IVictoriaTaskStore victoriaTasks,
             SoulCore.Inference.Presence.IAssignedWorkStore assignedWork,
+            SoulCore.Inference.Presence.IIdleParkedWorkBudget parkedBudget,
+            SoulCore.Host.Inference.InferenceRuntimeSelection inferenceSelection,
             CancellationToken cancellationToken) =>
         {
             var inferenceOptions = inferenceOpts.Value;
+            // PROP-22.2: live operator selection (null override = configured defaults).
+            var inferenceEffective = inferenceSelection.GetEffective(inferenceOptions);
             var embeddingsOn = inferenceOptions.Enabled && inferenceOptions.EmbeddingsEnabled;
             var memoryOk = memory.IsDatabaseOpen;
 
@@ -143,6 +153,9 @@ internal static class WebApplicationExtensions
                 // health stays up even if the ledger query fails
             }
 
+            // PROP-18.19 / F1: same safe snapshot helper as /settings/identity (no duplicate try/catch).
+            var idleParkedBudget = IdleParkedBudgetDto(SafeParkedBudgetSnapshot(parkedBudget));
+
             return Results.Json(new
             {
                 status = memoryOk ? "ok" : "degraded",
@@ -156,6 +169,8 @@ internal static class WebApplicationExtensions
                     count = taskCount,
                     runningId = runningTaskId
                 },
+                // PROP-18.8: B3 soft budget for unsupervised parked advances (FED Presence / Identity).
+                idleParkedBudget,
                 ws = new
                 {
                     path = chatOpts.Value.Path,
@@ -170,12 +185,13 @@ internal static class WebApplicationExtensions
                 {
                     enabled = inferenceOptions.Enabled,
                     provider = inferenceOptions.Enabled
-                        ? (inferenceOptions.IsCloudEndpoint ? "ollama-cloud" : "ollama")
+                        ? (inferenceEffective.Cloud ? "ollama-cloud" : "ollama")
                         : "null",
-                    // BED-01 / TASK-157: expose configured chat model for QA/ops (no secrets).
-                    model = inferenceOptions.Model,
-                    cloud = inferenceOptions.IsCloudEndpoint,
-                    baseUrl = inferenceOptions.IsCloudEndpoint ? InferenceOptions.CloudBaseUrl : "loopback",
+                    // BED-01 / TASK-157 + PROP-22.2: effective chat model (runtime override wins; no secrets).
+                    model = inferenceEffective.Model,
+                    cloud = inferenceEffective.Cloud,
+                    leisureModel = inferenceEffective.LeisureModel,
+                    baseUrl = inferenceEffective.BaseUrlHint,
                     embeddingsEnabled = embeddingsOn,
                     embeddingModel = inferenceOptions.EmbeddingModel,
                     embeddingBaseUrl = embeddingsOn
@@ -424,6 +440,190 @@ internal static class WebApplicationExtensions
             return Results.Json(new { paper = ResearchPaperDto(paper) });
         });
 
+        // Private Victoria journals (feeling / animation / environment / life_hacks /
+        // thoughts / wants / dreams). Read-only for Presence — separate from research papers.
+        app.MapGet("/journals/books", async (
+            IVictoriaJournalStore journals,
+            CancellationToken cancellationToken) =>
+        {
+            var books = await journals.ListBooksAsync(cancellationToken).ConfigureAwait(false);
+            return Results.Json(new
+            {
+                count = books.Count,
+                books = books.Select(b => new
+                {
+                    id = b.Id,
+                    title = b.Title,
+                    purpose = b.Purpose,
+                    createdAt = b.CreatedAt
+                })
+            });
+        });
+
+        app.MapGet("/journals/books/{bookId}/entries", async (
+            string bookId,
+            int? limit,
+            IVictoriaJournalStore journals,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(bookId))
+                return Results.Json(new { error = "bookId required" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var book = await journals.GetBookAsync(bookId, cancellationToken).ConfigureAwait(false);
+            if (book is null)
+            {
+                return Results.Json(
+                    new { error = "book not found", bookId },
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+
+            var take = limit is > 0 ? limit.Value : 50;
+            var entries = await journals
+                .ListEntriesAsync(book.Id, take, cancellationToken)
+                .ConfigureAwait(false);
+            return Results.Json(new
+            {
+                book = new
+                {
+                    id = book.Id,
+                    title = book.Title,
+                    purpose = book.Purpose,
+                    createdAt = book.CreatedAt
+                },
+                count = entries.Count,
+                entries = entries.Select(e => new
+                {
+                    id = e.Id,
+                    bookId = e.BookId,
+                    body = e.Body,
+                    moodJson = e.MoodJson,
+                    tagsJson = e.TagsJson,
+                    occurredAt = e.OccurredAt,
+                    createdAt = e.CreatedAt,
+                    source = e.Source
+                })
+            });
+        });
+
+        // PROP-18.7 / FED-18.3: activities log list/read (Entry, Date/Time, Activity, Subject, Desc).
+        app.MapGet("/activities", async (
+            string? subject,
+            int? limit,
+            IVictoriaActivitiesLogStore activities,
+            CancellationToken cancellationToken) =>
+        {
+            var take = limit is > 0 ? limit.Value : 50;
+            var rows = await activities
+                .ListRecentAsync(subject, take, cancellationToken)
+                .ConfigureAwait(false);
+            return Results.Json(new
+            {
+                count = rows.Count,
+                activities = rows.Select(ActivityLogDto)
+            });
+        });
+
+        app.MapGet("/activities/{entryNo:long}", async (
+            long entryNo,
+            IVictoriaActivitiesLogStore activities,
+            CancellationToken cancellationToken) =>
+        {
+            if (entryNo <= 0)
+                return Results.Json(new { error = "entryNo must be positive" }, statusCode: StatusCodes.Status400BadRequest);
+            var row = await activities.GetAsync(entryNo, cancellationToken).ConfigureAwait(false);
+            if (row is null)
+                return Results.Json(new { error = "entry not found", entryNo }, statusCode: StatusCodes.Status404NotFound);
+            return Results.Json(new { activity = ActivityLogDto(row) });
+        });
+
+        // Topic-scoped thoughts journal crumbs (tags include subject) for Presence / Identity.
+        app.MapGet("/journals/topic", async (
+            string? subject,
+            int? limit,
+            IVictoriaJournalStore journals,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(subject))
+                return Results.Json(new { error = "subject required" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var topic = subject.Trim();
+            var take = limit is > 0 ? Math.Min(limit.Value, 200) : 50;
+            // Over-fetch then filter by topic tag — thoughts book is the Q4 topic journal.
+            var pool = await journals
+                .ListEntriesAsync(ActivityResidueComposer.TopicJournalBookId, Math.Min(take * 4, 200), cancellationToken)
+                .ConfigureAwait(false);
+            var matched = pool
+                .Where(e => JournalTagsContainSubject(e.TagsJson, topic))
+                .Take(take)
+                .ToList();
+            return Results.Json(new
+            {
+                subject = topic,
+                bookId = ActivityResidueComposer.TopicJournalBookId,
+                count = matched.Count,
+                entries = matched.Select(e => new
+                {
+                    id = e.Id,
+                    bookId = e.BookId,
+                    body = e.Body,
+                    tagsJson = e.TagsJson,
+                    occurredAt = e.OccurredAt,
+                    createdAt = e.CreatedAt,
+                    source = e.Source
+                })
+            });
+        });
+
+        // While-you-were-gone: store residue only (empty is honest). FED-18.3 Presence strip.
+        app.MapGet("/presence/while-you-were-gone", async (
+            string? since,
+            int? limit,
+            IVictoriaActivitiesLogStore activities,
+            IVictoriaJournalStore journals,
+            CancellationToken cancellationToken) =>
+        {
+            var take = limit is > 0 ? Math.Min(limit.Value, 100) : 30;
+            var sinceAt = string.IsNullOrWhiteSpace(since)
+                ? DateTime.UtcNow.AddHours(-12).ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture)
+                : since.Trim();
+
+            IReadOnlyList<VictoriaActivityLogEntry> rows;
+            try
+            {
+                rows = await activities.ListSinceAsync(sinceAt, take, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var journalPool = await journals
+                .ListEntriesAsync(ActivityResidueComposer.TopicJournalBookId, take, cancellationToken)
+                .ConfigureAwait(false);
+            var journalCrumbs = journalPool
+                .Where(e => string.CompareOrdinal(e.OccurredAt, sinceAt) >= 0)
+                .Take(take)
+                .Select(e => new
+                {
+                    id = e.Id,
+                    bookId = e.BookId,
+                    bodyPreview = e.Body.Length > 240 ? e.Body[..237] + "…" : e.Body,
+                    tagsJson = e.TagsJson,
+                    occurredAt = e.OccurredAt
+                })
+                .ToList();
+
+            return Results.Json(new
+            {
+                since = sinceAt,
+                empty = rows.Count == 0 && journalCrumbs.Count == 0,
+                activities = rows.Select(ActivityLogDto),
+                activityCount = rows.Count,
+                journalCrumbs,
+                journalCount = journalCrumbs.Count
+            });
+        });
+
         app.MapPost("/health/drift/ack", (DriftWatcher driftWatcher) =>
         {
             var acked = driftWatcher.AcknowledgeAll();
@@ -587,11 +787,13 @@ internal static class WebApplicationExtensions
             }
         }).AddEndpointFilter(CompanionEmailAuthFilter);
 
-        // TASK-177: Identity tab payload — Companion display name + charter anchor details
-        // (read-only from CharterService; no fabricated biography).
+        // TASK-177 / PROP-20.30 / PROP-20.37: Identity tab — Companion name + charter +
+        // resting / context rows + bond counters / soak / growth for FED-20.38.
         app.MapGet("/settings/identity", async (
             IOptions<CompanionOptions> companionOpts,
             CharterService charter,
+            IGrowthService growth,
+            SoulCore.Inference.Presence.IIdleParkedWorkBudget parkedBudget,
             CancellationToken cancellationToken) =>
         {
             var companion = companionOpts.Value ?? new CompanionOptions();
@@ -601,25 +803,164 @@ internal static class WebApplicationExtensions
             try
             {
                 (charterTotal, charterLocked) = await charter.GetLockCountsAsync(cancellationToken).ConfigureAwait(false);
-                identityAnchors = await charter.ListAnchorDetailsAsync("identity", cancellationToken).ConfigureAwait(false);
-                allAnchors = await charter.ListAnchorDetailsAsync(kind: null, cancellationToken).ConfigureAwait(false);
+                identityAnchors = await charter.ListAnchorDetailsAsync("identity", cancellationToken: cancellationToken).ConfigureAwait(false);
+                allAnchors = await charter.ListAnchorDetailsAsync(kind: null, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (Exception)
             {
                 // Return name + empty anchors rather than failing the Settings tab.
             }
 
-            var fullyLocked = charterTotal > 0 && charterLocked == charterTotal;
-            static object AnchorDto(CharterAnchorInfo a) => new
+            GrowthIdentitySnapshot? growthSnap = null;
+            try
             {
-                id = a.Id,
-                kind = a.Kind,
-                title = a.Title,
-                body = a.Body,
-                priority = a.Priority,
-                isLocked = a.IsLocked,
-                source = a.Source
+                growthSnap = await growth.GetIdentitySnapshotAsync(cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Identity still returns charter/resting; growth fields fall back empty.
+            }
+
+            var fullyLocked = charterTotal > 0 && charterLocked == charterTotal;
+            // PROP-20.15: expose book when schema has it; else resolve from locked floor map.
+            static object AnchorDto(CharterAnchorInfo a)
+            {
+                var book = SoulCore.Core.Charter.CharterBooks.ResolveForTitle(a.Title, a.Book);
+                return new
+                {
+                    id = a.Id,
+                    kind = a.Kind,
+                    title = a.Title,
+                    body = a.Body,
+                    priority = a.Priority,
+                    isLocked = a.IsLocked,
+                    source = a.Source,
+                    book
+                };
+            }
+
+            // PROP-20.30: resting always-on rows; contextTraits empty on bare GET
+            // (turn-scoped selection lives in chat/SMS/leisure builders). Catalog is
+            // the v1 seed shape FED may render as "available / not earned this turn".
+            static object RestingDto(SoulCore.Core.VictoriaMindBlock.RestingTraitLine t) => new
+            {
+                id = t.Name.ToLowerInvariant(),
+                name = t.Name,
+                group = "resting",
+                weight = t.Weight,
+                band = t.Band,
+                promptLine = t.PromptLine,
+                ledgerReason = t.LedgerReason
             };
+
+            static object ContextDto(SoulCore.Core.VictoriaMindBlock.ContextTraitLine t) => new
+            {
+                id = t.Id,
+                name = t.Name,
+                group = t.Group,
+                kind = t.Kind.ToString().ToLowerInvariant(),
+                weight = t.Weight,
+                band = t.Band,
+                promptLine = t.PromptLine,
+                appliesWhen = t.AppliesWhen,
+                ledgerReason = t.LedgerReason
+            };
+
+            static object GrowthDto(GrowthTraitLine t) => new
+            {
+                id = t.Id,
+                name = t.Name,
+                group = "growth",
+                weight = t.Weight,
+                band = t.Band,
+                promptLine = t.PromptLine,
+                ledgerReason = t.LedgerReason
+            };
+
+            object bondCounters;
+            object soak;
+            object growthTraits;
+            object pendingBandCross;
+            object growthLedger;
+            if (growthSnap is { } g)
+            {
+                bondCounters = new
+                {
+                    contactTimeMinutes = g.BondCounters.ContactTimeMinutes,
+                    daysWithContact = g.BondCounters.DaysWithContact,
+                    entrustedTasks = g.BondCounters.EntrustedTasks,
+                    operatorCorrections = g.BondCounters.OperatorCorrections,
+                    herInitiatedReaches = g.BondCounters.HerInitiatedReaches,
+                    journalOpens = g.BondCounters.JournalOpens
+                };
+                soak = new
+                {
+                    phase = GrowthSoakClock.PhaseLabel(g.Soak.Phase),
+                    startedAt = g.Soak.StartedAtUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    daysElapsed = g.Soak.DaysElapsed,
+                    daysRemaining = g.Soak.DaysRemaining,
+                    contactDaysInWindow = g.Soak.ContactDaysInWindow,
+                    contactGateMet = g.Soak.ContactGateMet,
+                    minContactDays = GrowthSoakClock.MinContactDaysToOpen,
+                    displayOnlyDays = (int)GrowthSoakClock.DisplayOnlyDuration.TotalDays,
+                    isFirstWeekAfterOpen = g.Soak.IsFirstWeekAfterOpen,
+                    mayChangePrompt = g.Soak.MayChangePrompt
+                };
+                growthTraits = g.GrowthTraits.Select(GrowthDto).ToArray();
+                pendingBandCross = g.Pending.Select(p => new
+                {
+                    id = p.Id,
+                    traitId = p.TraitId,
+                    fromWeight = p.FromWeight,
+                    toWeight = p.ToWeight,
+                    fromBand = p.FromBand,
+                    toBand = p.ToBand,
+                    reason = p.Reason,
+                    status = p.Status,
+                    createdAt = p.CreatedAt
+                }).ToArray();
+                growthLedger = g.RecentLedger.Select(e => new
+                {
+                    id = e.Id,
+                    traitId = e.TraitId,
+                    fromWeight = e.FromWeight,
+                    toWeight = e.ToWeight,
+                    fromBand = e.FromBand,
+                    toBand = e.ToBand,
+                    reason = e.Reason,
+                    source = e.Source,
+                    recordedAt = e.RecordedAt
+                }).ToArray();
+            }
+            else
+            {
+                bondCounters = new
+                {
+                    contactTimeMinutes = 0.0,
+                    daysWithContact = 0,
+                    entrustedTasks = 0,
+                    operatorCorrections = 0,
+                    herInitiatedReaches = 0,
+                    journalOpens = 0
+                };
+                soak = new
+                {
+                    phase = "display_only",
+                    startedAt = (string?)null,
+                    daysElapsed = 0,
+                    daysRemaining = 14,
+                    contactDaysInWindow = 0,
+                    contactGateMet = false,
+                    minContactDays = GrowthSoakClock.MinContactDaysToOpen,
+                    displayOnlyDays = 14,
+                    isFirstWeekAfterOpen = false,
+                    mayChangePrompt = false
+                };
+                growthTraits = GrowthTraits.DefaultSeedTraits.Select(GrowthDto).ToArray();
+                pendingBandCross = Array.Empty<object>();
+                growthLedger = Array.Empty<object>();
+            }
 
             return Results.Json(new
             {
@@ -634,8 +975,45 @@ internal static class WebApplicationExtensions
                 },
                 identityAnchors = identityAnchors.Select(AnchorDto).ToArray(),
                 anchors = allAnchors.Select(AnchorDto).ToArray(),
-                note = "Read-only charter/identity anchors from SoulCore SQLite. Display name from Companion options (Victoria)."
+                restingTraits = SoulCore.Core.VictoriaMindBlock.DefaultRestingTraits
+                    .Select(RestingDto)
+                    .ToArray(),
+                contextTraits = Array.Empty<object>(),
+                contextTraitCatalog = SoulCore.Core.VictoriaMindBlock.DefaultContextTraits
+                    .Select(ContextDto)
+                    .ToArray(),
+                bondCounters,
+                soak,
+                growthTraits,
+                pendingBandCross,
+                growthLedger,
+                // PROP-18.8: B3 idle parked-work soft budget for FED Presence / Identity.
+                idleParkedBudget = IdleParkedBudgetDto(SafeParkedBudgetSnapshot(parkedBudget)),
+                note = "Read-only charter/identity anchors from SoulCore SQLite. Display name from Companion options (Victoria). restingTraits always on; contextTraits are turn-scoped (empty on this GET). PROP-20.37: bondCounters display-only until soak open; growthTraits nudge only responsiveness/initiative/openness; band-cross stays in pendingBandCross until operator confirm. PROP-18.8: idleParkedBudget is B3 soft cap (≤3 advances or 45 min tool time / local day)."
             });
+        });
+
+        // PROP-20.37 / FED-20.38: operator confirm or dismiss a pending band-cross proposal.
+        app.MapPost("/settings/identity/growth/pending/{id:long}/confirm", async (
+            long id,
+            IGrowthService growth,
+            CancellationToken cancellationToken) =>
+        {
+            var ok = await growth.ConfirmPendingAsync(id, cancellationToken).ConfigureAwait(false);
+            return ok
+                ? Results.Json(new { ok = true, id, status = "confirmed" })
+                : Results.NotFound(new { ok = false, id, error = "pending_not_found" });
+        });
+
+        app.MapPost("/settings/identity/growth/pending/{id:long}/dismiss", async (
+            long id,
+            IGrowthService growth,
+            CancellationToken cancellationToken) =>
+        {
+            var ok = await growth.DismissPendingAsync(id, cancellationToken).ConfigureAwait(false);
+            return ok
+                ? Results.Json(new { ok = true, id, status = "dismissed" })
+                : Results.NotFound(new { ok = false, id, error = "pending_not_found" });
         });
 
         app.MapGet("/desktop/view", (IDesktopViewHub view) =>
@@ -921,6 +1299,45 @@ internal static class WebApplicationExtensions
         updatedAt = p.UpdatedAt
     };
 
+    /// <summary>PROP-18.7 / FED-18.3 desk columns: Entry, Date/Time, Activity, Subject/Focus, Desc.
+    /// Wire name is <c>desc</c> only (PROP-18.29 F1 — no <c>sessionDesc</c> alias).</summary>
+    private static object ActivityLogDto(VictoriaActivityLogEntry e) => new
+    {
+        entryNo = e.EntryNo,
+        occurredAt = e.OccurredAt,
+        activity = e.Activity,
+        subject = e.Subject,
+        desc = e.SessionDesc,
+        journalBookId = e.JournalBookId,
+        journalEntryId = e.JournalEntryId,
+        createdAt = e.CreatedAt
+    };
+
+    private static bool JournalTagsContainSubject(string? tagsJson, string subject)
+    {
+        if (string.IsNullOrWhiteSpace(tagsJson) || string.IsNullOrWhiteSpace(subject))
+            return false;
+        var needle = subject.Trim();
+        try
+        {
+            using var doc = JsonDocument.Parse(tagsJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                return tagsJson.Contains(needle, StringComparison.OrdinalIgnoreCase);
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.ValueKind == JsonValueKind.String
+                    && string.Equals(el.GetString(), needle, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch (JsonException)
+        {
+            return tagsJson.Contains(needle, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
     private static object PresenceDto(
         SoulCore.Inference.Presence.PresenceActivitySnapshot snap,
         SoulCore.Inference.Presence.ILeisureSession leisure) => new
@@ -930,6 +1347,51 @@ internal static class WebApplicationExtensions
         activityUpdatedAt = snap.UpdatedAt,
         onHerMind = leisure.ActivityLine()
     };
+
+    /// <summary>PROP-18.8: B3 soft budget DTO for /health and /settings/identity.</summary>
+    private static object IdleParkedBudgetDto(
+        SoulCore.Inference.Presence.IdleParkedWorkBudgetSnapshot? snap)
+    {
+        if (snap is null)
+        {
+            return new
+            {
+                localDay = (string?)null,
+                advancesUsed = 0,
+                advancesCap = SoulCore.Inference.Presence.FileIdleParkedWorkBudget.MaxAdvancesPerDay,
+                toolMinutesUsed = 0.0,
+                toolMinutesCap = SoulCore.Inference.Presence.FileIdleParkedWorkBudget.MaxToolTime.TotalMinutes,
+                exhausted = false,
+                activeTaskId = (long?)null,
+                exhaustReason = (string?)null
+            };
+        }
+
+        return new
+        {
+            localDay = snap.LocalDay,
+            advancesUsed = snap.AdvancesUsed,
+            advancesCap = snap.AdvancesCap,
+            toolMinutesUsed = snap.ToolMinutesUsed,
+            toolMinutesCap = snap.ToolMinutesCap,
+            exhausted = snap.Exhausted,
+            activeTaskId = snap.ActiveTaskId,
+            exhaustReason = snap.ExhaustReason
+        };
+    }
+
+    private static SoulCore.Inference.Presence.IdleParkedWorkBudgetSnapshot? SafeParkedBudgetSnapshot(
+        SoulCore.Inference.Presence.IIdleParkedWorkBudget budget)
+    {
+        try
+        {
+            return budget.GetSnapshot();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     private static object ToolsSettingsDto(IToolsAccessSettings access)
     {
@@ -958,7 +1420,7 @@ internal static class WebApplicationExtensions
         };
     }
 
-    private static async ValueTask<object?> CompanionEmailAuthFilter(
+    internal static async ValueTask<object?> CompanionEmailAuthFilter(
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
     {

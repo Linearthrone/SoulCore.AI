@@ -13,9 +13,11 @@ using SoulCore.Protocol;
 namespace SoulCore.Host.Loop;
 
 /// <summary>
-/// PROP-17.3: one R&amp;R pass on the local LeisureModel.
+/// PROP-17.3 / PROP-20.6: one R&amp;R pass. Prefer local LeisureModel when it can
+/// hold the mind block; otherwise the same pass runs on the desk chat model.
 /// Self-started research (no task / no release). Action proposals → suspended.
 /// Never appends work/R&amp;R continuations to <c>presence-local</c>.
+/// Writes / speak-as-her only when the pass prompt carried floors + resting.
 /// </summary>
 public sealed class LeisureRunner
 {
@@ -27,6 +29,7 @@ public sealed class LeisureRunner
     private readonly IVictoriaTaskStore _tasks;
     private readonly IVictoriaJournalStore? _journals;
     private readonly IVictoriaResearchStore? _research;
+    private readonly IActivityResidueWriter? _residue;
     private readonly IInferenceLease _lease;
     private readonly ILeisureSession _session;
     private readonly IPresenceActivityHub? _activity;
@@ -35,6 +38,7 @@ public sealed class LeisureRunner
     private readonly IBlockedAsideNotice _aside;
     private readonly ILogger<LeisureRunner> _logger;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IInferenceClient? _deskInference;
 
     public LeisureRunner(
         IHttpClientFactory httpFactory,
@@ -50,7 +54,9 @@ public sealed class LeisureRunner
         IBlockedAsideNotice aside,
         IPresenceActivityHub? activity = null,
         IVictoriaJournalStore? journals = null,
-        IVictoriaResearchStore? research = null)
+        IVictoriaResearchStore? research = null,
+        IInferenceClient? deskInference = null,
+        IActivityResidueWriter? residue = null)
     {
         _httpFactory = httpFactory;
         _options = options.Value;
@@ -66,6 +72,8 @@ public sealed class LeisureRunner
         _activity = activity;
         _journals = journals;
         _research = research;
+        _deskInference = deskInference;
+        _residue = residue;
     }
 
     /// <summary>
@@ -74,6 +82,14 @@ public sealed class LeisureRunner
     /// </summary>
     public async Task<TimeSpan> RunOnePassAsync(CancellationToken abortToken)
     {
+        // PROP-18.19 / F2: B3 exemption must go through IsExemptKind — leisure never
+        // injects or calls IIdleParkedWorkBudget (catalog drift fails loud).
+        if (!FileIdleParkedWorkBudget.IsExemptKind("leisure"))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: leisure must remain IsExemptKind — do not consume idle parked budget.");
+        }
+
         var leisureModel = InferenceModelRouting.ResolveLeisureModel(_options);
         if (leisureModel is null)
         {
@@ -97,6 +113,27 @@ public sealed class LeisureRunner
         }
 
         await EnsureResearchSubjectAsync(interest!, abortToken).ConfigureAwait(false);
+
+        // PROP-20.6: mind block (floors + resting + interest reason) or do not run as her.
+        var related = RelatedMemoriesForInterest(interest!);
+        var mindBlock = LeisureMindBlock.Build(interest!, related);
+        if (!LeisureMindBlock.MayWriteAsHer(mindBlock))
+        {
+            _logger.LogWarning("R&R quiet — mind block incomplete (floors/resting required)");
+            NoteQuiet();
+            return TimeSpan.FromSeconds(45);
+        }
+
+        var passModel = LeisureMindBlock.ResolvePassModel(_options, mindBlock);
+        var useSmallLeisure = LeisureMindBlock.UsesLeisureSmallModel(_options, mindBlock);
+        if (!useSmallLeisure)
+        {
+            _logger.LogInformation(
+                "R&R mind block exceeds small leisure capacity ({Chars} chars) — pass on desk chat model {Model}",
+                mindBlock.Length,
+                passModel);
+        }
+
         // Mark the pass live so Presence "On her mind" is honest only while R&R is actually running.
         _session.NotePassCompleted();
         var phrase = _session.ActivityLine();
@@ -104,24 +141,31 @@ public sealed class LeisureRunner
         await PushStatusAsync(phrase, "leisure", abortToken).ConfigureAwait(false);
         await AnnounceUnfinishedWorkOnceAsync(abortToken).ConfigureAwait(false);
 
-        if (!await ModelPresentLocalAsync(leisureModel, abortToken).ConfigureAwait(false))
+        if (useSmallLeisure
+            && !await ModelPresentLocalAsync(leisureModel!, abortToken).ConfigureAwait(false))
         {
             _logger.LogInformation("Leisure model {Model} not pulled — R&R stays quiet", leisureModel);
             NoteQuiet();
             return TimeSpan.FromSeconds(90);
         }
 
+        if (!useSmallLeisure && _deskInference is null)
+        {
+            _logger.LogInformation("R&R desk-model fallback needed but desk inference unavailable — quiet");
+            NoteQuiet();
+            return TimeSpan.FromSeconds(90);
+        }
+
         _lease.Touch(InferenceLease.LeisureHolder);
 
-        var http = _httpFactory.CreateClient(HttpClientName);
-        var client = new OllamaInferenceClient(
-            http,
-            Options.Create(_options),
-            _loggerFactory.CreateLogger<OllamaInferenceClient>(),
-            toolRegistry: null,
-            _ueLive);
+        var system = mindBlock + "\n" + LeisurePrompt.SystemGuidance(interest!);
+        if (!LeisureMindBlock.MayWriteAsHer(system))
+        {
+            _logger.LogWarning("R&R quiet — assembled system prompt lost mind block");
+            NoteQuiet();
+            return TimeSpan.FromSeconds(45);
+        }
 
-        var system = LeisurePrompt.SystemGuidance(interest!);
         var user = LeisurePrompt.UserTurn(interest!, _session.LastUntrustedSummary);
         var messages = new List<ChatMessage>
         {
@@ -136,6 +180,15 @@ public sealed class LeisureRunner
             _lease.Touch(InferenceLease.LeisureHolder);
         });
 
+        IInferenceClient client = useSmallLeisure
+            ? new OllamaInferenceClient(
+                _httpFactory.CreateClient(HttpClientName),
+                Options.Create(_options),
+                _loggerFactory.CreateLogger<OllamaInferenceClient>(),
+                toolRegistry: null,
+                _ueLive)
+            : _deskInference!;
+
         string reply;
         try
         {
@@ -145,7 +198,7 @@ public sealed class LeisureRunner
                     filtered.GetDefinitions(),
                     noting,
                     linked.Token,
-                    new ToolLoopOptions { ModelOverride = leisureModel })
+                    new ToolLoopOptions { ModelOverride = passModel })
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (abortToken.IsCancellationRequested)
@@ -156,7 +209,7 @@ public sealed class LeisureRunner
         }
         catch (Exception ex) when (IsMissingModel(ex))
         {
-            _logger.LogInformation(ex, "Leisure model missing/contended — quiet");
+            _logger.LogInformation(ex, "Leisure/desk model missing/contended — quiet");
             NoteQuiet();
             return TimeSpan.FromSeconds(90);
         }
@@ -168,47 +221,91 @@ public sealed class LeisureRunner
             return TimeSpan.FromSeconds(30);
         }
 
+        // PROP-20.6: never write or speak as her unless this pass carried the mind block.
+        var mayWriteAsHer = LeisureMindBlock.MayWriteAsHer(system);
+
         if (ActionProposalClassifier.TryClassify(reply, out var proposal))
         {
-            try
+            if (!mayWriteAsHer)
             {
-                await _tasks.CreateAsync(
-                        proposal.Title,
-                        proposal.Description,
-                        "medium",
-                        surface: "local",
-                        ready: false,
-                        status: "suspended",
-                        notes: "R&R action proposal (" + proposal.Kind + ")",
-                        abortToken)
-                    .ConfigureAwait(false);
-                _logger.LogInformation("R&R filed suspended proposal kind={Kind}", proposal.Kind);
+                _logger.LogInformation("R&R proposal suppressed — mind block absent from pass prompt");
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogDebug(ex, "R&R suspended proposal insert failed");
+                try
+                {
+                    await _tasks.CreateAsync(
+                            proposal.Title,
+                            proposal.Description,
+                            "medium",
+                            surface: "local",
+                            ready: false,
+                            status: "suspended",
+                            notes: "R&R action proposal (" + proposal.Kind + ")",
+                            abortToken)
+                        .ConfigureAwait(false);
+                    _logger.LogInformation("R&R filed suspended proposal kind={Kind}", proposal.Kind);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "R&R suspended proposal insert failed");
+                }
             }
         }
 
-        if (noting.UntrustedChunks.Count > 0)
+        if (mayWriteAsHer && noting.UntrustedChunks.Count > 0)
         {
             var raw = string.Join("\n", noting.UntrustedChunks);
             var summary = UntrustedObservation.KeepSummary(raw, interest);
             _session.NoteUntrustedSummary(summary);
             await WriteJournalNoteAsync(summary, abortToken).ConfigureAwait(false);
+            // PROP-18.7: activities log + topic journal from this pass's findings.
+            await WriteActivityResidueAsync(
+                    interest!,
+                    raw,
+                    researchPass: noting.Names.Any(n =>
+                        n.StartsWith("research_", StringComparison.OrdinalIgnoreCase)),
+                    abortToken)
+                .ConfigureAwait(false);
         }
-        else if (LooksLikeWorthReading(reply) && !BlockedAside.IsWhySheIsntWorking(reply))
+        else if (mayWriteAsHer
+                 && LooksLikeWorthReading(reply)
+                 && !BlockedAside.IsWhySheIsntWorking(reply))
         {
             var summary = UntrustedObservation.KeepSummary(reply, interest);
             _session.NoteUntrustedSummary(summary);
             await WriteJournalNoteAsync(summary, abortToken).ConfigureAwait(false);
+            await WriteActivityResidueAsync(
+                    interest!,
+                    reply,
+                    researchPass: noting.Names.Any(n =>
+                        n.StartsWith("research_", StringComparison.OrdinalIgnoreCase)),
+                    abortToken)
+                .ConfigureAwait(false);
             await BroadcastFindAsync(VisibleFind(reply), abortToken).ConfigureAwait(false);
+        }
+        else if (!mayWriteAsHer)
+        {
+            _logger.LogInformation("R&R journal/find suppressed — mind block absent from pass prompt");
         }
 
         _session.NotePassCompleted();
         _activity?.NoteTool(_session.ActivityLine());
         await PushStatusAsync(_session.ActivityLine(), "leisure", abortToken).ConfigureAwait(false);
         return TimeSpan.FromSeconds(20);
+    }
+
+    private static IReadOnlyList<string> RelatedMemoriesForInterest(string interest)
+    {
+        // Lightweight interest-tied stubs until PROP-20.4 shared recall lands.
+        // Real episodic lines are preferred when the shared builder supplies them.
+        var topic = interest.Trim();
+        if (topic.Length == 0)
+            return Array.Empty<string>();
+        return new[]
+        {
+            "R&R thread: continuing curiosity about " + topic + "."
+        };
     }
 
     private async Task EnsureResearchSubjectAsync(string interest, CancellationToken cancellationToken)
@@ -314,6 +411,13 @@ public sealed class LeisureRunner
     {
         if (_journals is null || string.IsNullOrWhiteSpace(summary))
             return;
+        // PROP-18.19 / F2: journal kind is B3-exempt via IsExemptKind (no parallel kind list).
+        if (!FileIdleParkedWorkBudget.IsExemptKind("journal"))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: journal must remain IsExemptKind — do not consume idle parked budget.");
+        }
+
         try
         {
             await _journals.WriteEntryAsync(
@@ -329,6 +433,41 @@ public sealed class LeisureRunner
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "R&R journal note failed");
+        }
+    }
+
+    /// <summary>PROP-18.7: non-generic activities log + topic journal (Q1/Q4 depth law).</summary>
+    private async Task WriteActivityResidueAsync(
+        string interest,
+        string findings,
+        bool researchPass,
+        CancellationToken cancellationToken)
+    {
+        if (_residue is null || string.IsNullOrWhiteSpace(findings))
+            return;
+
+        // PROP-18.19 / F2: leisure residue stays B3-exempt through IsExemptKind.
+        // Research passes are not in the exempt catalog (distinct from leisure).
+        var activityKind = researchPass ? "research" : "leisure";
+        if (!researchPass && !FileIdleParkedWorkBudget.IsExemptKind(activityKind))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: leisure activity-log residue must remain IsExemptKind.");
+        }
+
+        try
+        {
+            await _residue.TryWriteAsync(
+                    activityKind,
+                    interest,
+                    findings,
+                    occurredAt: null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "R&R activity residue write failed");
         }
     }
 
@@ -377,11 +516,13 @@ public sealed class LeisureRunner
         }
 
         public List<string> UntrustedChunks { get; } = new();
+        public List<string> Names { get; } = new();
 
         public IReadOnlyList<ToolDefinition> GetDefinitions() => _inner.GetDefinitions();
 
         public async Task<ToolResult> ExecuteAsync(string name, JsonElement args, CancellationToken ct = default)
         {
+            Names.Add(name);
             _onTool(name);
             var result = await _inner.ExecuteAsync(name, args, ct).ConfigureAwait(false);
             if (result.Content is { Length: > 0 }

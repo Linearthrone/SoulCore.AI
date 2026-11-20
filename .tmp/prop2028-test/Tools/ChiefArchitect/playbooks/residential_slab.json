@@ -1,0 +1,70 @@
+{
+  "id": "residential.single_story.slab",
+  "title": "Residential single-story on slab (X17 tutorial path)",
+  "source": "Chief Architect X17 Tutorial Guide - walls first, then Build > Foundation",
+  "notes": [
+    "Do NOT invent a freehand 'slab tool from 0,0'. Foundations are generated after floor-1 walls.",
+    "Sketch wall topology with click-drag; refine exact lengths via dimensions.",
+    "Prefer Grid Snaps on while drawing the shell (Edit > Snap Settings > Grid Snaps)."
+  ],
+  "stages": [
+    {
+      "id": "session",
+      "title": "Session - focus Chief Architect and plan view",
+      "recipeIds": [
+        "session.focus",
+        "session.new_plan",
+        "session.plan_view",
+        "session.grid_snaps_on"
+      ]
+    },
+    {
+      "id": "perimeter",
+      "title": "Exterior shell walls",
+      "recipeIds": [
+        "wall.straight_exterior.activate",
+        "wall.draw_perimeter_rect",
+        "wall.close_loop_verify"
+      ]
+    },
+    {
+      "id": "dimensions",
+      "title": "Refine exact wall lengths from brief",
+      "recipeIds": ["dim.select_and_set_length"]
+    },
+    {
+      "id": "rooms",
+      "title": "Interior walls and room types",
+      "recipeIds": [
+        "wall.straight_interior.activate",
+        "wall.draw_interior_partitions",
+        "room.set_types_3br"
+      ]
+    },
+    {
+      "id": "openings",
+      "title": "Doors and windows",
+      "recipeIds": [
+        "opening.hinged_door.place",
+        "opening.window.place"
+      ]
+    },
+    {
+      "id": "foundation",
+      "title": "Build Foundation -> slab",
+      "recipeIds": [
+        "foundation.build_dialog",
+        "foundation.choose_slab",
+        "foundation.confirm"
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Screenshot verification",
+      "recipeIds": [
+        "verify.closed_perimeter",
+        "verify.foundation_present"
+      ]
+    }
+  ]
+}

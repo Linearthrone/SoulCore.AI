@@ -30,6 +30,16 @@
     <EmbeddedResource Include="Migrations\009_victoria_sops.sql" LogicalName="SoulCore.Memory.Migrations.009_victoria_sops.sql" />
     <EmbeddedResource Include="Migrations\010_life_hacks_journal.sql" LogicalName="SoulCore.Memory.Migrations.010_life_hacks_journal.sql" />
     <EmbeddedResource Include="Migrations\011_victoria_research.sql" LogicalName="SoulCore.Memory.Migrations.011_victoria_research.sql" />
+    <!-- PROP-20.3: Schema/012 is documentation companion only (never ReadEmbedded). -->
+    <EmbeddedResource Include="Migrations\012_thoughts_wants_dreams_journals.sql" LogicalName="SoulCore.Memory.Migrations.012_thoughts_wants_dreams_journals.sql" />
+    <!-- PROP-20.14: Schema/013 is documentation companion only (never ReadEmbedded). -->
+    <EmbeddedResource Include="Migrations\013_charter_four_books.sql" LogicalName="SoulCore.Memory.Migrations.013_charter_four_books.sql" />
+    <!-- PROP-20.37: Schema/014 is documentation companion only (never ReadEmbedded). -->
+    <EmbeddedResource Include="Migrations\014_growth_bond.sql" LogicalName="SoulCore.Memory.Migrations.014_growth_bond.sql" />
+    <!-- PROP-18.6: Schema/015 is documentation companion only (never ReadEmbedded). -->
+    <EmbeddedResource Include="Migrations\015_victoria_activities_log.sql" LogicalName="SoulCore.Memory.Migrations.015_victoria_activities_log.sql" />
+    <!-- PROP-22.1: operator work items + agenda (Presence glass shell). -->
+    <EmbeddedResource Include="Migrations\016_operator_work_and_agenda.sql" LogicalName="SoulCore.Memory.Migrations.016_operator_work_and_agenda.sql" />
   </ItemGroup>
 
   <PropertyGroup>

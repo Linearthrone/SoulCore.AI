@@ -514,6 +514,27 @@ public class MemoryToolsTests
             return Task.FromResult<IReadOnlyList<string>>(RecentResults);
         }
 
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallSimilarDatedAsync(
+            float[] queryVector, int limit, CancellationToken cancellationToken = default)
+        {
+            SimilarCalled = true;
+            SimilarLimit = limit;
+            var dated = SimilarResults
+                .Select(c => new MemoryRecallLine(c, "2026-11-17T12:00:00.000Z"))
+                .ToList();
+            return Task.FromResult<IReadOnlyList<MemoryRecallLine>>(dated);
+        }
+
+        public Task<IReadOnlyList<MemoryRecallLine>> RecallRecentDatedAsync(
+            int limit, CancellationToken cancellationToken = default)
+        {
+            RecentCalled = true;
+            var dated = RecentResults
+                .Select(c => new MemoryRecallLine(c, "2026-11-17T12:00:00.000Z"))
+                .ToList();
+            return Task.FromResult<IReadOnlyList<MemoryRecallLine>>(dated);
+        }
+
         public Task<long> WriteEpisodicAsync(string text, string sourceLabel, CancellationToken cancellationToken = default)
         {
             if (ThrowOnWrite)

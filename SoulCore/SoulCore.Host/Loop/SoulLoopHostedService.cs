@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SoulCore.Config;
 using SoulCore.Core.Abstractions;
+using SoulCore.Inference.Presence;
 
 namespace SoulCore.Host.Loop;
 
@@ -27,6 +28,14 @@ public sealed class SoulLoopHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // PROP-18.19 / F2: soul-loop is B3-exempt via IsExemptKind — never consume parked budget.
+        if (!FileIdleParkedWorkBudget.IsExemptKind("soulloop")
+            || !FileIdleParkedWorkBudget.IsExemptKind("soul-loop"))
+        {
+            throw new InvalidOperationException(
+                "B3 catalog drift: soulloop/soul-loop must remain IsExemptKind — do not consume idle parked budget.");
+        }
+
         if (!_options.Enabled)
         {
             _logger.LogInformation(

@@ -19,29 +19,39 @@ public static partial class UntrustedObservation
         && text.Contains(Marker, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Filter memories so untrusted page text cannot poison the preamble.</summary>
-    public static IReadOnlyList<string> StripFromPreamble(IReadOnlyList<string> memories)
+    public static IReadOnlyList<string> StripFromPreamble(IReadOnlyList<string> memories) =>
+        StripWhereMarked(memories, static s => s);
+
+    /// <summary>
+    /// PROP-20.11 / F3: shared first-marked skip loop for preamble / tape strip.
+    /// </summary>
+    public static IReadOnlyList<T> StripWhereMarked<T>(
+        IReadOnlyList<T> items,
+        Func<T, string?> text)
     {
-        if (memories is null || memories.Count == 0)
-            return memories ?? Array.Empty<string>();
-        List<string>? kept = null;
-        for (var i = 0; i < memories.Count; i++)
+        if (items is null || items.Count == 0)
+            return items ?? Array.Empty<T>();
+        ArgumentNullException.ThrowIfNull(text);
+
+        List<T>? kept = null;
+        for (var i = 0; i < items.Count; i++)
         {
-            if (IsMarked(memories[i]))
+            if (IsMarked(text(items[i])))
             {
-                kept ??= new List<string>(memories.Count);
+                kept ??= new List<T>(items.Count);
                 for (var j = 0; j < i; j++)
-                    kept.Add(memories[j]);
-                for (var k = i + 1; k < memories.Count; k++)
+                    kept.Add(items[j]);
+                for (var k = i + 1; k < items.Count; k++)
                 {
-                    if (!IsMarked(memories[k]))
-                        kept.Add(memories[k]);
+                    if (!IsMarked(text(items[k])))
+                        kept.Add(items[k]);
                 }
 
                 return kept;
             }
         }
 
-        return memories;
+        return items;
     }
 
     /// <summary>

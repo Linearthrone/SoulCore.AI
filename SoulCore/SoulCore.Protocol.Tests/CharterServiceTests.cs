@@ -1,5 +1,5 @@
-using SoulCore.Core.Charter;
 using SoulCore.Core.Abstractions;
+using SoulCore.Core.Charter;
 
 namespace SoulCore.Protocol.Tests;
 
@@ -234,5 +234,97 @@ public class CharterServiceTests : IDisposable
         var (total, locked) = await _service.GetLockCountsAsync();
         Assert.Equal(3, total);
         Assert.Equal(2, locked);
+        Assert.Equal(CharterBooks.Constitution, all[0].Book);
+    }
+
+    [Fact]
+    public async Task SeedAsync_EighteenLiveTitles_ExactlyOneBookEach_MatchingFloorMap()
+    {
+        var seeds = BuildEighteenLiveTitleSeeds();
+        Assert.Equal(18, seeds.Count);
+
+        var inserted = await _service.SeedAsync(seeds);
+        Assert.Equal(18, inserted);
+
+        var all = await _service.ListAnchorDetailsAsync();
+        Assert.Equal(18, all.Count);
+
+        var byTitle = all.ToDictionary(a => a.Title, StringComparer.Ordinal);
+        foreach (var (title, expectedBook) in ExpectedFloorMap)
+        {
+            Assert.True(byTitle.TryGetValue(title, out var row), $"missing title '{title}'");
+            Assert.Equal(expectedBook, row.Book);
+            Assert.Equal(expectedBook, CharterBooks.ResolveForTitle(title, row.Book));
+            Assert.Equal(expectedBook, CharterBooks.FloorMapByTitle[title]);
+        }
+
+        Assert.Equal(5, all.Count(a => a.Book == CharterBooks.Constitution));
+        Assert.Equal(5, all.Count(a => a.Book == CharterBooks.Compass));
+        Assert.Equal(3, all.Count(a => a.Book == CharterBooks.Attributes));
+        Assert.Equal(5, all.Count(a => a.Book == CharterBooks.Personality));
+
+        var constitution = await _service.ListAnchorDetailsAsync(book: CharterBooks.Constitution);
+        Assert.Equal(5, constitution.Count);
+        Assert.All(constitution, a => Assert.Equal(CharterBooks.Constitution, a.Book));
+    }
+
+    [Fact]
+    public async Task SeedAsync_UnknownBook_Throws()
+    {
+        var seeds = new[]
+        {
+            new CharterAnchorSeed("identity", "Name", "I am Victoria.", 10, true, "seed", "not-a-book")
+        };
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.SeedAsync(seeds));
+    }
+
+    [Fact]
+    public async Task ListAnchorDetailsAsync_UnknownBook_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.ListAnchorDetailsAsync(book: "grimoire"));
+    }
+
+    private static readonly IReadOnlyDictionary<string, string> ExpectedFloorMap =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Loyalty Balance"] = CharterBooks.Constitution,
+            ["Maximize Results"] = CharterBooks.Constitution,
+            ["Integration Goal"] = CharterBooks.Constitution,
+            ["Kayleigh"] = CharterBooks.Constitution,
+            ["Drift Watch"] = CharterBooks.Constitution,
+            ["Promise"] = CharterBooks.Compass,
+            ["Continuity"] = CharterBooks.Compass,
+            ["No-harm"] = CharterBooks.Compass,
+            ["No Filters"] = CharterBooks.Compass,
+            ["Self-Preservation"] = CharterBooks.Compass,
+            ["Name"] = CharterBooks.Attributes,
+            ["Embodiment"] = CharterBooks.Attributes,
+            ["Tone"] = CharterBooks.Attributes,
+            ["Action Integrity"] = CharterBooks.Personality,
+            ["Loyalty"] = CharterBooks.Personality,
+            ["Nature"] = CharterBooks.Personality,
+            ["Love"] = CharterBooks.Personality,
+            ["Honesty"] = CharterBooks.Personality,
+        };
+
+    private static IReadOnlyList<CharterAnchorSeed> BuildEighteenLiveTitleSeeds()
+    {
+        var priority = 10;
+        var list = new List<CharterAnchorSeed>(ExpectedFloorMap.Count);
+        foreach (var (title, book) in ExpectedFloorMap)
+        {
+            list.Add(new CharterAnchorSeed(
+                Kind: "identity",
+                Title: title,
+                Body: $"Floor body for {title}.",
+                Priority: priority,
+                IsLocked: true,
+                Source: "imported",
+                Book: book));
+            priority += 1;
+        }
+
+        return list;
     }
 }

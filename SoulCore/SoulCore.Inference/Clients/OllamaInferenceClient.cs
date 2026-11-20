@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -144,6 +145,51 @@ public sealed class OllamaInferenceClient : IInferenceClient
             Think = _options.ThinkEnabled,
             Options = options
         };
+
+        if (_options.PreferOpenAiCompat)
+        {
+            var openAiMessages = new List<OpenAiChatMessage>();
+            if (!string.IsNullOrWhiteSpace(systemPreamble))
+            {
+                openAiMessages.Add(new OpenAiChatMessage
+                {
+                    Role = "system",
+                    Content = systemPreamble.Trim()
+                });
+            }
+
+            openAiMessages.Add(new OpenAiChatMessage
+            {
+                Role = "user",
+                Content = prompt
+            });
+
+            var openAiPayload = new OpenAiChatRequest
+            {
+                Model = chatModel,
+                Messages = openAiMessages,
+                MaxTokens = numPredict,
+                Stream = false
+            };
+
+            using var openAiResponse = await PostJsonFixedLengthAsync(
+                "v1/chat/completions",
+                openAiPayload,
+                cancellationToken).ConfigureAwait(false);
+
+            var openAiBody = await openAiResponse.Content.ReadAsStringAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (!openAiResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "OpenAI-compat generate failed: {Status} {Body}",
+                    (int)openAiResponse.StatusCode,
+                    TextUtil.Truncate(openAiBody, 400));
+                openAiResponse.EnsureSuccessStatusCode();
+            }
+
+            return TryParseOpenAiAssistantMessage(openAiBody)?.Content ?? string.Empty;
+        }
 
         using var response = await _http.PostAsJsonAsync(
             "api/generate",
@@ -362,11 +408,12 @@ public sealed class OllamaInferenceClient : IInferenceClient
             OllamaChatResponseMessage? msg;
             string body;
             var modelSw = Stopwatch.StartNew();
-            var endpoint = wireToolChoice.HasValue ? "v1/chat/completions" : "api/chat";
+            // PreferOpenAiCompat (Colibri etc.): always /v1. Else BED-162: /v1 only when
+            // forcing tool_choice — native /api/chat ignores object-form tool_choice.
+            var useOpenAiCompat = _options.PreferOpenAiCompat || wireToolChoice.HasValue;
+            var endpoint = useOpenAiCompat ? "v1/chat/completions" : "api/chat";
 
-            // BED-162: native /api/chat ignores tool_choice on current Ollama;
-            // OpenAI-compat /v1/chat/completions honors object-form force.
-            if (wireToolChoice.HasValue)
+            if (useOpenAiCompat)
             {
                 // BED-166: OpenAI /v1 requires function.arguments as a JSON
                 // *string*. Session history (and in-loop echoes) often carry
@@ -384,10 +431,9 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     Stream = false
                 };
 
-                using var openAiResponse = await _http.PostAsJsonAsync(
+                using var openAiResponse = await PostJsonFixedLengthAsync(
                     "v1/chat/completions",
                     openAiPayload,
-                    JsonOptions,
                     cancellationToken).ConfigureAwait(false);
 
                 body = await openAiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -412,9 +458,12 @@ public sealed class OllamaInferenceClient : IInferenceClient
                     return ResolveEmptyLoopExit(lastAssistantText, toolsDispatched, ollamaMessages);
                 }
 
-                _logger.LogDebug(
-                    "Ollama tool_choice forced via /v1/chat/completions at iteration {Iter} tool={Tool} exclusiveTools={Count}",
-                    iteration, forceToolName, wireTools.Count);
+                if (wireToolChoice.HasValue)
+                {
+                    _logger.LogDebug(
+                        "Ollama tool_choice forced via /v1/chat/completions at iteration {Iter} tool={Tool} exclusiveTools={Count}",
+                        iteration, forceToolName, wireTools.Count);
+                }
             }
             else
             {
@@ -727,6 +776,25 @@ public sealed class OllamaInferenceClient : IInferenceClient
         if (toolsDispatched)
             return FirewallAssistantReply(SynthesizePostToolContinue(messages));
         return EmptyNoToolsMarker;
+    }
+
+    /// <summary>
+    /// POST JSON with an explicit <c>Content-Length</c> body.
+    /// Colibri (and some other OpenAI-compat servers) reject chunked
+    /// <c>Transfer-Encoding</c> from <see cref="HttpClientJsonExtensions.PostAsJsonAsync{TValue}(HttpClient, string?, TValue, JsonSerializerOptions?, CancellationToken)"/>.
+    /// </summary>
+    private async Task<HttpResponseMessage> PostJsonFixedLengthAsync<T>(
+        string relativeUrl,
+        T payload,
+        CancellationToken cancellationToken)
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+        {
+            CharSet = "utf-8"
+        };
+        return await _http.PostAsync(relativeUrl, content, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

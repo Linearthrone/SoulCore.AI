@@ -98,3 +98,10 @@ Network: netplan under `/etc/netplan/`. Do not switch the VM from NAT to bridged
 ## Evidence
 
 Paste command output. For “VM is up”: `list runningvms` + guest IP property + (if claimed) SSH or Guest Control `uname -a`.
+
+## Display freeze (GNOME + vboxvideo)
+
+Guest Additions rebuild installs **only** `vboxguest` + `vboxsf`. Display uses Ubuntu **in-tree** `vboxvideo`. GNOME **Wayland** on that stack has frozen the framebuffer (identical `screenshotpng`, dead input, guestcontrol stuck at `starting`) while GA runlevel stayed 2.
+
+Mitigation on KsDevice: `/etc/gdm3/custom.conf` → `WaylandEnable=false` (Xorg). Keep NAT `ssh` forward on host `2222` for recovery. Do not run distro release-upgrade prompts on this VM (`Prompt=never`).
+

@@ -1,0 +1,11 @@
+---
+type: report
+prop_id: PROP-20.2
+from: PM-01
+status: Accepted
+created: 2026-11-17
+---
+
+# PROP-20.2 — PM accept
+
+Dated recall + today-first `MemoryTape` Accepted. Next: Wave A QA (PROP-20.9).

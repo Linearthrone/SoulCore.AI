@@ -612,17 +612,32 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             new { method = "keyboardputscancode", vm = _vmName });
     }
 
+    public static TimeSpan GuestChannelWait = TimeSpan.FromSeconds(12);
+
     private static readonly SemaphoreSlim GuestChannel = new(1, 1);
     private static int _guestChannelWedged;
+    private static int _guestChannelFailures;
+
+    internal const string GuestChannelBusy =
+        "guest shell is busy with another command. It is not dead. Retry.";
+
+    internal const string GuestChannelRetry =
+        "guest shell did not answer. It is not dead. Retry.";
 
     internal const string GuestChannelStuck =
         "guest channel stuck. Savestate the VM to recover. Do not power it off.";
 
-    private async Task<(int Exit, string Stdout, string Stderr)> RunGuestControlAsync(
-        IReadOnlyList<string> argv, CancellationToken ct)
+    public static void ResetGuestChannelForTests()
     {
-        if (!await GuestChannel.WaitAsync(TimeSpan.FromSeconds(12), ct).ConfigureAwait(false))
-            return (1, "", GuestChannelStuck);
+        Volatile.Write(ref _guestChannelWedged, 0);
+        Volatile.Write(ref _guestChannelFailures, 0);
+    }
+
+    private async Task<(int Exit, string Stdout, string Stderr)> RunGuestControlAsync(
+        IReadOnlyList<string> argv, CancellationToken ct, bool latchChannel = true)
+    {
+        if (!await GuestChannel.WaitAsync(GuestChannelWait, ct).ConfigureAwait(false))
+            return (1, "", GuestChannelBusy);
 
         try
         {
@@ -631,6 +646,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
                 if (!await ProbeGuestChannelAsync(ct).ConfigureAwait(false))
                     return (1, "", GuestChannelStuck);
                 Volatile.Write(ref _guestChannelWedged, 0);
+                Volatile.Write(ref _guestChannelFailures, 0);
             }
 
             var result = await _run(_vboxManage, argv, ct).ConfigureAwait(false);
@@ -638,10 +654,32 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             if (blob.Contains("VERR_TIMEOUT", StringComparison.Ordinal)
                 || blob.Contains("VERR_NOT_FOUND", StringComparison.Ordinal))
             {
-                Volatile.Write(ref _guestChannelWedged, 1);
-                return (1, "", GuestChannelStuck);
+                // A slow command used to be killed at 8s and reported as a dead
+                // channel. If whoami still answers, the shell is up.
+                if (await ProbeGuestChannelAsync(ct).ConfigureAwait(false))
+                {
+                    Volatile.Write(ref _guestChannelWedged, 0);
+                    Volatile.Write(ref _guestChannelFailures, 0);
+                    return (1, "", "guest command timed out. The guest shell is still up.");
+                }
+
+                // Setup probes (id, xauthority) must not burn the latch.
+                // One missed answer used to report "savestate the VM" and then
+                // every later command repeated it. Require repeated shell failures.
+                if (!latchChannel)
+                    return (1, "", GuestChannelRetry);
+
+                var fails = Interlocked.Increment(ref _guestChannelFailures);
+                if (fails >= 3)
+                {
+                    Volatile.Write(ref _guestChannelWedged, 1);
+                    return (1, "", GuestChannelStuck);
+                }
+
+                return (1, "", GuestChannelRetry);
             }
 
+            Volatile.Write(ref _guestChannelFailures, 0);
             return result;
         }
         finally
@@ -921,7 +959,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             Array.Empty<string>(),
             exeArgs,
             waitOutput: true);
-        return await RunGuestControlAsync(argv, ct).ConfigureAwait(false);
+        return await RunGuestControlAsync(argv, ct, latchChannel: false).ConfigureAwait(false);
     }
 
     public static List<string> BuildGuestControl(
@@ -941,6 +979,7 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             "--username", username,
             "--passwordfile", passwordFile,
             "--profile",
+            "--ignore-orphaned-processes",
             "--quiet",
             "--exe", exe
         };
@@ -955,7 +994,11 @@ public sealed partial class VirtualBoxGuestAppLauncher : IVmGuestDesktop, IVmGue
             argv.Add("--wait-stdout");
             argv.Add("--wait-stderr");
             argv.Add("--timeout");
-            argv.Add(Math.Clamp(timeoutMs, 1000, 8000).ToString(CultureInfo.InvariantCulture));
+            // 8s stays available for the screenshot fallback, which passes it in.
+            // guest_shell asks for 60–180s; capping every wait at 8s killed the
+            // command and then marked the guest channel stuck.
+            var timeoutCapMs = GuestPathGuard.MaxShellTimeoutSeconds * 1000;
+            argv.Add(Math.Clamp(timeoutMs, 1000, timeoutCapMs).ToString(CultureInfo.InvariantCulture));
         }
 
         argv.Add("--");

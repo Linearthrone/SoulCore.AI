@@ -46,7 +46,8 @@ public partial class MainWindow
     private async Task RefreshVictoriaBrowserViewAsync()
     {
         if (_browserViewBusy) return;
-        if (PresenceView is { IsVisible: false }) return;
+        // PROP-22.6: Her screen lives in the VM drawer popup — nothing to poll while it is closed.
+        if (_vmDrawer is not { IsVisible: true }) return;
         // Skip Host poll while What she saw is showing (HWND embed stays attached).
         if (!IsHerScreenSideVisible())
             return;
