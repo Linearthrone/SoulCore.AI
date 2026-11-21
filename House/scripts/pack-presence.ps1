@@ -56,7 +56,9 @@ if (-not $Version) {
 $publishDir = Join-Path $repo 'House\artifacts\presence-publish'
 $releaseDir = Join-Path $repo 'House\artifacts\presence-releases'
 $buildRoot = Join-Path $repo 'House\artifacts\presence-bin\'
-$ico = Join-Path $repo 'House\House.ChatDesktop\Assets\house-victoria.ico'
+# Setup.exe and the Start Menu shortcut. Desktop shortcut icon is
+# Desktop_Icon_SoulCore_AI.ico (see install-presence-shortcuts.ps1).
+$ico = Join-Path $repo 'House\House.ChatDesktop\Assets\soulcore.ico'
 
 Write-Host "Publishing Presence $Version ..."
 if (Test-Path $publishDir) { Remove-Item -Recurse -Force $publishDir }

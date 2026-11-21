@@ -14,7 +14,7 @@
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
         WindowStartupLocation="CenterScreen"
-        Icon="/Assets/house-victoria.ico">
+        Icon="/Assets/soulcore.ico">
   <!-- PROP-22: frameless glass slab (19.5:9). Dull neon rim, near-black cool glass. -->
   <Border Classes="shell-bevel" Margin="4">
   <Border Classes="shell">

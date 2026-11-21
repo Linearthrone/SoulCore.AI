@@ -5,6 +5,7 @@
         Width="420" Height="220"
         MinWidth="360" MinHeight="200"
         WindowStartupLocation="CenterOwner"
+        Icon="/Assets/soulcore.ico"
         Foreground="{DynamicResource TextBrush}">
   <Border Classes="metal glass" Margin="12" Padding="14">
     <Grid RowDefinitions="Auto,Auto,*,Auto">

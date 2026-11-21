@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>House.ChatDesktop</RootNamespace>
     <AssemblyName>House.ChatDesktop</AssemblyName>
-    <ApplicationIcon>Assets\house-victoria.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\soulcore.ico</ApplicationIcon>
     <!-- PROP-14 / Avalonia NativeControlHost: CreateWindowEx needs supportedOS (see app.manifest). -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>

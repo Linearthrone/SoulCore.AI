@@ -89,7 +89,7 @@ Write-Host ''
 Write-Host 'Next:'
 if ($Target -eq 'host' -or $Target -eq 'all') {
   Write-Host '  Restart Host: .\ALLSTART.ps1 -RestartHost'
-  Write-Host '  Confirm: Settings > Updates shows Host version, or GET http://127.0.0.1:7700/health -> version'
+  Write-Host '  Confirm: Settings > Updates shows Host version, or GET http://127.0.0.1:7710/health -> version'
 }
 if ($Target -eq 'presence' -or $Target -eq 'all') {
   Write-Host '  Pack Presence: House/scripts/pack-presence.ps1  (then install/Update from that release)'

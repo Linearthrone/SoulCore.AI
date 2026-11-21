@@ -19,7 +19,7 @@ public enum WsConnectionState
 
 /// <summary>
 /// Presence WebSocket client for SoulCore Host.
-/// Default: ws://127.0.0.1:7700/ws (loopback only). No LLM calls from UI.
+/// Default: ws://127.0.0.1:7710/ws (loopback only). No LLM calls from UI.
 /// </summary>
 public sealed class SoulCoreWsClient : IAsyncDisposable
 {

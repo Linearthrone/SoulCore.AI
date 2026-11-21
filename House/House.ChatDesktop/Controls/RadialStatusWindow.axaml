@@ -2,8 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="House.ChatDesktop.Controls.RadialStatusWindow"
         Title="Status"
-        Width="340" Height="340"
+        Width="420" Height="420"
         CanResize="False"
+        SizeToContent="Manual"
         SystemDecorations="None"
         ShowInTaskbar="False"
         ShowActivated="True"
@@ -12,11 +13,6 @@
         TransparencyLevelHint="Transparent"
         Foreground="{DynamicResource TextBrush}"
         WindowStartupLocation="Manual">
-  <!-- PROP-22.5 / v3: three-quarter radial OUTSIDE the upper-left corner.
-       Large status orbs dominate each wedge; labels stay small under the orbs. -->
-  <Canvas x:Name="RadialCanvas" Width="340" Height="340" Background="Transparent">
-    <!-- Origin marker (orb corner of the main slab) — not hit-testable. -->
-    <Ellipse Canvas.Left="292" Canvas.Top="292" Width="16" Height="16"
-             Fill="#22000000" IsHitTestVisible="False"/>
-  </Canvas>
+  <!-- PROP-22 v3: glass wedges + large orbs, outside the slab's upper-left corner. -->
+  <Canvas x:Name="RadialCanvas" Background="Transparent"/>
 </Window>

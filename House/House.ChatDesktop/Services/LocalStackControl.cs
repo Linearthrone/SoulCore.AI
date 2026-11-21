@@ -362,7 +362,7 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
                     return LocalStackActionResult.Fail(
                         $"Host /health still reports '{hostVer ?? "(missing)"}' after bump+rebuild " +
                         $"(was '{versionBefore ?? "(missing)"}'). Stale process was likely reused — " +
-                        "check SoulCore/scripts/.soulcore-host.log and free port 7700, then Update again. " +
+                        $"check SoulCore/scripts/.soulcore-host.log and free port {ConnectionDefaults.Port}, then Update again. " +
                         $"Bump: {bump.Detail}");
                 }
 
@@ -486,6 +486,16 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
 
         progress?.Report($"Repo: {RepoRoot}");
 
+        var configuredPort = TryReadConfiguredHostPort(RepoRoot);
+        if (configuredPort is int cfgPort && cfgPort != ConnectionDefaults.Port)
+        {
+            return LocalStackEnsureResult.Fail(
+                $"SoulCore repo folder '{RepoRoot}' is configured for Host.Port={cfgPort}, " +
+                $"but Presence connects to :{ConnectionDefaults.Port}. " +
+                $"Set Settings → SoulCore repo folder to the .house_victoria\\SoulCore.AI checkout " +
+                $"(or set HOUSE_SOULCORE_REPO). The old Soul_Core tree usually binds :7700.");
+        }
+
         var ollamaWasUp = await ProbeOllamaAsync(ct).ConfigureAwait(false);
         if (!ollamaWasUp)
         {
@@ -542,8 +552,63 @@ $r2 = Invoke-WebRequest -Uri 'http://127.0.0.1:11434/api/tags' -UseBasicParsing 
             await Task.Delay(1000, ct).ConfigureAwait(false);
         }
 
+        var mismatch = await DescribePortMismatchAsync(ct).ConfigureAwait(false);
         return LocalStackEnsureResult.Fail(
-            $"Host start ran but /health did not answer within {hostReadyTimeoutSec}s. Detail: {start.Detail}");
+            $"Host start ran but /health on :{ConnectionDefaults.Port} did not answer within {hostReadyTimeoutSec}s. " +
+            $"Detail: {start.Detail}.{mismatch}");
+    }
+
+    /// <summary>
+    /// When Presence expects :7710 but the configured repo (or another Host) only answers
+    /// on :7700, surface that — the classic "Soul_Core vs .house_victoria" footgun.
+    /// </summary>
+    private async Task<string> DescribePortMismatchAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            using var resp = await http.GetAsync("http://127.0.0.1:7700/health", ct).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                return string.Empty;
+
+            var configuredPort = TryReadConfiguredHostPort(RepoRoot);
+            var hint = configuredPort is int p && p != ConnectionDefaults.Port
+                ? $" Settings → SoulCore repo folder is '{RepoRoot}' whose appsettings Host.Port={p}; Presence expects {ConnectionDefaults.Port}. Point the folder at the .house_victoria\\SoulCore.AI checkout (or set HOUSE_SOULCORE_REPO)."
+                : $" A Host is listening on :7700 but Presence talks to :{ConnectionDefaults.Port}. Fix Settings → SoulCore repo folder (must be the checkout that binds {ConnectionDefaults.Port}).";
+            return hint;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static int? TryReadConfiguredHostPort(string? repoRoot)
+    {
+        if (string.IsNullOrWhiteSpace(repoRoot))
+            return null;
+        try
+        {
+            var path = Path.Combine(repoRoot, "SoulCore", "SoulCore.Host", "appsettings.json");
+            if (!File.Exists(path))
+                path = Path.Combine(repoRoot, "SoulCore.Host", "appsettings.json");
+            if (!File.Exists(path))
+                return null;
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            if (doc.RootElement.TryGetProperty("Host", out var host)
+                && host.TryGetProperty("Port", out var portEl)
+                && portEl.TryGetInt32(out var port)
+                && port is > 0 and < 65536)
+            {
+                return port;
+            }
+        }
+        catch
+        {
+            // Best-effort diagnosis only.
+        }
+
+        return null;
     }
 
     private Task<LocalStackActionResult> RunScriptAsync(
